@@ -40,7 +40,7 @@ import GHC.Base (Alternative(..))
 \author[1]{Shin-Cheng Mu}
 \affil[1]{Academia Sinica, Taiwan}
 
-\date{}
+\date{Late 2017. Last Update: March 2018.}
 
 \maketitle
 
@@ -724,15 +724,15 @@ queens :: MonadPlus m => Int -> m [Int]
 queens n = assert safe =<< perm [0..n-1] {-"~~."-}
 \end{code}
 
-\paragraph{Safety in a |foldl|-ish manner}
+\paragraph{Safety using |scanl|}
 If we define:
 \begin{spec}
-safeL (i,us,ds) xs =
+safeAcc (i,us,ds) xs =
    nodup us' &&  nodup ds' && all (`notelem` us) us' && all (`notelem` ds) ds' {-"~~,"-}
   where  us'  = zipWith (+) [i..] xs
          ds'  = zipWith (-) [i..] xs {-"~~."-}
 \end{spec}
-We have |safe = safeL (0,[],[])|.
+We have |safe = safeAcc (0,[],[])|.
 
 
 For the next lemma we need this property:
@@ -740,14 +740,14 @@ For the next lemma we need this property:
   |all (`notelem` (x:xs)) ys = all (`notelem` xs) ys && x `notelem` ys {-"~~."-}| \label{eq:all-notelem-cons}
 \end{equation}
 
-\begin{lemma} |safeL st = all ok . scanlp oplus st|, where |oplus| and |ok| are defined by:
+\begin{lemma} |safeAcc st = all ok . scanlp oplus st|, where |oplus| and |ok| are defined by:
 \begin{spec}
 (i,us,ds) `oplus` x    = (i+1, (i+x : us), (i-x : ds)) {-"~~,"-}
 ok (i,(x:us), (y:ds))  = x `notelem` us && y `notelem` ds {-"~~."-}
 \end{spec}
 \end{lemma}
 \begin{proof} Prove that
-|safeL st xs = all ok . scanlp oplus st $ xs| by induction on |xs|.
+|safeAcc st xs = all ok . scanlp oplus st $ xs| by induction on |xs|.
 
 \noindent{\bf Case} |xs := []|. Both sides reduce to |True|.
 
@@ -760,17 +760,12 @@ ok (i,(x:us), (y:ds))  = x `notelem` us && y `notelem` ds {-"~~."-}
    ok ((i,us,ds) `oplus` x) &&
    all ok (scanlp oplus ((i,us,ds) `oplus` x) xs)
 =    {- induction -}
-   ok ((i,us,ds) `oplus` x) && safeL ((i,us,ds) `oplus` x) xs
-=    {- definition of |oplus| and |safeL|, let |us' = zipWith (+) [i+1..] xs| and |ds' = ...| -}
-   ok (i+1, (i+x : us), (i-x : ds)) &&
+   ok ((i,us,ds) `oplus` x) && safeAcc ((i,us,ds) `oplus` x) xs
+=    {- definition of |oplus|, |ok|, and |safeAcc|, let |us' = zipWith (+) [i+1..] xs| and |ds' = ...| -}
+   (i+x) `notelem` us && (i-x) `notelem` ds &&
    nodup us' && nodup ds' &&
    all (`notelem` (i+x : us)) us' && all (`notelem` (i-x : ds)) ds'
 =    {- by \eqref{eq:all-notelem-cons} -}
-   ok (i+1, (i+x : us), (i-x : ds)) &&
-   nodup us' && nodup ds' &&
-   all (`notelem` us) us' && (i+x) `notelem` us' &&
-   all (`notelem` ds) ds' && (i-x) `notelem` ds'
-=    {- definiton of |ok| -}
    (i+x) `notelem` us && (i-x) `notelem` ds &&
    nodup us' && nodup ds' &&
    all (`notelem` us) us' && (i+x) `notelem` us' &&
@@ -781,8 +776,8 @@ ok (i,(x:us), (y:ds))  = x `notelem` us && y `notelem` ds {-"~~."-}
 =    {- definitions of |nodup| and |all| -}
    nodup ((i+x):us') && nodup ((i-x) :ds') &&
    all (`notelem` us) ((i+x):us') && all (`notelem` ds) ((i-x):ds')
-=    {- definition of |safeL| -}
-   safeL (i,us,ds) (x:xs) {-"~~."-}
+=    {- definition of |safeAcc| -}
+   safeAcc (i,us,ds) (x:xs) {-"~~."-}
 \end{spec}
 \end{proof}
 

@@ -76,6 +76,7 @@
 %format f2
 %format cmd1
 %format cmd2
+%format s0
 
 %format epsilon = "\epsilon"
 %format eps = "\epsilon"
@@ -100,6 +101,10 @@
 
 %format scanlp = "\Varid{scanl}_{+}"
 %format scanlMp = "\Varid{scanlM}_{+}"
+
+%format putR = "\Varid{put}_{\scaleobj{0.6}{\sf R}}"
+%format modifyR = "\Varid{modify}_{\scaleobj{0.6}{\sf R}}"
+%format scanlMR = "\Varid{scanlM}_{\scaleobj{0.6}{\sf R}}"
 
 %format // = "\mathbin{/\!\!/}"
 

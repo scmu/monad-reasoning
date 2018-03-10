@@ -22,3 +22,11 @@ paper/der-monad\.dvi
 paper/\.DS_Store
 
 \.DS_Store
+
+*.hi
+
+notes/Nondet\.pdf
+
+notes/BacktrackLocal\.pdf
+
+notes/BacktrackGlobal\.pdf
