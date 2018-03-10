@@ -1,0 +1,109 @@
+%if not lhs2tex_Formatting_fmt_read
+%let lhs2tex_Formatting_fmt_read = True
+
+%if style /= newcode
+\ReadOnlyOnce{Formatting.fmt}%
+\makeatletter
+
+\let\Varid\mathit
+\let\Conid\mathsf
+
+\def\commentbegin{\quad\{\ }
+\def\commentend{\}}
+
+\newcommand{\ty}[1]{\Conid{#1}}
+\newcommand{\con}[1]{\Conid{#1}}
+\newcommand{\id}[1]{\Varid{#1}}
+\newcommand{\cl}[1]{\Varid{#1}}
+\newcommand{\opsym}[1]{\mathrel{#1}}
+
+\newcommand\Keyword[1]{\textbf{\textsf{#1}}}
+\newcommand\Hide{\mathbin{\downarrow}}
+\newcommand\Reveal{\mathbin{\uparrow}}
+
+%format == = "\doubleequals"
+%format . = "\mathbin{\cdot}"
+%format `app` = "\mathbin{\$}"
+%format app = "(\mathbin{\$})"
+%format ++ = "\mathbin{+\!\!\!+}"
+
+%% Paper-specific keywords
+
+%format mzero = "\emptyset"
+%format mplus = "([\!])"
+%format `mplus` = "\mathbin{[\!]}"
+%format =<< = "\mathbin{\hstretch{0.7}{=\!\!<\!\!<}}"
+%format << = "\mathbin{\hstretch{0.7}{<\!\!<}}"
+%format >> = "\mathbin{\hstretch{0.7}{>\!\!>}}"
+%format >>= = "\mathrel{\hstretch{0.7}{>\!\!>\!\!=}}"
+%format <$> = "\mathrel{\raisebox{0.5\depth}{\scaleobj{0.5}{\langle}} \scaleobj{0.8}{\$} \raisebox{0.5\depth}{\scaleobj{0.5}{\rangle}}}"
+%format <.> = "\mathrel{\raisebox{0.5\depth}{\scaleobj{0.5}{\langle \bullet \rangle}}}"
+%format ^<< = "\mathbin{{\,}^{\wedge}\!\!\!\ll}"
+%format <=< = "\mathrel{\hstretch{0.7}{<\!\!=\!\!<}}"
+%format >=> = "\mathrel{\hstretch{0.7}{>\!\!=\!\!>}}"
+
+%format oplus = "(\oplus)"
+%format `oplus` = "\mathbin{\oplus}"
+%format otimes = "(\otimes)"
+%format `otimes` = "\mathbin{\otimes}"
+%format `odot` = "\mathbin{\odot}"
+%format odot = "(\odot)"
+%format `ocirc` = "\mathbin{\circledcirc}"
+%format ocirc = "(\circledcirc)"
+%format `ominus` = "\mathbin{\ominus}"
+%format ominus = "(\ominus)"
+
+%%format seq = "(\otimes)"
+%%format `seq` = "\mathbin{\otimes}"
+
+%%format comb = "(\oplus)"
+%%format `comb` = "\mathbin{\oplus}"
+
+%format x1
+%format x2
+%format x3
+%format x4
+%format k1
+%format k2
+%format m1
+%format m2
+%format m3
+%format n1
+%format n2
+%format e1
+%format e2
+%format f1
+%format f2
+%format cmd1
+%format cmd2
+
+%format epsilon = "\epsilon"
+%format eps = "\epsilon"
+%format delta = "\delta"
+%format `mem` = "\in"
+%format `notMem` = "\not\in"
+%format Me (eff) = M"_{" eff "}"
+%format `union` = "\mathbin{\cup}"
+%format `sse` = "\mathbin{\subseteq}"
+
+%format beta = "\beta"
+
+%format <=> = "\mathrel{\Leftrightarrow}"
+%format === = "\mathbin{=}"
+%format mapp = <$>
+
+%format *** = "\times"
+%format /=  = "\mathbin{\not\doubleequals}"
+
+%format `notelem` = "\not\in"
+%format succ = "\mathbf{1_{+}}"
+
+%format scanlp = "\Varid{scanl}_{+}"
+%format scanlMp = "\Varid{scanlM}_{+}"
+
+%format // = "\mathbin{/\!\!/}"
+
+\makeatother
+\EndFmtInput
+%endif
+%endif
