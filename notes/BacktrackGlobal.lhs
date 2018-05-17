@@ -20,6 +20,7 @@
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{definition}[theorem]{Definition}
 
+\newcommand{\delete}[1]{}
 
 %if False
 \begin{code}
@@ -316,6 +317,7 @@ When |p| holds, |guard p >> m = m|; when |p| does not hold, |guard p >> m = mzer
 \end{spec}
 \end{proof}
 
+\delete{
 \subsection*{Commutivity}
 
 Not sure what we may have here now.
@@ -371,6 +373,7 @@ It was shown that |putR s >> mzero = mzero >> putR s|.
    putR s >> (m1 `mplus` m2) {-"~~."-}
 \end{spec}
 \end{proof}
+} %delete
 
 \subsection*{About |scanl|}
 
@@ -393,7 +396,8 @@ putR fin >> return (scanlp oplus st xs) === scanlMR oplus st fin xs {-"~~."-}
 \end{spec}
 \end{theorem}
 \begin{proof}
-[{\bf Warning}: not sure this is true. Gotta check again.]
+%[{\bf Warning}: not sure this is true. Gotta check again.]
+% Should be true.
 
 Induction on |xs|.
 
@@ -422,20 +426,23 @@ Both sides reduce to |putR fin >> return []|.
 
 \paragraph{Safety Check in a |foldr|} We calculate:
 \begin{spec}
-   putR fin >> assert (all ok . scanlp oplus st xs)
-=  putR fin >> guard (all ok . scanlp oplus st xs) >> return xs
-=  putR fin >> return (scanlp oplus st xs) >>= \ys ->
+   putR fin >> assert (all ok . scanlp oplus st) xs
+=    {- definition of |assert| -}
+   putR fin >> guard (all ok . scanlp oplus st xs) >> return xs
+=    {- monad law -}
+   putR fin >> return (scanlp oplus st xs) >>= \ys ->
    guard (all ok ys) >> return xs
 =    {- Theorem \ref{thm:putR-scanlp-scanM} -}
    scanlMR oplus st fin xs >>= \ys ->
    guard (all ok ys) >> return xs
-=  putR st >> foldr otimes (putR fin >> return []) xs >>= \ys ->
+=    {- definition of |scanlMR| -}
+   putR st >> foldr otimes (putR fin >> return []) xs >>= \ys ->
    guard (all ok ys) >> return xs {-"~~."-}
 \end{spec}
+We now try to fuse the |foldr| and |guard| together.
 
 \begin{theorem}[|foldr|-|guard| fusion] \label{lma:foldr-guard-fusion}
-Assume that state and non-determinism commute.
-Let |otimes| be defined as that in |scanlM| for any given |oplus :: s -> a -> s|. We have that for all |ok :: s -> Bool| and |xs :: [a]|:
+Let |otimes| be defined as that in |scanlMR| for any given |oplus :: s -> a -> s|. We have that for all |ok :: s -> Bool| and |xs :: [a]|:
 \begin{spec}
   foldr otimes (putR fin >> return []) xs >>= \ys -> guard (all ok ys) >> return xs =
       foldr odot (putR fin >> return []) xs {-"~~,"-}
@@ -444,8 +451,34 @@ Let |otimes| be defined as that in |scanlM| for any given |oplus :: s -> a -> s|
                         ((x:) <$> m) {-"~~."-}
 \end{spec}
 \end{theorem}
-\begin{proof}
-Is this true?
+\begin{proof} Induction on |xs|.
+
+\noindent {\bf Case} |xs := []|. Both sides reduce to |putR fin >> return []|.
+
+\noindent {\bf Case} |xs := x:xs|. We abbreviate |putR fin >> return []| to |finR|.
+\begin{spec}
+   foldr otimes finR (x:xs) >>= \ys -> guard (all ok ys) >> return (x:xs)
+=    {- definition of |otimes| -}
+   (get >>= \st -> ((st `oplus` x):) <$> (putR (st `oplus` x) >> foldr otimes finR xs)) >>= \ys ->
+   guard (all ok ys) >> return (x:xs)
+=   {- monad laws -}
+   get >>= \st -> putR (st `oplus` x) >> foldr otimes finR xs >>= \ys ->
+   guard (all ok ((st `oplus` x) : ys)) >> return (x:xs)
+=   {- definition of |all|, and |guard (p && q) = guard p >> guard q| -}
+   get >>= \st -> putR (st `oplus` x) >> foldr otimes finR xs >>= \ys ->
+   guard (all ok ys) >> guard ok (st `oplus` x) >> return (x:xs)
+=   {- monad laws, induction -}
+   get >>= \st -> putR (st `oplus` x) >>
+   foldr odot finR xs >>= \xs' ->
+   guard ok (st `oplus` x) >> return (x:xs)
+\end{spec}
+
+\begin{code}
+scanlMR :: (MonadState s m) => (s -> a -> s) -> s -> s -> [a] -> m [s]
+scanlMR oplus st fin xs = putR st >> foldr otimes (putR fin >> return []) xs
+  where x `otimes` m =  get >>= \st -> ((st `oplus` x):) <$> (putR (st `oplus` x) >> m) {-"~~."-}
+\end{code}
+
 \end{proof}
 
 \begin{theorem} Let |ominus| be such that |(st `oplus` x) `ominus` x = st| for all |st| and |x|. We have
