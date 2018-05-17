@@ -781,6 +781,8 @@ ok (i,(x:us), (y:ds))  = x `notelem` us && y `notelem` ds {-"~~."-}
 \end{spec}
 \end{proof}
 
+\paragraph{|n|-Queens solved} We reason:
+
 
 %% APPENDIX:
 %% Auxiliary definitions used in this file.
