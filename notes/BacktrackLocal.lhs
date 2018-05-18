@@ -611,7 +611,7 @@ Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude th
 
 Theorem \ref{thm:hylo-fusion} is not specific to local state. The following lemma applies to any |n| that commutes with state, for example, if |n :: Me N a|.
 
-\begin{lemma} Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
+\begin{lemma}\label{lma:odot-fusable} Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
 \begin{spec}
   x `odot` m =  get >>= \st -> guard (p x st) >>
                 put (next x st) >> (res x <$> m) {-"~~."-}
@@ -647,7 +647,7 @@ We have |n >>= ((x `odot`) . k) === x `odot` (n >>= k)|, if |n| commutes with st
 \end{spec}
 \end{proof}
 
-\paragraph{Concolusion}
+\paragraph{Conclusion}
 To conclude our derivation, a problem formulated as |unfoldM p f >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
 \begin{spec}
 solve ::  {N, S s} `sse` eps => (b -> Bool) -> (b -> Me eps (a, b)) ->
@@ -682,6 +682,23 @@ corUnfoldAssertScanlLocal p f z ok oplus st =
     solve p f ok oplus st z {-"~~."-}
 \end{code}
 \end{corollary}
+\begin{proof} We reason:
+\begin{spec}
+   unfoldM p f z >>= assert (all ok . scanlp oplus st)
+=     {- Corollary \ref{thm:assert-scanlp-foldr} -}
+   unfoldM p f z >>= \xs -> protect (put st >> foldr odot (return []) xs)
+=     {- definition of |protect| -}
+   unfoldM p f z >>= \xs -> get >>= \s0 ->
+   put st >> foldr odot (return []) xs >>= \ys ->
+   put s0 >> return ys
+=     {- non-determinism commutes with state, definition of |protect| -}
+   protect (put st >> unfoldM p f z >=> foldr odot (return []))
+=     {- Theorem \ref{thm:hylo-fusion}, Lemma \ref{lma:odot-fusable} -}
+   protect (put st >> hyloM odot (return []) p f z)
+=     {- definition of |solve| -}
+   solve p f ok oplus st z {-"~~."-}
+\end{spec}
+\end{proof}
 
 \section{n-Queens}
 
@@ -782,7 +799,27 @@ ok (i,(x:us), (y:ds))  = x `notelem` us && y `notelem` ds {-"~~."-}
 \end{proof}
 
 \paragraph{|n|-Queens solved} We reason:
-
+\begin{spec}
+   queens n = perm [0..n-1] >>= assert safe
+=    {- calculation above -}
+   perm [0..n-1] >>= assert (safeAcc (0,[],[]))
+=    {- calculation above -}
+   perm [0..n-1] >>= assert (all ok . scanlp oplus (0,[],[]))
+=    {- definition of |perm| -}
+   unfold null select [0..n-1] >>= assert (all ok . scanlp oplus (0,[],[]))
+=    {- Corollary \ref{cor:unfold-assert-scanl-local} -}
+   solve null select ok oplus (0,[],[]) [0..n-1] {-"~~."-}
+\end{spec}
+Expanding the definitions, we get that |queens n = put (0,[],[]) >> queensBody  [0..n-1]|, where |queensBody| is given by:
+\begin{spec}
+queensBody :: {N, S (Int, [Int], [Int])} `sse` eps => [Int] -> Me eps [Int]
+queensBody []  =  return []
+queensBody xs  =  select xs >>= \(x,ys) ->
+                  get >>= \st -> guard (ok (st `oplus` x)) >>
+                  put (st `oplus` x) >> ((x:) <$> queensBody ys) {-"~~,"-}
+  where  (i,us,ds) `oplus` x = (1 + i, (i+x):us, (i-x):ds)
+         ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
+\end{spec}
 
 %% APPENDIX:
 %% Auxiliary definitions used in this file.

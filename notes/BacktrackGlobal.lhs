@@ -52,6 +52,8 @@ import GHC.Base (Alternative(..))
 
 \maketitle
 
+\section{Setting Up}
+
 \paragraph{Axioms}
 \begin{align}
   |side (put s) `mplus` side m2| &= |side (put s >> m2)| \mbox{~~,}
@@ -134,7 +136,7 @@ Note that we do not have |get >>= putR = return ()|. To see that, we calculate:
 \end{spec}
 Meanwhile, |return () >> put t = put t|. The two side are not equal when |s /= t|.
 
-\subsection*{State-Restoring}
+\section{State-Restoration}
 
 \begin{definition}
   |m| is {\em state-restoring} if |m = get >>= \s0 -> m `mplus` sidePut s0|.
@@ -145,7 +147,7 @@ Define:
 modifyR next prev =  modify next `mplus` side (modify prev)
 \end{spec}
 \begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
-  If |m| is state-stable, we have
+  If |m| is state-restoring, we have
   \begin{spec}
   get >>= \s -> putR (next s) >> m =
     modifyR next prev >> m {-"~~."-}
@@ -160,7 +162,7 @@ modifyR next prev =  modify next `mplus` side (modify prev)
 =  (get >>= \s -> put (next s) >> m) `mplus` sideMod prev
      {- by \eqref{eq:get-mplus} -}
 =  get >>= \s -> (put (next s) >> m) `mplus` sideMod prev
-=    {- |m| state-stable -}
+=    {- |m| state-restoring -}
    get >>= \s ->  (put (next s) >> get >>= \s' -> m `mplus` sidePut s') `mplus`
                   sideMod prev
 =    {- |put|-|get| -}
@@ -190,7 +192,7 @@ modifyR next prev =  modify next `mplus` side (modify prev)
 \item |m >>= f| is state-restoring if |m| is.
 \end{enumerate}
 \end{lemma}
-\begin{proof}
+\begin{proof} In turns:
 \begin{enumerate}
   %
 \item |mzero| is state-restoring.
@@ -248,9 +250,9 @@ When |p| holds, |guard p >> m = m|; when |p| does not hold, |guard p >> m = mzer
 \end{enumerate}
 \end{proof}
 
-\subsection*{Commutivity with |guard|}
+\section{Commutivity with |guard|}
 
-|putR| and |get| commute with |guard|. Not sure whether we will need them, but we prove them anyway
+|putR| and |get| commute with |guard|, which will be useful later.
 \begin{lemma} |putR s >> guard p = guard p >> putR s|.
 \end{lemma}
 \begin{proof} We reason:
@@ -375,7 +377,7 @@ It was shown that |putR s >> mzero = mzero >> putR s|.
 \end{proof}
 } %delete
 
-\subsection*{About |scanl|}
+\section{Properties about |scanl|}
 
 \paragraph{Scan} Recall the definitions:
 \begin{code}
@@ -497,9 +499,26 @@ putR fin >> assert (all ok . scanlp oplus st) xs =
 \end{spec}
 \end{corollary}
 
-\paragraph{Hylo-Fusion}
+\section{Hylo-Fusion}
 
-\paragraph{Deriving a Backtracking Algorithm}
+To do...
 
+\section{Deriving a Backtracking Algorithm}
+
+Consider problems specified in the form
+\begin{spec}
+  unfoldM p f >=> assert (all ok . scanlp oplus st) {-"~~."-}
+\end{spec}
+
+Calculate.
+\begin{spec}
+    unfoldM p f z >>= \xs -> putR fin >> assert (all ok . scanlp oplus st) xs
+=     {- Corollary \ref{thm:putR-assert-scanlp-foldr} -}
+    unfoldM p f z >>= \xs -> putR st >> foldr ocirc finR xs
+=     {- ??? -}
+    putR st >> unfoldM p f z >>= foldr ocirc finR
+=     {- ??? -}
+    putR st >> hyloM ...?
+\end{spec}
 
 \end{document}
