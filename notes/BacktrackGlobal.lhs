@@ -319,64 +319,6 @@ When |p| holds, |guard p >> m = m|; when |p| does not hold, |guard p >> m = mzer
 \end{spec}
 \end{proof}
 
-\delete{
-\subsection*{Commutivity}
-
-Not sure what we may have here now.
-\begin{theorem}
-  |putR| commutes with non-determinism. That is,
-  |m >>= \x -> putR s >> return x = putR s >> m|.
-\end{theorem}
-\begin{proof}
-[{\bf Warning}: This is not right. It may be true if all contexts uses only |putR| and not |put|. Or under some other constraints.]
-
-Induction on |m|.
-
-\noindent{\bf Case} |m := mzero|.
-It was shown that |putR s >> mzero = mzero >> putR s|.
-
-\noindent{\bf Case} |m := return x|. Immediate.
-
-\noindent{\bf Case} |m := m1 `mplus` m2|. If |m1 = m2 = mzero| we fall back to a base case. If either |m1| or |m2| is |mzero| we can use induction. Assume that neither |m1| nor |m2| is |mzero|:
-\begin{spec}
-   (m1 `mplus` m2) >>= \x -> putR s >> return x
-=    {- left-distributivity -}
-   (m1 >>= \x -> putR s >> return x) `mplus` (m2 >>= \x -> putR s >> return x)
-=    {- induction -}
-   (putR s >> m1) `mplus` (putR s >> m2)
-=    {- definition of |putR| -}
-   (get >>= \s0 -> (put s >> m1) `mplus` putSide s0) `mplus`
-   (get >>= \s0 -> (put s >> m2) `mplus` putSide s0)
-=    {- by \eqref{eq:get-mplus-side-distr} -}
-   get >>= \s0 -> (put s >> m1) `mplus` (put s >> m2) `mplus` putSide s0
-=    {- ?? -}
-   get >>= \s0 -> (put s >> (m1 `mplus` m2)) `mplus` putSide s0
-=    {- definition of |putR| -}
-   putR s >> (m1 `mplus` m2)
-\end{spec}
-\begin{spec}
-   (m1 `mplus` m2) >>= \x -> putR s >> return x
-=    {- left-distributivity -}
-   (m1 >>= \x -> putR s >> return x) `mplus` (m2 >>= \x -> putR s >> return x)
-=    {- definition of |putR| -}
-   (m1 >>= \x -> get >>= \s0 -> (put s >> return x) `mplus` sidePut s0) `mplus`
-   (m2 >>= \x -> get >>= \s0 -> (put s >> return x) `mplus` sidePut s0)
-=    {- |get| and non-determinism commute -}
-   (get >>= \s0 -> m1 >>= (\x -> (put s >> return x) `mplus` sidePut s0)) `mplus`
-   (get >>= \s0 -> m2 >>= (\x -> (put s >> return x) `mplus` sidePut s0))
-=    {- Lemma \ref{lma:sidePut-distr} -}
-   (get >>= \s0 -> m1 `mplus` sidePut s0) `mplus`
-   (get >>= \s0 -> m2 `mplus` sidePut s0)
-=    {- by \eqref{eq:get-mplus-side-distr} -}
-   get >>= \s0 -> m1 `mplus` m2 `mplus` sidePut s0
-=    {- by \eqref{eq:put-ret-side} -}
-   get >>= \s0 -> put s >> (m1 `mplus` m2) `mplus` sidePut s0
-=    {- definition -}
-   putR s >> (m1 `mplus` m2) {-"~~."-}
-\end{spec}
-\end{proof}
-} %delete
-
 \section{Properties about |scanl|}
 
 \paragraph{Scan} Recall the definitions:
@@ -501,7 +443,17 @@ putR fin >> assert (all ok . scanlp oplus st) xs =
 
 \section{Hylo-Fusion}
 
-To do...
+The following hylo-fusion theorem does not depend on properties of particular effects and is still valid.
+\begin{theorem} \label{thm:hylo-fusion}
+For all |eps|, |otimes :: a -> Me eps c -> Me eps c|, |m :: Me eps c|, |p :: b -> Bool|, |f :: b -> Me eps (a,c)|, we have that |unfoldM p f >=> foldr otimes m = hyloM otimes m p f|, defined by:
+\begin{code}
+hyloM otimes m p f y
+  | p y        = m
+  | otherwise  = f y >>= \(x,z) ->  x `otimes` hyloM otimes m p f z {-"~~,"-}
+\end{code}
+if the relation |(not . p)? . snd . (=<<) . f| is well-founded, and
+|unfoldM p f z >>= ((x `otimes`) . k) === x `otimes` (unfoldM p f z >>= k)| for all |k|.
+\end{theorem}
 
 \section{Deriving a Backtracking Algorithm}
 
@@ -512,13 +464,228 @@ Consider problems specified in the form
 
 Calculate.
 \begin{spec}
+    putR fin >> unfoldM p f z >>= assert (all ok . scanlp oplus st)
+=     {- {\bf wish}: |putR| commutes with non-determinism -}
     unfoldM p f z >>= \xs -> putR fin >> assert (all ok . scanlp oplus st) xs
 =     {- Corollary \ref{thm:putR-assert-scanlp-foldr} -}
     unfoldM p f z >>= \xs -> putR st >> foldr ocirc finR xs
-=     {- ??? -}
+=     {- {\bf wish}: |putR| commutes with non-determinism -}
     putR st >> unfoldM p f z >>= foldr ocirc finR
-=     {- ??? -}
-    putR st >> hyloM ...?
+=     {- {\bf wish}: hylo-fusion is possible -}
+    putR st >> hyloM ocirc finR p f z {-"~~."-}
 \end{spec}
 
+\section{Properties We Wish to Have...}
+
+In the previous section we listed two wishes: that |putR| commutes with non-determinism, and hylo-fusion is allowed. We start with discussing the first:
+
+\begin{theorem} (Not sure)
+  |putR| commutes with non-determinism. That is,
+  |m >>= \x -> putR s >> return x = putR s >> m|.
+\end{theorem}
+% \noindent{\bf Disproof}: consider the context |put t >>[_] >> get|.
+% \begin{spec}
+%    put t >> (m >>= \x -> putR s >> return x) >> get
+% =  put t >> m >>= \x -> putR s >> return x >> get
+% =  put t >> m >>= \x -> get >>= \s0 ->
+%    (put s >> return x >> get) `mplus` sidePut s0
+% =  put t >> m >>= \x -> get >>= \s0 ->
+%    (put s >> return s) `mplus` sidePut s0
+% =     {- ??? -}
+%    put t >> m >>= \x ->
+%    (put s >> return s) `mplus` sidePut t
+% \end{spec}
+% \begin{spec}
+%    put t >> (putR s >> m) >> get
+% =  put t >> putR s >> m >> get
+% =  put t >> get >>= \s0 -> (put s >> m >> get) `mplus` put s0
+% =  (put s >> m >> get) `mplus` sidePut t
+% \end{spec}
+
+\delete{
+\begin{proof}
+({\bf Warning}: This is not right. It may be true if all contexts uses only |putR| and not |put|. Or under some other constraints.)
+
+Induction on |m|.
+
+\noindent{\bf Case} |m := mzero|. We calculate
+\begin{spec}
+   putR s >> mzero
+=  get >>= \s0 -> (putR >> mzero) `mplus` sidePut s0
+=  get >>= \s0 -> mzero `mplus` sidePut s0
+=  get >>= \s0 -> sidePut s0
+=  get >>= \s0 -> put s0 >> mzero
+=  return () >> mzero
+=  mzero
+=  mzero >>= \x -> putR s >> return x {-"~~."-}
+\end{spec}
+
+\noindent{\bf Case} |m := return x|. Immediate:
+\begin{spec}
+   return x >>= \x -> putR s >> return x
+=    {- monad law -}
+   putR s >> return x {-"~~."-}
+\end{spec}
+
+\noindent{\bf Case} |m := m1 `mplus` m2|. If |m1 = m2 = mzero| we fall back to a base case. If either |m1| or |m2| is |mzero| we can use induction. Assume that neither |m1| nor |m2| is |mzero|:
+\begin{spec}
+   (m1 `mplus` m2) >>= \x -> putR s >> return x
+=    {- left-distributivity -}
+   (m1 >>= \x -> putR s >> return x) `mplus` (m2 >>= \x -> putR s >> return x)
+=    {- induction -}
+   (putR s >> m1) `mplus` (putR s >> m2)
+=    {- definition of |putR| -}
+   (get >>= \s0 -> (put s >> m1) `mplus` putSide s0) `mplus`
+   (get >>= \s0 -> (put s >> m2) `mplus` putSide s0)
+=    {- by \eqref{eq:get-mplus-side-distr}. Is \eqref{eq:get-mplus-side-distr} true? -}
+   get >>= \s0 -> (put s >> m1) `mplus` (put s >> m2) `mplus` putSide s0
+=    {- ?? Is this true? -}
+   get >>= \s0 -> (put s >> (m1 `mplus` m2)) `mplus` putSide s0
+=    {- definition of |putR| -}
+   putR s >> (m1 `mplus` m2)
+\end{spec}
+% \begin{spec}
+%    (m1 `mplus` m2) >>= \x -> putR s >> return x
+% =    {- left-distributivity -}
+%    (m1 >>= \x -> putR s >> return x) `mplus` (m2 >>= \x -> putR s >> return x)
+% =    {- definition of |putR| -}
+%    (m1 >>= \x -> get >>= \s0 -> (put s >> return x) `mplus` sidePut s0) `mplus`
+%    (m2 >>= \x -> get >>= \s0 -> (put s >> return x) `mplus` sidePut s0)
+% =    {- |get| and non-determinism commute -}
+%    (get >>= \s0 -> m1 >>= (\x -> (put s >> return x) `mplus` sidePut s0)) `mplus`
+%    (get >>= \s0 -> m2 >>= (\x -> (put s >> return x) `mplus` sidePut s0))
+% =    {- Lemma \ref{lma:sidePut-distr} -}
+%    (get >>= \s0 -> m1 `mplus` sidePut s0) `mplus`
+%    (get >>= \s0 -> m2 `mplus` sidePut s0)
+% =    {- by \eqref{eq:get-mplus-side-distr} -}
+%    get >>= \s0 -> m1 `mplus` m2 `mplus` sidePut s0
+% =    {- by \eqref{eq:put-ret-side} -}
+%    get >>= \s0 -> put s >> (m1 `mplus` m2) `mplus` sidePut s0
+% =    {- definition -}
+%    putR s >> (m1 `mplus` m2) {-"~~."-}
+% \end{spec}
+\end{proof}
+}% delete
+
+% \begin{lemma} |
+%
+% \end{lemma}
+
+As for the second wish, to apply Theorem \ref{thm:hylo-fusion}, we need
+|m >>= ((x `ocirc`) . k) === x `ocirc` (m >>= k)| where |m = unfoldM p f z|. Since it is often the case that the only effect in |unfoldM p f| is non-detemrinism, we prove the following lemma:
+\begin{lemma}
+|m >>= ((x `ocirc`) . k) === x `ocirc` (m >>= k)| for |m| that is only non-deterministic.
+\end{lemma}
+\begin{proof} Recall definition of |ocirc|:
+\begin{spec}
+x `ocirc` m =  modifyR (`oplus` x) (`ominus` x) >>
+               get >>= (guard . ok) >>
+               ((x:) <$> m) {-"~~."-}
+\end{spec}
+We reason:
+\begin{spec}
+   m >>= ((x `ocirc`) . k)
+=    {- definition of |`ocirc`|, definition of |modifyR| -}
+   m >>= \y ->  (modify (`oplus` x) `mplus` sideMod (`ominus` x)) >>
+                get >>= (guard . ok) >> ((x:) <$> k y)
+=    {- left distributivity -}
+   m >>= \y ->  (modify (`oplus` x) >> get >>= (guard . ok) >> ((x:) <$> k y)) `mplus`
+                sideMod (`ominus` x)
+=    {- Lemma \ref{lma:nondet-mod-distr} -}
+   (modify (`oplus` x) >> get >>= (guard . ok) >> ((x:) <$> (m >>= k)) `mplus`
+   sideMod (`ominus` x)
+=    {- definition of |modifyR|, left distributivity -}
+   modifyR (`oplus` x) (`ominus` x) >>
+   get >>= (guard . ok) >> ((x:) <$> (m >>= k))
+=  x `ocirc` (m >>= k) {-"~~."-}
+\end{spec}
+\end{proof}
+
+\begin{lemma}\label{lma:nondet-mod-distr}
+For |m| that is only non-deterministic, we have
+\begin{spec}
+ m >>= (\y -> modifyR next prev >> f y) =
+     modifyR next prev >> m >> =f {-"~~."-}
+\end{spec}
+\end{lemma}
+\begin{proof} Expanding the definitions, we need to prove:
+\begin{spec}
+    m >>= (\y -> (modify next >> f y) `mplus` sideMod prev) =
+      (modify next >> m >>= f) `mplus` sideMod prev {-"~~."-}
+\end{spec}
+Induction on |m|.
+
+\noindent{\bf Case} |m := mzero|.
+\begin{spec}
+   (modify next >> mzero >>= f) `mplus` sideMod prev
+=    {- definition of |side|, left zero -}
+   sideMod next `mplus` sideMod prev
+=  return () >> mzero
+=  mzero
+=  mzero >>= (\y -> (modify next >> f y) `mplus` sideMod prev) {-"~~."-}
+\end{spec}
+
+\noindent{\bf Case} |m := return x|.
+\begin{spec}
+   return x >>= (\y -> (modify next >> f y) `mplus` sideMod prev)
+=  (modify next >> f x) `mplus` sideMod prev
+=  (modify next >> return x >>= f) `mplus` sideMod prev {-"~~."-}
+\end{spec}
+
+\noindent{\bf Case} |m := m1 `mplus` m2|.
+\begin{spec}
+   (m1 `mplus` m2) >>= (\y -> (modify next >> f y) `mplus` sideMod prev)
+=    {- left distributivity -}
+   (m1 >>= (\y -> (modify next >> f y) `mplus` sideMod prev)) `mplus`
+   (m2 >>= (\y -> (modify next >> f y) `mplus` sideMod prev))
+=    {- induction, |mplus| associative -}
+   (modify next >> m1 >>= f) `mplus` sideMod prev `mplus`
+   (modify next >> m2 >>= f) `mplus` sideMod prev
+=    {- Lemma \ref{lma:next-prev-cancel} -}
+   (modify next >> ((m1 >>=f) `mplus` (m2 >>= f))) `mplus` sideMod prev
+=    {- left distributivity -}
+   (modify next >> (m1 `mplus` m2) >>= f) `mplus` sideMod prev {-"~~."-}
+\end{spec}
+\end{proof}
+
+\begin{lemma}\label{lma:next-prev-cancel} If |m1| is state-restoring and |prev . next = id|, we have:
+\begin{spec}
+  (modify next >> m1) `mplus` sideMod prev `mplus` (modify next >> m2) =
+    modify next >> (m1 `mplus` m2) {-"~~."-}
+\end{spec}
+\end{lemma}
+\begin{proof} Expanding the first term:
+\begin{spec}
+   modify next >> m1
+=    {- |m1| state-restoring -}
+   modify next >> get >>= (\s -> m1 `mplus` sidePut s)
+=    {- definition of |modify| -}
+   get >>= (\s -> put (next s) >>= get >>= \s -> m1 `mplus` sidePut s)
+=    {- |put|-|get| -}
+   get >>= (\s -> put (next s) >> (m1 `mplus` sidePut (next s))) {-"~~."-}
+\end{spec}
+Back to the LHS:
+\begin{spec}
+   (modify next >> m1) `mplus` sideMod prev `mplus` (modify next >> m2)
+=  (get >>= (\s -> put (next s) >> (m1 `mplus` sidePut (next s)))) `mplus`
+     sideMod prev `mplus` (modify next >> m2)
+=      {- by \eqref{eq:get-mplus} -}
+   get >>= (\s ->  (put (next s) >> (m1 `mplus` sidePut (next s))) `mplus`
+                   sideMod prev `mplus` (modify next >> m2))
+=      {- by \eqref{eq:put-mplus} -}
+   get >>= (\s -> put (next s) >>
+              (m1 `mplus` sidePut (next s) `mplus` sideMod prev `mplus` (modify next >> m2)))
+=      {- by \eqref{eq:side-side}, |prev . next = id| -}
+   get >>= (\s -> put (next s) >> (m1 `mplus` sidePut s `mplus` (modify next >> m2)))
+=      {- hmm... ??? -}
+   get >>= (\s -> put (next s) >> (m1 `mplus` sidePut (next s) `mplus` m2)))
+=      {- by \eqref{eq:get-mplus} and monad laws -}
+   get >>= \s -> put (next s) >>
+     ((get >>= \s -> m1 `mplus` sidePut s) `mplus` m2)
+=      {- |m1| state-restoring -}
+   get >>= \s -> put (next s) >> (m1 `mplus` m2)
+=      {- definition of |modify| -}
+   modify next >> (m1 `mplus` m2) {-"~~."-}
+\end{spec}
+\end{proof}
 \end{document}
