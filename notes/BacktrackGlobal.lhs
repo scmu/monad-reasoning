@@ -48,19 +48,84 @@ import GHC.Base (Alternative(..))
 \author[1]{Shin-Cheng Mu}
 \affil[1]{Academia Sinica, Taiwan}
 
-\date{March 2018}
+\date{July 2018}
 
 \maketitle
 
+\section{The Task}
+
+We consider problems specified in the form
+\begin{spec}
+  unfoldM p f >=> assert (all ok . scanlp oplus st) {-"~~,"-}
+\end{spec}
+where the unfolding phase, using non-determinism but no other effects, generates all potential answers to be filtered by |assert|. The function
+|scanlp| is a slight variant to the usual |scanl|:
+\begin{code}
+scanlp :: (b -> a -> b) -> b -> [a] -> [b]
+scanlp oplus st []      = []
+scanlp oplus st (x:xs)  = (st `oplus` x) : scanlp oplus (st `oplus` x) xs {-"~~."-}
+\end{code}
+We hope to derive a backtracking algorithm that uses non-determinism and a shared global state.
+
+The derived algorithm uses state-restoring commands |putR|, |modifyR|, etc.
+For technical reason we prefix the specification above with a |putR| that determines the final state of the computation.
+The outline of the calculation is shown below.
+We are confident with some of the steps, while some steps needs verification.
+\begin{spec}
+    putR fin >> unfoldM p f z >>= assert (all ok . scanlp oplus st)
+=     {- {\bf wish}: |putR| commutes with non-determinism -}
+    unfoldM p f z >>= \xs -> putR fin >> assert (all ok . scanlp oplus st) xs
+=     {- Corollary \ref{thm:putR-assert-scanlp-foldr} -}
+    unfoldM p f z >>= \xs -> putR st >> foldr ocirc finR xs
+=     {- {\bf wish}: |putR| commutes with non-determinism -}
+    putR st >> unfoldM p f z >>= foldr ocirc finR
+=     {- {\bf wish}: hylo-fusion is possible -}
+    putR st >> hyloM ocirc finR p f z {-"~~,"-}
+\end{spec}
+where |finR| is an abbreviation of |putR fin >> return []|, and |ocirc|
+is defined by:
+\begin{spec}
+x `ocirc` m =  modifyR (`oplus` x) (`ominus` x) >>
+               get >>= (guard . ok) >>
+               ((x:) <$> m) {-"~~."-}
+\end{spec}
+The monadic hylomorphism is defined by:
+\begin{code}
+hyloM otimes m p f y
+  | p y        = m
+  | otherwise  = f y >>= \(x,z) ->  x `otimes` hyloM otimes m p f z {-"~~."-}
+\end{code}
+
+As we can see, the derivation tries to move |putR fin| inwards,
+such that Corollary~\ref{thm:putR-assert-scanlp-foldr} can be
+applied. The Corollary says that the |assert (....)|, a filter
+using a pure predicate, can be performed by a |foldr| that uses
+state and non-determinism. Development of this corollary is the
+part I feel relatively confident with, and will be discussed in
+Section~\ref{sec:assert-foldr}.
+
+I am not yet sure we can move |putR fin| past the |unfoldM|. But
+that is perhaps not essential to the derivation. Another thing
+we need to make sure is that the precondition for the hylo-fusion
+holds. We will discuss these in Section~.
+
 \section{Setting Up}
 
-\paragraph{Axioms}
+Before showing and proving Corollary~\ref{thm:putR-assert-scanlp-foldr},
+we define some more concepts we will need and prove some essential properties.
+Let |side m = m >> mzero|.
+Following usual convention, $\lambda$ binding extends to the right as far as possible.
+Thus |m >>= \x -> k1 `mplus` k2| should be parsed as |m >>= (\x -> (k1 `mplus` k2))|.
+We always use parenthesis when we mix |mplus| and |(>>=)| (or |(>>)|),
+to be clear.
+
+\paragraph{Axioms} We wish to have:
 \begin{align}
   |side (put s) `mplus` side m2| &= |side (put s >> m2)| \mbox{~~,}
     \label{eq:side-side} \\
   |put s >> (m1 `mplus` m2)| &= |(put s >> m1) `mplus` m2| \mbox{~~,}
     \label{eq:put-mplus}\\
-  |get >>= (\x -> f x `mplus` m)| &=~ |(get >>= f) `mplus` m| \mbox{~~, |x| not free in |m|.}
+  |get >>= \x -> f x `mplus` m| &=~ |(get >>= f) `mplus` m| \mbox{~~, |x| not free in |m|.}
     \label{eq:get-mplus}\\
 %  |(put s >> return x) `mplus` m| &= |(put s >> return x) `mplus` (put s >> m)| ~~\mbox{,}
 %        \label{eq:put-ret-side}\\
@@ -68,7 +133,7 @@ import GHC.Base (Alternative(..))
 %    \label{eq:side-nd-mplus}\\
   |get >>= \x -> f1 x `mplus` f2 x| &=~ |(get >>= f1) `mplus` (get >>= f2)| \mbox{~~, if |f1 x :: Me N a|}
       \label{eq:get-mplus-distr}\\
-  |get >>= \x -> f1 x `mplus` f2 x| &=~ |(get >>= (\x -> f1 x `mplus` side (put x))) `mplus` (get >>= f2)| \mbox{~~.}
+  |get >>= \x -> f1 x `mplus` f2 x| &=~ |(get >>= \x -> f1 x `mplus` side (put x)) `mplus` (get >>= f2)| \mbox{~~.}
         \label{eq:get-mplus-side-distr}
 \end{align}
 
@@ -80,10 +145,11 @@ By \eqref{eq:side-side} we have:
 
 With \eqref{eq:get-mplus-distr} we can prove that |get| and non-determinism commute.
 
-\paragraph{Restoring Put} Define
+\subsection{State-Restoring Put}
+
+Define {\em state-restoring put} by:
 \begin{code}
-side m = m >> mzero {-"~~,"-}
-putR s = get >>= \s0 -> (put s `mplus` side (put s0)) {-"~~."-}
+putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{code}
 
 \paragraph{Basic Laws}
@@ -96,22 +162,23 @@ The following laws are still true:
 \begin{proof} We reason:
 \begin{spec}
    putR s >>= get
-=  (get >>= \s0 -> (put s `mplus` side (put s0))) >>= get
-=    {- left distributivity -}
+=  (get >>= \s0 -> put s `mplus` side (put s0)) >>= get
+=    {- left distributivity, |mzero >>= k = mzero| -}
    get >>= \s0 -> (put s >>= get) `mplus` side (put s0)
 =    {- |put|-|get| -}
    get >>= \s0 -> (put s >>= return s) `mplus` side (put s0)
-=  (get >>= \s0 -> (put s `mplus` side (put s0))) >>= return s
+=    {- left distributivity, |mzero >>= k = mzero| -}
+   (get >>= \s0 -> put s `mplus` side (put s0)) >>= return s
 =  putR s >>= return s {-"~~."-}
 \end{spec}
 
 \begin{spec}
    putR s >> putR s'
-=  (get >>= \s0 -> (put s `mplus` side (put s0))) >>
-   (get >>= \s0 -> (put s' `mplus` side (put s0)))
+=  (get >>= \s0 -> put s `mplus` side (put s0)) >>
+   (get >>= \s0 -> put s' `mplus` side (put s0))
 =    {- left distributivity -}
    get >>= \s0 ->
-     (put s >> get >>= \s0 -> (put s' `mplus` side (put s0))) `mplus` side (put s0)
+     (put s >> get >>= \s0 -> put s' `mplus` side (put s0)) `mplus` side (put s0)
 =    {- |put|-|get| -}
    get >>= \s0 ->
      (put s >> (put s' `mplus` side (put s))) `mplus` side (put s0)
@@ -123,10 +190,11 @@ The following laws are still true:
 =  putR s' {-"~~."-}
 \end{spec}
 \end{proof}
-Note that we do not have |get >>= putR = return ()|. To see that, we calculate:
+Note that we do not have |get >>= putR = return ()| --- they can be
+told apart by contexts such as |_ >> put t|. To see that, we calculate:
 \begin{spec}
    (get >>= putR) >> put t
-=  (get >>= (\s -> get >>= \s0 -> put s `mplus` side (put s0))) >> put t
+=  (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
 =   {- |get|-|get| -}
    (get >>= \s -> put s `mplus` side (put s)) >> put t
 =   {- monad laws, left-distributivity -}
@@ -136,57 +204,18 @@ Note that we do not have |get >>= putR = return ()|. To see that, we calculate:
 \end{spec}
 Meanwhile, |return () >> put t = put t|. The two side are not equal when |s /= t|.
 
-\section{State-Restoration}
+\subsection{State-Restoration}
 
 \begin{definition}
   |m| is {\em state-restoring} if |m = get >>= \s0 -> m `mplus` sidePut s0|.
 \end{definition}
 
-Define:
-\begin{spec}
-modifyR next prev =  modify next `mplus` side (modify prev)
-\end{spec}
-\begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
-  If |m| is state-restoring, we have
-  \begin{spec}
-  get >>= \s -> putR (next s) >> m =
-    modifyR next prev >> m {-"~~."-}
-  \end{spec}
-\end{lemma}
-\begin{proof} We reason:
-\begin{spec}
-   modifyR next prev >> m
-=  (modify next `mplus` sideMod prev) >> m
-=    {- left distributivity -}
-   (modify next >> m) `mplus` sideMod prev
-=  (get >>= \s -> put (next s) >> m) `mplus` sideMod prev
-     {- by \eqref{eq:get-mplus} -}
-=  get >>= \s -> (put (next s) >> m) `mplus` sideMod prev
-=    {- |m| state-restoring -}
-   get >>= \s ->  (put (next s) >> get >>= \s' -> m `mplus` sidePut s') `mplus`
-                  sideMod prev
-=    {- |put|-|get| -}
-   get >>= \s ->  (put (next s) >> (m `mplus` sidePut (next s))) `mplus`
-                  sideMod prev
-=    {- by \eqref{eq:put-mplus} -}
-   get >>= \s -> put (next s) >>
-                 (m `mplus` sidePut (next s)) `mplus` sideMod prev)
-=    {- by \eqref{eq:side-side} -}
-   get >>= \s -> put (next s) >>
-                 (m `mplus` side (put (next s) >> modify prev))
-=  get >>= \s -> put (next s) >> (m `mplus` sidePut s)
-=    {- by \eqref{eq:put-mplus} -}
-   get >>= \s -> (put (next s) >> m) `mplus` sidePut s
-=    {- |get|-|get|, definition of |putR| -}
-   get >>= \s -> putR (next s) >> m {-"~~."-}
-\end{spec}
-\end{proof}
-
-\paragraph{Compositional State-Restoration}
+\paragraph{Compositional State-Restoration} The following lemma allows us to
+construct state-restoring programs compositionally.
 \begin{lemma} We have the following properties:
 \begin{enumerate}
 \item |mzero| is state-restoring;
-\item |putR s >> m| is state-restoring;
+\item |putR s >> m| is state-restoring for all |m|;
 \item if |m| is state-restoring, so is |guard p >> m|;
 \item if |f x| is state-restoring for all |x|, so is |get >>= f|;
 \item |m >>= f| is state-restoring if |m| is.
@@ -216,7 +245,7 @@ modifyR next prev =  modify next `mplus` side (modify prev)
    get >>= \s0 -> (put s >> m) `mplus` sidePut s0
 =    {- left-distributivity -}
    get >>= \s0 -> (put s `mplus` sidePut s0) >> m
-=    {- monad law, definition of |putR| -}
+=    {- associativity of |(>>=)|, definition of |putR| -}
    putR s >> m {-"~~."-}
 \end{spec}
 %
@@ -250,16 +279,61 @@ When |p| holds, |guard p >> m = m|; when |p| does not hold, |guard p >> m = mzer
 \end{enumerate}
 \end{proof}
 
-\section{Commutivity with |guard|}
+\paragraph{Get/Put and Modify} One reason we introduce the concept
+of state-restoration is to clarify when |get| and |put| can be replaced by
+|modify|.
+Recall that |modify f = get >>= (put . f)|.
+Abbreviating |side (modify f)| to |sideMod f|, define:
+\begin{spec}
+modifyR next prev =  modify next `mplus` sideMod prev {-"~~."-}
+\end{spec}
+\begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
+  If |m| is state-restoring, we have
+  \begin{spec}
+  get >>= \s -> putR (next s) >> m =
+    modifyR next prev >> m {-"~~."-}
+  \end{spec}
+\end{lemma}
+\begin{proof} We reason:
+\begin{spec}
+   modifyR next prev >> m
+=  (modify next `mplus` sideMod prev) >> m
+=    {- left distributivity -}
+   (modify next >> m) `mplus` sideMod prev
+=    {- definition of |modify| -}
+   (get >>= \s -> put (next s) >> m) `mplus` sideMod prev
+     {- by \eqref{eq:get-mplus} -}
+=  get >>= \s -> (put (next s) >> m) `mplus` sideMod prev
+=    {- |m| state-restoring -}
+   get >>= \s ->  (put (next s) >> get >>= \s' -> m `mplus` sidePut s') `mplus`
+                  sideMod prev
+=    {- |put|-|get| -}
+   get >>= \s ->  (put (next s) >> (m `mplus` sidePut (next s))) `mplus`
+                  sideMod prev
+=    {- by \eqref{eq:put-mplus} -}
+   get >>= \s -> put (next s) >>
+                 (m `mplus` sidePut (next s)) `mplus` sideMod prev)
+=    {- by \eqref{eq:side-side} -}
+   get >>= \s -> put (next s) >>
+                 (m `mplus` side (put (next s) >> modify prev))
+=    {- since |prev . next = id| -}
+   get >>= \s -> put (next s) >> (m `mplus` sidePut s)
+=    {- by \eqref{eq:put-mplus} -}
+   get >>= \s -> (put (next s) >> m) `mplus` sidePut s
+=    {- left-distributivity, definition of |putR| -}
+   get >>= \s -> putR (next s) >> m {-"~~."-}
+\end{spec}
+\end{proof}
 
-|putR| and |get| commute with |guard|, which will be useful later.
+\subsection{Commutivity with |guard|}
+
+We have that |putR| and |get| commute with |guard|, which will be useful later.
 \begin{lemma} |putR s >> guard p = guard p >> putR s|.
 \end{lemma}
 \begin{proof} We reason:
 \begin{spec}
      putR s >> guard p
-===  get >>= \s0 ->
-     (put s `mplus` side (put s0)) >> guard p
+===  (get >>= \s0 -> put s `mplus` side (put s0)) >> guard p
 ===    {- left distributivity, |side m >> k = side m| -}
      get >>= \s0 ->
      (put s >> guard p) `mplus` side (put s0)
@@ -267,26 +341,23 @@ When |p| holds, |guard p >> m = m|; when |p| does not hold, |guard p >> m = mzer
 
 \noindent{\bf Case} |not p|, thus |guard p = mzero|:
 \begin{spec}
-     get >>= \s0 ->
-     (put s >> guard p) `mplus` side (put s0)
+     get >>= \s0 -> (put s >> guard p) `mplus` side (put s0)
 ===    {- since |guard p = mzero| -}
-     get >>= \s0 ->
-     (put s >> mzero) `mplus` side (put s0)
+     get >>= \s0 -> (put s >> mzero) `mplus` side (put s0)
 ===    {- by \eqref{eq:side-put-put} -}
      get >>= \s0 -> side (put s0)
 ===  get >>= \s0 -> put s0 >> mzero
-===  mzero
+===    {- |get|-|put|, monad law -}
+     mzero
 ===  mzero >> putR s
 ===  guard p >> putR s {-"~~."-}
 \end{spec}
 
 \noindent{\bf Case} |p|, thus |guard p = return ()|:
 \begin{spec}
-     get >>= \s0 ->
-     (put s >> guard p) `mplus` side (put s0)
+     get >>= \s0 -> (put s >> guard p) `mplus` side (put s0)
 ===    {- since |guard p = return ()|, monad laws -}
-     get >>= \s0 ->
-     put s `mplus` side (put s0)
+     get >>= \s0 -> put s `mplus` side (put s0)
 ===    {- monad laws -}
      return () >> get >>= \s0 ->
      put s `mplus` side (put s0)
@@ -319,20 +390,22 @@ When |p| holds, |guard p >> m = m|; when |p| does not hold, |guard p >> m = mzer
 \end{spec}
 \end{proof}
 
-\section{Properties about |scanl|}
+\section{Safety Check in a |foldr|}
+\label{sec:assert-foldr}
 
-\paragraph{Scan} Recall the definitions:
-\begin{code}
-scanlp :: (b -> a -> b) -> b -> [a] -> [b]
-scanlp oplus st []      = []
-scanlp oplus st (x:xs)  = (st `oplus` x) : scanlp oplus (st `oplus` x) xs {-"~~,"-}
-\end{code}
+In this section we develop and prove Corollary~\ref{thm:putR-assert-scanlp-foldr},
+whose goal is to compute |assert (all ok . scanlp oplus st) xs| in a |foldr|,
+such that it can be fused with the unfolding phase in the next step.
+
+\subsection{Properties about |scanl|}
+
+A monadic |scanl| that uses the state effect to store computed state can be defined by:
 \begin{code}
 scanlMR :: (MonadState s m) => (s -> a -> s) -> s -> s -> [a] -> m [s]
 scanlMR oplus st fin xs = putR st >> foldr otimes (putR fin >> return []) xs
   where x `otimes` m =  get >>= \st -> ((st `oplus` x):) <$> (putR (st `oplus` x) >> m) {-"~~."-}
 \end{code}
-
+The following theorem establishes the relationship between the pure and the monadic |scanl|:
 \begin{theorem}\label{thm:putR-scanlp-scanM}
 For all |oplus :: (s -> a -> s)|, |fin, st :: s|, and |xs :: [a]|,
 \begin{spec}
@@ -358,9 +431,9 @@ Both sides reduce to |putR fin >> return []|.
    (st':) <$> (putR st' >> foldr otimes ret xs)
 =   {- |putR|-|get| -}
    putR st >> (st':) <$> (putR st' >> foldr otimes ret xs)
-=  (st':) <$> putR st >> putR st' >> foldr otimes ret xs
+=  (st':) <$> (putR st >> putR st' >> foldr otimes ret xs)
 =   {- |putR|-|putR| -}
-   (st':) <$> putR st' >> foldr otimes ret xs
+   (st':) <$> (putR st' >> foldr otimes ret xs)
 =   {- induction -}
    ((st `oplus` x):) <$> (putR fin >> return (scanlp oplus (st `oplus` x) xs))
 =  putR fin >> return ((st `oplus` x) : scanlp oplus (st `oplus` x) xs)
@@ -368,7 +441,7 @@ Both sides reduce to |putR fin >> return []|.
 \end{spec}
 \end{proof}
 
-\paragraph{Safety Check in a |foldr|} We calculate:
+\paragraph{Safety Check in a |foldr|} Recall that the goal is to compute |assert (all ok . scanlp ...)| in a |foldr|. We calculate:
 \begin{spec}
    putR fin >> assert (all ok . scanlp oplus st) xs
 =    {- definition of |assert| -}
@@ -432,8 +505,11 @@ x `ocirc` m =  modifyR (`oplus` x) (`ominus` x) >>
                ((x:) <$> m) {-"~~."-}
 \end{spec}
 \end{theorem}
+\begin{proof}
 To be verified.
+\end{proof}
 
+The corollary follows from the combination of all the theorems above.
 \begin{corollary}\label{thm:putR-assert-scanlp-foldr} The following is true, where |ocirc| is as defined in Theorem \ref{thm:putR-modifyR}:
 \begin{spec}
 putR fin >> assert (all ok . scanlp oplus st) xs =
@@ -455,34 +531,19 @@ if the relation |(not . p)? . snd . (=<<) . f| is well-founded, and
 |unfoldM p f z >>= ((x `otimes`) . k) === x `otimes` (unfoldM p f z >>= k)| for all |k|.
 \end{theorem}
 
-\section{Deriving a Backtracking Algorithm}
-
-Consider problems specified in the form
-\begin{spec}
-  unfoldM p f >=> assert (all ok . scanlp oplus st) {-"~~."-}
-\end{spec}
-
-Calculate.
-\begin{spec}
-    putR fin >> unfoldM p f z >>= assert (all ok . scanlp oplus st)
-=     {- {\bf wish}: |putR| commutes with non-determinism -}
-    unfoldM p f z >>= \xs -> putR fin >> assert (all ok . scanlp oplus st) xs
-=     {- Corollary \ref{thm:putR-assert-scanlp-foldr} -}
-    unfoldM p f z >>= \xs -> putR st >> foldr ocirc finR xs
-=     {- {\bf wish}: |putR| commutes with non-determinism -}
-    putR st >> unfoldM p f z >>= foldr ocirc finR
-=     {- {\bf wish}: hylo-fusion is possible -}
-    putR st >> hyloM ocirc finR p f z {-"~~."-}
-\end{spec}
-
 \section{Properties We Wish to Have...}
 
-In the previous section we listed two wishes: that |putR| commutes with non-determinism, and hylo-fusion is allowed. We start with discussing the first:
+Now we talk about what still needs to be validated.
+In the first section we listed two wishes: that |putR| commutes with non-determinism, and hylo-fusion is allowed. We start with discussing the first:
 
 \begin{theorem} (Not sure)
   |putR| commutes with non-determinism. That is,
   |m >>= \x -> putR s >> return x = putR s >> m|.
 \end{theorem}
+We have shown that |putR| commutes with |guard|. But what about non-detemrinism in general? I am not sure. It might be true only under certain context or conditions (e.g. under a |run| so we are sure we
+get the whole program? Or do we need the context to be state-restoring?)
+We may need to change the proof outline to adapt to this.
+
 % \noindent{\bf Disproof}: consider the context |put t >>[_] >> get|.
 % \begin{spec}
 %    put t >> (m >>= \x -> putR s >> return x) >> get
@@ -567,12 +628,12 @@ Induction on |m|.
 \end{proof}
 }% delete
 
-% \begin{lemma} |
-%
-% \end{lemma}
 
 As for the second wish, to apply Theorem \ref{thm:hylo-fusion}, we need
-|m >>= ((x `ocirc`) . k) === x `ocirc` (m >>= k)| where |m = unfoldM p f z|. Since it is often the case that the only effect in |unfoldM p f| is non-detemrinism, we prove the following lemma:
+|m >>= ((x `ocirc`) . k) === x `ocirc` (m >>= k)| where |m = unfoldM p f z|.
+The property is split into three lemmas. The first one depends on the second, while the second depends on the third. It is the third we need to verify.
+
+Since we have decided that the only effect in |unfoldM p f| is non-determinism, the first lemma considers |m| that is only non-deterministic:
 \begin{lemma}
 |m >>= ((x `ocirc`) . k) === x `ocirc` (m >>= k)| for |m| that is only non-deterministic.
 \end{lemma}
@@ -601,6 +662,7 @@ We reason:
 \end{spec}
 \end{proof}
 
+The key step of the proof is split into the next lemma, which allows us to commute |modifyR| and non-deterministic programs:
 \begin{lemma}\label{lma:nondet-mod-distr}
 For |m| that is only non-deterministic, we have
 \begin{spec}
@@ -648,6 +710,9 @@ Induction on |m|.
 \end{spec}
 \end{proof}
 
+Lemma~\ref{lma:nondet-mod-distr} uses Lemma~\ref{lma:next-prev-cancel},
+which I think is the property that does the real work: it allows us to
+cancel adjacent |prev| and |next|.
 \begin{lemma}\label{lma:next-prev-cancel} If |m1| is state-restoring and |prev . next = id|, we have:
 \begin{spec}
   (modify next >> m1) `mplus` sideMod prev `mplus` (modify next >> m2) =
@@ -688,4 +753,10 @@ Back to the LHS:
    modify next >> (m1 `mplus` m2) {-"~~."-}
 \end{spec}
 \end{proof}
+
+In the 4th step from the last, I need to turn
+\begin{spec}
+sidePut s `mplus` (modify next >> m2)
+\end{spec}
+into |sidePut (next s) `mplus` m2|. Is this true?
 \end{document}
