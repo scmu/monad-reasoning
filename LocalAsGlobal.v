@@ -3,9 +3,6 @@ Module Type Syntax.
 Require Import Coq.Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Logic.FunctionalExtensionality.
-
-
-
 (* The type of state. *)
 Parameter S : Type.
 
@@ -269,6 +266,7 @@ Parameter D : Type -> Type.
 Parameter run : forall {A}, Prog A -> D A.
 
 (* The algebra for the signature *)
+Parameter retD: forall {A}, A -> D A.
 Parameter failD : forall {A}, D A.
 Parameter orD : forall {A}, D A -> D A -> D A.
 Parameter getD : forall {A}, (S -> D A) -> D A.
@@ -277,6 +275,7 @@ Parameter putD : forall {A}, S -> D A -> D A.
 Parameter andD : forall {A}, D A -> D A -> D A.
 
 (* run is a fold with the algebra *)
+Parameter run_ret: forall {A} (x: A), run (Return x) = retD x.
 Parameter run_fail: forall {A}, @run A Fail = failD.
 Parameter run_or: forall {A} (p q: Prog A), run (Or p q) = orD (run p) (run q).
 Parameter run_get: forall {A} (p: S -> Prog A),     run (Get p) = getD (fun s => run (p s)).
@@ -314,14 +313,13 @@ Proof.
 Qed.
 
 
-
 Parameter get_get_G_D:
   forall {A} (k: S -> S -> D A),
     getD (fun s => getD (fun s' => k s s'))
     =
     getD (fun s => k s s).
 
-Require Import Coq.Logic.FunctionalExtensionality.
+(*
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Classes.Morphisms.
 
@@ -332,6 +330,7 @@ Print pointwise_relation.
 Instance pointwise_eq_ext {A B : Type} `(sb : subrelation B RB eq)
   : subrelation (pointwise_relation A RB) eq.
 Proof. intros f g Hfg. apply functional_extensionality. intro x; apply sb, (Hfg x). Qed.
+*)
 
 Lemma get_get_G':
   forall {A} (k: S -> S -> Prog A),
@@ -341,12 +340,12 @@ Lemma get_get_G':
 Proof.
   intros A k.
   repeat rewrite run_get.
-  Print f_equal.
   erewrite (@f_equal _ _ _ _ (fun s : S => getD (fun s' : S => run (k s s'))) _).
   - rewrite get_get_G_D.
   reflexivity.
   Unshelve.
-  setoid_rewrite run_get; reflexivity.
+  apply functional_extensionality; intro s0.
+  rewrite run_get; auto.
 Qed.
 
 Lemma meta_G:
@@ -396,6 +395,12 @@ Proof.
 ).
 Qed.
 
+Parameter get_put_G_D:
+  forall {A} (p: D A),
+    getD (fun s => putD s p)
+   =
+   p.
+
 Parameter get_put_G:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (k: OProg E1 A),
     orun (appl c (fun env => Get (fun s => Put s (k env))))
@@ -433,6 +438,12 @@ Proof.
   ).
 Qed.
 
+Parameter put_put_G_D:
+  forall {A} (s s': S) (p: D A),
+  putD s (putD s' p)
+  =
+  putD s' p.
+
 Parameter put_put_G':
   forall {A} (v1 v2: S) (q: Prog A),
     run (Put v1 (Put v2 q))
@@ -445,6 +456,12 @@ Parameter put_put_G:
     =
    orun (appl c (fun env => Put (v2 env) (k env))).
 
+Parameter put_or_G_D:
+  forall {A} (p q: D A) (s: S),
+   orD (putD s p) q
+   = 
+   putD s (orD p q).
+
 Parameter put_or_G':
   forall {A} (p q: Prog A) (s: S),
     run (Or (Put s p) q)
@@ -456,12 +473,6 @@ Parameter put_or_G:
     orun (appl c (fun env => Or (Put (s env) (p env)) (q env)))
    = 
    orun (appl c (fun env => Put (s env) (Or (p env) (q env)))). 
-
-Parameter or_fail':
-  forall {A} (q: Prog A),
-    run (Or Fail q)
-    =
-    run q.
 
 Parameter or_fail:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (q: OProg E1 A), 
@@ -492,6 +503,12 @@ Parameter or_or:
     orun (appl c (fun env => Or (Or (p env) (q env)) (r env)))
    =
    orun (appl c (fun env => Or (p env) (Or (q env) (r env)))).
+
+Parameter put_ret_or_G_D:
+  forall {A}  (v: S) (w: A) (q: D A),
+  putD v (orD (retD w) q)
+  =
+  andD (putD v (retD w)) (putD v q).
 
 Parameter put_ret_or_G:
   forall {A} (v: S) (w: A) (q: Prog A),
@@ -1076,7 +1093,127 @@ Proof.
   auto.
 Qed.
 
-<======
+Lemma put_put_L_2:
+  forall {E1 E2 A B C} (c: Context E1 B E2 C) (v: Env E1 -> S) (w: Env E1 -> S) (p: OProg E1 A) (k: A -> OProg E1 B),
+    oevl (appl c (obind (fun env => Put (v env) (Put (w env) (p env))) k))
+    =
+    oevl (appl c (obind (fun env => Put (w env) (p env)) k)).
+Proof.
+    intros; unfold obind; simpl; apply put_put_L_1.
+Qed.
 
+(* TODO:
+   - derive non-primitive parameters from primitive parameters
+   - prove meta lemma + application to get derived lemmas
+   - prove implementation
+*)
 
 End Syntax.
+
+Module Implementation <: Syntax.
+
+Require Import Coq.Lists.List.
+Require Import Coq.Logic.FunctionalExtensionality.
+
+Parameter S : Type.
+
+Definition D : Type -> Type := 
+  fun A => S -> (list (A * S) * S).
+
+Definition retD : forall {A}, A -> D A :=
+  fun A => (fun x => (fun s => ((x,s) :: nil, s))).
+
+Definition failD : forall {A}, D A :=
+  fun A => (fun s => (nil, s)).
+
+Definition orD : forall {A}, D A -> D A -> D A :=
+  fun A xs ys => 
+      (fun s => match xs s with
+                     | (ansx, s') => match ys s' with
+                                         | (ansy, s'') => (ansx ++ ansy, s'')
+                                         end
+                     end).
+
+Definition getD : forall {A}, (S -> D A) -> D A :=
+  fun A k => 
+     (fun s => k s s).
+
+Definition putD : forall {A}, S -> D A -> D A :=
+  fun A s k =>
+    (fun _ => k s).
+
+Definition andD : forall {A}, D A -> D A -> D A :=
+  fun A xs ys =>
+    (fun s => match xs s, ys s with
+                   | (ansx,_), (ansy, s') => (ansx ++ ansy, s')
+                  end).
+
+Lemma get_get_G_D:
+  forall {A} (k: S -> S -> D A),
+    getD (fun s => getD (fun s' => k s s'))
+    =
+    getD (fun s => k s s).
+Proof.
+ auto.
+Qed.
+
+Lemma put_get_G_D:
+  forall {A} (s: S) (k: S -> D A),
+  putD s (getD k)
+  =
+  putD s (k s).
+Proof.
+  auto.
+Qed.
+
+Lemma get_put_G_D:
+  forall {A} (p: D A),
+    getD (fun s => putD s p)
+   =
+   p.
+Proof.
+  auto.
+Qed.
+
+Lemma put_put_G_D:
+  forall {A} (s s': S) (p: D A),
+  putD s (putD s' p)
+  =
+  putD s' p.
+Proof.
+  auto.
+Qed.
+
+Lemma put_or_G_D:
+  forall {A} (p q: D A) (s: S),
+   orD (putD s p) q
+   = 
+   putD s (orD p q).
+Proof.
+  auto.
+Qed.
+
+Lemma or_or_D:
+  forall {A} (p q r: D A),
+  orD (orD p q) r
+  =
+  orD p (orD q r).
+Proof.
+  intros; unfold orD.
+  apply functional_extensionality; intro s0.
+  destruct (p s0); destruct (q s); destruct (r s1).
+  rewrite app_assoc.
+  auto.
+Qed.
+
+Lemma put_ret_or_G_D:
+  forall {A}  (v: S) (w: A) (q: D A),
+  putD v (orD (retD w) q)
+  =
+  andD (putD v (retD w)) (putD v q).
+Proof.
+  auto.
+Qed.
+
+
+End Implementation.
