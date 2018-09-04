@@ -1,10 +1,85 @@
-Module Type Syntax.
+Module Type SemanticInterface.
+
+(* The type of state. *)
+Parameter S : Type.
+
+(* The semantic domain *)
+Parameter D : Type -> Type.
+
+(* The algebra for the signature *)
+Parameter retD: forall {A}, A -> D A.
+Parameter failD : forall {A}, D A.
+Parameter orD : forall {A}, D A -> D A -> D A.
+Parameter getD : forall {A}, (S -> D A) -> D A.
+Parameter putD : forall {A}, S -> D A -> D A.
+
+Parameter andD : forall {A}, D A -> D A -> D A.
+
+(* Laws *)
+
+Parameter get_get_G_D:
+  forall {A} (k: S -> S -> D A),
+    getD (fun s => getD (fun s' => k s s'))
+    =
+    getD (fun s => k s s).
+
+Parameter get_put_G_D:
+  forall {A} (p: D A),
+    getD (fun s => putD s p)
+   =
+   p.
+
+Parameter put_get_G_D:
+  forall {A} (s: S) (k: S -> D A),
+  putD s (getD k)
+  =
+  putD s (k s).
+
+Parameter put_put_G_D:
+  forall {A} (s s': S) (p: D A),
+  putD s (putD s' p)
+  =
+  putD s' p.
+
+Parameter put_or_G_D:
+  forall {A} (p q: D A) (s: S),
+   orD (putD s p) q
+   = 
+   putD s (orD p q).
+
+Parameter or1_fail_D:
+  forall {A} (q: D A),
+  orD failD q
+  =
+  q.
+
+Parameter or2_fail_D:
+  forall {A} (p: D A),
+  orD p failD
+  =
+  p.
+
+Parameter or_or_D:
+  forall {A} (p q r: D A),
+  orD (orD p q) r
+  =
+  orD p (orD q r).
+
+Parameter put_ret_or_G_D:
+  forall {A}  (v: S) (w: A) (q: D A),
+  putD v (orD (retD w) q)
+  =
+  andD (putD v (retD w)) (putD v q).
+
+End SemanticInterface.
+
+Module Type Syntax (Sem: SemanticInterface).
+
+Import Sem.
 
 Require Import Coq.Lists.List.
 Require Import Coq.Program.Equality.
 Require Import Coq.Logic.FunctionalExtensionality.
-(* The type of state. *)
-Parameter S : Type.
 
 (* Programs -- the free monad over the signature of fail + or + get + put *)
 Inductive Prog : Type -> Type :=
@@ -32,6 +107,26 @@ Proof.
   - rewrite IHp1, IHp2; auto.
   - f_equal; apply functional_extensionality; intros; rewrite H; auto.
   - rewrite IHp; auto.
+Qed.
+
+Lemma bind_return:
+  forall {A} (p: Prog A),
+     bind p (fun x => Return x) = p.
+Proof.
+  intros Ap; 
+  induction p; intros; simpl; auto.
+  - rewrite IHp1, IHp2; auto.
+  - f_equal; apply functional_extensionality; intros; rewrite H; auto.
+  - rewrite IHp; auto.
+Qed.
+
+Lemma bind_return':
+  forall {A X} (p: X -> Prog A),
+     (fun e => bind (p e)  (fun x => Return x)) = (fun e => p e).
+Proof.
+  intros.
+  apply functional_extensionality; intro e0.
+  apply bind_return.
 Qed.
 
 (* Programs with free variables *)
@@ -258,21 +353,8 @@ Fixpoint appendEnv_ {E1} (env: Env E1): forall E2, Env E2 -> Env (E1 ++ E2) :=
   end.
 *)
 
-
-(* The semantic domain *)
-Parameter D : Type -> Type.
-
 (* The semantic function for global, i.e. non-backtracking, state *)
 Parameter run : forall {A}, Prog A -> D A.
-
-(* The algebra for the signature *)
-Parameter retD: forall {A}, A -> D A.
-Parameter failD : forall {A}, D A.
-Parameter orD : forall {A}, D A -> D A -> D A.
-Parameter getD : forall {A}, (S -> D A) -> D A.
-Parameter putD : forall {A}, S -> D A -> D A.
-
-Parameter andD : forall {A}, D A -> D A -> D A.
 
 (* run is a fold with the algebra *)
 Parameter run_ret: forall {A} (x: A), run (Return x) = retD x.
@@ -311,26 +393,6 @@ Lemma orun_put:
 Proof.
   intros; apply functional_extensionality; intro env; unfold orun; auto using run_put.
 Qed.
-
-
-Parameter get_get_G_D:
-  forall {A} (k: S -> S -> D A),
-    getD (fun s => getD (fun s' => k s s'))
-    =
-    getD (fun s => k s s).
-
-(*
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Classes.Morphisms.
-
-Generalizable All Variables.
-
-Print pointwise_relation.
-
-Instance pointwise_eq_ext {A B : Type} `(sb : subrelation B RB eq)
-  : subrelation (pointwise_relation A RB) eq.
-Proof. intros f g Hfg. apply functional_extensionality. intro x; apply sb, (Hfg x). Qed.
-*)
 
 Lemma get_get_G':
   forall {A} (k: S -> S -> Prog A),
@@ -395,23 +457,32 @@ Proof.
 ).
 Qed.
 
-Parameter get_put_G_D:
-  forall {A} (p: D A),
-    getD (fun s => putD s p)
+Lemma get_put_G':
+  forall {A} (q: Prog A),
+    run (Get (fun s => Put s q))
    =
-   p.
+   run q.
+Proof.
+  intros; rewrite run_get.
+  assert ((fun s => run (Put s q)) = (fun s => putD s (run q))).
+  apply functional_extensionality; intros s; rewrite run_put; auto.
+  rewrite H; rewrite get_put_G_D; reflexivity.
+Qed.
 
-Parameter get_put_G:
+Lemma get_put_G:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (k: OProg E1 A),
     orun (appl c (fun env => Get (fun s => Put s (k env))))
    =
    orun (appl c k).
-
-Parameter put_get_G_D:
-  forall {A} (s: S) (k: S -> D A),
-  putD s (getD k)
-  =
-  putD s (k s).
+Proof.
+  intros.
+ apply (@meta_G A B E1 E2 (Prog A) 
+     (fun q => Get (fun s => Put s q))
+     (fun q => q)
+     get_put_G'
+     (fun env => k env)
+ ).
+Qed.
 
 Lemma put_get_G':
   forall {A} (s: S) (p: S -> Prog A),
@@ -438,122 +509,137 @@ Proof.
   ).
 Qed.
 
-Parameter put_put_G_D:
-  forall {A} (s s': S) (p: D A),
-  putD s (putD s' p)
-  =
-  putD s' p.
-
-Parameter put_put_G':
+Lemma put_put_G':
   forall {A} (v1 v2: S) (q: Prog A),
     run (Put v1 (Put v2 q))
    =
    run (Put v2 q).
+Proof.
+  intros; repeat rewrite run_put; apply put_put_G_D.
+Qed.
 
-Parameter put_put_G:
+Lemma put_put_G:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (v1 v2: Env E1 -> S) (k: OProg E1 A),
     orun (appl c (fun env => Put (v1 env) (Put (v2 env) (k env))))
     =
    orun (appl c (fun env => Put (v2 env) (k env))).
+Proof.
+  intros.
+   apply (@meta_G A B E1 E2 ((S * S) * (Prog A))
+     (fun t => Put (fst (fst t)) (Put (snd (fst t)) (snd t)))
+     (fun t => Put (snd (fst t)) (snd t))
+     (fun t => put_put_G' (fst (fst t)) (snd (fst t)) (snd t))
+    (fun env => ((v1 env, v2 env), k env))
+  ).
+Qed.
 
-Parameter put_or_G_D:
-  forall {A} (p q: D A) (s: S),
-   orD (putD s p) q
-   = 
-   putD s (orD p q).
-
-Parameter put_or_G':
+Lemma put_or_G':
   forall {A} (p q: Prog A) (s: S),
     run (Or (Put s p) q)
    = 
    run (Put s (Or p q)).
+Proof.
+  intros; repeat rewrite run_put, run_or; apply put_or_G_D.
+Qed.
 
-Parameter put_or_G:
+Lemma put_or_G:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (p: OProg E1 A) (q: OProg E1 A) (s: Env E1 -> S),
     orun (appl c (fun env => Or (Put (s env) (p env)) (q env)))
    = 
-   orun (appl c (fun env => Put (s env) (Or (p env) (q env)))). 
+   orun (appl c (fun env => Put (s env) (Or (p env) (q env)))).
+Proof.
+  intros.
+  apply (@meta_G A B E1 E2 ((Prog A * Prog A) * S)
+     (fun t => Or (Put (snd t) (fst (fst t))) (snd (fst t)))
+     (fun t => Put (snd t) (Or (fst (fst t)) (snd (fst t))))
+     (fun t => put_or_G' (fst (fst t)) (snd (fst t)) (snd t))
+    (fun env => ((p env, q env), s env))
+  ).
+Qed.
 
-Parameter or_fail:
+Lemma or_fail':
+  forall {A} (q: Prog A),
+    run (Or Fail q)
+    =
+    run q.
+Proof.
+  intros; repeat rewrite run_or,run_fail; apply or1_fail_D.
+Qed.
+
+Lemma or_fail:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (q: OProg E1 A), 
     orun (appl c (fun env => Or Fail (q env)))
     =
     orun (appl c q).
+Proof.
+  intros.
+  apply (@meta_G A B E1 E2 (Prog A)
+     (fun t => Or Fail t)
+     (fun t => t)
+     (fun t => or_fail' t)
+    (fun env => q env)
+  ).
+Qed.
 
-Parameter fail_or':
+Lemma  fail_or':
   forall {A} (q: Prog A),
     run (Or q Fail)
     =
     run q.
+Proof.
+  intros; repeat rewrite run_or,run_fail; apply or2_fail_D.
+Qed.
 
-Parameter fail_or:
+Lemma fail_or:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (q: OProg E1 A), 
     orun (appl c (fun env => Or  (q env) Fail))
     =
     orun (appl c q).
+Proof.
+  intros.
+  apply (@meta_G A B E1 E2 (Prog A)
+     (fun t => Or t Fail)
+     (fun t => t)
+     (fun t => fail_or' t)
+    (fun env => q env)
+  ).
+Qed.
 
-Parameter or_or':
+Lemma or_or':
   forall {A} (p q r: Prog A),
     run (Or (Or p q) r)
     =
     run (Or p (Or q r)).
+Proof.
+  intros; repeat rewrite run_or; apply or_or_D.
+Qed.
 
-Parameter or_or:
+Lemma or_or:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (p q r: OProg E1 A),
     orun (appl c (fun env => Or (Or (p env) (q env)) (r env)))
    =
    orun (appl c (fun env => Or (p env) (Or (q env) (r env)))).
+Proof.
+  intros.
+  apply (@meta_G A B E1 E2 ((Prog A * Prog A) * Prog A)
+     (fun t => Or (Or (fst (fst t)) (snd (fst t))) (snd t))
+     (fun t => Or (fst (fst t)) (Or (snd (fst t)) (snd t)))
+     (fun t => or_or' (fst (fst t)) (snd (fst t)) (snd t))
+    (fun env => ((p env, q env), r env))
+  ).
+Qed.
 
-Parameter put_ret_or_G_D:
-  forall {A}  (v: S) (w: A) (q: D A),
-  putD v (orD (retD w) q)
-  =
-  andD (putD v (retD w)) (putD v q).
-
-Parameter put_ret_or_G:
+Lemma put_ret_or_G:
   forall {A} (v: S) (w: A) (q: Prog A),
   run (Put v (Or (Return w) q))
   =
   andD (run (Put v (Return w))) (run (Put v q)).
-
-
-
-(*
-Definition castConcat_ {E1 E2 E3} (c: Concat E1 E2 E3) :  
-  (match E1 with 
-   | nil => (forall {A}, OProg E2 A -> OProg E3 A) 
-   | X :: Xs => (forall {A}, X -> OProg E2 A -> (forall {E2'}, Concat Xs E2' E3 -> OProg E2' A -> OProg E3 A) -> OProg E3 A)
-   end):=
-  match c in (Concat E1 E2 E3) return (match E1 with 
-                                                           | nil => (forall {A}, OProg E2 A -> OProg E3 A) 
-                                                           | X :: Xs => (forall {A}, X -> OProg E2 A -> (forall {E2'}, Concat Xs E2' E3 -> OProg E2' A -> OProg E3 A) -> OProg E3 A) 
-                                                           end) with
-  | CNil _ => (fun A p => p)
-  | CCons _ _ _ _ pf => (fun A x p k => k _ pf (cpush x p))
-  end.
-
-Definition castConcatNil {E2 E3} (c: Concat nil E2 E3): forall {A}, OProg E2 A -> OProg E3 A :=
-  castConcat_ c.
-
-Definition castConcatCons {X Xs E2 E3} (c: Concat (X::Xs) E2 E3): forall {A}, X -> OProg E2 A -> (forall {E2'}, Concat Xs E2' E3 -> OProg E2' A -> OProg E3 A) -> OProg E3 A :=
-  castConcat_ c.
-
-Fixpoint cpushes_ {E1} (env: Env E1): forall {A E2 E3}, Concat E1 E2 E3 -> OProg E2 A -> OProg E3 A :=
-  match env in (Env E1) return (forall {A E2 E3}, Concat E1 E2 E3 -> OProg E2 A -> OProg E3 A) with
-  | Nil => (fun _ _ _ pf p => castConcatNil pf p)
-  | Cons x xs => (fun _ _ _ pf p => castConcatCons pf x p (fun E2' => @cpushes_ _ xs _ E2' _))
-  end.
-
-Definition cpushes {E} (env: Env E): forall {A}, OProg E A -> OProg nil A :=
-  fun A => cpushes_ env concat_nil_r.
-*)
-
-
-
-
-
-
-
+Proof.
+  intros. repeat rewrite run_put.
+  rewrite run_or.
+  repeat rewrite run_ret.
+  apply put_ret_or_G_D.
+Qed.
 
 (* Translating the syntx of local state semantics programs to global state semantics programs *)
 Fixpoint trans {A} (p: Prog A): Prog A :=
@@ -718,14 +804,101 @@ Proof.
        (oevl (appl c p) (tail env)). auto. 
 Qed.
 
+Lemma inverse_functional_extensionality:
+  forall {A B} (f g: A -> B),
+  f = g -> forall x, f x = g x.
+Proof.
+  intros; rewrite H; auto.
+Qed.
+
+Lemma evl_meta:
+  forall {A B E1 E2} {X}  (p q: X -> Prog A)
+    (meta_G': forall (x: X), evl (p x) = evl (q x)) 
+    (f: Env E1 -> X)
+    (c: Context E1 A E2 B),
+    oevl (appl c (fun env => p (f env)))
+    = 
+    oevl (appl c (fun env => q (f env))).
+Proof.
+  intros; induction c.
+  - simpl; unfold oevl; unfold orun, otrans.
+     apply functional_extensionality; intro env0.
+     unfold evl in meta_G'.
+     apply meta_G'.
+ - simpl; unfold oevl, evl, otrans, orun in *; simpl; apply functional_extensionality; intro env0.
+  repeat rewrite run_or; simpl in IHc. apply equal_f. apply f_equal. generalize env0. 
+  apply inverse_functional_extensionality. rewrite (IHc p q).
+  auto.
+  auto.
+  - simpl; unfold oevl, evl, otrans, orun in *; simpl; apply functional_extensionality; intro env0.
+  repeat rewrite run_or; simpl in IHc. apply f_equal. generalize env0. 
+  apply inverse_functional_extensionality. rewrite (IHc p q).
+  auto.
+  auto.
+ - simpl;  unfold oevl, evl, otrans, orun in *; simpl.
+    apply functional_extensionality; intro env0.
+    repeat rewrite run_get; apply f_equal.
+   apply functional_extensionality; intro s0.
+   repeat rewrite run_or.
+  apply equal_f.
+  apply f_equal.
+  repeat rewrite run_put.
+  apply f_equal.
+  generalize env0. apply inverse_functional_extensionality.
+  rewrite (IHc p q).
+  auto.
+  auto.
+ - simpl;  unfold oevl, evl, otrans, orun in *; simpl.
+    apply functional_extensionality; intro env0.
+    repeat rewrite run_get; apply f_equal.
+    apply functional_extensionality; intro s0.
+    destruct (b s0).
+    * unfold cpush, comap.
+      generalize (Cons s0 env0). apply inverse_functional_extensionality.
+      rewrite (IHc p q).
+     reflexivity.
+     auto.
+  * auto.
+ - simpl;  unfold oevl, evl, otrans, orun in *; simpl.
+   apply functional_extensionality; intro env0.
+   destruct (b env0).
+  * generalize env0; apply inverse_functional_extensionality.
+     rewrite (IHc p q). auto.
+     auto.
+  * auto.
+ - simpl;  unfold oevl, evl, otrans, orun in *; simpl.
+    unfold cpush, comap.
+    apply functional_extensionality; intro env0.
+    generalize (Cons c env0); apply inverse_functional_extensionality.
+    apply (IHc p q). auto.
+ - simpl;  unfold oevl, evl, otrans, orun in *; simpl.
+    unfold clift, comap.
+    apply functional_extensionality; intro env0.
+    generalize (tail env0); apply inverse_functional_extensionality.
+    apply (IHc p q). auto.
+Qed.
+
+Lemma get_get_L_0:
+  forall {A} (k: S -> S -> Prog A),
+    evl (Get (fun s1 => Get (fun s2 => k s1 s2)))
+    =
+    evl (Get (fun s1 => k s1 s1)).
+Proof.
+  intros A k; unfold evl; simpl. apply get_get_G'.
+Qed.
+
 Lemma get_get_L_1:
   forall {A B E1 E2} (c: Context E1 A E2 B) (k: S -> S -> OProg E1 A),
     oevl (appl c (fun env => Get (fun s1 => Get (fun s2 => k s1 s2 env))))
     =
     oevl (appl c (fun env => Get (fun s1 => k s1 s1 env))).
 Proof.
-  intros A B E1 e2 c k; unfold oevl, evl.
-  repeat  rewrite otrans_appl; unfold otrans; simpl. rewrite get_get_G; auto.
+  intros A B E1 E2 c k.
+  apply (evl_meta 
+     (fun k => Get (fun s1 => Get (fun s2 => k s1 s2)))
+     (fun k => Get (fun s => k s s))
+     get_get_L_0 
+    (fun env => (fun s1 s2 => k s1 s2 env))).
 Qed.
 
 Lemma get_get_L_2:
@@ -1103,14 +1276,76 @@ Proof.
 Qed.
 
 (* TODO:
-   - derive non-primitive parameters from primitive parameters
    - prove meta lemma + application to get derived lemmas
-   - prove implementation
+  - get rid of run_ lemmas and define run in terms of algebra
 *)
+
+Inductive BContext : list Type -> Type -> list Type -> Type -> Type :=
+  | BHole   : forall {E A}, BContext E A E A
+  | BOr1    : forall {E1 E2 A B}, BContext E1 A E2 B -> OProg E2 B -> BContext E1 A E2 B
+  | BOr2    : forall {E1 E2 A B}, OProg E2 B -> BContext E1 A E2 B -> BContext E1 A E2 B
+  | BPut     : forall {E1 E2 A B}, (Env E2 -> S) -> BContext E1 A E2 B -> BContext E1 A E2 B
+  | BGet     : forall {E1 E2 A B}, (S -> bool) -> (BContext E1 A (S::E2) B) -> (S -> OProg E2 B)-> BContext E1 A E2 B
+  | BDelay  : forall {E1 E2 A B}, (Env E2 -> bool) -> BContext E1 A E2 B -> OProg E2 B -> BContext E1 A E2 B
+  | BPush   : forall {E1 E2 A B C}, C -> BContext E1 A (C::E2) B-> BContext E1 A E2 B
+  | BLift      : forall {E1 E2 A B C}, BContext E1 A E2 B -> BContext E1 A (C::E2) B
+  | BBind1   : forall {E1 E2 A B C}, BContext E1 A E2 B -> (B -> OProg E2 C) -> BContext E1 A E2 C
+  | BBind2   : forall {E1 E2 A B C}, OProg E2 A -> BContext E1 B (A::E2) C -> BContext E1 B E2 C.
+
+Fixpoint bappl {E1 E2: list Type} {A B: Type} (c: BContext E1 A E2 B)  : OProg E1 A -> OProg E2 B :=
+  match c in (BContext E1 A E2 B) return (OProg E1 A -> OProg E2 B) with
+  | BHole => (fun p env => p env)
+  | BOr1 c q => (fun p env => Or (bappl c p env) (q env))
+  | BOr2 p c => (fun q env => Or (p env) (bappl c q env))
+  | BPut v c => (fun p env => Put (v env) (bappl c p env)) 
+  | BGet t c q => (fun p env => Get (fun s => if t s then cpush s (bappl c p) env else q s env))
+  | BDelay t c q => (fun p => (fun env => if t env then bappl c p env else q env))
+  | BPush x c => (fun p env => cpush x (bappl c p) env)
+  | BLift c => (fun p env => clift (bappl c p) env)
+  | BBind1 c k => (fun p env => bind (bappl c p env) (fun x => k x env))
+  | BBind2 p c => (fun q env => bind (p env) (fun x => cpush x (bappl c q) env))
+  end.
+
+Lemma bappFromAppl:
+  forall {A B E1 E2} (p q: OProg E1 A)
+    (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C), oevl (appl c (obind p k)) = oevl (appl c (obind q k)))
+    (b: BContext E1 A E2 B) ,
+    oevl (bappl b p) = oevl (bappl b q).
+Proof.
+  intros a B E1 E2 p q P b.
+  induction b; simpl.
+  - pose (P _ _ _ CHole (fun x env => Return x)); unfold obind in e; simpl in e.
+    rewrite <- bind_return'. rewrite e. rewrite bind_return'. reflexivity.
+  - repeat rewrite oevl_or; rewrite (IHb p q); auto.
+  - repeat rewrite oevl_or; rewrite (IHb p q); auto.
+  - repeat rewrite oevl_put; rewrite (IHb p q); auto.
+  - repeat rewrite oevl_get; apply functional_extensionality; intro env0;
+    apply f_equal; apply functional_extensionality; intro s0; destruct (b s0).
+    unfold cpush, comap.
+   change (oevl (fun env : Env E2 => bappl b0 ?p (Cons s0 env)) env0) with
+               (oevl (bappl b0 p) (Cons s0 env0)).
+   rewrite (IHb p q); auto. auto.
+  - apply functional_extensionality; intro env0.
+   change (oevl (fun env : Env E2 => if b env then bappl b0 ?p env else o env) env0)
+    with (oevl (fun env : Env E2 => if b env0 then bappl b0 p env else o env) env0).
+   destruct (b env0).
+   change (fun env => bappl b0 ?p env) with (bappl b0 p); rewrite (IHb p q) ; auto.
+   auto.
+  - unfold cpush, comap.
+     change (oevl (fun env : Env E2 => bappl b ?p (Cons c env))) with
+                (fun env0 => oevl (bappl b p) (Cons c env0)).
+    rewrite (IHb p q); auto.
+  - unfold clift, comap.
+     change (oevl (fun env : Env (C :: E2) => bappl b ?p (tail env))) with
+                (fun env0 => oevl (bappl b p) (@tail C _ env0)).
+    rewrite (IHb p q); auto.
+  - admit. (* TODO: need zipper-variant of BContext *)
+  - admit. (* TODO: need zipper-variant of BContext *)
+Admitted.
 
 End Syntax.
 
-Module Implementation <: Syntax.
+Module Implementation <: SemanticInterface.
 
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.FunctionalExtensionality.
@@ -1206,6 +1441,29 @@ Proof.
   auto.
 Qed.
 
+Lemma or1_fail_D:
+  forall {A} (q: D A),
+  orD failD q
+  =
+  q.
+Proof.
+  intros; unfold orD, failD; simpl.
+  change q with (fun s => q s); simpl.
+  apply functional_extensionality; intro s0; destruct (q s0); auto.
+Qed.
+
+Lemma or2_fail_D:
+  forall {A} (p: D A),
+  orD p failD
+  =
+  p.
+Proof.
+  intros; unfold orD, failD. 
+  change p with (fun s => p s); simpl.
+  apply functional_extensionality; intro s0; destruct (p s0);  
+  rewrite app_nil_r; auto.
+Qed.
+
 Lemma put_ret_or_G_D:
   forall {A}  (v: S) (w: A) (q: D A),
   putD v (orD (retD w) q)
@@ -1214,6 +1472,5 @@ Lemma put_ret_or_G_D:
 Proof.
   auto.
 Qed.
-
 
 End Implementation.
