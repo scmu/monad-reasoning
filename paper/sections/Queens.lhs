@@ -23,7 +23,7 @@ Backtracking algorithms make good examples of programs that are stateful and non
 In this section we present a specification of the problem, before transforming it into the form |unfoldM p f >=> assert (all ok . scanlp oplus st)| (whose components will be defined later), which is the general form of problems we will deal with in this pearl.
 The specification is non-deterministic, but not stateful.
 In the next few sections we will introduce state into the specification,
-under different assumption of the interaction between non-determinism and state.
+under different assumptions of the interaction between non-determinism and state.
 
 \subsection{Non-Determinism}
 
@@ -186,7 +186,7 @@ perm = unfoldM null select {-"~~."-}
 
 \subsection{Safety Check in a |scanl|}
 
-We have yet to defined |safe|.
+We have yet to define |safe|.
 Representing a placement as a permutation allows an easy way to check whether two queens are put on the same diagonal.
 An 8 by 8 chess board has 15 {\em up diagonals} (those running between bottom-left and top-right). Let them be indexed by |[0..14]| (see Figure \ref{fig:queens-examples}(b)).
 If we apply |zipWith (+) [0..]| to a permutation, we get the indices of the up-diagonals where the chess pieces are placed.
@@ -244,7 +244,7 @@ scanlp oplus st []      = []
 scanlp oplus st (x:xs)  = (st `oplus` x) : scanlp oplus (st `oplus` x) xs {-"~~."-}
 \end{code}
 
-Operationally, |safeAcc| examines the list from left to right, while keeping a state |(i,us,ds)|, where |i| is the current position being examined, while |us| and |ds| are respectively indices of all the up and down diagonals encountered so far. Indeed, in a function call |scanlp oplus st|, the value |st| can be seen as a ``state'' that is explicitly carried around. This naturally leads to the idea: can we convert a |scanlp| to a monadic program that stores |st| in its state? This is the goal of the next section.
+Operationally, |safeAcc| examines the list from left to right, while keeping a state |(i,us,ds)|, where |i| is the current position being examined, while |us| and |ds| are respectively indices of all the up and down diagonals encountered so far. Indeed, in a function call |scanlp oplus st|, the value |st| can be seen as a ``state'' that is explicitly carried around. This naturally leads to the idea: can we convert |scanlp oplus st| to a monadic program that stores |st| in its state? This is the goal of Section~\ref{sec:monadic-scanl}.
 
 As a summary of this section, after defining |queens|, we have transformed it into the following form:
 %if False
