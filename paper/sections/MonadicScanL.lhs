@@ -62,7 +62,7 @@ It behaves like |scanlp|, but stores the accumulated information in a monadic st
 
 To relate |scanlp| and |scanlM|, one would like to have |return (scanlp oplus st xs) = scanlM oplus st xs|.
 However, the lefthand side does not alter the state, while the righthand side does.
-% To make the equality hold we need to manually back up and restore the state.
+To make the equality hold we need to manually backup and restore the state.
 Define
 %if False
 \begin{code}
@@ -72,7 +72,7 @@ protect :: MonadState s m => m b -> m b
 \begin{code}
 protect m = get >>= \ini -> m >>= \x -> put ini >> return x {-"~~,"-}
 \end{code}
-such that |protect m| backs up the state before running |m|, and restores it afterwards. We have
+We have
 \begin{theorem}\label{lma:scanl-loop}
 For all |oplus :: (s -> a -> s)|, |st :: s|, and |xs :: [a]|,
 %if False
@@ -155,7 +155,7 @@ Implementation of such non-deterministic monads have been studied by Fischer~\sh
 When mixed with state, one consequence of \eqref{eq:mplus-bind-dist} is that |get >>= (\s -> f1 s `mplus` f2 s) = (get >>= f1 `mplus` get >>= f2)|. That is, |f1| and |f2| get the same state regardless of whether |get| is performed outside or inside the non-deterministic branch.
 Similarly, \eqref{eq:mzero-bind-zero} implies |put s >> mzero = mzero| --- when a program fails, the changes it performed on the state can be discarded.
 These requirements imply that each non-deterministic branch has its own copy of the state.
-One monad having such property is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}. With effect handling (e.g. Kiselyov and Ishii~\shortcite{KiselyovIshii:15:Freer}), the monad meets the requirements if we run the handler for state before that for list.
+One monad having such property is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}. With effect handling, the monad meets the requirements if we run the handler for state before that for list.
 
 The advantage of having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning. In particular, non-determinism commutes with other effects.
 \begin{definition}
@@ -191,13 +191,10 @@ in addition to the monad laws stated before, non-determinism commutes with any e
 For the rest of Section \ref{sec:monadic-scanl} and \ref{sec:nd-state-local}, we assume that \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold.
 
 \paragraph{Note} We briefly justify proofs by induction on the syntax tree.
-Finite monadic programs can be represented by the free monad constructed out of |return| and the effect operators, using the syntax in Figure~\ref{figure:type-system}, which can be represented by an inductively defined data structure.
-The programs can be run by an interpreter (equivalently, given a denotation), and by |m1 = m2| we mean that they evaluate to the same result (or having the same denotation).
-Such equality can certainly be proved by induction on |m1| or |m2|.
-% and interpreted by effect handlers~\cite{Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
-% When we say two programs |m1| and |m2| are equal, we mean that they have the same denotation when interpreted by the effect handlers of the corresponding effects, for example, |hdNondet (hdState s m1) = hdNondet (hdState s m2)|, where |hdNondet| and |hdState| are respectively handlers for nondeterminism and state.
-% Such equality can be proved by induction on some sub-expression in |m1| or |m2|, which are treated like any inductively defined data structure.
-% A more complete treatment is a work in progress, which cannot be fully covered in this pearl.
+Finite monadic programs can be represented by the free monad constructed out of |return| and the effect operators, which can be represented by an inductively defined data structure, and interpreted by effect handlers~\cite{Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
+When we say two programs |m1| and |m2| are equal, we mean that they have the same denotation when interpreted by the effect handlers of the corresponding effects, for example, |hdNondet (hdState s m1) = hdNondet (hdState s m2)|, where |hdNondet| and |hdState| are respectively handlers for nondeterminism and state.
+Such equality can be proved by induction on some sub-expression in |m1| or |m2|, which are treated like any inductively defined data structure.
+A more complete treatment is a work in progress, which cannot be fully covered in this pearl.
 ({\em End of Note})
 
 
@@ -228,9 +225,7 @@ assert_safe_der oplus st ok xs =
       get >>= \ini -> scanlM oplus st xs >>= \ys ->
       guard (all ok ys) >> put ini >> return xs
  ===    {- definition of |protect|, monad laws -}
-      protect (scanlM oplus st xs >>= \ys -> guard (all ok ys) >> return xs)
- ===    {- definition of |scanlM| -}
-      protect (put st >> foldr otimes (return []) xs >>= \ys -> guard (all ok ys) >> return xs) {-"~~."-}
+      protect (scanlM oplus st xs >>= \ys -> guard (all ok ys) >> return xs) {-"~~."-}
 \end{code}
 %if False
 \begin{code}
@@ -239,7 +234,9 @@ assert_safe_der oplus st ok xs =
                        (st:) <$> m
 \end{code}
 %endif
-The following theorem deals with the sub-expression after |put st|: it fuses a monadic |foldr| with a |guard|.
+
+Recall that |scanlM oplus st xs = put st >> foldr otimes (return []) xs|.
+The following theorem fuses a monadic |foldr| with a |guard| that uses its result.
 \begin{theorem}\label{lma:foldr-guard-fusion}
 Assume that state and non-determinism commute.
 Let |otimes| be defined as that in |scanlM| for any given |oplus :: s -> a -> s|. We have that for all |ok :: s -> Bool| and |xs :: [a]|:

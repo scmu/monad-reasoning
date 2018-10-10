@@ -67,10 +67,9 @@ Monads are used to model effects, and each effect comes with its collection of o
 
 A program might involve more than one effect.
 In Haskell, the type class constraint |MonadPlus| in the type of a program denotes that the program may have used |mzero| or |mplus|, and possibly other effects, while |MonadState s| denotes that it may have used |get| and |put|.
-
-Some theorems in this pearl, however, applies only to programs that, for example, use non-determinism {\em and no other effects}.
+Some theorems in this pearl, however, applies only to programs that, for example, use non-determinism and no other effects.
 To talk about such programs, we use a slightly different notation.
-We let the type |Me eps a| denote a monad whose return type is |a| and, during whose execution, only effects in the set |eps| may occur.
+We let the type |Me eps a| denote a monad whose return type is |a| and, during whose execution, effects in the set |eps| might occur.
 This pearl considers only two effects: non-determinism and state.
 Non-determinism is denoted by |N|, for which we assume two operators |mzero :: Me eps a| and |mplus :: Me eps a -> Me eps a -> Me eps a|, where |N `mem` eps|.
 A state effect is denoted by |S s|, where |s| is the type of the state, with two operators |get :: Me eps s| and |put :: s -> Me eps ()| where |S s `mem` eps|.
@@ -84,19 +83,17 @@ All these are merely notational convenience --- the point is that the effects a 
 \begin{figure}
 \small
 %format ntE = "\mathcal{E}"
-%format ntEV = "\mathcal{EV}"
 %format ntP = "\mathcal{P}"
 %format ntT = "\mathcal{T}"
 %format ntEff = "\mathcal{F}"
 
 \begin{spec}
-                              ntE    = {-"\mbox{pure, non-monadic expressions}"-}
-                              ntEV   = {-"\mbox{functions returning monadic programs}"-}
-{-"\mbox{monadic progs}~~"-}  ntP    = return ntE | ntP >>= ntEV | mzero | ntP `mplus` ntP | get | put ntE
+{-"\mbox{pure programs}~~"-}  ntE    = {-"\mbox{pure, non-monadic programs}"-} | ntP
+{-"\mbox{monadic progs}~~"-}  ntP    = return ntE | ntE =<< ntP | mzero | ntP `mplus` ntP | get | put ntE
 {-"\mbox{types}"-}            ntT    = a | c | ntT -> ntT | Me {ntEff} ntT
 {-"\mbox{effects}"-}          ntEff  = S a | S c | N
 {-"\quad\mbox{$a$ ranges over type variables,}"-}
-{-"\quad\mbox{while $c$ ranges over built-in type constants.}"-}
+{-"\quad\mbox{while $c$ ranges over for built-in type constants.}"-}
 \end{spec}
 %\vspace{-0.5cm}
 \begin{align*}

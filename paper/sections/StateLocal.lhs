@@ -46,7 +46,7 @@ The final task is to fuse |unfoldM p f| with |foldr odot (return [])|.
 In a pure setting, it is known that, provided that the unfolding phase terminates, |foldr otimes e . unfoldr p f| is the unique solution of |hylo| in the equation below~\cite{Hinze:15:Conjugate}:
 \begin{spec}
 hylo y  | p y        = e
-        | otherwise  = let (x,z) = f y in x `otimes` hylo z {-"~~."-}
+        | otherwise  = let f y = (x,z) in x `otimes` hylo z {-"~~."-}
 \end{spec}
 Hylomorphisms with monadic folds and unfolds are a bit tricky.
 Pardo \shortcite{Pardo:01:Fusion} discussed hylomorphism for regular base functors, where the unfolding phase is monadic while the folding phase is pure.
@@ -95,7 +95,8 @@ hyloFusion1 otimes m p f y =
 \begin{code}
     unfoldM p f y >>= foldr otimes m
  ===    {- definition of |unfoldM|, |not (p y)| -}
-    (f y >>= (\(x,z) -> (x:) <$> unfoldM p f z)) >>= foldr otimes m
+    (f y >>= (\(x,z) -> (x:) <$> unfoldM p f z)) >>=
+    foldr otimes m
  ===    {- monadic law \eqref{eq:monad-bind-ret} and |foldr| -}
     f y >>= (  \(x,z) -> unfoldM p f z >>= \xs ->
                x `otimes` foldr otimes m xs) {-"~~."-}
@@ -123,21 +124,12 @@ To understand the first step, note that
 Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude that it equals |hyloM otimes m p f| if the latter has a unique fixed-point. See the note below.
 \end{proof}
 
-\paragraph{Note} Fixed-points are usually reasoned about in a semantics based on complete partial orders.
-However, it was shown~\cite{DoornbosBackhouse:95:Induction} that, in {\sf Rel}, hylo-equations have unique solutions when the relation used in the unfolding phase is {\em well-founded}.
-One may thus stay within a set-theoretic semantics.
-In our case, the relation that maps on seed to the next in the unfolding phase of |hyloM| is |(not.p)? . snd . (=<<) . f| ---
-where |(=<<)| is |(>>=)| written reversed, and |(not . p)?| is a relation defined by |{(x,x) `mid` not (p x)}|.
-If this relation is well-founded --- meaning that it cannot be applied forever and |p| will eventually hold --- there is a unique solution for |hyloM|.
-Hence the second requirement of Theorem~\ref{thm:hylo-fusion}.
-More recently, Hinze et al.~\shortcite{Hinze:15:Conjugate} also explored reasoning about recursion in a set-theoretic semantics. ({\em End of Note})
+\paragraph{Note} Let |q| be a predicate, |q?| is a relation defined by |{(x,x) `mid` q x}|. The parameter |y| in |unfoldM| is called the {\em seed} used to generate the list. The relation |(not.p)? . snd . (=<<) . f| maps one seed to the next seed (where |(=<<)| is |(>>=)| written reversed). If it is {\em well-founded}, intuitively speaking, the seed generation cannot go on forever and |p| will eventually hold. It is known that inductive types (those can be folded) and coinductive types (those can be unfolded) do not coincide in {\sf SET}. To allow a fold to be composed after an unfold, typically one moves to a semantics based on complete partial orders. However, it was shown~\cite{DoornbosBackhouse:95:Induction} that, in {\sf Rel}, when the relation generating seeds is well-founded, hylo-equations do have unique solutions. One may thus stay within a set-theoretic semantics. Such an approach is recently explored again~\cite{Hinze:15:Conjugate}. ({\em End of Note})
 
 \vspace{1em}
 Theorem \ref{thm:hylo-fusion} does not rely on \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, and does not put restriction on |eps|.
-To apply the theorem to our particular case, we have to show that the antecedents hold for our particular |odot|.
-This is where we need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}.
-In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard-fusion}:
-\begin{lemma} Assume \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold. Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
+To apply the theorem to our particular case, we have to show that the precondition holds for our particular |odot|. Fortunately it is indeed the case, although we do need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}. In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard-fusion}:
+\begin{lemma} Assuming that state and non-determinism commute, and |m >>= mzero = mzero|. Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
 \begin{spec}
   x `odot` m =  get >>= \st -> guard (p x st) >>
                 put (next x st) >> (res x <$> m) {-"~~."-}
@@ -145,28 +137,12 @@ In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard
 We have |x `odot` m = m >>= ((x `odot`) . return)|.
 \end{lemma}
 \begin{proof}
-Routine, using the fact that \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} imply commutativity of state and non-determinism.
+Routine, using commutativity of state and non-determinism.
 \end{proof}
 
 \subsection{Summary, and Solving |n|-Queens}
 
-To conclude our derivation, a problem formulated as |unfoldM p f >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism:
-\begin{corollary} \label{cor:unfold-assert-scanl-local}
-% Given |p :: b -> Bool|, |f :: b -> Me eps (a,b)|, |z :: b|, |ok :: s -> Bool|, |oplus :: s -> a -> s|, |st :: s|, where |{N, S s} `sse` eps|,
-If the relation |(not . p)? . snd . (=<<) . f| is well-founded, and \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold in addition to the other laws, we have
-%if False
-\begin{code}
-corUnfoldAssertScanlLocal :: (MonadPlus m, MonadState s m) =>
-  (b -> Bool) -> (b -> m (a, b)) -> b -> (s -> Bool) -> (s -> a -> s)
-  -> s -> m [a]
-corUnfoldAssertScanlLocal p f z ok oplus st =
-\end{code}
-%endif
-\begin{code}
- unfoldM p f z >>= assert (all ok . scanlp oplus st) ===
-    solve p f ok oplus st z {-"~~,"-}
-\end{code}
-where |solve| is defined by:
+To conclude our derivation, a problem formulated as |unfoldM p f >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
 \begin{spec}
 solve :: {N, S s} `sse` eps => (b -> Bool) -> (b -> Me eps (a, b)) -> (s -> Bool) -> (s -> a -> s) -> s -> b -> Me eps [a]
 solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z)
@@ -183,6 +159,21 @@ solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z)
                       put (st `oplus` x) >> ((x:) <$> m)
 \end{code}
 %endif
+\begin{corollary} \label{cor:unfold-assert-scanl-local}
+% Given |p :: b -> Bool|, |f :: b -> Me eps (a,b)|, |z :: b|, |ok :: s -> Bool|, |oplus :: s -> a -> s|, |st :: s|, where |{N, S s} `sse` eps|,
+If the relation |(not . p)? . snd . (=<<) . f| is well-founded, and \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold in addition to the other laws, we have
+%if False
+\begin{code}
+corUnfoldAssertScanlLocal :: (MonadPlus m, MonadState s m) =>
+  (b -> Bool) -> (b -> m (a, b)) -> b -> (s -> Bool) -> (s -> a -> s)
+  -> s -> m [a]
+corUnfoldAssertScanlLocal p f z ok oplus st =
+\end{code}
+%endif
+\begin{code}
+ unfoldM p f z >>= assert (all ok . scanlp oplus st) ===
+    solve p f ok oplus st z {-"~~."-}
+\end{code}
 \end{corollary}
 
 \paragraph{|n|-Queens Solved}
