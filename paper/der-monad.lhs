@@ -21,6 +21,7 @@
 \EnableBpAbbreviations
 \usepackage{url}
 \usepackage{subfig}
+\usepackage{enumitem}
 
 % %% Some recommended packages.
 % \usepackage{booktabs}   %% For formal tables:
@@ -36,7 +37,7 @@
 \setlength{\mathindent}{15pt}
 
 \newcommand{\todo}[1]{{\bf [To do: #1]}}
-
+\newcommand{\delete}[1]{}
 
 % \makeatletter\if@ACM@journal\makeatother
 % %% Journal information (used by PACMPL format)
@@ -164,7 +165,7 @@ Equational reasoning is among the most important tools that functional programmi
 %include sections/MonadicScanL.lhs
 %include sections/StateLocal.lhs
 %include sections/NondetGlobal.lhs
-%include sections/BacktrackGlobal.lhs
+%%include sections/BacktrackGlobal.lhs
 %include sections/Conclusion.lhs
 
 

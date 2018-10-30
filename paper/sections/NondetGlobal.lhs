@@ -25,7 +25,7 @@ m1 >> m2 = m1 >>= const m2
 For a monad with both non-determinism and state, right-distributivity \eqref{eq:mplus-bind-dist} implies that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
 
 Non-deterministic monads with a global state, however, is rather tricky.
-One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad. The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, consequently violates monad laws, and is therefore not even a monad. See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
+One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad. The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad. See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
 
 Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
 In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
@@ -43,14 +43,14 @@ In backtracking algorithms that keep a global state, it is a common pattern to
 3. roll back the state to the previous step.
 To implement such pattern as a monadic program, one might come up with something like the code below:
 \begin{spec}
-modify next >> solve >>= modReturn prev {-"~~."-}
+modify next >> search >>= modReturn prev {-"~~."-}
 \end{spec}
 where |next| advances the state, |prev| undoes the modification of |next|, and |modify| and |modReturn| are defined by:
 \begin{spec}
 modify f       = get >>= (put . f) {-"~~,"-}
 modReturn f v  = modify f >> return v {-"~~."-}
 \end{spec}
-Let the initial state be |st| and assume that |solve| found three choices |m1 `mplus` m2 `mplus` m3|. The intention is that all of |m1|, |m2|, and |m3| start running with state |next st|, and the state is restored to |prev (next st) = st| afterwards. By \eqref{eq:bind-mplus-dist}, however,
+Let the initial state be |st| and assume that |search| found three choices |m1 `mplus` m2 `mplus` m3|. The intention is that all of |m1|, |m2|, and |m3| start running with state |next st|, and the state is restored to |prev (next st) = st| afterwards. By \eqref{eq:bind-mplus-dist}, however,
 \begin{spec}
  modify next >> (m1 `mplus` m2 `mplus` m3) >>= modReturn prev =
    modify next >> (  (m1 >>= modReturn prev) `mplus`
@@ -59,9 +59,9 @@ Let the initial state be |st| and assume that |solve| found three choices |m1 `m
 \end{spec}
 which, with a shared state, means that |m2| starts with state |st|, after which the state is rolled back too early to |prev st|. The computation |m3| starts with |prev st|, after which the state is rolled too far to |prev (prev st)|.
 
-In fact, one cannot guarantee that |modReturn prev| is always executed --- if |solve| fails, we get |modify next >> solve >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
+In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails, we get |modify next >> solve >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
 
-We need a way to say that ``|modify next| and |modReturn prev| are run exactly once, respectively before and after all non-deterministic branches in |solve|.'' Fortunately, for the purpose of this pearl, there is a curious technique. Define
+We need a way to say that ``|modify next| and |modReturn prev| are run exactly once, respectively before and after all non-deterministic branches in |solve|.'' Fortunately, we have discovered a curious technique. Define
 \begin{spec}
 side :: N `mem` eps => Me eps a -> Me eps b
 side m = m >> mzero {-"~~."-}
@@ -78,6 +78,229 @@ side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modify prev)
 \end{spec}
 executes |modify next| and |modify prev| once, respectively before and after all the non-deterministic branches, even if they fail. Note that |side m| does not generate a result. Its presence is merely for the side-effect of |m|, hence the name. Note also that the type of |side m| need not be the same as that of |m|.
 
+\subsection{State-Restoring Operations}
+
+The discussion above suggests that one can implement backtracking, in a global-state setting, by using |mplus| and |side| appropriately.
+We can even go a bit further by defining the following variations of |put| and |modify|:
+\begin{spec}
+putR :: {S s, N} `sse` eps => s -> Me eps ()
+putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~,"-}
+
+modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
+modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
+\end{spec}
+%if False
+\begin{code}
+putR :: (MonadPlus m, MonadState s m) => s -> m ()
+putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~,"-}
+
+modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
+modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
+\end{code}
+%endif
+For some intuition about |putR|, consider |putR s >> comp| where |comp| is some arbitrary computation:
+%if False
+\begin{code}
+putRExplain :: (MonadPlus m, MonadState s m) => s -> m b -> m b
+putRExplain s comp =
+\end{code}
+%endif
+\begin{code}
+      putR s >> comp
+ ===  (get >>= \s0 -> put s `mplus` side (put s0)) >> comp
+ ===    {- monad law, left-distributivity \eqref{eq:bind-mplus-dist} -}
+      get >>= \s0 -> (put s >> comp) `mplus` (side (put s0) >> comp)
+ ===    {- by \eqref{eq:bind-mzero-zero}, |mzero >> comp = mzero| -}
+      get >>= \s0 -> (put s >> comp) `mplus` side (put s0) {-"~~."-}
+\end{code}
+Thanks to left-distributivity \eqref{eq:bind-mplus-dist}, |(>> comp)| is promoted into |mplus|.
+Furthermore, the |(>> comp)| after |side (put s0)| is discarded by
+\eqref{eq:bind-mzero-zero}.
+In words, |putR s >> comp| saves the current state, computes |comp| using state |s|, and restores the saved state! Similarly with |modifyR|. The subscript |R| in their names stand for ``restore.''
+
+The behaviour of |putR|, however, is still rather tricky. It is instructive comparing
+\begin{enumerate}[label=(\alph*)]
+\item |return x|,  \label{ex:putR-pitfalls-1}
+\item |put s >> return x|, and \label{ex:putR-pitfalls-2}
+\item |putR s >> return x|. \label{ex:putR-pitfalls-3}
+\end{enumerate}
+When run in initial state |s0|, they all yield |x| as the result.
+Certainly, \ref{ex:putR-pitfalls-1} terminates with state |s0|, and \ref{ex:putR-pitfalls-2} terminates with state |s|.
+Program \ref{ex:putR-pitfalls-3} also terminates with state |s0|.
+However, \ref{ex:putR-pitfalls-3} does {\em not} equal \ref{ex:putR-pitfalls-1}!
+There exist contexts, for example |(>> get)|, with which we can tell them apart:
+|return x >> get| returns |s0|, while |putR s >> return x >> get| returns |s|, even though the program yields final state |s0|.
+
+We wish that |putR|, when run with a global state, still satisfies laws \eqref{eq:put-put} through \eqref{eq:mzero-bind-zero}.
+If so, one could take a program written for a local state monad, replace all occurrences of |put| by |putR|, and run the program with a global state.
+Unfortunately this is not the case: |putR| does satisfy |put|-|put|~\eqref{eq:put-put} and |get|-|put|~\eqref{eq:put-get}, but |put|-|get|~\eqref{eq:get-put} fails ---
+|get >>= putR| and |return ()| can be
+told apart by some contexts, for example |(>> put t)|.
+To see that, we calculate:
+\begin{spec}
+   (get >>= putR) >> put t
+=  (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
+=   {- |get|-|get| -}
+   (get >>= \s -> put s `mplus` side (put s)) >> put t
+=   {- monad laws, left-distributivity -}
+   get >>= \s -> (put s >> put t) `mplus` side (put s)
+=   {- |put|-|put| -}
+   get >>= \s -> put t `mplus` side (put s) {-"~~."-}
+\end{spec}
+Meanwhile, |return () >> put t = put t|. The two side are not equal when |s /= t|.
+
+In a global-state setting, reasoning about combination of |mplus| and |(>>=)| is tricky because, due to \eqref{eq:bind-mplus-dist}, every occurrence of |mplus| is a point where future code can be inserted.
+This makes it hard to reason about programs compositionally --- some properties hold only when we take the entire program into consideration.
+
+It turns out that all properties we need do hold, provided that {\em all} occurrences of |put| are replaced by |putR| --- problematic contexts such as |put t| above is thus ruled out.
+However, that ``all |put| replaced by |putR|'' is a global property, and to properly talk about it we have to formally define contexts, which is what we will do in Section~\ref{sec:ctxt-trans}.
+
+\subsection{Contexts and Translation}
+\label{sec:ctxt-trans}
+
+%format Dom = "\mathcal{D}"
+%format apply z (e) = z "\lbrack" e "\rbrack"
+%format ntZ = "\mathcal{Z}"
+%format ntV = "\mathcal{V}"
+%format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
+%format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
+%format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
+%format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
+
+\begin{figure}
+\centering
+\small
+\subfloat[]{
+\begin{minipage}{0.3\textwidth}
+\begin{spec}
+ntE    =  {-"\mbox{pure expressions}"-}
+ntEV   =  {-"\mbox{functions returning monad}"-}
+ntP    =  return ntE | mzero | ntP `mplus` ntP
+       |  Get ntEV | Put ntE ntP
+ntZ    =  [] | Z; `mplus` ntE | Z;ntE `mplus`
+       |  Z; Put ntE | Z; Get
+\end{spec}
+\end{minipage}
+} %subfloat1
+\quad
+\subfloat[]{
+\begin{minipage}{0.3\textwidth}
+\begin{spec}
+(>>=) :: ntP -> ntEV -> ntP
+return x       >>= f  = f x
+mzero          >>= f = mzero
+(m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
+Get k          >>= f = Get ((>>= f) . k)
+Put x e        >>= f = Put x (e >>= k)
+\end{spec}
+\end{minipage}
+}%subfloat
+\quad
+\subfloat[]{
+\begin{minipage}{0.3\textwidth}
+\begin{spec}
+run         :: ntP -> Dom
+<&>, <||>   :: Dom -> Dom -> Dom
+getD        :: (ntV -> Dom) -> Dom
+putD        :: ntV -> Dom -> Dom
+\end{spec}
+\end{minipage}
+}%subfloat
+\caption{(a) Syntax for programs and contexts (zippers).
+(b) The bind operator. (c) Semantic domain.}
+\label{fig:context-semantics}
+\end{figure}
+
+In this section we will state clearly what laws we expect from a global-state non-deterministic monad and show that, under our semantical assumptions, a program we get by replacing all occurrences of |put| by |putR| does satisfy all laws we demand of a local-state non-deterministic monad.
+All these concepts need to be defined more formally, however.
+In Figure~\ref{fig:context-semantics}(a) we present a slightly altered syntax for monadic programs, in the usual free monad style --- |Get| and |Put| takes continuations, while |(>>=)| is defined as a function in Figure~\ref{fig:context-semantics}(b).
+One can see that the definition of |(>>=)| has laws \eqref{eq:bind-mplus-dist} and \eqref{eq:mzero-bind-zero} built-in.
+Also defined in Figure~\ref{fig:context-semantics}(a) are single-hole contexts |ntZ|, defined as zippers for syntax.
+Given a context |C|, filling the hole by |e| is denoted by |apply C e|.
+
+In the previous sections we have been mixing syntax and semantics.
+Now we assume a semantic domain |Dom|, and a function |run :: ntP -> Dom| that ``runs'' a program into a value in |Dom|, and several operators |(<&>)|, |(<||||>)|, |getD|, and |putD|, shown in Figure~~\ref{fig:context-semantics}(c). Semantics of |mplus|, |get|, and |put| may thus be defined compositionally:
+\begin{spec}
+run (m1 `mplus` m2) = run m1 <||> run m2 {-"~~,"-}
+run (Get k) = getD (\s -> run (k s)) {-"~~,"-}
+run (Put x m) = putD x (run m) {-"~~."-}
+\end{spec}
+The following laws are assumed to hold.
+There should be nothing surprising here:
+they are merely variations of the monad laws \eqref{eq:monad-bind-ret} and \eqref{eq:monad-assoc}, \eqref{eq:bind-mzero-zero} and the monoid property of |mplus|, and laws \eqref{eq:put-put} -- \eqref{eq:get-get} regard states, which we have discussed about:
+\begin{align*}
+|run (apply C (m >>= return))| &= |run (apply C m)| \mbox{~~,}\\
+|run (apply C ((m >>= f) >>= g))| &= |run (apply C (m >>= \x -> (f x >>= g)))|\mbox{~~,}\\
+|run (apply C (mzero `mplus` m))| &= |run (apply C (m `mplus` mzero)) = run (apply C m)|\mbox{~~,}\\
+|run (apply C ((m1 `mplus` m2) `mplus` m3))| &= |run (apply C (m1 `mplus` (m2 `mplus` m3)))|\mbox{~~,}\\
+|run (apply C (mzero >>= k))| &= |run (apply C mzero)|\mbox{~~,}\\
+|run (apply C (Get (\s1 -> Get (\s2 -> k s1 s2))))| &= |run (apply C (Get (\s1 -> k s1 s2)))|\mbox{~~,}\\
+|run (apply C (Get (\s -> Put s m)))| &= |run (apply C m)|\mbox{~~,}\\
+|run (apply C (Put x (Get k)))| &= |run (apply C (Put x (k V)))|\mbox{~~,}\\
+|run (apply C (Put x (Put y m)))| &= |run (apply C (Put y m))|\mbox{~~.}
+\end{align*}
+The laws specific for global-state non-deterministic monads are the following three:
+\begin{align}
+|run (apply C (Put x m1 `mplus` m2))| &= |run (apply C (Put x (m1 `mplus` m2)))|\mbox{~~,} \label{eq:put-mplus-g}\\
+|run (apply C (Get k `mplus` m))| &= |run (apply C (Get (\x -> k x `mplus` m)))|\mbox{~~, |x| not in |k| and |m|,} \label{eq:get-mplus}\\
+|run (Put x (return y `mplus` m))| &= |run (Put x (return y)) <&> run (Put x m)| \label{eq:put-ret-mplus-g}\mbox{~~.}
+\end{align}
+Law~\eqref{eq:put-mplus-g} says that a |Put| prefixing the first  non-deterministic branch can be pulled out of that branch --- either way, the effect of |put| applies to the first branch.
+Law~\eqref{eq:get-mplus} allows us to pull a |Get| out of non-deterministic branches.
+Law~\eqref{eq:put-ret-mplus-g} (\todo{How best to explain this law?})
+Note that we expect it to hold only at the top level --- no context is involved.
+This law is crucial in our proofs.
+
+Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
+\begin{spec}
+eval :: ntP -> Dom
+eval = run . trans {-"~~."-}
+\end{spec}
+We have proved the following theorems:
+\begin{theorem} \label{thm:putG-state-laws}
+The four state laws \eqref{eq:put-put} -- \eqref{eq:get-get} hold for the translated program, in the sense below:
+\begin{align*}
+  |eval (apply C (Get (\s1 -> Get (\s2 -> k s1 s2))))| &=
+     |eval (apply C (Get (\s1 -> k s1 s2)))| \mbox{~~,}\\
+  |eval (apply C (Put x (Get k)))| &= |eval (apply C (Put x (k x)))|\mbox{~~,}\\
+  |eval (apply C (Get (\s -> Put s k)))| &=
+    |eval (apply C k)| \mbox{~~, |s| not free in |k|,} \\
+  |eval (apply C (Put x (Put y m)))| &=
+     |eval (apply C (Put y m))|\mbox{~~.}
+\end{align*}
+\end{theorem}
+Proof of these laws basically start with promoting |trans| inside, before applying \eqref{eq:put-mplus-g} and other laws mentioned earlier in this section.
+
+\begin{theorem}\label{thm:putG-mplus-distr}
+  In the translated program, |putR| distributes into |mplus| and is cancelled by |mzero|:
+\begin{align*}
+  |eval (apply C (Put x mzero))| &= |eval (apply C mzero)| \mbox{~~,}\\
+  |eval (apply C (Put x m1 `mplus` Put x m2))| &=
+    |eval (apply C (Put x (m1 `mplus` m2)))| \mbox{~~.}
+\end{align*}
+\end{theorem}
+\noindent
+The two properties in Theorem~\ref{thm:putG-mplus-distr} allow us to show that |putR| commutes with non-determinism.
+Proof of these laws uses \eqref{eq:put-mplus-g} and \eqref{eq:get-mplus}.
+In addition, both Theorem~\ref{thm:putG-state-laws} and \ref{thm:putG-mplus-distr} uses the following crucial lemma, proved by
+induction on |m1| and |C|, using~\eqref{eq:put-ret-mplus-g}.
+\begin{lemma} |run (apply C (Put x (trans m1 `mplus` m2))) = run (apply C (Put x (trans m1) `mplus` Put x m2))|.
+\end{lemma}
+
+Finally, we need a congruence theorem:
+\begin{theorem} For all |m1|, |m2| and |n| we have:
+\begin{spec}
+  (forall C k, eval (apply C (m1 >>= k) = eval (apply C (m2 >>= k)))) =>
+    (forall C k, eval (apply C ((n >>= \x -> m1) >>= k)) = eval (apply C ((n >>= \x -> m2) >>= k))) {-"~~."-}
+\end{spec}
+\end{theorem}%
+\noindent The proof proceeds by induction on |n|.
+
+\subsection{Backtracking with a Global State Monad}
+
+\todo{Put all these to work. In particular, replace |put| by |modify|.}
+
+\delete{
 \paragraph{Properties} In absence of \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, we instead assume the following properties.
 \begin{align}
   |side m1 `mplus` side m2| &= |side (m1 >> m2)| \mbox{~~,}
@@ -122,7 +345,10 @@ propGetMPlusSideDistr f1 f2 = (get >>= \x -> f1 x `mplus` f2 x) === ((get >>= (\
 Property \eqref{eq:get-mplus-distr} allows right-distributivity of |get| if the branches are only non-deterministic.
 It helps to prove that |get| commutes with non-determinism.
 In general cases, we need a |side (put x)| in the first branch to ensure that the second branch gets the correct value, as in \eqref{eq:get-mplus-side-distr}.
+} %delete
 
+
+\delete{
 \subsection{State-Restoring Programs}
 \label{sec:state-restoring}
 
@@ -294,3 +520,5 @@ putRSRModifyRDer2 next prev s m =
 \end{code}
 Put it back to the context |(get >>= \s -> _)|, and the expression simplifies to |get >>= \s -> putR (next s) >> m|.
 \end{proof}
+
+} %delete
