@@ -30,3 +30,5 @@ notes/Nondet\.pdf
 notes/BacktrackLocal\.pdf
 
 notes/BacktrackGlobal\.pdf
+
+*.el
