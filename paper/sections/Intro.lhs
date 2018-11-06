@@ -19,13 +19,13 @@ Validity of these properties, being proved using only these laws, is independent
 This pearl follows the trail of Hutton and Fulger~\shortcite{HuttonFulger:08:Reasoning} and~Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just}, aiming to develop theorems and patterns that are useful for reasoning about monadic programs.
 We focus on two effects --- non-determinism and state.
 The interaction between non-determinism and state is known to be intricate.
-When each non-deterministic branch has its local state, we get a relatively well-behaved monad, providing a richer collection of properties to work with.
+When each non-deterministic branch has its own local state, we get a relatively well-behaved monad, providing a richer collection of properties to work with.
 When all the non-deterministic branches share one global state, the properties of the monad is much less intuitive, as we shall see in this pearl.
 
 In this pearl we consider problem specifications that uses a monadic unfold to generate possible solutions, which are filtered using a |scanl|-like predicate.
-We derive two backtracking algorithms that uses non-determinism and state, in which the states are respectively local and global.
-In both cases we develop theorems that convert a variation of |scanl| to a |foldr| that uses the state monad, as well as theorems constructing hylomorphism.
+We construct backtracking algorithms for such problems in two scenarios, in which the state is respectively local and global.
+In the local-state case, we develop theorems that convert a variation of |scanl| to a |foldr| that uses the state monad, as well as theorems constructing hylomorphism.
 For the case of global state, we develop a notion of ``state-restoring'' programs that guarantees to restore the initial state after all non-deterministic branches.
-The algorithms are used to solve the |n|-queens and the Sudoku puzzles.
+The algorithms are used to solve the |n|-queens puzzle and Sudoku.
 
 %Code accompanying this pearl can be retrieved from \url{http://www.iis.sinica.edu.tw/~scm/sw/2017_monad_reasoning.zip}.

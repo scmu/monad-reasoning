@@ -175,8 +175,8 @@ Equational reasoning is among the most important tools that functional programmi
 %\input{der-monad.bbl}
 
 %% Appendix
-%\appendix
-%\section{Appendix}
+\appendix
+%include sections/GSMonad.lhs
 
 %Text of appendix \ldots
 

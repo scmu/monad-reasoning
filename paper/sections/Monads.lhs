@@ -83,15 +83,17 @@ All these are merely notational convenience --- the point is that the effects a 
 \begin{figure}
 \small
 %format ntE = "\mathcal{E}"
+%format ntEV = "\mathcal{F}"
 %format ntP = "\mathcal{P}"
 %format ntT = "\mathcal{T}"
 %format ntEff = "\mathcal{F}"
 
 \begin{spec}
-{-"\mbox{pure programs}~~"-}  ntE    = {-"\mbox{pure, non-monadic programs}"-} | ntP
-{-"\mbox{monadic progs}~~"-}  ntP    = return ntE | ntE =<< ntP | mzero | ntP `mplus` ntP | get | put ntE
-{-"\mbox{types}"-}            ntT    = a | c | ntT -> ntT | Me {ntEff} ntT
-{-"\mbox{effects}"-}          ntEff  = S a | S c | N
+ntE    = {-"\mbox{pure, non-monadic expressons}"-}
+ntEV   = {-"\mbox{functions returning monadic programs}~~"-}
+ntP    = return ntE | ntP >>= ntEV | mzero | ntP `mplus` ntP | get | put ntE   {-"\mbox{~~ --- monadic progs}~~"-}
+ntT    = a | c | ntT -> ntT | Me {ntEff} ntT                                   {-"\mbox{~~ --- types}"-}
+ntEff  = S a | S c | N                                                         {-"\mbox{~~ --- effects}"-}
 {-"\quad\mbox{$a$ ranges over type variables,}"-}
 {-"\quad\mbox{while $c$ ranges over for built-in type constants.}"-}
 \end{spec}

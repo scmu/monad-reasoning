@@ -83,7 +83,7 @@ scanlpscanlM oplus st xs =
 \end{code}
 %endif
 \begin{code}
-  return (scanlp oplus st xs) === protect (scanlM oplus st xs) {-"~~,"-}
+  return (scanlp oplus st xs) === protect (scanlM oplus st xs) {-"~~."-}
 \end{code}
 \end{theorem}
 \begin{proof} By induction on |xs|. We present the case |xs := x:xs|.
@@ -155,7 +155,8 @@ Implementation of such non-deterministic monads have been studied by Fischer~\sh
 When mixed with state, one consequence of \eqref{eq:mplus-bind-dist} is that |get >>= (\s -> f1 s `mplus` f2 s) = (get >>= f1 `mplus` get >>= f2)|. That is, |f1| and |f2| get the same state regardless of whether |get| is performed outside or inside the non-deterministic branch.
 Similarly, \eqref{eq:mzero-bind-zero} implies |put s >> mzero = mzero| --- when a program fails, the changes it performed on the state can be discarded.
 These requirements imply that each non-deterministic branch has its own copy of the state.
-One monad having such property is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}. With effect handling, the monad meets the requirements if we run the handler for state before that for list.
+One monad having such property is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}.
+With effect handling~\cite{Wu:14:Effect, KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
 
 The advantage of having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning. In particular, non-determinism commutes with other effects.
 \begin{definition}
