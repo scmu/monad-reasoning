@@ -253,6 +253,7 @@ Law~\eqref{eq:get-mplus} allows us to pull a |Get| out of non-deterministic bran
 Law~\eqref{eq:put-ret-mplus-g} (\todo{How best to explain this law?})
 Note that we expect it to hold only at the top level --- no context is involved.
 This law is crucial in our proofs.
+In Appendix~\ref{sec:GSMonad} we present one implementation of |Dom| and its operators that satisfy all the laws in this section.
 
 Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
 \begin{spec}
@@ -298,6 +299,7 @@ Finally, we need a congruence theorem:
 \end{spec}
 \end{theorem}%
 \noindent The proof proceeds by induction on |n|.
+\todo{It is a crucial property. More explanations?}
 
 \subsection{Backtracking with a Global State Monad}
 
@@ -375,61 +377,26 @@ solveR p f ok oplus ominus st z = putR st >> hyloM odot (return []) p f z
 Note that the use of |run| enforces that the program is run as a whole, that is, it cannot be further composed with other monadic programs.
 
 
-\subsection{Example: A Sudoku Solver}
 
-To demonstrate an application where an array is used in the state, we implemented a backtracking, brute-force Sudoku solver. For those who have not yet heard of the puzzle: given is a 9 by 9 grid, some cells being blank and some filled with numbers. The aim is to fill in the blank cells such that each column, each row, and each of the nine 3 by 3 sub-grids (also called ``boxes'') contains all of the digits from 1 to 9.
+\paragraph{|n|-Queens using a global state}
+To wrap up, we revisit the |n|-queens puzzle.
+Recall that, for the puzzle, |(i,us,ds) `oplus` x = (1 + i,  (i+x):us,  (i-x):ds)|.
+By defining |(i,us,ds) `ominus` x  = (i - 1, tail us, tail ds)|,
+we have |(`ominus` x) . (`oplus` x) = id|.
+One may thus compute all solutions to the puzzle,
+in a scenario with a shared global state, by |run (queensR n)|,
+where |queens| expands to:
+\begin{spec}
+queensR n = put (0,[],[]) >> queensBody [0..n-1] {-"~~,"-}
 
-In the specification, we simply try, for each blank cell, each of the 9 digits. Define:
-\begin{spec}
-allChoices :: N `mem` eps => Int -> Me eps [Int]
-allChoices = unfoldM (0==) (\n -> liftList [1..9] >>= \x -> return (x,n-1)) {-"~~,"-}
+queensBody []  =  return []
+queensBody xs  =  select xs >>= \(x,ys) ->
+                  (get >>= (guard . ok . (`oplus` x))) >>
+                  modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> queensBody ys) {-"~~,"-}
+  where  (i,us,ds) `oplus` x   = (1 + i,  (i+x):us,  (i-x):ds)
+         (i,us,ds) `ominus` x  = (i - 1,  tail us,   tail ds)
+         ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
 \end{spec}
-%if False
-\begin{code}
-allChoices :: Monad m => Int -> ListT m [Int]
-allChoices = unfoldM (0==) (\n -> liftList [1..9] >>= \x -> return (x,n-1))
- {-"~~,"-}
-\end{code}
-%endif
-where |liftList :: N `mem` eps => [a] => Me eps a| non-deterministically returns an element in the given list, such that |allChoices n| returns a list of length |n| whose elements are independently chosen from |[1..9]|. If a given grid contains |n| blank cells, a list of length |n| represents a proposed solution.
-
-To check whether a solution is valid, we inspect the list left-to-right,  keeping a state. It is sufficient letting the state be the current partially filled grid. For convenience, and also for simplifying the definition of |oplus| and |ominus|, we also maintain a zipper of positions:
-\begin{spec}
-type Pos = (Int, Int) {-"~~,\qquad"-}  type Grid = Array Pos Entry{-"~~,"-}
-type Entry = Int{-"~~,"-}              type State = (Grid, [Pos], [Pos]) {-"~~."-}
-\end{spec}
-Therefore, in the state |(grid, todo, done)|, |grid| is an array representing the current status of the grid (an empty cell being filled |0|), |todo| is a list of blank positions to be filled, and |done| is the list of positions that were blank but are now filled.
-
-We assume a function |collisions :: Pos -> [Pos]| which, given a position, returns a list of positions that should be checked. That is, |collisions i| returns all the positions that are on the same row, column, and in the same box as~|i|. With that, we may define:
-\begin{spec}
-safe st = all ok . scanlp oplus st {-"~~,"-}
-  where  (grid, i:is, js) `oplus`  x  = (grid // [(i,x)], is, i:js) {-"~~,"-}
-         ok (grid, is, i:js) = all ((grid ! i) /=) (map (grid !) (collisions i)) {-"~~,"-}
-\end{spec}
-where |(!)| and |(//)| respectively performs array reading and updating. The reverse operation of |oplus| is |(grid, is, i:js) `ominus` x  = (grid // [(i,0)], i:is, js)|. A program solving the puzzle can be specified by
-\begin{spec}
-sudoku grid = putR fin >> allChoices (length empties) >>= assert (safe initState) {-"~~,"-}
-   where initState = (grid, empties, []) {-"~~,"-}
-\end{spec}
-where |grid| is the array representing the initial puzzle and |empties| are the blank positions.
-
-The actual implementation is slightly complicated by conversion from |Array| to |STUArray|, the array that supports in-place update in Haskell. In the code below, |guardNoCollision| is specified by |get >>= (guard . ok)|. Operations |modNext x| and |modPrev x| are respectively specified by |modify (`oplus` x)| and |modify (`ominus` x)|, but alters the array directly.
-\begin{spec}
-sudoku grid  = putR initState >> sudokuBody (length empties) {-"~~,"-}
-sudokuBody 0  =  return []
-sudokuBody n  =  liftList [1..9] >>= \x ->
-                 modifyR (modNext x) (modPrev x) >>
-                 guardNoCollision x >>
-                 (x:) <$> solve (n-1) {-"~~."-}
-\end{spec}
-The handle of an |STUArray| is usually stored in a reader monad. The actual monad we use is constructed by
-\begin{spec}
-type Grid s   = STUArray s Pos Entry {-"~~,"-}
-type SudoM s  = ListT (StateT ([Pos], [Pos]) (ReaderT (Grid s) (ST s))) {-"~~,"-}
-\end{spec}
-where |ListT| is one of the correct implementations~\cite{Gale:07:ListT}.
-
-This Sudoku solver is not very effective --- a puzzle rated as ``hard'' could take minutes to solve. For Sudoku, naive brute-force searching does not make a good algorithm. In comparison, Bird~\shortcite{Bird:10:Pearls} derived a purely functional program, based on constraint refining, that is able to solve the same puzzle in an instant. Nevertheless, the algorithm in this section does the job, and demonstrates that our pattern of derivation is applicable.
 
 \delete{
 \paragraph{Properties} In absence of \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, we instead assume the following properties.

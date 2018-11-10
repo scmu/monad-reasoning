@@ -1,3 +1,4 @@
+%% This section is not included in the paper anymore.
 %if False
 \begin{code}
 {-# LANGUAGE RankNTypes, FlexibleContexts, ScopedTypeVariables #-}

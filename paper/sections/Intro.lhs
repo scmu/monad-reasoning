@@ -26,6 +26,6 @@ In this pearl we consider problem specifications that uses a monadic unfold to g
 We construct backtracking algorithms for such problems in two scenarios, in which the state is respectively local and global.
 In the local-state case, we develop theorems that convert a variation of |scanl| to a |foldr| that uses the state monad, as well as theorems constructing hylomorphism.
 For the case of global state, we develop a notion of ``state-restoring'' programs that guarantees to restore the initial state after all non-deterministic branches.
-The algorithms are used to solve the |n|-queens puzzle and Sudoku.
+The algorithms are used to solve the |n|-queens puzzle, our running example.
 
 %Code accompanying this pearl can be retrieved from \url{http://www.iis.sinica.edu.tw/~scm/sw/2017_monad_reasoning.zip}.

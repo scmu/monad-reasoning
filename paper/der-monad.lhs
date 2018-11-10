@@ -165,7 +165,6 @@ Equational reasoning is among the most important tools that functional programmi
 %include sections/MonadicScanL.lhs
 %include sections/StateLocal.lhs
 %include sections/NondetGlobal.lhs
-%%include sections/BacktrackGlobal.lhs
 %include sections/Conclusion.lhs
 
 
