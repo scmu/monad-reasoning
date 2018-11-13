@@ -11,6 +11,7 @@
 %include Formatting.fmt
 
 \usepackage{amsmath}
+\usepackage{mathpartir}
 \usepackage{amsfonts}
 \usepackage{stmaryrd}
 %\usepackage{mathptmx}

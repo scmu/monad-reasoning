@@ -158,14 +158,16 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \subsection{Contexts and Translation}
 \label{sec:ctxt-trans}
 
+%format hole = "\square"
 %format Dom = "\mathcal{D}"
 %format apply z (e) = z "\lbrack" e "\rbrack"
-%format ntZ = "\mathcal{Z}"
+%format ntC = "\mathcal{C}"
 %format ntV = "\mathcal{V}"
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
 %format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
+%format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
 
 \begin{figure}
 \centering
@@ -173,12 +175,12 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \subfloat[]{
 \begin{minipage}{0.3\textwidth}
 \begin{spec}
-ntE    =  {-"\mbox{pure expressions}"-}
-ntEV   =  {-"\mbox{functions returning monad}"-}
-ntP    =  return ntE | mzero | ntP `mplus` ntP
-       |  Get ntEV | Put ntE ntP
-ntZ    =  [] | Z; `mplus` ntE | Z;ntE `mplus`
-       |  Z; Put ntE | Z; Get
+ntE    ::=  {-"\mbox{pure expressions}"-}
+ntEV   ::=  {-"\mbox{functions returning monad}"-}
+ntP    ::=  return ntE | mzero | ntP `mplus` ntP
+         |  Get ntEV | Put ntE ntP
+ntC    ::=  hole | ntC; `mplus` ntP | ntC;ntP `mplus`
+         |  ntC; Put ntE | ntC; Get ntE ntEV
 \end{spec}
 \end{minipage}
 } %subfloat1
@@ -200,7 +202,8 @@ Put x e        >>= f = Put x (e >>= k)
 \begin{minipage}{0.3\textwidth}
 \begin{spec}
 run         :: ntP -> Dom
-<&>, <||>   :: Dom -> Dom -> Dom
+<||>   :: Dom -> Dom -> Dom
+retD        :: ntV -> Dom
 getD        :: (ntV -> Dom) -> Dom
 putD        :: ntV -> Dom -> Dom
 \end{spec}
@@ -209,47 +212,105 @@ putD        :: ntV -> Dom -> Dom
 \caption{(a) Syntax for programs and contexts (zippers).
 (b) The bind operator. (c) Semantic domain.}
 \label{fig:context-semantics}
+\todo{Change context notation; no need to distinguish between regular contexts and zipper contexts.}
+\todo{Make types more informative, make it more clear that mathcal V refers to the state type}
+\end{figure}
+
+\newcommand{\orM}{\mathbin{\scaleobj{0.8}{[\!]}}}
+\begin{figure}
+  \begin{mathpar}
+    \inferrule*[right=CHole]
+    {~}
+    {[] : \Gamma ; A \leftarrow \Gamma ; A}
+    \\\\
+    \inferrule*[right=COr1]
+    {
+      \Gamma_2 \vdash \mathcal{P} : B
+      \\
+      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+    }
+    {\mathcal{C} ; \mathcal{P} \orM : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+
+    \inferrule*[right=COr2]
+    {
+      \Gamma_2 \vdash \mathcal{P} : B
+      \\
+      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+    }
+    {\mathcal{C} ; \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+    \\\\
+    \inferrule*[right=CPut]
+    {
+      \Gamma_2 \vdash \mathcal{E} : S
+      \\
+      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B) 
+    }
+    {\mathcal{C} ; \text{Put}~v : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+
+    \inferrule*[right=CGet]
+    {
+      \emptyset \vdash p : S \rightarrow \text{bool}
+      \\
+      \Gamma_2, S \vdash \mathit{alt} : B
+      \\
+      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2, S; B) 
+    }
+    {\mathcal{C} ; \text{Get}~p~\mathit{alt} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+  \end{mathpar}
+  \todo{in CGet rule: empty environment, alt typing; not sure about those}
+  \todo{this is a bit large, if we are going to do a separate mechanization paper it should probably be moved there}
 \end{figure}
 
 In this section we will state clearly what laws we expect from a global-state non-deterministic monad and show that, under our semantical assumptions, a program we get by replacing all occurrences of |put| by |putR| does satisfy all laws we demand of a local-state non-deterministic monad.
 All these concepts need to be defined more formally, however.
-In Figure~\ref{fig:context-semantics}(a) we present a slightly altered syntax for monadic programs, in the usual free monad style --- |Get| and |Put| takes continuations, while |(>>=)| is defined as a function in Figure~\ref{fig:context-semantics}(b).
+In Figure~\ref{fig:context-semantics}(a) we present an altered syntax for monadic programs, in the usual free monad style --- |Get| and |Put| take continuations, while |(>>=)| is defined as a (meta)function in Figure~\ref{fig:context-semantics}(b).
 One can see that the definition of |(>>=)| has laws \eqref{eq:bind-mplus-dist} and \eqref{eq:mzero-bind-zero} built-in.
-Also defined in Figure~\ref{fig:context-semantics}(a) are single-hole contexts |ntZ|, defined as zippers for syntax.
+Also defined in Figure~\ref{fig:context-semantics}(a) are single-hole contexts |ntC|.
+% TODO: are contexts so standard that they require no further explanation?
 Given a context |C|, filling the hole by |e| is denoted by |apply C e|.
 
 In the previous sections we have been mixing syntax and semantics.
-Now we assume a semantic domain |Dom|, and a function |run :: ntP -> Dom| that ``runs'' a program into a value in |Dom|, and several operators |(<&>)|, |(<||||>)|, |getD|, and |putD|, shown in Figure~~\ref{fig:context-semantics}(c). Semantics of |mplus|, |get|, and |put| may thus be defined compositionally:
+Now we assume a semantic domain |Dom|, and a function |run :: ntP -> Dom| that ``runs'' a program into a value in |Dom|, and several operators |(<||||>)|, |getD|, and |putD|, shown in Figure~~\ref{fig:context-semantics}(c).  Semantics of |mplus|, |get|, and |put| may thus be defined compositionally:
 \begin{spec}
 run (m1 `mplus` m2) = run m1 <||> run m2 {-"~~,"-}
 run (Get k) = getD (\s -> run (k s)) {-"~~,"-}
 run (Put x m) = putD x (run m) {-"~~."-}
 \end{spec}
+
+In order to lighten the notational burden, we define a notion of ``contextual equivalence'' of programs:
+\begin{align*}
+  |m1| \triangleq_C |m2| \iff |run (apply C m1)| = |run (apply C m2)|
+\end{align*}
+
 The following laws are assumed to hold.
 There should be nothing surprising here:
-they are merely variations of the monad laws \eqref{eq:monad-bind-ret} and \eqref{eq:monad-assoc}, \eqref{eq:bind-mzero-zero} and the monoid property of |mplus|, and laws \eqref{eq:put-put} -- \eqref{eq:get-get} regard states, which we have discussed about:
+they are merely variations of the monad laws \eqref{eq:monad-bind-ret} and \eqref{eq:monad-assoc}, \eqref{eq:bind-mzero-zero} and the monoid property of |mplus|, and laws \eqref{eq:put-put} -- \eqref{eq:get-get} regard states, which we discussed earlier.
+% TODO: maybe add some motivation why we use contexts here.
+
+\newcommand{\CEq}{\triangleq_C}
+
 \begin{align*}
-|run (apply C (m >>= return))| &= |run (apply C m)| \mbox{~~,}\\
-|run (apply C ((m >>= f) >>= g))| &= |run (apply C (m >>= \x -> (f x >>= g)))|\mbox{~~,}\\
-|run (apply C (mzero `mplus` m))| &= |run (apply C (m `mplus` mzero)) = run (apply C m)|\mbox{~~,}\\
-|run (apply C ((m1 `mplus` m2) `mplus` m3))| &= |run (apply C (m1 `mplus` (m2 `mplus` m3)))|\mbox{~~,}\\
-|run (apply C (mzero >>= k))| &= |run (apply C mzero)|\mbox{~~,}\\
-|run (apply C (Get (\s1 -> Get (\s2 -> k s1 s2))))| &= |run (apply C (Get (\s1 -> k s1 s2)))|\mbox{~~,}\\
-|run (apply C (Get (\s -> Put s m)))| &= |run (apply C m)|\mbox{~~,}\\
-|run (apply C (Put x (Get k)))| &= |run (apply C (Put x (k V)))|\mbox{~~,}\\
-|run (apply C (Put x (Put y m)))| &= |run (apply C (Put y m))|\mbox{~~.}
+|m >>= return|                      &\CEq |m| \mbox{~~,}\\
+|(m >>= f) >>= g|                   &\CEq |m >>= \x -> (f x >>= g)|\mbox{~~,}\\
+|mzero `mplus` m|                   &\CEq |m `mplus` mzero = m|\mbox{~~,}\\
+|(m1 `mplus` m2) `mplus` m3|        &\CEq |m1 `mplus` (m2 `mplus` m3)|\mbox{~~,}\\
+|mzero >>= k|                       &\CEq |mzero|\mbox{~~,}\\
+|Get (\s1 -> Get (\s2 -> k s1 s2))| &\CEq |(Get (\s1 -> k s1 s2))|\mbox{~~,}\\
+|Get (\s -> Put s m)|               &\CEq |m|\mbox{~~,}\\
+|Put x (Get k)|                     &\CEq |Put x (k V)|\mbox{~~,}\\
+|Put x (Put y m)|                   &\CEq |Put y m|\mbox{~~.}
 \end{align*}
 The laws specific for global-state non-deterministic monads are the following three:
+\todo{I'm not sure law~\eqref{eq:get-mplus} is specific to global-state semantics}
 \begin{align}
-|run (apply C (Put x m1 `mplus` m2))| &= |run (apply C (Put x (m1 `mplus` m2)))|\mbox{~~,} \label{eq:put-mplus-g}\\
-|run (apply C (Get k `mplus` m))| &= |run (apply C (Get (\x -> k x `mplus` m)))|\mbox{~~, |x| not in |k| and |m|,} \label{eq:get-mplus}\\
-|run (Put x (return y `mplus` m))| &= |run (Put x (return y)) <&> run (Put x m)| \label{eq:put-ret-mplus-g}\mbox{~~.}
+|(Put x m1 `mplus` m2)|      &\CEq |(Put x (m1 `mplus` m2))|\mbox{~~,} \label{eq:put-mplus-g}\\
+|(Get k `mplus` m)|          &\CEq |(Get (\x -> k x `mplus` m))|\mbox{~~, |x| not in |k| and |m|,} \label{eq:get-mplus}\\
+|Put x (return y `mplus` m)| &\CEq |Put x (return y) `mplus` Put x m| \label{eq:put-ret-mplus-g}\mbox{~~.}
 \end{align}
 Law~\eqref{eq:put-mplus-g} says that a |Put| prefixing the first  non-deterministic branch can be pulled out of that branch --- either way, the effect of |put| applies to the first branch.
 Law~\eqref{eq:get-mplus} allows us to pull a |Get| out of non-deterministic branches.
-Law~\eqref{eq:put-ret-mplus-g} (\todo{How best to explain this law?})
-Note that we expect it to hold only at the top level --- no context is involved.
-This law is crucial in our proofs.
+Law~\eqref{eq:put-ret-mplus-g} will form the base case for a proof that a |Put| operation can be distributed over non-deterministic branches if the first branch does not modify the state.
+Note that we expect it to hold only at the top level --- no context is involved. This law is crucial in our proofs.
 
 Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
 \begin{spec}
@@ -280,7 +341,7 @@ Proof of these laws basically start with promoting |trans| inside, before applyi
 \end{align*}
 \end{theorem}
 \noindent
-The two properties in Theorem~\ref{thm:putG-mplus-distr} allow us to show that |putR| commutes with non-determinism.
+The two properties in Theorem~\ref{thm:putG-mplus-distr} allow us to show that |putR| commutes with non-deterministic choice (i.e. |putR v >> choose x y >> k = choose x y >> putR v >> k| where |choose x y = return x `mplus` return y| \todo{Check this; also where do we prove this in the mechanization?}).
 Proof of these laws uses \eqref{eq:put-mplus-g} and \eqref{eq:get-mplus}.
 In addition, both Theorem~\ref{thm:putG-state-laws} and \ref{thm:putG-mplus-distr} uses the following crucial lemma, proved by
 induction on |m1| and |C|, using~\eqref{eq:put-ret-mplus-g}.
