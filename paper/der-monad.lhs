@@ -166,7 +166,6 @@ Equational reasoning is among the most important tools that functional programmi
 %include sections/MonadicScanL.lhs
 %include sections/StateLocal.lhs
 %include sections/NondetGlobal.lhs
-%%include sections/BacktrackGlobal.lhs
 %include sections/Conclusion.lhs
 
 
@@ -176,8 +175,8 @@ Equational reasoning is among the most important tools that functional programmi
 %\input{der-monad.bbl}
 
 %% Appendix
-%\appendix
-%\section{Appendix}
+\appendix
+%include sections/GSMonad.lhs
 
 %Text of appendix \ldots
 

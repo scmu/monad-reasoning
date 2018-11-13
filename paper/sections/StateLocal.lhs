@@ -141,8 +141,9 @@ Routine, using commutativity of state and non-determinism.
 \end{proof}
 
 \subsection{Summary, and Solving |n|-Queens}
+\label{sec:solve-n-queens}
 
-To conclude our derivation, a problem formulated as |unfoldM p f >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
+To conclude our derivation, a problem formulated as |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
 \begin{spec}
 solve :: {N, S s} `sse` eps => (b -> Bool) -> (b -> Me eps (a, b)) -> (s -> Bool) -> (s -> a -> s) -> s -> b -> Me eps [a]
 solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z)

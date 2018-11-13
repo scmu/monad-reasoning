@@ -25,7 +25,14 @@ m1 >> m2 = m1 >>= const m2
 For a monad with both non-determinism and state, right-distributivity \eqref{eq:mplus-bind-dist} implies that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
 
 Non-deterministic monads with a global state, however, is rather tricky.
-One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad. The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad. See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
+One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
+The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
+%See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
+\footnote{
+The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
+More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT, Volkov:14:list-t}.
+Effect handlers, such as that of Wu~\shortcite{Wu:14:Effect} and Kiselyov and Ishii~\shortcite{KiselyovIshii:15:Freer}, do produce correct implementations by running the handler for non-determinism before that of state.
+}
 
 Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
 In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
@@ -36,6 +43,7 @@ Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails
 These significantly limit the properties we may have.
 
 \subsection{Chaining Using Non-deterministic Choice}
+\label{sec:chaining}
 
 In backtracking algorithms that keep a global state, it is a common pattern to
 1. update the current state to its next step,
@@ -81,21 +89,15 @@ executes |modify next| and |modify prev| once, respectively before and after all
 \subsection{State-Restoring Operations}
 
 The discussion above suggests that one can implement backtracking, in a global-state setting, by using |mplus| and |side| appropriately.
-We can even go a bit further by defining the following variations of |put| and |modify|:
+We can even go a bit further by defining the following variations of |put|:
 \begin{spec}
 putR :: {S s, N} `sse` eps => s -> Me eps ()
-putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~,"-}
-
-modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
-modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
+putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{spec}
 %if False
 \begin{code}
 putR :: (MonadPlus m, MonadState s m) => s -> m ()
-putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~,"-}
-
-modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
-modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
+putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{code}
 %endif
 For some intuition about |putR|, consider |putR s >> comp| where |comp| is some arbitrary computation:
@@ -116,7 +118,8 @@ putRExplain s comp =
 Thanks to left-distributivity \eqref{eq:bind-mplus-dist}, |(>> comp)| is promoted into |mplus|.
 Furthermore, the |(>> comp)| after |side (put s0)| is discarded by
 \eqref{eq:bind-mzero-zero}.
-In words, |putR s >> comp| saves the current state, computes |comp| using state |s|, and restores the saved state! Similarly with |modifyR|. The subscript |R| in their names stand for ``restore.''
+In words, |putR s >> comp| saves the current state, computes |comp| using state |s|, and restores the saved state!
+The subscript |R| stands for ``restore.''
 
 The behaviour of |putR|, however, is still rather tricky. It is instructive comparing
 \begin{enumerate}[label=(\alph*)]
@@ -266,7 +269,6 @@ All these concepts need to be defined more formally, however.
 In Figure~\ref{fig:context-semantics}(a) we present an altered syntax for monadic programs, in the usual free monad style --- |Get| and |Put| take continuations, while |(>>=)| is defined as a (meta)function in Figure~\ref{fig:context-semantics}(b).
 One can see that the definition of |(>>=)| has laws \eqref{eq:bind-mplus-dist} and \eqref{eq:mzero-bind-zero} built-in.
 Also defined in Figure~\ref{fig:context-semantics}(a) are single-hole contexts |ntC|.
-% TODO: are contexts so standard that they require no further explanation?
 Given a context |C|, filling the hole by |e| is denoted by |apply C e|.
 
 In the previous sections we have been mixing syntax and semantics.
@@ -285,7 +287,6 @@ In order to lighten the notational burden, we define a notion of ``contextual eq
 The following laws are assumed to hold.
 There should be nothing surprising here:
 they are merely variations of the monad laws \eqref{eq:monad-bind-ret} and \eqref{eq:monad-assoc}, \eqref{eq:bind-mzero-zero} and the monoid property of |mplus|, and laws \eqref{eq:put-put} -- \eqref{eq:get-get} regard states, which we discussed earlier.
-% TODO: maybe add some motivation why we use contexts here.
 
 \newcommand{\CEq}{\triangleq_C}
 
@@ -311,6 +312,8 @@ Law~\eqref{eq:put-mplus-g} says that a |Put| prefixing the first  non-determinis
 Law~\eqref{eq:get-mplus} allows us to pull a |Get| out of non-deterministic branches.
 Law~\eqref{eq:put-ret-mplus-g} will form the base case for a proof that a |Put| operation can be distributed over non-deterministic branches if the first branch does not modify the state.
 Note that we expect it to hold only at the top level --- no context is involved. This law is crucial in our proofs.
+\todo{It actually probably holds for contexts as we presented them here, but not for the more general notion of contexts which also includes bind; we should probably just immediately use the more general notion of contexts in the paper.}
+In Appendix~\ref{sec:GSMonad} we present one implementation of |Dom| and its operators that satisfy all the laws in this section.
 
 Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
 \begin{spec}
@@ -356,10 +359,104 @@ Finally, we need a congruence theorem:
 \end{spec}
 \end{theorem}%
 \noindent The proof proceeds by induction on |n|.
+\todo{It is a crucial property. More explanations?}
 
 \subsection{Backtracking with a Global State Monad}
 
-\todo{Put all these to work. In particular, replace |put| by |modify|.}
+There is still one technical detail to to deal with before we deliver a backtracking algorithm that uses a global state.
+As mentioned in Section~\ref{sec:chaining}, rather than using |put|, such algorithms typically use a pair of commands |modify next| and |modify next|, with |prev . next = id|, to update and restore the state.
+This is especially true when the state is implemented using an array or other data structure that is usually not overwritten in its entirety.
+Following a style similar to |putR|, this can be modelled by:
+\begin{spec}
+modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
+modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
+\end{spec}
+%if False
+\begin{code}
+modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
+modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
+\end{code}
+%endif
+One can see that |modifyR next prev >> m| expands to
+|(modify next >> m) `mplus` side (modify prev)|, thus the two |modify|s are performed before and after |m|.
+
+Assume that |s0| is the current state.
+Is it safe to replace |putR (next s0) >> m| by |modifyR next prev >> m|?
+We can do so if we are sure that |m| always restores the state to |s0| before |modify prev| is performed.
+We say that a monadic program |m| is {\em state-restoring} if, for all |comp|, the initial state in which |m >>= comp| is run is always restored when the computation finishes. Formally, it can be written as:
+\begin{definition} |m :: {N, S s} `sse` eps => Me eps a| is called {\em state-restoring} if
+  |m = get >>= \s0 -> m `mplus` side (put s0)|.
+\end{definition}
+Certainly, |putR s| is state-restoring. In fact, the following properties allow state-restoring programs to be built compositionally:
+\begin{lemma} We have that
+\begin{enumerate}
+\item |mzero| is state-restoring,
+\item |putR s| is state-restoring,
+\item |guard p >> m| is state-restoring if |m| is,
+\item |get >>= f| is state-restoring if |f x| is state-storing for all |x|, and
+\item |m >>= f| is state restoring if |m| is state-restoring.
+\end{enumerate}
+\end{lemma}
+\noindent Proof of these properties are routine exercises.
+With these properties, we also have that, for a program |m| written using our program syntax, |trans m| is always state-restoring.
+The following lemma then allows us to replace certain |putR| by |modifyR|:
+\begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
+If |m| is state-restoring, we have
+%if False
+\begin{code}
+putRSRModifyR ::
+  (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
+putRSRModifyR next prev m =
+\end{code}
+\begin{code}
+  get >>= \s -> putR (next s) >> m {-"~~"-}=== {-"~~"-}
+    modifyR next prev >> m {-"~~."-}
+\end{code}
+%endif
+\begin{equation*}
+  |get >>= \s -> putR (next s) >> m| ~=~
+    |modifyR next prev >> m| \mbox{~~.}
+\end{equation*}
+\end{lemma}
+
+\paragraph{Backtracking using a global-state monad}
+Recall that, in Section~\ref{sec:solve-n-queens},
+we showed that a problem formulated by |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism |solve p f ok oplus st z|,
+run in a non-deterministic local-state monad.
+Putting all the information in this section together,
+we conclude that solutions of the same problem can be computed,
+in a non-deterministic global-state monad,
+by |run (solveR p f ok oplus ominus st z)|, where |(`ominus` x) . (`oplus` x) = id| for all |x|, and |solveR| is defined by:
+\begin{spec}
+solveR :: {N, S s} `sse` eps =>  (b -> Bool) -> (b -> Me eps (a, b)) ->
+                                 (s -> Bool) -> (s -> a -> s) -> (s -> a -> s) -> s -> b -> Me eps [a]
+solveR p f ok oplus ominus st z = putR st >> hyloM odot (return []) p f z
+  where x `odot` m =  (get >>= guard . ok . (`oplus` x)) >>
+                      modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> m) {-"~~."-}
+\end{spec}
+Note that the use of |run| enforces that the program is run as a whole, that is, it cannot be further composed with other monadic programs.
+
+
+
+\paragraph{|n|-Queens using a global state}
+To wrap up, we revisit the |n|-queens puzzle.
+Recall that, for the puzzle, |(i,us,ds) `oplus` x = (1 + i,  (i+x):us,  (i-x):ds)|.
+By defining |(i,us,ds) `ominus` x  = (i - 1, tail us, tail ds)|,
+we have |(`ominus` x) . (`oplus` x) = id|.
+One may thus compute all solutions to the puzzle,
+in a scenario with a shared global state, by |run (queensR n)|,
+where |queens| expands to:
+\begin{spec}
+queensR n = put (0,[],[]) >> queensBody [0..n-1] {-"~~,"-}
+
+queensBody []  =  return []
+queensBody xs  =  select xs >>= \(x,ys) ->
+                  (get >>= (guard . ok . (`oplus` x))) >>
+                  modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> queensBody ys) {-"~~,"-}
+  where  (i,us,ds) `oplus` x   = (1 + i,  (i+x):us,  (i-x):ds)
+         (i,us,ds) `ominus` x  = (i - 1,  tail us,   tail ds)
+         ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
+\end{spec}
 
 \delete{
 \paragraph{Properties} In absence of \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, we instead assume the following properties.
@@ -416,41 +513,6 @@ In general cases, we need a |side (put x)| in the first branch to ensure that th
 In this section we present an interesting programming pattern that exploits left-distributivity \eqref{eq:bind-mplus-dist}.
 Define the following variation of |put|:%
 \footnote{The author owes the idea of |putR| to Tom Schrijvers. See Section \ref{sec:conclusion} for more details.}
-\begin{spec}
-putR :: {S s, N} `sse` eps => s -> Me eps ()
-putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~,"-}
-\end{spec}
-%if False
-\begin{code}
-putR :: (MonadPlus m, MonadState s m) => s -> m ()
-putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~,"-}
-\end{code}
-%endif
-and consider |putR s >> comp| where |comp| is some arbitray computation:
-%if False
-\begin{code}
-putRExplain :: (MonadPlus m, MonadState s m) => s -> m b -> m b
-putRExplain s comp =
-\end{code}
-%endif
-\begin{code}
-      putR s >> comp
- ===  (get >>= \s0 -> put s `mplus` side (put s0)) >> comp
- ===    {- monad law, left-distributivity \eqref{eq:bind-mplus-dist} -}
-      get >>= \s0 -> (put s >> comp) `mplus` (side (put s0) >> comp)
- ===    {- by \eqref{eq:bind-mzero-zero}, |mzero >> comp = mzero| -}
-      get >>= \s0 -> (put s >> comp) `mplus` side (put s0) {-"~~."-}
-\end{code}
-Thanks to left-distributivity \eqref{eq:bind-mplus-dist}, |(>> comp)| is promoted into |mplus|.
-Furthermore, the |(>> comp)| after |side (put s0)| is discarded by
-\eqref{eq:bind-mzero-zero}.
-In words, |putR s >> comp| saves the current state, computes |comp| using state |s|, and restores the saved state, hence the subscript |R| in its name.
-
-It might be instructive comparing |return x|, |m1 = put s >> return x|, and |m2 = putR s >> return x|, when run in initial state |s0|.
-They all yield |x| as the result.
-Certainly, |return x| terminates with state |s0|, and |m1| terminates with state |s|.
-The program |m2| also terminates with state |s0|. However, |m2| does {\em not} equal |return x|!
-There exist contexts, for example |(>>= f)|, with which we can tell them apart: in |return x >>= f|, |f| runs with state |s0|, while in |putR s >> return x >>= f|, |f| runs with state |s|, even though the program yields final state |s0|.
 
 \begin{lemma}\label{lma:putR-basics}
 The following laws regarding |putR| are true:
