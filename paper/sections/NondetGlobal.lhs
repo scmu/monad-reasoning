@@ -182,8 +182,8 @@ ntE    ::=  {-"\mbox{pure expressions}"-}
 ntEV   ::=  {-"\mbox{functions returning monad}"-}
 ntP    ::=  return ntE | mzero | ntP `mplus` ntP
          |  Get ntEV | Put ntE ntP
-ntC    ::=  hole | ntC; `mplus` ntP | ntC;ntP `mplus`
-         |  ntC; Put ntE | ntC; Get ntE ntEV
+ntC    ::=  hole | ntC `mplus` ntP | ntP `mplus` ntC
+         |  Put ntE ntC | Get ntE ntEV ntC
 \end{spec}
 \end{minipage}
 } %subfloat1
@@ -205,7 +205,7 @@ Put x e        >>= f = Put x (e >>= k)
 \begin{minipage}{0.3\textwidth}
 \begin{spec}
 run         :: ntP -> Dom
-<||>   :: Dom -> Dom -> Dom
+<||>        :: Dom -> Dom -> Dom
 retD        :: ntV -> Dom
 getD        :: (ntV -> Dom) -> Dom
 putD        :: ntV -> Dom -> Dom
@@ -215,7 +215,6 @@ putD        :: ntV -> Dom -> Dom
 \caption{(a) Syntax for programs and contexts (zippers).
 (b) The bind operator. (c) Semantic domain.}
 \label{fig:context-semantics}
-\todo{Change context notation; no need to distinguish between regular contexts and zipper contexts.}
 \todo{Make types more informative, make it more clear that mathcal V refers to the state type}
 \end{figure}
 
@@ -224,7 +223,7 @@ putD        :: ntV -> Dom -> Dom
   \begin{mathpar}
     \inferrule*[right=CHole]
     {~}
-    {[] : \Gamma ; A \leftarrow \Gamma ; A}
+    {\square : \Gamma ; A \leftarrow \Gamma ; A}
     \\\\
     \inferrule*[right=COr1]
     {
@@ -232,7 +231,9 @@ putD        :: ntV -> Dom -> Dom
       \\
       \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
     }
-    {\mathcal{C} ; \mathcal{P} \orM : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+    {
+      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+    }
 
     \inferrule*[right=COr2]
     {
@@ -240,25 +241,27 @@ putD        :: ntV -> Dom -> Dom
       \\
       \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
     }
-    {\mathcal{C} ; \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+    {
+      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+    }
     \\\\
     \inferrule*[right=CPut]
     {
-      \Gamma_2 \vdash \mathcal{E} : S
+      \Gamma_2 \vdash \mathcal{E} : \mathcal{V}
       \\
       \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B) 
     }
-    {\mathcal{C} ; \text{Put}~v : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+    {\text{Put}~v~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
 
     \inferrule*[right=CGet]
     {
-      \emptyset \vdash p : S \rightarrow \text{bool}
+      \emptyset \vdash p : \mathcal{V} \rightarrow \text{bool}
       \\
-      \Gamma_2, S \vdash \mathit{alt} : B
+      \Gamma_2, \mathcal{V} \vdash \mathit{alt} : B
       \\
-      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2, S; B) 
+      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2, \mathcal{V}; B) 
     }
-    {\mathcal{C} ; \text{Get}~p~\mathit{alt} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+    {\text{Get}~p~\mathit{alt}~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
   \end{mathpar}
   \todo{in CGet rule: empty environment, alt typing; not sure about those}
   \todo{this is a bit large, if we are going to do a separate mechanization paper it should probably be moved there}
