@@ -171,6 +171,7 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 %format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
 %format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
+%format type = "\mathcal{T}"
 
 \begin{figure}
 \centering
@@ -179,11 +180,13 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \begin{minipage}{0.3\textwidth}
 \begin{spec}
 ntE    ::=  {-"\mbox{pure expressions}"-}
+
 ntEV   ::=  {-"\mbox{functions returning monad}"-}
 ntP    ::=  return ntE | mzero | ntP `mplus` ntP
          |  Get ntEV | Put ntE ntP
 ntC    ::=  hole | ntC `mplus` ntP | ntP `mplus` ntC
-         |  Put ntE ntC | Get ntE ntEV ntC
+         | Put ntE ntC | Get ntE ntEV ntC
+         | ntC >>= ntEV | ntP >>= ntC
 \end{spec}
 \end{minipage}
 } %subfloat1
@@ -195,7 +198,7 @@ ntC    ::=  hole | ntC `mplus` ntP | ntP `mplus` ntC
 return x       >>= f  = f x
 mzero          >>= f = mzero
 (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
-Get k          >>= f = Get ((>>= f) . k)
+Get k          >>= f = Get (\x -> k x >>= f)
 Put x e        >>= f = Put x (e >>= k)
 \end{spec}
 \end{minipage}
@@ -212,7 +215,7 @@ putD        :: ntV -> Dom -> Dom
 \end{spec}
 \end{minipage}
 }%subfloat
-\caption{(a) Syntax for programs and contexts (zippers).
+\caption{(a) Syntax for programs and contexts.
 (b) The bind operator. (c) Semantic domain.}
 \label{fig:context-semantics}
 \todo{Make types more informative, make it more clear that mathcal V refers to the state type}
@@ -264,6 +267,7 @@ putD        :: ntV -> Dom -> Dom
     {\text{Get}~p~\mathit{alt}~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
   \end{mathpar}
   \todo{in CGet rule: empty environment, alt typing; not sure about those}
+  \todo{add rules for bind}
   \todo{this is a bit large, if we are going to do a separate mechanization paper it should probably be moved there}
 \end{figure}
 
@@ -282,16 +286,18 @@ run (Get k) = getD (\s -> run (k s)) {-"~~,"-}
 run (Put x m) = putD x (run m) {-"~~."-}
 \end{spec}
 
+
 In order to lighten the notational burden, we define a notion of ``contextual equivalence'' of programs:
+\newcommand{\CEq}{\triangleq_\mathtt{GS}}
 \begin{align*}
-  |m1| \triangleq_C |m2| \iff |run (apply C m1)| = |run (apply C m2)|
+  |m1| \CEq |m2| \iff \forall C. |run (apply C m1)| = |run (apply C m2)|
 \end{align*}
+\todo{not for literally all C, only for C for which the result is well-typed.}
 
 The following laws are assumed to hold.
 There should be nothing surprising here:
 they are merely variations of the monad laws \eqref{eq:monad-bind-ret} and \eqref{eq:monad-assoc}, \eqref{eq:bind-mzero-zero} and the monoid property of |mplus|, and laws \eqref{eq:put-put} -- \eqref{eq:get-get} regard states, which we discussed earlier.
 
-\newcommand{\CEq}{\triangleq_C}
 
 \begin{align*}
 |m >>= return|                      &\CEq |m| \mbox{~~,}\\
@@ -299,23 +305,34 @@ they are merely variations of the monad laws \eqref{eq:monad-bind-ret} and \eqre
 |mzero `mplus` m|                   &\CEq |m `mplus` mzero = m|\mbox{~~,}\\
 |(m1 `mplus` m2) `mplus` m3|        &\CEq |m1 `mplus` (m2 `mplus` m3)|\mbox{~~,}\\
 |mzero >>= k|                       &\CEq |mzero|\mbox{~~,}\\
-|Get (\s1 -> Get (\s2 -> k s1 s2))| &\CEq |(Get (\s1 -> k s1 s2))|\mbox{~~,}\\
+|Get (\s1 -> Get (\s2 -> k s1 s2))| &\CEq |(Get (\s1 -> k s1 s1))|\mbox{~~,}\\
 |Get (\s -> Put s m)|               &\CEq |m|\mbox{~~,}\\
-|Put x (Get k)|                     &\CEq |Put x (k V)|\mbox{~~,}\\
+|Put x (Get k)|                     &\CEq |Put x (k x)|\mbox{~~,}\\
 |Put x (Put y m)|                   &\CEq |Put y m|\mbox{~~.}
 \end{align*}
-The laws specific for global-state non-deterministic monads are the following three:
-\todo{I'm not sure law~\eqref{eq:get-mplus} is specific to global-state semantics}
+\todo{In get-put: should we qualify by saying that s must not occur free in m? Alternatively, we might split the law into two: $\mathit{Get}~(\lambda s \rightarrow m) = m ~ \text{if s not free in m}$ and $\mathit{Get}~(\lambda s \rightarrow \mathit{Put}~s~m) = \mathit{Get}~(\lambda s \rightarrow m)$ )}
+
+We require some additional laws to write our proofs.
+We introduce law~\eqref{eq:put-mplus-g}, which states that a |Put| prefixing the first non-deterministic branch can be pulled out of that branch --- either way, the effect of |Put| applies to the first branch.
 \begin{align}
-|(Put x m1 `mplus` m2)|      &\CEq |(Put x (m1 `mplus` m2))|\mbox{~~,} \label{eq:put-mplus-g}\\
-|(Get k `mplus` m)|          &\CEq |(Get (\x -> k x `mplus` m))|\mbox{~~, |x| not in |k| and |m|,} \label{eq:get-mplus}\\
-|Put x (return y `mplus` m)| &\CEq |Put x (return y) `mplus` Put x m| \label{eq:put-ret-mplus-g}\mbox{~~.}
+|Put x m1 `mplus` m2| \CEq |Put x (m1 `mplus` m2)| \label{eq:put-mplus-g}
 \end{align}
-Law~\eqref{eq:put-mplus-g} says that a |Put| prefixing the first  non-deterministic branch can be pulled out of that branch --- either way, the effect of |put| applies to the first branch.
-Law~\eqref{eq:get-mplus} allows us to pull a |Get| out of non-deterministic branches.
-Law~\eqref{eq:put-ret-mplus-g} will form the base case for a proof that a |Put| operation can be distributed over non-deterministic branches if the first branch does not modify the state.
-Note that we expect it to hold only at the top level --- no context is involved. This law is crucial in our proofs.
-\todo{It actually probably holds for contexts as we presented them here, but not for the more general notion of contexts which also includes bind; we should probably just immediately use the more general notion of contexts in the paper.}
+Note that this law is specific to \emph{global-state} non-deterministic monads.
+
+We will also require a law that allows us to do the same for |Get|. This law is not specifically tied to global-state semantics.
+\begin{align}
+|Get k `mplus` m| \CEq |Get (\x -> k x `mplus` m)|\mbox{~~, |x| not in |k| and |m|} \label{eq:get-mplus}
+\end{align}
+
+In order to complete our proofs we will require the property that |Put| distributes into |(`mplus`)| at the top level if the first branch does not modify the state.
+We will only be able to prove this property if we assume the following law, which shall form the base case of that proof:
+\begin{align}
+|run (Put x (return y `mplus` m))| = |run (Put x (return y) `mplus` Put x m)| \label{eq:put-ret-mplus-g}\mbox{~~.}
+\end{align}
+It bears repeating that we expect it to hold only at the top level --- no context is involved.
+For example, the context |ntC >> put w| can discriminate between the two sides of the equation of law~\ref{eq:put-ret-mplus-g}.
+\todo{is ``discriminate'' the right word here?}
+
 In Appendix~\ref{sec:GSMonad} we present one implementation of |Dom| and its operators that satisfy all the laws in this section.
 
 Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
@@ -323,17 +340,21 @@ Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put|
 eval :: ntP -> Dom
 eval = run . trans {-"~~."-}
 \end{spec}
+
+In a similar fashion to the ``contextual equivalence'' shorthand, we define a ``contextual equivalence under simulated local-state semantics''.
+\newcommand{\CEqLS}{\triangleq_\mathtt{LS}}
+\begin{align*}
+  |m1| \CEqLS |m2| \iff \forall C. |eval (apply C m1)| = |eval (apply C m2)|
+\end{align*}
+
 We have proved the following theorems:
 \begin{theorem} \label{thm:putG-state-laws}
 The four state laws \eqref{eq:put-put} -- \eqref{eq:get-get} hold for the translated program, in the sense below:
 \begin{align*}
-  |eval (apply C (Get (\s1 -> Get (\s2 -> k s1 s2))))| &=
-     |eval (apply C (Get (\s1 -> k s1 s2)))| \mbox{~~,}\\
-  |eval (apply C (Put x (Get k)))| &= |eval (apply C (Put x (k x)))|\mbox{~~,}\\
-  |eval (apply C (Get (\s -> Put s k)))| &=
-    |eval (apply C k)| \mbox{~~, |s| not free in |k|,} \\
-  |eval (apply C (Put x (Put y m)))| &=
-     |eval (apply C (Put y m))|\mbox{~~.}
+  |Get (\s1 -> Get (\s2 -> k s1 s2))| &\CEqLS |Get (\s1 -> k s1 s1)| \mbox{~~,}\\
+  |Put x (Get k)|                     &\CEqLS |Put x (k x)|\mbox{~~,}\\
+  |Get (\s -> Put s k))|              &\CEqLS |k| \mbox{~~, |s| not free in |k|,} \\
+  |Put x (Put y m)|                   &\CEqLS |Put y m|\mbox{~~.}
 \end{align*}
 \end{theorem}
 Proof of these laws basically start with promoting |trans| inside, before applying \eqref{eq:put-mplus-g} and other laws mentioned earlier in this section.
@@ -341,9 +362,8 @@ Proof of these laws basically start with promoting |trans| inside, before applyi
 \begin{theorem}\label{thm:putG-mplus-distr}
   In the translated program, |putR| distributes into |mplus| and is cancelled by |mzero|:
 \begin{align*}
-  |eval (apply C (Put x mzero))| &= |eval (apply C mzero)| \mbox{~~,}\\
-  |eval (apply C (Put x m1 `mplus` Put x m2))| &=
-    |eval (apply C (Put x (m1 `mplus` m2)))| \mbox{~~.}
+  |Put x mzero|               &\CEqLS |mzero| \mbox{~~,}\\
+  |Put x m1 `mplus` Put x m2| &\CEqLS |Put x (m1 `mplus` m2)| \mbox{~~.}
 \end{align*}
 \end{theorem}
 \noindent
