@@ -22,6 +22,7 @@ m1 >> m2 = m1 >>= const m2
 \section{Non-Determinism with Global State}
 \label{sec:nd-state-global}
 
+\todo{this motivation doesn't work as-is because our putR operation still performs the duplication}
 For a monad with both non-determinism and state, right-distributivity \eqref{eq:mplus-bind-dist} implies that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
 
 Non-deterministic monads with a global state, however, is rather tricky.
@@ -136,7 +137,7 @@ There exist contexts, for example |(>> get)|, with which we can tell them apart:
 
 We wish that |putR|, when run with a global state, still satisfies laws \eqref{eq:put-put} through \eqref{eq:mzero-bind-zero}.
 If so, one could take a program written for a local state monad, replace all occurrences of |put| by |putR|, and run the program with a global state.
-Unfortunately this is not the case: |putR| does satisfy |put|-|put|~\eqref{eq:put-put} and |get|-|put|~\eqref{eq:put-get}, but |put|-|get|~\eqref{eq:get-put} fails ---
+Unfortunately this is not the case: |putR| does satisfy |put|-|put|~\eqref{eq:put-put} and |put|-|get|~\eqref{eq:put-get}, but |get|-|put|~\eqref{eq:get-put} fails ---
 |get >>= putR| and |return ()| can be
 told apart by some contexts, for example |(>> put t)|.
 To see that, we calculate:
@@ -150,7 +151,7 @@ To see that, we calculate:
 =   {- |put|-|put| -}
    get >>= \s -> put t `mplus` side (put s) {-"~~."-}
 \end{spec}
-Meanwhile, |return () >> put t = put t|. The two side are not equal when |s /= t|.
+Meanwhile, |return () >> put t = put t|. The two sides are not equal when |s /= t|.
 
 In a global-state setting, reasoning about combination of |mplus| and |(>>=)| is tricky because, due to \eqref{eq:bind-mplus-dist}, every occurrence of |mplus| is a point where future code can be inserted.
 This makes it hard to reason about programs compositionally --- some properties hold only when we take the entire program into consideration.
@@ -162,114 +163,145 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \label{sec:ctxt-trans}
 
 %format hole = "\square"
-%format Dom = "\mathcal{D}"
 %format apply z (e) = z "\lbrack" e "\rbrack"
-%format ntC = "\mathcal{C}"
-%format ntV = "\mathcal{V}"
-%format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
 %format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
 %format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
-%format type = "\mathcal{T}"
 
 \begin{figure}
 \centering
 \small
 \subfloat[]{
-\begin{minipage}{0.3\textwidth}
+\begin{minipage}{0.5\textwidth}
 \begin{spec}
-ntE    ::=  {-"\mbox{pure expressions}"-}
+-- variables
+  data Var = x | y | ...
 
-ntEV   ::=  {-"\mbox{functions returning monad}"-}
-ntP    ::=  return ntE | mzero | ntP `mplus` ntP
-         |  Get ntEV | Put ntE ntP
-ntC    ::=  hole | ntC `mplus` ntP | ntP `mplus` ntC
-         | Put ntE ntC | Get ntE ntEV ntC
-         | ntC >>= ntEV | ntP >>= ntC
+-- pure, closed (as in, no free variables) expressions of type a
+  data Exp a where
+    Lambda :: Var -> Exp a -> Exp (a -> b)
+    ...
+
+-- function expressions
+  type Fun a b = Exp (a -> b)
+
+-- monadic programs
+  data Prog a where
+    Return  :: Exp a -> Prog a
+    mzero   :: Prog a
+    mplus   :: Prog a -> Prog a -> Prog a
+    Get     :: Fun S (Prog a) -> Prog a
+    Put     :: Exp S -> Prog a -> Prog a
 \end{spec}
 \end{minipage}
-} %subfloat1
+}
+\subfloat[]{
+\begin{minipage}{0.5\textwidth}
+\begin{spec}
+-- environments
+  type Env ... 
+
+-- open expressions
+  type OExp e a = Env e -> Exp a
+
+-- open programs
+  type OProg e a = Env e -> Prog a
+
+-- program contexts
+  data Ctx e1 a e2 b where
+    hole  :: Ctx e1 a e2 b
+    COr1  :: Ctx e1 a e2 b -> OProg e2 b -> Ctx e1 a e2 b
+    COr2  :: OProg e2 b -> Ctx e1 a e2 b -> Ctx e1 a e2 b
+    CPut  :: OExp e2 S -> Ctx e1 a e2 b -> Ctx e1 a e2 b
+    CGet  :: Fun S Bool -> Ctx e1 a (S:e2) b
+          -> Fun S (OProg e2 b) -> Ctx e1 a e2 b
+
+\end{spec}
+\end{minipage}
+}
 \quad
 \subfloat[]{
-\begin{minipage}{0.3\textwidth}
-\begin{spec}
-(>>=) :: ntP -> ntEV -> ntP
-return x       >>= f  = f x
-mzero          >>= f = mzero
-(m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
-Get k          >>= f = Get (\x -> k x >>= f)
-Put x e        >>= f = Put x (e >>= k)
-\end{spec}
-\end{minipage}
-}%subfloat
-\quad
+  \begin{minipage}{0.5\textwidth}
+    \begin{spec}
+      (>>=) :: P a -> Fun a (P b) -> P b
+      Return x       >>= f = App f x
+      mzero          >>= f = mzero
+      (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
+      Get k          >>= f = Get (Lambda x (App k x >>= f))
+      Put x e        >>= f = Put x (e >>= k)
+    \end{spec}
+  \end{minipage}
+}
 \subfloat[]{
-\begin{minipage}{0.3\textwidth}
-\begin{spec}
-run         :: ntP -> Dom
-<||>        :: Dom -> Dom -> Dom
-retD        :: ntV -> Dom
-getD        :: (ntV -> Dom) -> Dom
-putD        :: ntV -> Dom -> Dom
-\end{spec}
-\end{minipage}
-}%subfloat
-\caption{(a) Syntax for programs and contexts.
-(b) The bind operator. (c) Semantic domain.}
-\label{fig:context-semantics}
-\todo{Make types more informative, make it more clear that mathcal V refers to the state type}
+  \begin{minipage}{0.5\textwidth}
+    \begin{spec}
+      run   :: Prog a -> Dom a
+      <||>  :: Dom a -> Dom a -> Dom a
+      retD  :: S -> Dom a
+      getD  :: (S -> Dom a) -> Dom a
+      putD  :: S -> Dom a -> Dom a
+    \end{spec}
+  \end{minipage}
+}
+\quad
+\todo{leave environments abstract or actually define?}
+\todo{syntax for lambdas}
+\todo{distinguish object language function type from meta language function type}
+\todo{do we need open expressions? is this the right way to express (Env E2 -\textgreater S) from the Coq file? maybe it's better to just say that expressions in general are open, but in that case we can't relate the e2 environment from the context to the expression in the CPut constructor}
+\todo{environment extension}
+\todo{How to express elegantly: we don't care what pure expressions look like, but they need to support abstraction and application}
 \end{figure}
 
-\newcommand{\orM}{\mathbin{\scaleobj{0.8}{[\!]}}}
-\begin{figure}
-  \begin{mathpar}
-    \inferrule*[right=CHole]
-    {~}
-    {\square : \Gamma ; A \leftarrow \Gamma ; A}
-    \\\\
-    \inferrule*[right=COr1]
-    {
-      \Gamma_2 \vdash \mathcal{P} : B
-      \\
-      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-    }
-    {
-      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-    }
-
-    \inferrule*[right=COr2]
-    {
-      \Gamma_2 \vdash \mathcal{P} : B
-      \\
-      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-    }
-    {
-      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-    }
-    \\\\
-    \inferrule*[right=CPut]
-    {
-      \Gamma_2 \vdash \mathcal{E} : \mathcal{V}
-      \\
-      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B) 
-    }
-    {\text{Put}~v~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
-
-    \inferrule*[right=CGet]
-    {
-      \emptyset \vdash p : \mathcal{V} \rightarrow \text{bool}
-      \\
-      \Gamma_2, \mathcal{V} \vdash \mathit{alt} : B
-      \\
-      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2, \mathcal{V}; B) 
-    }
-    {\text{Get}~p~\mathit{alt}~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
-  \end{mathpar}
-  \todo{in CGet rule: empty environment, alt typing; not sure about those}
-  \todo{add rules for bind}
-  \todo{this is a bit large, if we are going to do a separate mechanization paper it should probably be moved there}
-\end{figure}
+%\newcommand{\orM}{\mathbin{\scaleobj{0.8}{[\!]}}}
+%\begin{figure}
+%  \begin{mathpar}
+%    \inferrule*[right=CHole]
+%    {~}
+%    {\square : \Gamma ; A \leftarrow \Gamma ; A}
+%    \\\\
+%    \inferrule*[right=COr1]
+%    {
+%      \Gamma_2 \vdash \mathcal{P} : B
+%      \\
+%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+%    }
+%    {
+%      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+%    }
+%
+%    \inferrule*[right=COr2]
+%    {
+%      \Gamma_2 \vdash \mathcal{P} : B
+%      \\
+%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+%    }
+%    {
+%      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
+%    }
+%    \\\\
+%    \inferrule*[right=CPut]
+%    {
+%      \Gamma_2 \vdash \mathcal{E} : \mathcal{V}
+%      \\
+%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B) 
+%    }
+%    {\text{Put}~v~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+%
+%    \inferrule*[right=CGet]
+%    {
+%      \emptyset \vdash p : \mathcal{V} \rightarrow \text{bool}
+%      \\
+%      \Gamma_2, \mathcal{V} \vdash \mathit{alt} : B
+%      \\
+%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2, \mathcal{V}; B) 
+%    }
+%    {\text{Get}~p~\mathit{alt}~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
+%  \end{mathpar}
+%  \todo{in CGet rule: empty environment, alt typing; not sure about those}
+%  \todo{add rules for bind}
+%  \todo{this is a bit large, if we are going to do a separate mechanization paper it should probably be moved there}
+%\end{figure}
 
 In this section we will state clearly what laws we expect from a global-state non-deterministic monad and show that, under our semantical assumptions, a program we get by replacing all occurrences of |put| by |putR| does satisfy all laws we demand of a local-state non-deterministic monad.
 All these concepts need to be defined more formally, however.
