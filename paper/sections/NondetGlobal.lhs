@@ -178,7 +178,7 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 -- variables
   data Var = x | y | ...
 
--- pure, closed (as in, no free variables) expressions of type a
+-- pure, closed expressions of type a
   data Exp a where
     Lambda :: Var -> Exp a -> Exp (a -> b)
     ...
@@ -251,67 +251,28 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \todo{do we need open expressions? is this the right way to express (Env E2 -\textgreater S) from the Coq file? maybe it's better to just say that expressions in general are open, but in that case we can't relate the e2 environment from the context to the expression in the CPut constructor}
 \todo{environment extension}
 \todo{How to express elegantly: we don't care what pure expressions look like, but they need to support abstraction and application}
+\caption{(a) Syntax for programs. (b) Syntax for contexts. (c) Bind operator. (d) Semantic domain.}
+\label{fig:context-semantics}
 \end{figure}
-
-%\newcommand{\orM}{\mathbin{\scaleobj{0.8}{[\!]}}}
-%\begin{figure}
-%  \begin{mathpar}
-%    \inferrule*[right=CHole]
-%    {~}
-%    {\square : \Gamma ; A \leftarrow \Gamma ; A}
-%    \\\\
-%    \inferrule*[right=COr1]
-%    {
-%      \Gamma_2 \vdash \mathcal{P} : B
-%      \\
-%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-%    }
-%    {
-%      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-%    }
-%
-%    \inferrule*[right=COr2]
-%    {
-%      \Gamma_2 \vdash \mathcal{P} : B
-%      \\
-%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-%    }
-%    {
-%      \mathcal{C} \orM \mathcal{P} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)
-%    }
-%    \\\\
-%    \inferrule*[right=CPut]
-%    {
-%      \Gamma_2 \vdash \mathcal{E} : \mathcal{V}
-%      \\
-%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B) 
-%    }
-%    {\text{Put}~v~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
-%
-%    \inferrule*[right=CGet]
-%    {
-%      \emptyset \vdash p : \mathcal{V} \rightarrow \text{bool}
-%      \\
-%      \Gamma_2, \mathcal{V} \vdash \mathit{alt} : B
-%      \\
-%      \mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2, \mathcal{V}; B) 
-%    }
-%    {\text{Get}~p~\mathit{alt}~\mathcal{C} : (\Gamma_1; A) \leftarrow (\Gamma_2; B)}
-%  \end{mathpar}
-%  \todo{in CGet rule: empty environment, alt typing; not sure about those}
-%  \todo{add rules for bind}
-%  \todo{this is a bit large, if we are going to do a separate mechanization paper it should probably be moved there}
-%\end{figure}
 
 In this section we will state clearly what laws we expect from a global-state non-deterministic monad and show that, under our semantical assumptions, a program we get by replacing all occurrences of |put| by |putR| does satisfy all laws we demand of a local-state non-deterministic monad.
 All these concepts need to be defined more formally, however.
-In Figure~\ref{fig:context-semantics}(a) we present an altered syntax for monadic programs, in the usual free monad style --- |Get| and |Put| take continuations, while |(>>=)| is defined as a (meta)function in Figure~\ref{fig:context-semantics}(b).
+
+In Figure~\ref{fig:context-semantics}(a), we define a language of monadic programs (the object language) using a Haskell-like meta-language with support for GADTs.
+The object language is, at the top-level, a program as defined by the |Prog| data type.
+It uses an altered syntax: it is presented in the usual free monad style --- |Get| and |Put| take continuations, while |(>>=)| is defined as a (meta)function in Figure~\ref{fig:context-semantics}(c).
 One can see that the definition of |(>>=)| has laws \eqref{eq:bind-mplus-dist} and \eqref{eq:mzero-bind-zero} built-in.
-Also defined in Figure~\ref{fig:context-semantics}(a) are single-hole contexts |ntC|.
+A program in our object language can contain pure subexpressions.
+We are not particularly interested in any properties of these pure expressions, so we are largely parametric over the details of the expression sublanguage: we don't require much more of it than that it is a typed $\lambda$-calculus with support for parametric polymorphism.
+Note that the |Prog| data structure straddles the line between object language and meta-language: it describes the top-level structure of the object-language, but in some cases expressions in the object language are expected to return values of the type |Prog a| (for some |a|); this the case in the |Get| constructor for example.
+\todo{give some more insight where this comes from}
+
+Figure~\ref{fig:context-semantics} provides the definition for single-hole contexts (|Ctx|).
+A context of type |Ctx e1 a e2 b| can be interpreted as a function that, given a program that returns a value of type |b| under environment |e2| (in other words: the type and environment for the hole), produces a program that returns a value of type |a| under environment |e1| (the type and environment for the entire program).
 Given a context |C|, filling the hole by |e| is denoted by |apply C e|.
 
 In the previous sections we have been mixing syntax and semantics.
-Now we assume a semantic domain |Dom|, and a function |run :: ntP -> Dom| that ``runs'' a program into a value in |Dom|, and several operators |(<||||>)|, |getD|, and |putD|, shown in Figure~~\ref{fig:context-semantics}(c).  Semantics of |mplus|, |get|, and |put| may thus be defined compositionally:
+Now we assume a semantic domain |Dom| (Figure~\ref{fig:context-semantics}(d)), and a function |run :: Prog a -> Dom a| that ``runs'' a program |Prog a| into a value in |Dom a|, and several operators |(<||||>)|, |getD|, and |putD|, shown in Figure~~\ref{fig:context-semantics}(c).  Semantics of |mplus|, |get|, and |put| may thus be defined compositionally:
 \begin{spec}
 run (m1 `mplus` m2) = run m1 <||> run m2 {-"~~,"-}
 run (Get k) = getD (\s -> run (k s)) {-"~~,"-}
