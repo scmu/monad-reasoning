@@ -168,6 +168,7 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 %format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
 %format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
+%format emptyListLit = "`[]"
 
 \begin{figure}
 \centering
@@ -175,48 +176,33 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \subfloat[]{
 \begin{minipage}{0.5\textwidth}
 \begin{spec}
--- variables
-  data Var = x | y | ...
+data Prog a where
+  Return  :: a -> Prog a
+  mzero   :: Prog a
+  mplus   :: Prog a -> Prog a -> Prog a
+  Get     :: (S -> Prog a) -> Prog a
+  Put     :: S -> Prog a -> Prog a
 
--- pure, closed expressions of type a
-  data Exp a where
-    Lambda :: Var -> Exp a -> Exp (a -> b)
-    ...
+data Env (l :: [*]) where
+  Nil  :: Env emptyListLit
+  Cons :: a -> Env l -> Env (a:l)
 
--- function expressions
-  type Fun a b = Exp (a -> b)
-
--- monadic programs
-  data Prog a where
-    Return  :: Exp a -> Prog a
-    mzero   :: Prog a
-    mplus   :: Prog a -> Prog a -> Prog a
-    Get     :: Fun S (Prog a) -> Prog a
-    Put     :: Exp S -> Prog a -> Prog a
+type OProg e a = Env e -> Prog a
 \end{spec}
 \end{minipage}
 }
 \subfloat[]{
 \begin{minipage}{0.5\textwidth}
 \begin{spec}
--- environments
-  type Env ... 
-
--- open expressions
-  type OExp e a = Env e -> Exp a
-
--- open programs
-  type OProg e a = Env e -> Prog a
-
--- program contexts
-  data Ctx e1 a e2 b where
-    hole  :: Ctx e1 a e2 b
-    COr1  :: Ctx e1 a e2 b -> OProg e2 b -> Ctx e1 a e2 b
-    COr2  :: OProg e2 b -> Ctx e1 a e2 b -> Ctx e1 a e2 b
-    CPut  :: OExp e2 S -> Ctx e1 a e2 b -> Ctx e1 a e2 b
-    CGet  :: Fun S Bool -> Ctx e1 a (S:e2) b
-          -> Fun S (OProg e2 b) -> Ctx e1 a e2 b
-
+data Ctx e1 a e2 b where
+  hole    :: Ctx e1 a e2 b
+  COr1    :: Ctx e1 a e2 b -> OProg e2 b -> Ctx e1 a e2 b
+  COr2    :: OProg e2 b -> Ctx e1 a e2 b -> Ctx e1 a e2 b
+  CPut    :: (Env e2 -> S) -> Ctx e1 a e2 b -> Ctx e1 a e2 b
+  CGet    :: (S -> Bool) -> Ctx e1 a (S:e2) b
+          -> (S -> OProg e2 b) -> Ctx e1 a e2 b
+  CBind1  :: Ctx e1 a e2 b -> (b -> OProg e2 c) -> Ctx e1 a e2 c
+  CBind2  :: OProg e2 a -> Ctx e1 b (a::e2) c -> Ctx e1 b e2 c
 \end{spec}
 \end{minipage}
 }
@@ -224,11 +210,11 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{spec}
-      (>>=) :: P a -> Fun a (P b) -> P b
-      Return x       >>= f = App f x
+      (>>=) :: Prog a -> (a -> Prog b) -> Prog b
+      Return x       >>= f = f x
       mzero          >>= f = mzero
       (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
-      Get k          >>= f = Get (Lambda x (App k x >>= f))
+      Get k          >>= f = Get (\x -> k x >>= f)
       Put x e        >>= f = Put x (e >>= k)
     \end{spec}
   \end{minipage}
@@ -245,12 +231,6 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
   \end{minipage}
 }
 \quad
-\todo{leave environments abstract or actually define?}
-\todo{syntax for lambdas}
-\todo{distinguish object language function type from meta language function type}
-\todo{do we need open expressions? is this the right way to express (Env E2 -\textgreater S) from the Coq file? maybe it's better to just say that expressions in general are open, but in that case we can't relate the e2 environment from the context to the expression in the CPut constructor}
-\todo{environment extension}
-\todo{How to express elegantly: we don't care what pure expressions look like, but they need to support abstraction and application}
 \caption{(a) Syntax for programs. (b) Syntax for contexts. (c) Bind operator. (d) Semantic domain.}
 \label{fig:context-semantics}
 \end{figure}
@@ -258,16 +238,12 @@ However, that ``all |put| replaced by |putR|'' is a global property, and to prop
 In this section we will state clearly what laws we expect from a global-state non-deterministic monad and show that, under our semantical assumptions, a program we get by replacing all occurrences of |put| by |putR| does satisfy all laws we demand of a local-state non-deterministic monad.
 All these concepts need to be defined more formally, however.
 
-In Figure~\ref{fig:context-semantics}(a), we define a language of monadic programs (the object language) using a Haskell-like meta-language with support for GADTs.
-The object language is, at the top-level, a program as defined by the |Prog| data type.
-It uses an altered syntax: it is presented in the usual free monad style --- |Get| and |Put| take continuations, while |(>>=)| is defined as a (meta)function in Figure~\ref{fig:context-semantics}(c).
+In Figure~\ref{fig:context-semantics}(a), we define a syntax for nondeterministic, stateful, closed programs |Prog| in a free monad style: |Get| and |Put| take continuations, while |(>>=)| is defined as a function in Figure~\ref{fig:context-semantics}(c).
 One can see that the definition of |(>>=)| has laws \eqref{eq:bind-mplus-dist} and \eqref{eq:mzero-bind-zero} built-in.
-A program in our object language can contain pure subexpressions.
-We are not particularly interested in any properties of these pure expressions, so we are largely parametric over the details of the expression sublanguage: we don't require much more of it than that it is a typed $\lambda$-calculus with support for parametric polymorphism.
-Note that the |Prog| data structure straddles the line between object language and meta-language: it describes the top-level structure of the object-language, but in some cases expressions in the object language are expected to return values of the type |Prog a| (for some |a|); this the case in the |Get| constructor for example.
-\todo{give some more insight where this comes from}
+We also define open programs |OProg| (that is, programs that may contain free variables) as functions that construct a closed program from an environment that contains the variables which occur free in the program.
+Environments |Env|, in turn, are defined as heterogeneous lists.
 
-Figure~\ref{fig:context-semantics} provides the definition for single-hole contexts (|Ctx|).
+Figure~\ref{fig:context-semantics}(b) provides the definition for single-hole contexts (|Ctx|).
 A context of type |Ctx e1 a e2 b| can be interpreted as a function that, given a program that returns a value of type |b| under environment |e2| (in other words: the type and environment for the hole), produces a program that returns a value of type |a| under environment |e1| (the type and environment for the entire program).
 Given a context |C|, filling the hole by |e| is denoted by |apply C e|.
 
@@ -285,7 +261,6 @@ In order to lighten the notational burden, we define a notion of ``contextual eq
 \begin{align*}
   |m1| \CEq |m2| \iff \forall C. |run (apply C m1)| = |run (apply C m2)|
 \end{align*}
-\todo{not for literally all C, only for C for which the result is well-typed.}
 
 The following laws are assumed to hold.
 There should be nothing surprising here:
@@ -323,14 +298,13 @@ We will only be able to prove this property if we assume the following law, whic
 |run (Put x (return y `mplus` m))| = |run (Put x (return y) `mplus` Put x m)| \label{eq:put-ret-mplus-g}\mbox{~~.}
 \end{align}
 It bears repeating that we expect it to hold only at the top level --- no context is involved.
-For example, the context |ntC >> put w| can discriminate between the two sides of the equation of law~\ref{eq:put-ret-mplus-g}.
-\todo{is ``discriminate'' the right word here?}
+For example, the context |cBindProg1 hole (Put w)| \footnote{where |cBindProg1 ctx k = CBind1 ctx (const . k)|} can discriminate between the two sides of the equation of law~\ref{eq:put-ret-mplus-g}.
 
 In Appendix~\ref{sec:GSMonad} we present one implementation of |Dom| and its operators that satisfy all the laws in this section.
 
-Let |trans :: ntP -> ntP| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
+Let |trans :: Prog a -> Prog a| be the function that replaces all occurrences of |put| in its input program by |putR|. Define:
 \begin{spec}
-eval :: ntP -> Dom
+eval :: Prog a -> Dom a
 eval = run . trans {-"~~."-}
 \end{spec}
 
@@ -364,8 +338,10 @@ The two properties in Theorem~\ref{thm:putG-mplus-distr} allow us to show that |
 Proof of these laws uses \eqref{eq:put-mplus-g} and \eqref{eq:get-mplus}.
 In addition, both Theorem~\ref{thm:putG-state-laws} and \ref{thm:putG-mplus-distr} uses the following crucial lemma, proved by
 induction on |m1| and |C|, using~\eqref{eq:put-ret-mplus-g}.
-\begin{lemma} |run (apply C (Put x (trans m1 `mplus` m2))) = run (apply C (Put x (trans m1) `mplus` Put x m2))|.
+\begin{lemma} |run (Put x (trans m1 `mplus` m2)) = run (Put x (trans m1) `mplus` Put x m2)|.
 \end{lemma}
+Again, this lemma only holds at the top-level. The counter-example from law~\ref{eq:put-ret-mplus-g} also works here.
+\todo{we've proved this for simplified contexts, but it doesn't hold in contexts with bind}
 
 Finally, we need a congruence theorem:
 \begin{theorem} For all |m1|, |m2| and |n| we have:
@@ -378,9 +354,9 @@ Finally, we need a congruence theorem:
 \todo{It is a crucial property. More explanations?}
 
 \subsection{Backtracking with a Global State Monad}
-
+\todo{This interface still doesn't really support mutable state. Do we want to go into this level of technical detail?}
 There is still one technical detail to to deal with before we deliver a backtracking algorithm that uses a global state.
-As mentioned in Section~\ref{sec:chaining}, rather than using |put|, such algorithms typically use a pair of commands |modify next| and |modify next|, with |prev . next = id|, to update and restore the state.
+As mentioned in Section~\ref{sec:chaining}, rather than using |put|, such algorithms typically use a pair of commands |modify prev| and |modify next|, with |prev . next = id|, to update and restore the state.
 This is especially true when the state is implemented using an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled by:
 \begin{spec}

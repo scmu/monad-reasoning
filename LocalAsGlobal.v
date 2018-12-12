@@ -14,7 +14,6 @@ Parameter getD : forall {A}, (S -> D A) -> D A.
 Parameter putD : forall {A}, S -> D A -> D A.
 
 (* Laws *)
-
 Parameter get_get_G_D:
   forall {A} (k: S -> S -> D A),
     getD (fun s => getD (fun s' => k s s'))
@@ -129,6 +128,12 @@ Proof.
   apply bind_return.
 Qed.
 
+Lemma bind_or:
+  forall {A B} (p1 p2: Prog A) (f: A -> Prog B),
+    bind (Or p1 p2) f = Or (bind p1 f) (bind p2 f).
+Proof.
+  auto.
+Qed.
 (* Programs with free variables *)
 
 (* Environment as a heterogeneous list *)
@@ -823,6 +828,16 @@ Lemma oevl_or:
     oevl (fun env => Or (p env) (q env)) = fun env => orD (oevl p env) (oevl q env).
 Proof.
   auto.
+Qed.
+
+(* TODO: probably not useful *)
+Lemma oevl_ret_bind:
+  forall {A B E} (x : Env E -> A) (k : Env E -> A -> Prog B),
+    oevl (fun env => bind (Return (x env)) (k env))
+    =
+    oevl (fun env => (k env (x env))).
+Proof.
+  simpl. reflexivity.
 Qed.
 
 Lemma oevl_get:
@@ -1607,6 +1622,44 @@ Proof.
 Qed.
 *)
 
+(* oevl (fun env : Env E2 => bind (bappl b p env) (fun x : B => o x env)) *)
+
+(* TODO: address this in the paper? *)
+Parameter or1_inv_D:
+  forall {A} (p q o: D A),
+    orD p o = orD q o -> p = q.
+
+Lemma oevl_bappl_bor1:
+  forall {E1 E2 A B} (p q: OProg E1 A) (o: OProg E2 B) (b: BContext E1 A E2 B)
+  (H: oevl (bappl (BOr1 b o) p) = oevl (bappl (BOr1 b o) q)),
+  oevl (bappl b p) = oevl (bappl b q).
+Proof.
+  intros.
+  unfold oevl, orun, otrans.
+  apply functional_extensionality; intro env.
+  rewrite <- (or1_inv_D
+                (run (trans (bappl b p env)))
+                (run (trans (bappl b q env)))
+                (run (trans (o env)))
+             ); auto.
+  simpl in H.
+  unfold oevl, orun, otrans in H.
+  simpl in H.
+  change (orD (run (trans (bappl b ?r env))) (run (trans (o env))))
+    with ((fun env0 : Env E2 =>
+             orD (run (trans (bappl b r env0))) (run (trans (o env0))))
+            env).
+  rewrite H.
+  reflexivity.
+Qed.
+
+
+Lemma oevl_bappl_bor2:
+  forall {E1 E2 A B} (p q: OProg E1 A) (o: OProg E2 B) (b: BContext E1 A E2 B)
+  (H: oevl (bappl (BOr2 o b) p) = oevl (bappl (BOr2 o b) q)),
+  oevl (bappl b p) = oevl (bappl b q).
+Admitted.
+
 Lemma bappFromAppl:
   forall {A B E1 E2} (p q: OProg E1 A)
     (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C),
@@ -1641,29 +1694,54 @@ Proof.
      change (oevl (fun env : Env (C :: E2) => bappl b ?p (tail env))) with
                 (fun env0 => oevl (bappl b p) (@tail C _ env0)).
     rewrite (IHb p q); auto.
-  -
-    (*
-    apply functional_extensionality; intro env0.
-    change (oevl (fun env => bind (bappl b ?r env) (fun x => o x env)) env0)
-      with (oevl (fun env => bind (bappl b r env0) (fun x => o x env0)) env0).
+  - unfold oevl, otrans, orun; apply functional_extensionality. intro env.
+    induction b; simpl.
+    + admit. (* apply IHb in P.
+      simpl in P.
+      change (fun env => ?r env) with (r) in P.
+      (* induction on p and q? that would be lots of work :( *)
+      induction p, q.
+      * simpl.
 
-    unfold oevl, otrans, obind, orun.
-    
-    change (run (trans ?prog))
-      with (evl prog).
-
-
-    change (fun env => bind (bappl b ?r env) (fun x => o x env))
-      with (obind (bappl b r) o).
-
-
-    apply IHb in P.
-    change (bind (bappl b p ?env) ?k)
-      with (bappl (BBind1 b k) p env).
+      admit.
 *)
-    admit. (* TODO: need zipper-variant of BContext *)
-  - admit. (* TODO: need zipper-variant of BContext *)
-Admitted.
+
+    + rewrite (IHb0 p q P); auto.
+      intros.
+      apply IHb in P.
+      rewrite (oevl_bappl_bor1 p0 q0 o0 b); auto.
+    + rewrite (IHb0 p q P); auto.
+      intros.
+      apply IHb in P.
+      rewrite (oevl_bappl_bor2 p0 q0 o0 b); auto.
+    + rewrite (IHb0 p q P); auto.
+      intros.
+      
+
+  - unfold oevl, otrans, orun; apply functional_extensionality; intro env.
+    induction (o env); auto.
+    + simpl.
+      unfold cpush, comap.
+      unfold oevl, otrans, orun in P.
+      unfold oevl, otrans, orun in IHb.
+      apply IHb in P.
+      change (run (trans (bappl b ?r (Cons a env))))
+        with ((fun env0 => run (trans (bappl b r env0))) (Cons a env)).
+      rewrite P.
+      auto.
+    + simpl.
+      rewrite IHp0_1; auto.
+      rewrite IHp0_2; auto.
+    + simpl.
+      f_equal.
+      apply functional_extensionality; intro s.
+      rewrite H; auto.
+    + simpl.
+      f_equal.
+      apply functional_extensionality; intro s0.
+      f_equal; f_equal.
+      rewrite IHp0; auto.
+Qed.      
 
 End Syntax.
 
