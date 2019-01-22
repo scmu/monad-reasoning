@@ -33,10 +33,12 @@ under different assumption of the interaction between non-determinism and state.
 Since the |n|-queens problem will be specified by a non-deterministic program,
 we discuss non-determinism before presenting the specification.
 We assume two operators |mzero| and |mplus|: the former denotes failure, while |m `mplus` n| denotes that the computation may yield either |m| or |n|. What laws they should satisfy, however, can be a tricky issue. As discussed by Kiselyov~\shortcite{Kiselyov:15:Laws}, it eventually comes down to what we use the monad for. It is usually expected that |mplus| and |mzero| form a monoid. That is, |mplus| is associative, with |mzero| as its zero:
-\begin{align*}
-|(m `mplus` n) `mplus` k|~ &=~ |m `mplus` (n `mplus` k)| \mbox{~~,}\\
+\begin{align}
+|(m `mplus` n) `mplus` k|~ &=~ |m `mplus` (n `mplus` k)| \mbox{~~,}
+  \label{eq:mplus-assoc}\\
 |mzero `mplus` m| ~=~ & |m| ~=~ |m `mplus` mzero| \mbox{~~.}
-\end{align*}
+  \label{eq:mzero-mplus}
+\end{align}
 It is also assumed that monadic bind distributes into |mplus| from the end,
 while |mzero| is a left zero for |(>>=)|:
 \begin{alignat}{2}
@@ -53,6 +55,9 @@ propBindMZeroZero f    = (mzero >>= f) === mzero
 \end{code}
 %endif
 % Properties \eqref{eq:bind-mplus-dist} and \eqref{eq:bind-mzero-zero} are called {\em left-distributivity} and {\em left-zero}.
+We will refer to the laws \eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus},
+\eqref{eq:bind-mplus-dist}, \eqref{eq:bind-mzero-zero} collectively as the
+\emph{nondeterminism laws}.
 Other properties regarding |mzero| and |mplus| will be introduced when needed.
 
 \subsection{Specification}

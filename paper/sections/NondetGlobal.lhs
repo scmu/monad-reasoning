@@ -42,6 +42,55 @@ Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is glo
 Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
 These significantly limit the properties we may have.
 
+\subsection{Laws for Global State}
+We have already discussed general laws for nondeterministic monads
+(laws~\eqref{eq:mplus-assoc} through~\eqref{eq:bind-mzero-zero}),
+as well as laws which govern the interaction between state and nondeterminism in
+a local state setting (laws~\eqref{eq:mplus-bind-dist} and
+\eqref{eq:mzero-bind-zero}).
+For global state semantics, alternative laws are required to govern the
+interactions between nondeterminism and state.
+We call these the \emph{global state laws}.
+\begin{alignat}{2}
+&\mbox{\bf put-or}:\quad&
+  |(put x >> m) `mplus` n| &=~ |put x >> (m `mplus` n)|~ \mbox{~~,}
+    \label{eq:put-or}\\
+&\mbox{\bf put-return-or}:\quad&
+  |put x >> (return w `mplus` q)|~ &=~ |(put x >> return w) `mplus` (put x >> q))| ~~\mbox{~~.}
+    \label{eq:put-ret-or}
+\end{alignat}
+Law~\eqref{eq:put-or} allows the lifting of a |put| operation from the left
+branch of a nondeterministic choice, an operation which does not preserve
+meaning under local-state semantics:
+suppose for example that |m = mzero|, then by
+\eqref{eq:mzero-bind-zero} and~\eqref{eq:mzero-mplus}, the left-hand side of
+the equation is equal to |n|, whereas by
+~\eqref{eq:mzero-mplus},
+the right-hand side of the equation is equal to |put x >> n|.
+
+In global state semantics, the right-distributivity rule does not hold in
+general. However, there are some cases where an operation does distribute over
+non-deterministic choice while preserving semantics; more precisely, this is the
+case when
+\begin{enumerate}
+\item the left branch of the choice operator does not modify the state, and
+\item the operation that is distributed over the choice operator is idempotent
+  with respect to the state.
+\end{enumerate}
+Law~\eqref{eq:put-ret-or} is a much weaker variant of this general idea
+(requiring the left branch to only consist of a |return| expression and the
+operation to be distributed to be a simple |put| operation), but
+\todo{choose between ``it turns out we don't need the law in its full generality
+  for our purposes'' and ``we believe the more general statement to follow from
+  it''}.
+
+\todo{Not formulated correctly as put-return-or does not hold when bind is
+  available. How to fix?
+  Intro semantic domain with continuation-based get/put here already,
+  either fully formally or informally?
+  Or maybe specify somehow that put-return-or only holds at the top-level?
+}
+
 \subsection{Chaining Using Non-deterministic Choice}
 \label{sec:chaining}
 
@@ -164,19 +213,18 @@ However, that ``all |put| are replaced by |putR|'' is a global property, and to 
 \subsection{Contexts and Translation}
 \label{sec:ctxt-trans}
 
-In this section it is our goal to show that we can automatically translate a
+This section shows that we can automatically translate a
 program into another program which, when run under global-state semantics,
 has the same result as the original program run under local-state semantics.
 We do this by systematically replacing each occurrence of |put| by |putR|.
 
-First we introduce a syntax for nondeterministic and stateful
+To show this we first introduce a syntax for nondeterministic and stateful
 monadic programs and contexts.
-In the second part we add a semantic domain and imbue our programs with
-global-state semantics.
+Then we imbue these programs with global-state semantics.
 Finally we define the function that performs the translation just described, and
 prove that this translation is correct.
 
-\subsubsection*{Programs and Contexts}
+\subsubsection{Programs and Contexts}
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
@@ -184,9 +232,11 @@ prove that this translation is correct.
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
 %format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
 %format failD = "\scaleobj{0.8}{\langle}\varnothing\scaleobj{0.8}{\rangle}"
+%format langle = "\scaleobj{0.8}{\langle}"
+%format rangle = "\scaleobj{0.8}{\rangle}"
 %format emptyListLit = "`[]"
-
 \begin{figure}
+\begin{mdframed}
 \centering
 \small
 \subfloat[]{
@@ -198,40 +248,38 @@ data Prog a where
   mplus   :: Prog a -> Prog a -> Prog a
   Get     :: (S -> Prog a) -> Prog a
   Put     :: S -> Prog a -> Prog a
-
-data Env (l :: [*]) where
-  Nil  :: Env emptyListLit
-  Cons :: a -> Env l -> Env (a:l)
-
-type OProg e a = Env e -> Prog a
 \end{spec}
 \end{minipage}
 }
 \subfloat[]{
-\begin{minipage}{0.5\textwidth}
-\begin{spec}
-data Ctx e1 a e2 b where
-  hole    :: Ctx e a e a
-  COr1    :: Ctx e1 a e2 b -> OProg e2 b -> Ctx e1 a e2 b
-  COr2    :: OProg e2 b -> Ctx e1 a e2 b -> Ctx e1 a e2 b
-  CPut    :: (Env e2 -> S) -> Ctx e1 a e2 b -> Ctx e1 a e2 b
-  CGet    :: (S -> Bool) -> Ctx e1 a (S:e2) b
-          -> (S -> OProg e2 b) -> Ctx e1 a e2 b
-  CBind1  :: Ctx e1 a e2 b -> (b -> OProg e2 c) -> Ctx e1 a e2 c
-  CBind2  :: OProg e2 a -> Ctx e1 b (a::e2) c -> Ctx e1 b e2 c
-\end{spec}
-\end{minipage}
+  \begin{minipage}{0.5\textwidth}
+    \begin{spec}
+      data Env (l :: [*]) where
+        Nil  :: Env emptyListLit
+        Cons :: a -> Env l -> Env (a:l)
+
+      type OProg e a = Env e -> Prog a
+    \end{spec}
+  \end{minipage}
 }
 \quad
 \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{spec}
-      (>>=) :: Prog a -> (a -> Prog b) -> Prog b
-      Return x       >>= f = f x
-      mzero          >>= f = mzero
-      (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
-      Get k          >>= f = Get (\x -> k x >>= f)
-      Put x e        >>= f = Put x (e >>= k)
+    data Ctx e1 a e2 b where
+      hole    :: Ctx e a e a
+      COr1    :: Ctx e1 a e2 b -> OProg e2 b
+              -> Ctx e1 a e2 b
+      COr2    :: OProg e2 b -> Ctx e1 a e2 b
+              -> Ctx e1 a e2 b
+      CPut    :: (Env e2 -> S) -> Ctx e1 a e2 b
+              -> Ctx e1 a e2 b
+      CGet    :: (S -> Bool) -> Ctx e1 a (S:e2) b
+              -> (S -> OProg e2 b) -> Ctx e1 a e2 b
+      CBind1  :: Ctx e1 a e2 b -> (b -> OProg e2 c)
+              -> Ctx e1 a e2 c
+      CBind2  :: OProg e2 a -> Ctx e1 b (a:e2) c
+              -> Ctx e1 b e2 c
     \end{spec}
   \end{minipage}
 }
@@ -248,24 +296,40 @@ data Ctx e1 a e2 b where
   \end{minipage}
 }
 \quad
-\caption{(a) Syntax for programs. (b) Syntax for contexts. (c) Bind operator. (d) Semantic domain.}
+\end{mdframed}
+\caption{(a) Syntax for programs. (b) Environments and open programs. (c) Syntax
+  for contexts. (d) Semantic domain.}
 \label{fig:context-semantics}
 \end{figure}
-\todo{fix explanation of contexts (cft e-mail shin)}
-In Figure~\ref{fig:context-semantics}(a), we define a syntax for
-nondeterministic, stateful, closed programs |Prog|.
-In the previous sections we have been mixing syntax and semantics.
-In this section we avoid this by defining the program syntax as a free monad:
+In the previous sections we have been mixing syntax and semantics,
+which we avoid in this section by defining the program syntax as a free monad.
+This way we avoid the need for a type-level distinction between programs
+with local-state semantics and programs with global-state semantics.
+Figure~\ref{fig:context-semantics}(a), defines a syntax for
+nondeterministic, stateful, closed programs |Prog|, where
 the |Get| and |Put| constructors take continuations as arguments, and
-the |(>>=)| operator is defined in Figure~\ref{fig:context-semantics}(c).
-One can see that its definition has laws \eqref{eq:bind-mplus-dist} and
+the |(>>=)| operator is defined as follows.
+\begin{samepage}
+\begin{spec}
+  (>>=) :: Prog a -> (a -> Prog b) -> Prog b
+  Return x       >>= f = f x
+  mzero          >>= f = mzero
+  (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
+  Get k          >>= f = Get (\x -> k x >>= f)
+  Put x e        >>= f = Put x (e >>= k)
+\end{spec}
+\end{samepage}
+One can see that |(>>=)| is defined as a purely syntactical manipulation, and
+its definition has laws \eqref{eq:bind-mplus-dist} and
 \eqref{eq:bind-mzero-zero} built-in.
 
-The meaning of a monadic program is then determined by a semantic domain of our
+The meaning of such a monadic program is determined by a semantic domain of our
 choosing, which we denote with |Dom|, and its corresponding
-domain operators |retD|, |failD|, |getD|, |putD| and |(<||||>)|.
+domain operators |retD|, |failD|, |getD|, |putD| and |(<||||>)|
+(see figure~\ref{fig:context-semantics}(d)).
 The |run :: Prog a -> Dom a| function ``runs'' a program |Prog a| into a value
 in the semantic domain |Dom a|.
+\begin{samepage}
 \begin{spec}
 run (Return x)       = retD x
 run mzero            = failD
@@ -273,41 +337,44 @@ run (m1 `mplus` m2)  = run m1 <||> run m2 {-"~~,"-}
 run (Get k)          = getD (\s -> run (k s)) {-"~~,"-}
 run (Put x m)        = putD x (run m) {-"~~."-}
 \end{spec}
-\todo{To what extent do we wish to talk about the technicalities of open
-  programs (ie using orun in stead of run, using oevl in stead of eval etc)?
-  If the answer is ``not at all'', then maybe we should not mention open
-  programs at all in the paper?
-}
+\end{samepage}
+Note that no |langle>>=rangle| operator is required to define |run|;
+in other words, |Dom| need not be a monad.
+In fact, as we will see later, we will choose our implementation in such a way
+that there does not exist a bind operator for |run|.
 
-We define open programs |OProg| (that is, programs that may reference free
-variables) as functions that construct a closed program given an environment
-that contains the free variables referenced in the program.
-Environments |Env|, in turn, are defined as heterogeneous lists.
-
-Figure~\ref{fig:context-semantics}(b) provides the definition for single-hole
-contexts |Ctx|.
-A context |C| of type |Ctx e1 a e2 b| can be interpreted as a function that, given a
-program that returns a value of type |a| under environment |e1| (in other words:
-the type and environment of the hole), produces a program that returns a value
-of type |b| under environment |e2| (the type and environment of the whole program).
-Filling the hole by |e| is denoted by |apply C e|.
-
-\subsubsection*{Modeling Global State Semantics}
-We define laws upon the domain operators to impose the semantics of a
+\subsubsection{Modeling Global State Semantics}
+We impose laws upon |Dom| and the domain operators to ensure the semantics of a
 non-backtracking (global-state),
-nondeterministic, stateful computation on our programs.
-Naturally, we need the state laws and nondeterminism laws to hold.
-\todo{rewrite as align block, last time I tried this I got tons of weird glitches}
-\begin{spec}
-failD <||> m = m <||> failD          = m
-(m1 <||> m2) <||> m3                 = m1 <||> (m2 <||> m3)
-getD (\s1 -> getD (\s2 -> k s1 s2))  = getD (\s1 -> k s1 s1)
-getD (\s -> putD s m)                = m
-putD x (getD k)                      = putD x (k x)
-putD x (putD y m)                    = putD y m
-\end{spec}
+nondeterministic, stateful computation for our programs.
+Naturally, we need laws analogous to the state laws and nondeterminism laws to
+hold for our semantic domain.
+As it is not required that a bind operator
+(|(>>=) :: Dom a -> (a -> Dom b) -> Dom b|) can be defined for the semantic
+domain (and we will later argue that it \emph{cannot} be defined for the domain,
+given the laws we impose on it), the state laws
+(\eqref{eq:put-put} through \eqref{eq:get-get})
+must be reformulated to fit the continuation-passing style of the semantic domain
+operators.
+\begin{align}
+  |putD s1 (putD s2 p)| &= |putD s2 p| \mbox{~~,} \label{eq:put-put-g-d} \\
+  |putD s (getD k)| &= |putD s (k s)| \mbox{~~,} \label{eq:put-get-g-d} \\
+  |getD (\s -> putD s p)| &= |p| \mbox{~~,} \label{eq:get-put-g-d} \\
+  |getD (\s1 -> getD (\s2 -> k s1 s2))| &= |getD (\s -> k s s)| \mbox{~~.} \label{eq:get-get-g-d}
+\end{align}
+As for the nondeterminism laws
+(\eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus}, \eqref{eq:bind-mplus-dist},
+\eqref{eq:bind-mzero-zero}),
+we can simply omit the ones that mention at the semantic level |(>>=)|
+as these are proven at the syntactic level: their proof follows immediately
+from |Prog|'s definition of |(>>=)|.
+\begin{align}
+  |(m <||||> n) <||||> k| &= |m <||||> (n <||||> k)| \mbox{~~,} \\
+  |failD <||||> m| = |m <||||> failD| &= |m| \mbox{~~.}
+\end{align}
 
-We introduce the following |put|-|or| law to impose global-state semantics.
+following |put|-|or| law to impose global-state semantics.
+\todo{intro earlier}
 It allows us to lift a |putD| operation from the left branch of an |(<||||>)|,
 an operation which would not preserve meaning under local-state semantics.
 \begin{align}
@@ -316,98 +383,237 @@ an operation which would not preserve meaning under local-state semantics.
 
 Finally, we wish to stipulate that |putD| \emph{does} distribute over |(<||||>)|
 in those cases where the left branch does not modify the state.
-We introduce a weaker law |put|-|ret|-|or|, from which that property can be proven.
+We introduce a weaker |put|-|ret|-|or| law which only requires |putD| to distribute
+over |(<||||>)| when the left branch does nothing but returning a value; this will be sufficient to
+prove the properties we need later on.
 \begin{align}
 |putD x (retD w <||||> q)| = |putD x (retD w) <||||> putD x q| \label{eq:put-ret-or-g-d}
 \end{align}
-In Appendix~\ref{sec:GSMonad} we present one implementation of |Dom| and its
-operators that satisfy all the laws in this section.
+This law only holds if the implementation of |Dom| does not permit the definition
+of a bind operator |(>>=) :: Dom a -> (a -> Dom b) -> Dom b|.
+Consider for instance the following program:
+\begin{code}
+  putD x (retD w <||> getD retD) langle>>=rangle \z -> putD y (retD z)
+\end{code}
+If \eqref{eq:put-ret-or-g-d} holds, this program should be equal to
+\begin{code}
+  (putD x (retD w) <||> putD x (getD retD)) langle>>=rangle \z -> putD y (retD z)
+\end{code}
+However, Figure~\ref{fig:put-ret-or-vs-bind} proves that the first program can
+be reduced to |putD y (retD w <||||> retD y)|,
+whereas the second program is equal to
+|putD y (retD w <||||> retD x)|,
+which clearly does not always have the same result.
+\begin{figure}
+  \centering
+  \small
+  \subfloat[]{
+  \begin{minipage}{0.5\textwidth}
+    \begin{code}
+      putD x (retD w <||> getD retD) langle>>=rangle \z -> putD y (retD z)
+      === {- definition of |langle>>=rangle| -}
+      putD x (putD y (retD w) <||> getD (\s -> putD y (retD s)))
+      === {- by \eqref{eq:put-or-g-d} and \eqref{eq:put-put-g-d} -}
+      putD y (retD w <||> getD (\s -> putD y (retD s)))
+      === {- by \eqref{eq:put-ret-or-g-d} -}
+      putD y (retD w) <||>  putD y (getD (\s -> putD y (retD s)))
+      === {- by \eqref{eq:put-get-g-d} and \eqref{eq:put-put-g-d} -}
+      putD y (retD w) <||> putD y (retD y)
+      === {- by \eqref{eq:put-ret-or-g-d} -}
+      putD y (retD w <||> retD y)
+    \end{code}
+  \end{minipage}
+  }
+  \subfloat[]{
+  \begin{minipage}{0.5\textwidth}
+    \begin{code}
+      (putD x (retD w) <||> putD x (getD retD))
+        langle>>=rangle \z -> putD y (retD z)
+      === {- definition of |langle>>=rangle| -}
+      putD x (putD y (retD w)) <||> putD x (getD (\s -> putD y (retD s)))
+      === {- by \eqref{eq:put-put-g-d} and \eqref{eq:put-get-g-d} -}
+      putD y (retD w) <||> putD x (putD y (retD x))
+      === {- by \eqref{eq:put-put-g-d} -}
+      putD y (retD w) <||> putD y (retD x)
+      === {- by \eqref{eq:put-ret-or-g-d} -}
+      putD y (retD w <||> retD x)
+    \end{code}
+  \end{minipage}
+  }
+  \caption{Proof that law~\eqref{eq:put-ret-or-g-d} implies that a bind operator
+    cannot exist for the semantic domain.}
+  \label{fig:put-ret-or-vs-bind}
+\end{figure}
 
+% put x (return w || q) >>= \z -> put y (return z)
+%put x (return w >>= \z -> put y (return z) || get return >>= \z -> put y (return z))
+%put x (put y (return w)
+%       ||
+%       get (\s -> put y (return s))
+%      )
+%  [put-or]
+%put x (put y (return w || get (\s -> put y (return s))))
+%  [put-put]
+%put y (return w || get (\s -> put y (return s)))
+%  [put-ret-or]
+%put y (return w) || put y (get \s -> put y (return s))
+%  [put-get]
+%put y (return w) || put y (put y (return y))
+%  [put-put]
+%put y (return w) || put y (return y)
+%  [put-ret-or]
+%put y (return w || return y)
+%-> ([(w,y)), (y,y)],y)
+%################################################################################
+%(put x (return w) || put x (get return))
+%>>=
+%\z -> put y (return z)
+%  [def >>=]
+%put x (return w) >>= \z -> put y (return z)
+%||
+%put x (get return) >>= \z -> put y (return z)
+%  [def >>=]
+%put x (put y (return w))
+%||
+%put x (get (\s -> put y (return s)))
+%  [put-put, put-get]
+%put y (return w)
+%||
+%put x (put y (return x))
+%  [put-put]
+%put y (return w)
+%||
+%put y (return x)
+%  [put-or]
+%put y (return w || put y return x)
+%  [put-ret-or, put-put]
+%put y (return w) || put y (return x)
+%  [put-ret-or]
+%put y (return w || return x)
+
+It is worth remarking that this requirement disqualifies the most
+straightforward candidate for the semantic domain, |ListT (State s)|, as a
+bind operator can be defined for it.
+In Appendix~\ref{sec:GSMonad} we present an implementation of |Dom| and its
+operators that satisfy all the laws in this section, and which does not permit
+the implementation of a sensible bind operator.
+
+\subsubsection{Contextual Equivalence}
+\label{subsec:contextual-equivalence}
 With our semantic domain sufficiently specified, we can prove analogous
 properties for programs interpreted through this domain.
-We define a notion of ``contextual equivalence'' of programs:
-\todo{Define in terms of orun?}
+We must take care in how we reformulate these properties however.
+It is certainly not sufficient to merely copy the laws as formulated for the
+semantic domain, substituting |Prog| data constructors for semantic domain
+operators as needed; we must keep in mind that a term in |Prog a| describes a
+syntactical structure without ascribing meaning to it.
+For example, one cannot simply assert that |Put x (Put y p)| is \emph{equal} to
+|Put y p|, because although these two programs have the same semantics, they
+are not structurally identical.
+It is clear that we must define a notion of ``semantical equivalence'' between
+programs.
+We can map the syntactical structures in |Prog a| onto the semantic domain
+|Dom a| using |run| to achieve that.
+Yet wrapping both sides of an equation in |run| applications
+is not enough as such statements only apply at the top-level of a program.
+For instance, while |run (Put x (Put y p)) = run (Put y p)| is a correct statement,
+we cannot prove
+|run (Return w `mplus` Put x (Put y p)) = run (Return w `mplus` Put y p)| 
+from such a law.
+
+So the concept of semantical equivalence in itself is not sufficient; we require
+a notion of ``contextual semantic equivalence'' of programs which allows us to
+formulate properties about semantical equivalence which hold in any surrounding
+context.
+Figure~\ref{fig:context-semantics}(c) provides the definition for single-hole
+contexts |Ctx|.
+A context |C| of type |Ctx e1 a e2 b| can be interpreted as a function that, given a
+program that returns a value of type |a| under environment |e1| (in other words:
+the type and environment of the hole), produces a program that returns a value
+of type |b| under environment |e2| (the type and environment of the whole program).
+Filling the hole with |p| is denoted by |apply C p|.
+The type of environments, |Env| is defined using heterogeneous lists
+(Figure~\ref{fig:context-semantics}(b)).
+When we consider the notion of programs in contexts, we must take into account
+that these contexts may introduce variables which are referenced by the program.
+The |Prog| datatype however represents only closed programs.
+Figure~\ref{fig:context-semantics}(b) introduces the |OProg| type to represent
+``open'' programs, and the |Env| type to represent environments.
+|OProg e a| is defined as the type of functions that construct a \emph{closed}
+program of type |Prog a|, given an environment of type |Env e|.
+Environments, in turn, are defined as heterogeneous lists.
+We also define a function for mapping open programs onto the semantic domain.
+\begin{spec}
+  orun :: OProg e a -> Env e -> Dom a
+  orun p env = run (p env)
+\end{spec}
+
+We can then assert that two programs are contextually equivalent if, for
+\emph{any} context, running both programs wrapped in that context will
+yield the same result:
 \newcommand{\CEq}{=_\mathtt{GS}}
 \begin{align*}
-  |m1| \CEq |m2| \iff \forall C. |run (apply C m1)| = |run (apply C m2)|
+  |m1| \CEq |m2| \triangleq \forall C. |orun (apply C m1)| = |orun (apply C m2)|
 \end{align*}
-For each of the semantic domain laws, we state and prove an analogous lemmas for
-programs in arbitrary contexts (the proofs are straightforward).
+
+We can then straightforwardly formulate variants of the state laws, the
+nondeterminism laws and the |put|-|or| law for this global state monad as
+lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
-|mzero `mplus` m|                        &\CEq |m `mplus` mzero| \\
-                                         &\CEq |m| \mbox{~~,}\\
-|(m1 `mplus` m2) `mplus` m3|             &\CEq |m1 `mplus` (m2 `mplus` m3)|\mbox{~~,}\\
-|Get (\s1 -> Get (\s2 -> k s1 s2))|      &\CEq |(Get (\s1 -> k s1 s1))|\mbox{~~,}\\
-|Get (\s -> Put s m)|                    &\CEq |m|\mbox{~~,}\\
-|Put x (Get k)|                          &\CEq |Put x (k x)|\mbox{~~,}\\
-|Put x (Put y m)|                        &\CEq |Put y m|\mbox{~~.}
+  |Put s1 (Put s2 p)| &\CEq |Put s2 p|
 \end{align*}
-An analogous |Put|-|Or| law also holds:
-\begin{align}
-|Put x p `mplus` q| &\CEq |Put x (p `mplus` q)| \label{eq:put-or-g} \mbox{~~.}
-\end{align}
-The one exception is law \eqref{eq:put-ret-or-g-d}: the analogue of this
-property does not hold in arbitrary contexts.
+
+Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
+easily follow from the analogous semantic domain laws. The formulation of a
+|put|-|ret|-|or| law-like property \eqref{eq:put-ret-or-g-d} requires somewhat
+more care: because there exists a bind operator for |Prog|, we must stipulate
+that it does not hold in arbitrary contexts:
 \begin{align}
 |run (Put x (Return w `mplus` q))| = |run (Put x (Return w) `mplus` Put x q)| \label{eq:put-ret-or-g} \mbox{~~.}
 \end{align}
-For example, in the context |cBindProg1 hole (Put w)|
-\footnote{where |cBindProg1 ctx k = CBind1 ctx (const . k)|},
-the two sides of the equation do not behave the same way.
 
-Furthermore, we state and prove the monad laws for |Prog|:
-\begin{align*}
-|return x >>= f|  &\CEq |f x| \mbox{~~,}\\
-|m >>= return|    &\CEq |m| \mbox{~~,}\\
-|(m >>= f) >>= g| &\CEq |m >>= \x -> (f x >>= g)| \mbox{~~.}
-\end{align*}
-
-\subsubsection*{Simulating Local-State Semantics}
+\subsubsection{Simulating Local-State Semantics}
 We simulate local-state semantics by replacing each occurrence of |Put| by a
 variant that restores the state, as described in subsection
-\ref{subsec:state-restoring-ops}.
-This transformation is implemented by the function |trans :: Prog a -> Prog a|:
+\ref{subsec:state-restoring-ops}. This transformation is implemented by the
+function |trans| for closed programs, and |otrans| for open programs:
+\begin{samepage}
 \begin{spec}
+  trans   :: Prog a -> Prog a
   trans (Return x)     = Return x
   trans (p `mplus` q)  = trans p `mplus` trans q
-  trans Fail           = Fail
+  trans mzero          = mzero
   trans (Get p)        = Get (\s -> trans (p s))
-  trans (Put s p)      = Get (\s' -> Put s (trans p) `mplus` Put s' Fail)
+  trans (Put s p)      = Get (\s' -> Put s (trans p) `mplus` Put s' mzero)
+
+  otrans  :: OProg e a -> OProg e a
+  otrans p             = \env -> trans (p env)
 \end{spec}
+\end{samepage}
 We then define the function |eval|, which runs a transformed program (in other
 words, it runs a program with local-state semantics).
 \begin{spec}
 eval :: Prog a -> Dom a
-eval = run . trans {-"~~."-}
+eval = run . trans
 \end{spec}
+We show that the transformation works by proving that our free monad equipped
+with |eval| is a correct
+implementation for a nondeterministic, stateful monad with local-state semantics.
 We introduce notation for ``contextual equivalence under simulated backtracking
 semantics''.
 \newcommand{\CEqLS}{=_\mathtt{LS}}
 \begin{align*}
-  |m1| \CEqLS |m2| \iff \forall C. |eval (apply C m1)| = |eval (apply C m2)|
+  |m1| \CEqLS |m2| \triangleq \forall C. |eval (apply C m1)| = |eval (apply C m2)|
 \end{align*}
-
-We show that the transformation works by proving that our free monad equipped
-with |eval| is a correct
-implementation for a nondeterministic, stateful monad with local-state semantics.
-
-\todo{do we need to argue why it is a nondeterministic monad? we probably do,
-  even though it is trivial}
-
-First we show that it implements a state monad by proving the state laws.
-Proof of these laws start with promoting |trans| inside, before
-applying \eqref{eq:put-or-g} and other laws mentioned earlier in this
-section. \todo{check this}
+For example, we formulate the statement that the |put|-|put|
+law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
 \begin{align*}
-  % get_get_L_2
-  |Get (\s1 -> Get (\s2 -> k s1 s2))| &\CEqLS |Get (\s1 -> k s1 s1)| \mbox{~~,}\\
-  % put_get_L_2
-  |Put x (Get k)|                     &\CEqLS |Put x (k x)|\mbox{~~,}\\
-  % get_put_L_2
-  |Get (\s -> Put s k))|              &\CEqLS |k| \mbox{~~, |s| not free in |k|,} \\
-  % put_put_L_2
-  |Put x (Put y m)|                   &\CEqLS |Put y m|\mbox{~~.}
+  |Put s1 (Put s2 p)| &\CEqLS |Put s2 p|
 \end{align*}
+Proofs for the nondeterminism laws follow trivially from the nondeterminism laws
+for global state.
+The state laws are proven by promoting |trans| inside, then applying
+global-state laws.
 For the proof of the |get|-|put| law, we require the property that in
 global-state semantics, |Put| distributes over |(`mplus`)| if the left branch
 has been transformed (in which case the left branch leaves the state unmodified).
@@ -416,15 +622,8 @@ This property only holds at the top-level.
   % put_or_trans
 |run (Put x (trans m1 `mplus` m2))| = |run (Put x (trans m1) `mplus` Put x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.}
 \end{align}
-The proof of this lemma depends on \eqref{eq:put-or-g} and
-\eqref{eq:put-ret-or-g}.
-Furthermore, we require the property that it is possible
-to lift a |Get| from the left branch of an |(`mplus`)|
-(\todo{discuss proof briefly})
-\begin{align*}
-  % get_or (onbewezen)
-|Get k `mplus` m| \CEq |Get (\x -> k x `mplus` m)|\mbox{~~, |x| not in |k| and |m|}
-\end{align*}
+Proof of this lemma depends on the |put|-|ret|-|or| law (in fact, this lemma is the
+reason why this law was introduced).
 
 Finally, we show that the interaction of state and nondeterminism in this
 implementation produces backtracking semantics.
@@ -432,7 +631,7 @@ To this end we prove laws analogous to \eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}
 \begin{align*}
   |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \\
-  |m >> Fail|                       &\CEqLS |Fail|
+  |m >> mzero|                      &\CEqLS |mzero|
 \end{align*}
 \todo{expand upon these proofs}
 \todo{actually prove them}

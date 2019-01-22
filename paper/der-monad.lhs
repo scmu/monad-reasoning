@@ -23,6 +23,7 @@
 \usepackage{url}
 \usepackage{subfig}
 \usepackage{enumitem}
+\usepackage{mdframed}
 
 % %% Some recommended packages.
 % \usepackage{booktabs}   %% For formal tables:

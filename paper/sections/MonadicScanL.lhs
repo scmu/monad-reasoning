@@ -21,7 +21,7 @@ import Queens
 
 The aim of this section is to turn the filtering phase |assert (all ok . scanlp oplus st)| into a |foldr|. For that we introduce a state monad to pass the state around.
 
-\paragraph{State} The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retrieves the state, while |put :: S s `mem` eps =>  s -> Me eps ()| overwrites the state by the given value. They are supposed to satisfy the laws:
+\paragraph{State} The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retrieves the state, while |put :: S s `mem` eps =>  s -> Me eps ()| overwrites the state by the given value. They are supposed to satisfy the \emph{state laws}:
 \begin{alignat}{2}
 &\mbox{\bf put-put}:\quad &
 |put st >> put st'| &= |put st'|~~\mbox{,} \label{eq:put-put}\\
@@ -126,6 +126,7 @@ scanlpscanlM_der2 oplus st x xs =
                        in (st':) <$> (put st' >> m) {-"~~."-}
 \end{code}
 %endif
+%    $
 \end{proof}
 This proof is instructive due to the use of properties \eqref{eq:put-put} and \eqref{eq:get-put}, and that |(st' :)|, being a pure function, can be easily moved around using \eqref{eq:ap-bind-ap}.
 
@@ -137,7 +138,7 @@ The operator |assert| is defined using non-determinism. The transform therefore 
 \subsection{Right-Distributivity and Local State}
 \label{sec:right-distr-local-state}
 
-We now digress a little to discuss one form of interaction between non-determinism and state. When mixed with other effects, the following laws holds for some monads with non-determinism, but not all:
+We now digress a little to discuss one form of interaction between non-determinism and state. When mixed with other effects, the following \emph{local state laws} hold for some monads with non-determinism, but not all:
 \begin{alignat}{2}
 &\mbox{\bf right-distributivity}:\quad&
   |m >>= (\x -> f1 x `mplus` f2 x)|~ &=~ |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,}
