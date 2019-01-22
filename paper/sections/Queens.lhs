@@ -23,7 +23,7 @@ Backtracking algorithms make good examples of programs that are stateful and non
 In this section we present a specification of the problem, before transforming it into the form |unfoldM p f >=> assert (all ok . scanlp oplus st)| (whose components will be defined later), which is the general form of problems we will deal with in this pearl.
 The specification is non-deterministic, but not stateful.
 In the next few sections we will introduce state into the specification,
-under different assumption of the interaction between non-determinism and state.
+under different assumptions of the interaction between non-determinism and state.
 
 \subsection{Non-Determinism}
 

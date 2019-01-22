@@ -63,20 +63,20 @@ propApBindAp f m k       = f <$> (m >>= k) === m >>= (\x -> f <$> k x)
 %endif
 
 \paragraph{Effect and Effect Operators}
-Monads are used to model effects, and each effect comes with its collection of operators. For example, to model non-determinism we might assume two operators |mzero| and |mplus| ($\Varid{mplus}$), respectively modeling failure and choice. A state effect comes with operators |get| and |put|, which respectively reads from and writes to an unnamed state variable.
+Monads are used to model effects, and each effect comes with its collection of operators. For example, to model non-determinism we assume two operators |mzero| and |mplus| ($\Varid{mplus}$), respectively modeling failure and choice. A state effect comes with operators |get| and |put|, which respectively reads from and writes to an unnamed state variable.
 
-A program might involve more than one effect.
-In Haskell, the type class constraint |MonadPlus| in the type of a program denotes that the program may have used |mzero| or |mplus|, and possibly other effects, while |MonadState s| denotes that it may have used |get| and |put|.
-Some theorems in this pearl, however, applies only to programs that, for example, use non-determinism and no other effects.
+A program may involve more than one effect.
+In Haskell, the type class constraint |MonadPlus| in the type of a program denotes that the program may use |mzero| or |mplus|, and possibly other effects, while |MonadState s| denotes that it may use |get| and |put|.
+Some theorems in this pearl, however, apply only to programs that, for example, use non-determinism and no other effects.
 To talk about such programs, we use a slightly different notation.
-We let the type |Me eps a| denote a monad whose return type is |a| and, during whose execution, effects in the set |eps| might occur.
+We let the type |Me eps a| denote a monad whose return type is |a| and, during whose execution, effects in the set |eps| may occur.
 This pearl considers only two effects: non-determinism and state.
 Non-determinism is denoted by |N|, for which we assume two operators |mzero :: Me eps a| and |mplus :: Me eps a -> Me eps a -> Me eps a|, where |N `mem` eps|.
 A state effect is denoted by |S s|, where |s| is the type of the state, with two operators |get :: Me eps s| and |put :: s -> Me eps ()| where |S s `mem` eps|.
 
 We introduce a small language of effectful programs and a simple type system in Figure \ref{figure:type-system}.
-If a program may have type |Me N a|, we know that non-determinism is the {\em only effect} allowed.
-Inference of effects is not unique, however: a program having |mzero| can be typed as both |Me N a| and |Me {N, S Int} a|.
+If a program has type |Me N a|, we know that non-determinism is the {\em only effect} allowed.
+Inference of effects is not unique, however: a program using |mzero| can be typed as both |Me N a| and |Me {N, S Int} a|.
 We sometimes denote the constraint on |eps| in a type-class-like syntax, e.g |mzero :: N `mem` eps => Me eps a|.
 All these are merely notational convenience --- the point is that the effects a program uses can be determined statically.
 
