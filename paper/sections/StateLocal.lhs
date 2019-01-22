@@ -199,7 +199,7 @@ queensBody xs  =  select xs >>= \(x,ys) ->
   where  (i,us,ds) `oplus` x = (1 + i, (i+x):us, (i-x):ds)
          ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
 \end{spec}
-Thus completes the derivation of our first algorithm for the |n|-queens problem.
+This completes the derivation of our first algorithm for the |n|-queens problem.
 %if False
 \begin{code}
 queensBody :: (MonadPlus m, MonadState (Int, [Int], [Int]) m) => [Int] -> m [Int]
