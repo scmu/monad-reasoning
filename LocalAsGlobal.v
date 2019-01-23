@@ -1,4 +1,10 @@
+Require Coq.Lists.List.
+Require Coq.Program.Equality.
+
+Require Coq.Logic.FunctionalExtensionality.
+
 Module Type SemanticInterface.
+Import Coq.Logic.FunctionalExtensionality.
 
 (* The type of state. *)
 Parameter S : Type.
@@ -68,16 +74,56 @@ Parameter put_ret_or_G_D':
     =
     orD (putD v (retD w)) (putD v q).
 
+Lemma get_put_G_D':
+  forall {A} (p: S -> D A),
+    getD (fun s => putD s (p s))
+    =
+    getD p.
+Proof.
+  intros.
+  assert (H : (fun s => putD s (p s)) = (fun s => putD s (getD (fun s0 => p s0)))).
+  - apply functional_extensionality; intro s.
+    rewrite put_get_G_D.
+    reflexivity.
+  - rewrite H.
+    rewrite get_put_G_D.
+    auto.
+Qed.
+
+Lemma get_or_G_D:
+  forall {A} (p: S -> D A) (q: D A),
+    getD (fun s => orD (p s) q)
+    =
+    orD (getD p) q.
+Proof.
+  intros.
+  rewrite <- (get_put_G_D (orD (getD p) q)).
+  assert (H : (fun s => putD s (orD (getD p) q))
+              = (fun s => putD s (orD (p s) q))).
+  - apply functional_extensionality; intro s.
+    rewrite <- put_or_G_D.
+    rewrite put_get_G_D.
+    rewrite put_or_G_D.
+    reflexivity.
+  - rewrite H.
+    rewrite get_put_G_D'.
+    reflexivity.
+Qed.
+
+Parameter get_fail_G_D:
+  forall {A},
+    getD (fun _ => failD) = (failD : D A).
+
 End SemanticInterface.
 
 Module Type Syntax (Sem: SemanticInterface).
 
 Import Sem.
 
-Require Import Coq.Lists.List.
-Require Import Coq.Program.Equality.
-Require Import Coq.Logic.FunctionalExtensionality.
-
+Import Coq.Lists.List.
+Import Coq.Program.Equality.
+Import Coq.Logic.FunctionalExtensionality.
+Import Coq.Program.Basics.
 (* Programs -- the free monad over the signature of fail + or + get + put.
    These programs are closed, i.e. they contain no free variables.
  *)
@@ -128,12 +174,20 @@ Proof.
   apply bind_return.
 Qed.
 
-Lemma bind_or:
+Lemma bind_or_left:
   forall {A B} (p1 p2: Prog A) (f: A -> Prog B),
     bind (Or p1 p2) f = Or (bind p1 f) (bind p2 f).
 Proof.
   auto.
 Qed.
+
+Lemma bind_left_zero:
+  forall {A B} (f: A -> Prog B),
+    bind Fail f = Fail.
+Proof.
+  auto.
+Qed.
+
 (* Programs with free variables *)
 
 (* Environment as a heterogeneous list *)
@@ -202,6 +256,10 @@ Qed.
            So this context can be said to construct an open program that returns
            a value of type A given an E1 environment, from an open program that
            returns a value of type B given an E2 environment
+
+   TODO: do we need both A and B here? seems to me like the type of the hole
+         and the type of the entire program will always be identical if we
+         don't have binds.
  *)
  
 Inductive Context : list Type -> Type -> list Type -> Type -> Type :=
@@ -458,8 +516,8 @@ Lemma run_put:forall {A} (s: S) (p: Prog A), run (Put s p) = putD s (run p).
 Proof. auto. Qed.
 
 (* Derived definitions for open programs *)
-Definition orun : forall {A E}, OProg E A -> Env E -> D A :=
-  fun _ _ p env => run (p env).
+Definition orun {A E} (p: OProg E A) (env: Env E) : D A :=
+  run (p env).
 
 Lemma orun_fail:
   forall {A E},
@@ -566,6 +624,16 @@ Proof.
      (fun env s1 s2 => k s1 s2 env)
 ).
 Qed.
+(*
+Lemma meta_G:
+  forall {A B E1 E2} {X}  (p q: X -> Prog A)
+    (meta_G': forall (x: X), run (p x) = run (q x)) 
+    (f: Env E1 -> X)
+    (c: Context E1 A E2 B),
+    orun (appl c (fun env => p (f env)))
+    = 
+    orun (appl c (fun env => q (f env))).
+*)
 
 Lemma get_put_G':
   forall {A} (q: Prog A),
@@ -665,6 +733,16 @@ Proof.
   ).
 Qed.
 
+Lemma get_or_G' : forall {A : Type} (p : S -> Prog A) (q : Prog A),
+    run (Get (fun s => Or (p s) q))
+    =
+    run (Or (Get p) q).
+Proof.
+  intros; apply get_or_G_D.
+Qed.  
+
+(* TODO: G variant? not necessary for any proofs afaik, but we claim we prove it in the paper *)
+
 Lemma or_fail':
   forall {A} (q: Prog A),
     run (Or Fail q)
@@ -757,8 +835,8 @@ Fixpoint trans {A} (p: Prog A): Prog A :=
   | Put s p  => Get (fun s0 => Or (Put s (trans p)) (Put s0 Fail))
   end.
 
-Definition otrans {E A}: OProg E A -> OProg E A :=
-  fun p env => trans (p env).
+Definition otrans {E A} (p: OProg E A) : OProg E A :=
+  fun env => trans (p env).
 
 (* Translating contexts *)
 Fixpoint transC {E1 E2: list Type} {A B: Type} (c: Context E1 A E2 B) : Context E1 A E2 B :=
@@ -1002,7 +1080,7 @@ Lemma get_get_L_0:
     =
     evl (Get (fun s1 => k s1 s1)).
 Proof.
-  intros A k; unfold evl; simpl. apply get_get_G'.
+  intros A k. unfold evl; simpl. apply get_get_G'.
 Qed.
 
 Lemma get_get_L_1:
@@ -1082,7 +1160,7 @@ Proof.
 Qed.
 
 Lemma put_get_L_2:
-  forall {A B E1 E2} (c: Context E1 A E2 B) (k: S -> OProg E1 A) (v: S) q,
+  forall {E1 E2 A B C} (c: Context E1 B E2 C) (k: S -> OProg E1 A) (v: S) q,
     oevl (appl c (obind (fun env => Put v (Get (fun s => k s env)) ) q))
     =
     oevl (appl c (obind (fun env => Put v (k v env)) q)).
@@ -1090,10 +1168,6 @@ Proof.
   intros; unfold obind; simpl; apply put_get_L_1.
 Qed.
 
-(* TODO: ik wou dit bewijs even nader bekijken als voorbeeld van context/zcontext
-         switchen
-ASDF
- *)
 Lemma put_fail_L_1:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (v: Env E1 -> S),
     oevl (appl c (fun env => Put (v env) Fail))
@@ -1143,17 +1217,9 @@ Proof.
   intros; unfold obind; simpl; apply put_fail_L_1.
 Qed.
 
-(* law 18 in the paper *)
-Lemma get_or : forall {A : Type} (p : S -> Prog A) (q : Prog A),
-    run (Get (fun s => Or (trans (p s)) q))
-    =
-    run (Or (Get (fun s => trans (p s))) q).
-Proof.
-  Admitted.
-
-
 Lemma put_or_trans:
-  forall {E1 A} (p: OProg E1 A) {E2 B} (c: Context E1 A E2 B) (v: Env E1 -> S) (q: OProg E1 A),
+  forall {E1 A} (p: OProg E1 A)
+         {E2 B} (c: Context E1 A E2 B) (v: Env E1 -> S) (q: OProg E1 A),
     orun (appl c (fun env => Put (v env) (Or (otrans p env) (q env))))
     =
     orun (appl c (fun env => Or (Put (v env) (otrans p env)) (Put (v env) (q env)))).
@@ -1162,7 +1228,8 @@ Proof.
   induction c; simpl.
 
   (* Proof for empty context *)
-  - unfold orun, otrans; apply functional_extensionality; intro env. induction (p env). 
+  - unfold orun, otrans; apply functional_extensionality; intro env.
+    induction (p env). 
     + simpl trans.
       rewrite <- put_ret_or_G.
       reflexivity.
@@ -1177,7 +1244,8 @@ Proof.
       change (run (Put ?s ?p)) with (putD s (run p)).
       rewrite or_or'.
       rewrite <- run_put.
-      change (Or (trans p0_2) (q env)) with ((fun env => Or (trans p0_2) (q env)) env).
+      change (Or (trans p0_2) (q env))
+        with ((fun env => Or (trans p0_2) (q env)) env).
       rewrite (IHp0_1(fun env => Or (trans p0_2) (q env))).
       rewrite run_or.
       rewrite IHp0_2; auto.
@@ -1202,7 +1270,7 @@ Proof.
       rewrite <- put_get_G'.
 
       repeat rewrite run_put.
-      rewrite get_or.
+      rewrite get_or_G'.
       reflexivity.
 
     + simpl trans.
@@ -1396,6 +1464,7 @@ Lemma put_put_L_2:
 Proof.
     intros; unfold obind; simpl; apply put_put_L_1.
 Qed.
+
 
 (* TODO:
    - prove meta lemma + application to get derived lemmas
@@ -1660,7 +1729,7 @@ Lemma oevl_bappl_bor2:
   oevl (bappl b p) = oevl (bappl b q).
 Admitted.
 
-Lemma bappFromAppl:
+Lemma bapp_from_appl:
   forall {A B E1 E2} (p q: OProg E1 A)
     (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C),
         oevl (appl c (obind p k)) = oevl (appl c (obind q k)))
@@ -1716,8 +1785,9 @@ Proof.
       rewrite (oevl_bappl_bor2 p0 q0 o0 b); auto.
     + rewrite (IHb0 p q P); auto.
       intros.
-      
-
+      admit.
+Admitted.
+(*
   - unfold oevl, otrans, orun; apply functional_extensionality; intro env.
     induction (o env); auto.
     + simpl.
@@ -1742,6 +1812,275 @@ Proof.
       f_equal; f_equal.
       rewrite IHp0; auto.
 Qed.      
+*)
+
+Lemma get_get_L:
+  forall {A B E1 E2}
+         (c: BContext E1 A E2 B) (k: S -> S -> OProg E1 A),
+    oevl (bappl c (fun env => Get (fun s1 => Get (fun s2 => k s1 s2 env))))
+    =
+    oevl (bappl c (fun env => Get (fun s1 => k s1 s1 env))).
+Proof.
+  intros.
+  apply bapp_from_appl.
+  intros.
+  apply get_get_L_2.
+Qed.
+
+Lemma get_put_L:
+  forall {A B E1 E2}
+         (c: BContext E1 A E2 B) (p: OProg E1 A),
+    oevl (bappl c (fun env => Get (fun s => Put s (p env))))
+    =
+    oevl (bappl c p).
+Proof.
+  intros.
+  apply bapp_from_appl.
+  intros.
+  apply get_put_L_2.
+Qed.
+
+Lemma put_get_L:
+  forall {A B E1 E2}
+         (c: BContext E1 A E2 B) (k: S -> OProg E1 A) (v: S),
+    oevl (bappl c (fun env => Put v (Get (fun s => k s env))))
+    =
+    oevl (bappl c (fun env => Put v (k v env))).
+Proof.
+  intros.
+  apply bapp_from_appl.
+  intros.
+  apply put_get_L_2.
+
+Lemma put_put_L:
+  forall {A B E1 E2}
+         (c: BContext E1 A E2 B) (v: Env E1 -> S) (w: Env E1 -> S) (p: OProg E1 A),
+    oevl (bappl c (fun env => Put (v env) (Put (w env) (p env))))
+    =
+    oevl (bappl c (fun env => Put (w env) (p env))).
+Proof.
+  intros.
+  apply bapp_from_appl.
+  intros.
+  apply put_put_L_2.
+Qed.
+
+Lemma put_fail_L:
+  forall {E1 E2 A B} (c: BContext E1 A E2 B) (v: Env E1 -> S),
+  oevl (bappl c (fun env => Put (v env) Fail))
+  =
+  oevl (bappl c (fun env => Fail)).
+Proof.
+  intros.
+  apply bapp_from_appl.
+  intros.
+  apply put_fail_L_2.
+Qed.
+(* right distributivity *)
+
+Lemma put_fail_L_0:
+  forall {A} (s: S),
+    evl (Put s Fail)
+    =
+    evl (Fail: Prog A).
+Proof.
+  intros.
+  unfold evl.
+  unfold trans.
+  unfold run.
+  assert (H: (fun s0 : S => orD (putD s (failD: D A)) (putD s0 failD))
+             =
+             (fun s0 => putD s0 failD)).
+  - apply functional_extensionality; intro s0.
+    rewrite put_or_G_D.
+    rewrite or1_fail_D.
+    rewrite put_put_G_D.
+    reflexivity.
+  - rewrite H.
+    rewrite get_put_G_D.
+    reflexivity.
+Qed.
+
+Lemma bind_or_right_zero_L_0:
+  forall {A B} (m: Prog A),
+    evl (bind m (fun x => Fail))
+    =
+    evl (Fail : Prog B).
+Proof.
+  intros.
+  induction m .
+  - unfold bind; reflexivity.
+  - unfold bind; reflexivity.
+  - admit.
+  - admit.
+  - change (bind (Put s m) ?k)
+      with (Put s (bind m k)).
+    change (evl (Put s ?k))
+      with (getD (fun s0 => orD (putD s (evl k)) (putD s0 failD))).
+    rewrite IHm.
+    change (getD (fun s0 => orD (putD s (evl Fail)) (putD s0 failD)))
+      with (evl (Put s (Fail: Prog B))).
+    rewrite put_fail_L_0.
+    reflexivity.
+Admitted.
+
+Lemma bind_or_right_zero_L_1':
+  forall {E1 E2 A B X} (c: Context E1 A E2 B) (m: X -> Prog A) (f: Env E1 -> X),
+    oevl (appl c (fun env => bind (m (f env)) (fun x => Fail)))
+    =
+    oevl (appl c (fun env => Fail)).
+Proof.
+  intros.
+  change (fun env => bind (m (f env)) (fun x => Fail))
+    with (fun env => (fun x => bind (m x) (fun x => (Fail: Prog A))) (f env)).
+  change (fun env: Env E1 => Fail)
+    with (fun env: Env E1 => (fun x => (Fail: Prog A)) (f env)).
+  apply evl_meta.
+  intro x.
+  apply bind_or_right_zero_L_0.
+Qed.
+
+Lemma bind_or_right_zero_L_1:
+  forall {E1 E2 A B} (c: Context E1 A E2 B) (m: OProg E1 A),
+    oevl (appl c (fun env => bind (m env) (fun x => Fail)))
+    =
+    oevl (appl c (fun env => Fail)).
+Proof.
+  intros.
+  apply bind_or_right_zero_L_1'.
+Qed.
+
+Lemma bind_or_right_zero_L:
+  forall {E1 E2 A B}
+         (c: BContext E1 A E2 B) (m: OProg E1 A),
+    oevl (bappl c (fun env => bind (m env) (fun x => Fail)))
+    =
+    oevl (bappl c (fun env => Fail)).
+Proof.
+  intros.
+  unfold oevl.
+
+Lemma bind_or_right_zero_L_2:
+  forall {E1 E2 A B C}
+         (c: Context E1 C E2 B) (m: OProg E1 A) (q: A -> OProg E1 C),
+  oevl (appl c (obind (fun env => bind (m env) (fun x => Fail)) q))
+  =
+  oevl (appl c (obind (fun env => Fail) q)).
+Proof.
+  intros.
+  unfold obind.
+  simpl.
+  unfold orun.
+Admitted.
+
+Definition side {A} (m: Prog A) : Prog A :=
+  bind m (fun _ => Fail).
+Definition modify {A} (f: S -> S) (p: Prog A) : Prog A :=
+  Get (fun s => Put (f s) p).
+Definition modifyR {A} (next: S -> S) (prev: S -> S) (p: Prog A) : Prog A :=
+  Or (modify next p) (side (modify prev p)).
+Definition omodifyR {A E} (next: S -> S) (prev: S -> S) (p: OProg E A)
+  : OProg E A
+  := fun env => modifyR next prev (p env).
+
+
+
+Lemma get_or_G_D':
+  forall {A} (p: D A) (q: S -> D A),
+    getD (fun s => orD p (q s)) = orD p (getD q).
+Admitted.
+  
+Lemma trans_bind_fail:
+  forall {A B} (m: Prog A),
+    run (bind (trans m) (fun _ => (Fail : Prog B))) = failD.
+Proof.
+  intros.
+  induction m; simpl; auto.
+  - rewrite IHm1, IHm2.
+    apply or1_fail_D.
+  - assert (H': (fun s => run (bind (trans (p s)) (fun _ => (Fail : Prog B))))
+                =
+                (fun s => failD)).
+    + apply functional_extensionality; intro s.
+      apply H.
+    + rewrite H'.
+      (* TODO:
+         I added a new axiom "get_fail_G_D" to the semantic domain.
+         It can be seen as an instance of a more general (reasonable,
+         but currently unmentioned) axiom
+         forall m, state_restoring m -> m >> fail = fail.
+         I should describe it in the paper.
+         Maybe I should go for another axiom?
+         forall m, getD (fun _ => m) = m
+         (ie, if you don't use the result of the get, might as well
+          ditch the whole get)
+       *)
+      apply get_fail_G_D.
+  - assert (H: (fun s0 => orD (putD s (run (bind (trans m) (fun _ => Fail)))) (putD s0 (failD : D B)))
+               =
+               (fun s0 => putD s0 failD)).
+    + apply functional_extensionality; intro s0.
+      rewrite IHm.
+      rewrite put_or_G_D.
+      rewrite or1_fail_D.
+      rewrite put_put_G_D.
+      reflexivity.
+    + rewrite H.
+      rewrite get_put_G_D.
+      reflexivity.
+Qed.
+  
+(* Is this equally general to lemma 6.3? Using (trans m) as a proxy for
+   the predicate "state-restoring".
+   Clearly (trans m) is always state restoring, but can any state restoring
+   program be written as the result of a (trans m)?
+ *)
+Lemma modify_lemma:
+  forall {A}
+         (m: Prog A)
+         (prev next: S -> S)
+         (rollbackH: forall s, prev (next s) = s),
+    evl (Get (fun s => Put (next s) m))
+    =
+    run (modifyR next prev (trans m)).
+Proof.
+  intros.
+  unfold modifyR, modify, side.
+  unfold evl.
+  simpl.
+  rewrite <- get_or_G_D.
+  rewrite get_get_G_D.
+  assert (H: (fun s => orD (putD (next s) (run (trans m))) (getD (fun s0 => putD (prev s0) (run (bind (trans m) (fun _ => Fail))))))
+             =
+             (fun s => orD (putD (next s) (evl m)) (putD s failD))).
+  - intros.
+    apply functional_extensionality; intro s.
+    rewrite put_or_G_D.
+    rewrite <- get_or_G_D'.
+    rewrite put_get_G_D.
+    rewrite rollbackH.
+    rewrite trans_bind_fail.
+    rewrite put_or_G_D.
+    auto.
+  - rewrite H.
+    reflexivity.
+Qed.
+
+Lemma modify_lemma':
+  forall {A B E1 E2}
+         (c: Context E1 A E2 B)
+         (m: OProg E1 A)
+         (prev next: S -> S)
+         (rollbackH: forall s, prev (next s) = s),
+    oevl (appl c (fun env => (Get (fun s => Put (next s) (m env)))))
+    =
+    orun (appl c (fun env => (omodifyR next prev (otrans m) env))).
+Proof.
+  intros.
+  unfold oevl, otrans.
+
+
+
 
 End Syntax.
 
@@ -1874,3 +2213,21 @@ Proof.
 Qed.
 
 End Implementation.
+
+(*
+TO PROVE?
+[X] left-zero: bind Fail m = Fail     -- don't need it for other proofs
+
+[ ] right-distr: bind m (fun x => Or (f1 x) (f2 x)) = Or (bind m f1) (bind m f2)
+
+[ ] right-zero: bind m Fail = Fail
+
+[ ] prev . next = id ->
+      get >>= fun s => putR (next s) >> m = modifyR next prev >> m
+
+[X] state laws in context with bind
+
+[ ] right-distr, right-zero in context with bind
+
+[ ] probably not: bind cannot be defined for implementation?
+*)
