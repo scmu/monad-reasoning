@@ -835,6 +835,36 @@ Fixpoint trans {A} (p: Prog A): Prog A :=
   | Put s p  => Get (fun s0 => Or (Put s (trans p)) (Put s0 Fail))
   end.
 
+(* TODO currently unused I think *)
+Lemma trans_bind:
+  forall {A B} (p: Prog A) (q: A -> Prog B),
+    trans (bind p (fun x => q x)) = bind (trans p) (fun x => trans (q x)).
+Proof.
+  intros.
+  induction p; simpl; auto.
+  - rewrite (IHp1 q), (IHp2 q).
+    reflexivity.
+  - assert (H':
+              (fun s => trans (bind (p s) (fun x : A => q x)))
+              =
+              (fun s => bind (trans (p s)) (fun x : A => trans (q x)))).
+    + apply functional_extensionality; intro s.
+      apply H.
+    + rewrite H'.
+      reflexivity.
+  - assert
+      (H: (fun s0 => Or (Put s (trans (bind p (fun x : A => q x))))
+                        (Put s0 Fail))
+          =
+          (fun s0 => Or (Put s (bind (trans p) (fun x : A => trans (q x))))
+                        (Put s0 Fail))).
+    + apply functional_extensionality; intro s0.
+      rewrite IHp.
+      reflexivity.
+    + rewrite H.
+      reflexivity.
+Qed.
+
 Definition otrans {E A} (p: OProg E A) : OProg E A :=
   fun env => trans (p env).
 
@@ -901,6 +931,13 @@ Proof.
   auto.
 Qed.
 
+Lemma evl_or:
+  forall {A} (m1 m2: Prog A),
+    evl (Or m1 m2) = orD (evl m1) (evl m2).
+Proof.
+  auto.
+Qed.
+  
 Lemma oevl_or:
   forall {A E} (p q: OProg E A),
     oevl (fun env => Or (p env) (q env)) = fun env => orD (oevl p env) (oevl q env).
@@ -916,6 +953,13 @@ Lemma oevl_ret_bind:
     oevl (fun env => (k env (x env))).
 Proof.
   simpl. reflexivity.
+Qed.
+
+Lemma evl_get:
+  forall {A} (p: S -> Prog A),
+    evl (Get p) = getD (fun s => evl (p s)).
+Proof.
+  auto.
 Qed.
 
 Lemma oevl_get:
@@ -1734,7 +1778,7 @@ Lemma bapp_from_appl:
     (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C),
         oevl (appl c (obind p k)) = oevl (appl c (obind q k)))
     (b: BContext E1 A E2 B),
-    oevl (bappl b p) = oevl (bappl b q).
+        oevl (bappl b p) = oevl (bappl b q).
 Proof.
   intros a B E1 E2 p q P b.
   induction b; simpl.
@@ -1851,6 +1895,7 @@ Proof.
   apply bapp_from_appl.
   intros.
   apply put_get_L_2.
+Qed.
 
 Lemma put_put_L:
   forall {A B E1 E2}
@@ -1911,8 +1956,23 @@ Proof.
   induction m .
   - unfold bind; reflexivity.
   - unfold bind; reflexivity.
-  - admit.
-  - admit.
+  - rewrite bind_or_left.
+    rewrite evl_or.
+    rewrite IHm1, IHm2.
+    unfold evl.
+    simpl.
+    apply or1_fail_D.
+  - change (bind (Get p) (fun _ => Fail))
+      with (Get (fun s => (bind (p s) (fun _ => Fail : Prog B)))).
+    rewrite evl_get.
+    assert (H': (fun s => evl (bind (p s) (fun _ => Fail : Prog B)))
+                =
+                (fun s => evl Fail)).
+    + apply functional_extensionality; intro s.
+      apply H.
+    + rewrite H'.
+      unfold evl, trans, run.
+      apply get_fail_G_D.
   - change (bind (Put s m) ?k)
       with (Put s (bind m k)).
     change (evl (Put s ?k))
@@ -1922,32 +1982,55 @@ Proof.
       with (evl (Put s (Fail: Prog B))).
     rewrite put_fail_L_0.
     reflexivity.
-Admitted.
+Qed.
 
 Lemma bind_or_right_zero_L_1':
-  forall {E1 E2 A B X} (c: Context E1 A E2 B) (m: X -> Prog A) (f: Env E1 -> X),
+  forall {E1 E2 A B C X} (c: Context E1 C E2 B) (m: X -> Prog A) (f: Env E1 -> X),
     oevl (appl c (fun env => bind (m (f env)) (fun x => Fail)))
     =
     oevl (appl c (fun env => Fail)).
 Proof.
   intros.
   change (fun env => bind (m (f env)) (fun x => Fail))
-    with (fun env => (fun x => bind (m x) (fun x => (Fail: Prog A))) (f env)).
+    with (fun env => (fun x => bind (m x) (fun x => (Fail: Prog C))) (f env)).
   change (fun env: Env E1 => Fail)
-    with (fun env: Env E1 => (fun x => (Fail: Prog A)) (f env)).
+    with (fun env: Env E1 => (fun x => (Fail: Prog C)) (f env)).
   apply evl_meta.
   intro x.
   apply bind_or_right_zero_L_0.
 Qed.
 
 Lemma bind_or_right_zero_L_1:
-  forall {E1 E2 A B} (c: Context E1 A E2 B) (m: OProg E1 A),
+  forall {E1 E2 A B C} (c: Context E1 C E2 B) (m: OProg E1 A),
     oevl (appl c (fun env => bind (m env) (fun x => Fail)))
     =
     oevl (appl c (fun env => Fail)).
 Proof.
   intros.
   apply bind_or_right_zero_L_1'.
+Qed.
+
+Lemma bind_or_right_zero_L_2:
+  forall {E1 E2 A B C} (c: Context E1 C E2 B) (m: OProg E1 A) (q: A -> OProg E1 C),
+    oevl (appl c (obind (fun env => bind (m env) (fun x => Fail)) q))
+    =
+    oevl (appl c (obind (fun env => Fail) q)).
+Proof.
+  intros.
+  unfold obind.
+  assert (H:
+            (fun env => bind (bind (m env)
+                                   (fun _ => Fail))
+                             (fun x => q x env))
+            =
+            (fun env => bind (m env) (fun _ => Fail))).
+  - apply functional_extensionality; intro env.
+    rewrite bind_bind.
+    simpl.
+    reflexivity.
+  - rewrite H.
+    simpl.
+    apply bind_or_right_zero_L_1.
 Qed.
 
 Lemma bind_or_right_zero_L:
@@ -1958,20 +2041,10 @@ Lemma bind_or_right_zero_L:
     oevl (bappl c (fun env => Fail)).
 Proof.
   intros.
-  unfold oevl.
-
-Lemma bind_or_right_zero_L_2:
-  forall {E1 E2 A B C}
-         (c: Context E1 C E2 B) (m: OProg E1 A) (q: A -> OProg E1 C),
-  oevl (appl c (obind (fun env => bind (m env) (fun x => Fail)) q))
-  =
-  oevl (appl c (obind (fun env => Fail) q)).
-Proof.
+  apply bapp_from_appl.
   intros.
-  unfold obind.
-  simpl.
-  unfold orun.
-Admitted.
+  apply bind_or_right_zero_L_2.
+Qed.
 
 Definition side {A} (m: Prog A) : Prog A :=
   bind m (fun _ => Fail).
@@ -1982,8 +2055,6 @@ Definition modifyR {A} (next: S -> S) (prev: S -> S) (p: Prog A) : Prog A :=
 Definition omodifyR {A E} (next: S -> S) (prev: S -> S) (p: OProg E A)
   : OProg E A
   := fun env => modifyR next prev (p env).
-
-
 
 Lemma get_or_G_D':
   forall {A} (p: D A) (q: S -> D A),
@@ -2009,7 +2080,8 @@ Proof.
          It can be seen as an instance of a more general (reasonable,
          but currently unmentioned) axiom
          forall m, state_restoring m -> m >> fail = fail.
-         I should describe it in the paper.
+         Is this ok?
+         If yes, I should describe it in the paper.
          Maybe I should go for another axiom?
          forall m, getD (fun _ => m) = m
          (ie, if you don't use the result of the get, might as well
@@ -2030,23 +2102,23 @@ Proof.
       reflexivity.
 Qed.
   
-(* Is this equally general to lemma 6.3? Using (trans m) as a proxy for
+(* TODO
+   Is this equally general to lemma 6.3? Using (trans m) as a proxy for
    the predicate "state-restoring".
    Clearly (trans m) is always state restoring, but can any state restoring
    program be written as the result of a (trans m)?
  *)
-Lemma modify_lemma:
+Lemma modify_lemma_0:
   forall {A}
          (m: Prog A)
          (prev next: S -> S)
          (rollbackH: forall s, prev (next s) = s),
-    evl (Get (fun s => Put (next s) m))
+    run (Get (fun s => trans (Put (next s) m)))
     =
     run (modifyR next prev (trans m)).
 Proof.
   intros.
   unfold modifyR, modify, side.
-  unfold evl.
   simpl.
   rewrite <- get_or_G_D.
   rewrite get_get_G_D.
@@ -2065,22 +2137,50 @@ Proof.
   - rewrite H.
     reflexivity.
 Qed.
+(* meta_G *)
+(*      : forall p q : ?X -> Prog ?A, *)
+(*        (forall x : ?X, run (p x) = run (q x)) -> *)
+(*        forall (f : Env ?E1 -> ?X) (c0 : Context ?E1 ?A ?E2 ?B), *)
+(*        orun (appl c0 (fun env : Env ?E1 => p (f env))) = *)
+(*        orun (appl c0 (fun env : Env ?E1 => q (f env))) *)
 
-Lemma modify_lemma':
+Lemma modify_lemma_1:
   forall {A B E1 E2}
          (c: Context E1 A E2 B)
          (m: OProg E1 A)
          (prev next: S -> S)
          (rollbackH: forall s, prev (next s) = s),
-    oevl (appl c (fun env => (Get (fun s => Put (next s) (m env)))))
+    orun (appl c (fun env => (Get (fun s => trans (Put (next s) (m env))))))
     =
-    orun (appl c (fun env => (omodifyR next prev (otrans m) env))).
+    orun (appl c (fun env => (modifyR next prev (trans (m env))))).
 Proof.
   intros.
-  unfold oevl, otrans.
+  change (fun env => Get (fun s => trans (Put (next s) (m env))))
+    with (fun env => (fun x => Get (fun s => trans (Put (next s) x))) (m env)).
+  change (fun env => modifyR next prev (trans (m env)))
+    with (fun env => (fun x => modifyR next prev (trans x)) (m env)).
+  apply meta_G.
+  intro x.
+  apply modify_lemma_0.
+  apply rollbackH.
+Qed.
 
-
-
+Lemma modify_lemma_2:
+  forall {A B E1 E2}
+         (c: BContext E1 A E2 B)
+         (m: OProg E1 A)
+         (prev next: S -> S)
+         (rollbackH: forall s, prev (next s) = s),
+    orun
+      (bappl
+         c
+         (fun env => (Get (fun s => trans (Put (next s) (m env))))))
+    =
+    orun
+      (bappl
+         c
+         (fun env => (modifyR next prev (trans (m env))))).
+Admitted.
 
 End Syntax.
 
