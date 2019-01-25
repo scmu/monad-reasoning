@@ -562,6 +562,7 @@ lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
   |Put s1 (Put s2 p)| &\CEq |Put s2 p|
 \end{align*}
+\todo{we don't prove this (yet) for contexts with bind!}
 
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
 easily follow from the analogous semantic domain laws. The formulation of a
