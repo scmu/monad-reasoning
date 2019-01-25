@@ -741,6 +741,16 @@ Proof.
   intros; apply get_or_G_D.
 Qed.  
 
+(* TODO *)
+Lemma get_or_G:
+  forall {E1 E2 A B}
+         (c: Context E1 A E2 B) (p: S -> OProg E1 A) (q: OProg E1 A),
+    orun (appl c (fun env => Get (fun s => Or (p s env) (q env))))
+    =
+    orun (appl c (fun env => Or (Get (fun s => p s env)) (q env))).
+Admitted.
+
+
 (* TODO: G variant? not necessary for any proofs afaik, but we claim we prove it in the paper *)
 
 Lemma or_fail':
@@ -2056,12 +2066,7 @@ Definition omodifyR {A E} (next: S -> S) (prev: S -> S) (p: OProg E A)
   : OProg E A
   := fun env => modifyR next prev (p env).
 
-Lemma get_or_G_D':
-  forall {A} (p: D A) (q: S -> D A),
-    getD (fun s => orD p (q s)) = orD p (getD q).
-Admitted.
-  
-Lemma trans_bind_fail:
+Lemma trans_bind_fail':
   forall {A B} (m: Prog A),
     run (bind (trans m) (fun _ => (Fail : Prog B))) = failD.
 Proof.
@@ -2101,7 +2106,104 @@ Proof.
       rewrite get_put_G_D.
       reflexivity.
 Qed.
-  
+
+Lemma trans_bind_fail:
+  forall {E1 E2 A B C} (c: Context E1 B E2 C) (m: OProg E1 A),
+    orun (appl c (obind (otrans m) (fun _ => fun env => Fail)))
+    =
+    orun (appl c (fun env => Fail : Prog B)).
+Admitted.
+
+Lemma modify_lemma_1:
+  forall {A B E1 E2}
+         (c: Context E1 A E2 B)
+         (m: OProg E1 A)
+         (prev next: S -> S)
+         (rollbackH: forall s, prev (next s) = s),
+    orun (appl c (fun env => (Get (fun s => trans (Put (next s) (m env))))))
+    =
+    orun (appl c (fun env => (modifyR next prev (trans (m env))))).
+Proof.
+  intros.
+  unfold modifyR, modify, side.
+  simpl trans.
+  rewrite <- get_or_G.
+  rewrite get_get_G.
+  repeat rewrite <- zappl_toZContext.
+  repeat rewrite invert_zappl_zget.
+  unfold clift, comap.
+  repeat rewrite <- appl_fromZContext.
+  simpl bind.
+  repeat rewrite put_or_G.
+
+  assert (H: (fun env =>
+                Put (next (head env))
+                    (Or (trans (m (tail env)))
+                        (Get (fun s =>
+                                Put (prev s)
+                                    (bind (trans (m (tail env)))
+                                          (fun _ : A => Fail))))))
+             =
+             (fun env => Put (next (head env)) (Or (otrans (fun env' => (m (tail env'))) env) (Get (fun s =>
+                                Put (prev s)
+                                    (bind (trans (m (tail env)))
+                                          (fun _ : A => Fail))))))).
+  - auto.
+  - rewrite H.
+    rewrite put_or_trans.
+    repeat rewrite <- zappl_toZContext.
+    rewrite invert_zappl_zor2.
+    repeat rewrite <- appl_fromZContext.
+    rewrite put_get_G.
+    rewrite put_put_G.
+    repeat rewrite <- zappl_toZContext.
+    repeat rewrite invert_zappl_zput.
+    repeat rewrite <- appl_fromZContext.
+    assert
+      (H':
+         (fun env : Env (S :: E1) =>
+              bind (trans (m (tail env))) (fun _ : A => Fail))
+         =
+         (fun env =>
+            (obind
+               (otrans
+                  (fun env' => m (tail env')))
+               (fun _ _ => Fail: Prog A))
+              env)).
+    + auto.
+    + rewrite H'.
+      rewrite trans_bind_fail.
+      repeat rewrite <- zappl_toZContext.
+      repeat rewrite toZContext_fromZContext.
+      repeat rewrite <- invert_zappl_zput.
+      repeat rewrite <- appl_fromZContext.
+      assert (H'': (fun env => Put (prev (next (head env))) Fail)
+                   =
+                   (fun env => Put ((head: Env (S :: E1) -> S) env) (Fail: Prog A))).
+      * apply functional_extensionality; intro env.
+        rewrite rollbackH.
+        reflexivity.
+      * rewrite H''.
+        repeat rewrite <- zappl_toZContext.
+        repeat rewrite toZContext_fromZContext.
+        rewrite <- invert_zappl_zor2.
+        repeat rewrite <- appl_fromZContext.
+        rewrite put_or_G.
+        unfold otrans.
+        reflexivity.
+Qed.
+
+
+(* fun env : Env (?C :: E1) => bind (trans (m (tail env))) (fun _ : A => Fail) *)
+(*      : forall env : Env (?C :: E1), Prog ?B *)
+
+(* fun env : Env (S :: E1) => *)
+(* obind (otrans (fun env' : Env (S :: E1) => m (tail env'))) *)
+(*   (fun (_ : A) (_ : Env (S :: E1)) => Fail : Prog B) env *)
+(*      : Env (S :: E1) -> Prog B *)
+
+
+  repeat rewrite orun_get.
 (* TODO
    Is this equally general to lemma 6.3? Using (trans m) as a proxy for
    the predicate "state-restoring".
@@ -2119,6 +2221,17 @@ Lemma modify_lemma_0:
 Proof.
   intros.
   unfold modifyR, modify, side.
+  simpl trans.
+  rewrite <- get_or_G'.
+  rewrite get_get_G'.
+  repeat rewrite run_get.
+  simpl bind.
+  apply f_equal, functional_extensionality; intro s.
+  rewrite put_or_G'.
+  rewrite put_or_trans.
+
+
+
   simpl.
   rewrite <- get_or_G_D.
   rewrite get_get_G_D.
