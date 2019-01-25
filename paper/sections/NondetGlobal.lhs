@@ -228,6 +228,7 @@ prove that this translation is correct.
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
+%format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
 %format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
 %format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"

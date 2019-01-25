@@ -12,8 +12,8 @@ axioms demanded by Section~\ref{sec:ctxt-trans}.
 We let |Dom| be the union of |M s a| for all |a| and
 for a given |s|.
 
-{\centering
 \begin{figure}[H]
+{\centering
 \subfloat{
 \begin{minipage}{0.3\textwidth}
 \begin{code}
