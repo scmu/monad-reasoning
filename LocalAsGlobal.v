@@ -2114,6 +2114,12 @@ Lemma trans_bind_fail:
     orun (appl c (fun env => Fail : Prog B)).
 Admitted.
 
+(* TODO
+   Is this equally general to lemma 6.3? Using (trans m) as a proxy for
+   the predicate "state-restoring".
+   Clearly (trans m) is always state restoring, but can any state restoring
+   program be written as the result of a (trans m)?
+ *)
 Lemma modify_lemma_1:
   forall {A B E1 E2}
          (c: Context E1 A E2 B)
@@ -2191,91 +2197,6 @@ Proof.
         rewrite put_or_G.
         unfold otrans.
         reflexivity.
-Qed.
-
-
-(* fun env : Env (?C :: E1) => bind (trans (m (tail env))) (fun _ : A => Fail) *)
-(*      : forall env : Env (?C :: E1), Prog ?B *)
-
-(* fun env : Env (S :: E1) => *)
-(* obind (otrans (fun env' : Env (S :: E1) => m (tail env'))) *)
-(*   (fun (_ : A) (_ : Env (S :: E1)) => Fail : Prog B) env *)
-(*      : Env (S :: E1) -> Prog B *)
-
-
-  repeat rewrite orun_get.
-(* TODO
-   Is this equally general to lemma 6.3? Using (trans m) as a proxy for
-   the predicate "state-restoring".
-   Clearly (trans m) is always state restoring, but can any state restoring
-   program be written as the result of a (trans m)?
- *)
-Lemma modify_lemma_0:
-  forall {A}
-         (m: Prog A)
-         (prev next: S -> S)
-         (rollbackH: forall s, prev (next s) = s),
-    run (Get (fun s => trans (Put (next s) m)))
-    =
-    run (modifyR next prev (trans m)).
-Proof.
-  intros.
-  unfold modifyR, modify, side.
-  simpl trans.
-  rewrite <- get_or_G'.
-  rewrite get_get_G'.
-  repeat rewrite run_get.
-  simpl bind.
-  apply f_equal, functional_extensionality; intro s.
-  rewrite put_or_G'.
-  rewrite put_or_trans.
-
-
-
-  simpl.
-  rewrite <- get_or_G_D.
-  rewrite get_get_G_D.
-  assert (H: (fun s => orD (putD (next s) (run (trans m))) (getD (fun s0 => putD (prev s0) (run (bind (trans m) (fun _ => Fail))))))
-             =
-             (fun s => orD (putD (next s) (evl m)) (putD s failD))).
-  - intros.
-    apply functional_extensionality; intro s.
-    rewrite put_or_G_D.
-    rewrite <- get_or_G_D'.
-    rewrite put_get_G_D.
-    rewrite rollbackH.
-    rewrite trans_bind_fail.
-    rewrite put_or_G_D.
-    auto.
-  - rewrite H.
-    reflexivity.
-Qed.
-(* meta_G *)
-(*      : forall p q : ?X -> Prog ?A, *)
-(*        (forall x : ?X, run (p x) = run (q x)) -> *)
-(*        forall (f : Env ?E1 -> ?X) (c0 : Context ?E1 ?A ?E2 ?B), *)
-(*        orun (appl c0 (fun env : Env ?E1 => p (f env))) = *)
-(*        orun (appl c0 (fun env : Env ?E1 => q (f env))) *)
-
-Lemma modify_lemma_1:
-  forall {A B E1 E2}
-         (c: Context E1 A E2 B)
-         (m: OProg E1 A)
-         (prev next: S -> S)
-         (rollbackH: forall s, prev (next s) = s),
-    orun (appl c (fun env => (Get (fun s => trans (Put (next s) (m env))))))
-    =
-    orun (appl c (fun env => (modifyR next prev (trans (m env))))).
-Proof.
-  intros.
-  change (fun env => Get (fun s => trans (Put (next s) (m env))))
-    with (fun env => (fun x => Get (fun s => trans (Put (next s) x))) (m env)).
-  change (fun env => modifyR next prev (trans (m env)))
-    with (fun env => (fun x => modifyR next prev (trans x)) (m env)).
-  apply meta_G.
-  intro x.
-  apply modify_lemma_0.
-  apply rollbackH.
 Qed.
 
 Lemma modify_lemma_2:
