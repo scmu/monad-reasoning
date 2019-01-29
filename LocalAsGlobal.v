@@ -181,6 +181,15 @@ Proof.
   auto.
 Qed.
 
+Lemma bind_if:
+  forall {A B} (p: bool) (m n: Prog A) (k: A -> Prog B),
+    bind (if p then m else n) k
+    =
+    if p then bind m k else bind n k.
+Proof.
+  intros; destruct p; auto.
+Qed.  
+
 Lemma bind_left_zero:
   forall {A B} (f: A -> Prog B),
     bind Fail f = Fail.
@@ -211,6 +220,11 @@ Definition head_ {E} (env: Env E) :=
 
 Definition head {C E} (env: Env (C :: E)): C := head_ env.
 
+Lemma cons_head_tail:
+  forall {A E} (env: Env (A::E)),
+    Cons (head env) (tail env) = env.
+Admitted.
+
 (* We represent open programs (programs with free variables) abstractly
    as a function that produces a closed program when given an environment
  *)
@@ -235,6 +249,25 @@ Qed.
 
 Definition obind {E A B} (p: OProg E A) : (A -> OProg E B) -> OProg E B :=
   fun k env => bind (p env) (fun x => k x env).
+
+Lemma obind_from_bind:
+  forall {E A B} (p: OProg E A) (k: A -> OProg E B),
+    (fun env => bind (p env) (fun x => k x env))
+    =
+    obind p k.
+Proof.
+  auto.
+Qed.
+
+Lemma obind_obind:
+  forall {A B C E} (p: OProg E A) (k1: A -> OProg E B) (k2: B -> OProg E C),
+    obind (obind p k1) k2 = obind p (fun x => obind (k1 x) k2).
+Proof.
+  intros.
+  unfold obind.
+  apply functional_extensionality; intro env.
+  apply bind_bind.
+Qed.
 
 Lemma obind_cpush:
   forall {E A B C} {a: C} {p: OProg (C :: E) A} {k: A -> OProg (C::E) B},
@@ -1170,6 +1203,15 @@ Proof.
   intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
 Qed.
 
+Lemma invert_zappl_zor1:
+  forall {E1 E2 A B} (z: ZContext E1 A E2 B)  (p q: OProg E1 A),
+     zappl z (fun env => Or (p env) (q env))
+     =
+     zappl (ZOr1 z q) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
 Lemma invert_zappl_zor2:
   forall {E1 E2 A B} (z: ZContext E1 A E2 B)  (p q: OProg E1 A),
      zappl z (fun env => Or (p env) (q env))
@@ -1196,6 +1238,26 @@ Lemma invert_zappl_zget_or:
 Proof.
   intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
 Qed.
+
+Lemma invert_zappl_zdelay:
+  forall {E1 E2 A B} (z: ZContext E1 A E2 B) (b: Env E1 -> bool) (p q: OProg E1 A),
+    zappl z (fun env => if (b env) then (p env) else (q env))
+    =
+    zappl (ZDelay z b q) (fun env => p env).
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zappl_zpush:
+  forall {E1 E2 A B C}
+         (z: ZContext E1 A E2 B) (x: C) (p: OProg (C::E1) A),
+    zappl z (cpush x p)
+    =
+    zappl (ZPush z x) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
 
 Lemma put_get_L_1:
   forall {A B E1 E2} (c: Context E1 A E2 B) (k: S -> OProg E1 A) (v: Env E1 -> S),
@@ -1707,21 +1769,118 @@ Proof.
   intros; unfold toZBContext; rewrite zbappl_toZBContext_; simpl; reflexivity.
 Qed.
 
+Fixpoint fromZBContext_ {E2 E3: list Type} {B C: Type} (z: ZBContext E2 B E3 C)  : forall {E1 A}, BContext E1 A E2 B -> BContext E1 A E3 C :=
+  match z in (ZBContext E2 B E3 C) return (forall {E1 A}, BContext E1 A E2 B -> BContext E1 A E3 C) with
+  | ZBTop         => (fun _ _ c => c)
+  | ZBOr1 z q     => (fun _ _ c => fromZBContext_ z (BOr1 c q)) 
+  | ZBOr2 z p     => (fun _ _ c => fromZBContext_ z (BOr2 p c))
+  | ZBPut z v     => (fun _ _ c => fromZBContext_ z (BPut v c))
+  | ZBGet z t q   => (fun _ _ c => fromZBContext_ z (BGet t c q))
+  | ZBDelay z t q => (fun _ _ c => fromZBContext_ z (BDelay t c q))
+  | ZBPush z x    => (fun _ _ c => fromZBContext_ z (BPush x c))
+  | ZBLift z      => (fun _ _ c => fromZBContext_ z (BLift c))
+  | ZBBind1 z k   => (fun _ _ c => fromZBContext_ z (BBind1 c k))
+  | ZBBind2 z q   => (fun _ _ c => fromZBContext_ z (BBind2 q c))
+  end.
+
+Definition fromZBContext {E1 E2: list Type} {A B: Type} (z: ZBContext E1 A E2 B)  : BContext E1 A E2 B :=
+  fromZBContext_ z BHole. 
+
+Lemma bappl_fromZBContext_:
+  forall {B C E2 E3} (z: ZBContext E2 B E3 C) {E1 A} (c: BContext E1 A E2 B) (p: OProg E1 A),
+       bappl (fromZBContext_ z c) p = zbappl z (bappl c p).
+Proof.
+  intros. induction z; intros; auto; simpl; rewrite IHz; auto.
+Qed.
+
+Lemma bappl_fromZBContext:
+  forall {A B E1 E2} (z: ZBContext E1 A E2 B) (p: OProg E1 A),
+       bappl (fromZBContext z) p = zbappl z p.
+Proof.
+  intros; unfold fromZBContext; rewrite bappl_fromZBContext_; auto.
+Qed.
+
+Lemma invert_zbappl_zbor1:
+  forall {E1 E2 A B} (z: ZBContext E1 A E2 B)  (p q: OProg E1 A),
+     zbappl z (fun env => Or (p env) (q env))
+     =
+     zbappl (ZBOr1 z q) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zbappl_zbor2:
+  forall {E1 E2 A B} (z: ZBContext E1 A E2 B)  (p q: OProg E1 A),
+     zbappl z (fun env => Or (p env) (q env))
+     =
+     zbappl (ZBOr2 z p) q.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zbappl_zbput:
+  forall {E1 E2 A B} (z: ZBContext E1 A E2 B) (v: Env E1 -> S) (q: OProg E1 A),
+     zbappl z (fun env => Put (v env) (q env))
+     =
+     zbappl (ZBPut z v) q.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zbappl_zbdelay:
+  forall {E1 E2 A B}
+         (z: ZBContext E1 A E2 B) (t: Env E1 -> bool) (p q: OProg E1 A),
+    zbappl z (fun env => if t env then p env else q env)
+    =
+    zbappl (ZBDelay z t q) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zbappl_zbpush:
+  forall {E1 E2 A B C}
+         (z: ZBContext E1 A E2 B) (x: C) (p: OProg (C::E1) A),
+    zbappl z (cpush x p)
+    =
+    zbappl (ZBPush z x) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zbappl_zblift:
+  forall {E1 E2 A B C}
+         (z: ZBContext (C::E1) A E2 B) (x: C) (p: OProg E1 A),
+    zbappl z (clift p)
+    =
+    zbappl (ZBLift z) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+
+Lemma invert_zbappl_zbbind1:
+  forall {E1 E2 A B C}
+         (z: ZBContext E1 B E2 C) (p: OProg E1 A) (k: A -> OProg E1 B),
+    zbappl z (obind p k)
+    =
+    zbappl (ZBBind1 z k) p.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
+(*
+Lemma invert_zbappl_zbor2_:
+  forall {E1 E2 A B} (c: BContext E1 A E2 B)  (p q: OProg E1 A),
+     zbappl (toZBContext b) (fun env => Or (p env) (q env))
+     =
+     zbappl (toZBContext (BOr2 b p)) q.
+Proof.
+*)
+
 (*
 Lemma invert_zappl_zput:
   forall {E1 E2 A B} (z: ZContext E1 A E2 B) (v: Env E1 -> S) (q: OProg E1 A),
      zappl z (fun env => Put (v env) (q env))
      =
      zappl (ZPut z v) q.
-Proof.
-  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
-Qed.
-
-Lemma invert_zappl_zor2:
-  forall {E1 E2 A B} (z: ZContext E1 A E2 B)  (p q: OProg E1 A),
-     zappl z (fun env => Or (p env) (q env))
-     =
-     zappl (ZOr2 z p) q.
 Proof.
   intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
 Qed.
@@ -1785,88 +1944,173 @@ Admitted.
 
 Lemma bapp_from_appl:
   forall {A B E1 E2} (p q: OProg E1 A)
-    (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C),
-        oevl (appl c (obind p k)) = oevl (appl c (obind q k)))
-    (b: BContext E1 A E2 B),
-        oevl (bappl b p) = oevl (bappl b q).
+         (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C),
+             oevl (appl c (obind p k)) = oevl (appl c (obind q k)))
+         (b: BContext E1 A E2 B),
+    oevl (bappl b p) = oevl (bappl b q).
 Proof.
   intros a B E1 E2 p q P b.
-  induction b; simpl.
-  - pose (P _ _ _ CHole (fun x env => Return x)); unfold obind in e; simpl in e.
-    rewrite <- bind_return'. rewrite e. rewrite bind_return'. reflexivity.
-  - repeat rewrite oevl_or; rewrite (IHb p q); auto.
-  - repeat rewrite oevl_or; rewrite (IHb p q); auto.
-  - repeat rewrite oevl_put; rewrite (IHb p q); auto.
-  - repeat rewrite oevl_get; apply functional_extensionality; intro env0;
-    apply f_equal; apply functional_extensionality; intro s0; destruct (b s0).
+  repeat rewrite <- zbappl_toZBContext.
+  induction (toZBContext b).
+  - simpl.
+    change (fun env => ?r env)
+      with (appl CHole (fun env => r env)).
+    assert (H: forall (r : OProg E A),
+               (fun env => r env) = (obind r (fun x _ => Return x))).
+    + intro r. unfold obind.
+      apply functional_extensionality; intro env.
+      rewrite bind_return.
+      reflexivity.
+    + rewrite (H p); rewrite (H q); apply P.
+  - repeat rewrite <- invert_zbappl_zbor1.
+    apply IHz.
+    intros.
+    unfold obind.
+    assert (H: forall (r: OProg E1 A),
+               (fun env => bind (Or (r env) (o env)) (fun x => k x env))
+               =
+               (fun env =>
+                  Or (bind (r env) (fun x => k x env))
+                     (bind (o env) (fun x => k x env)))).
+    + intro r; apply functional_extensionality; intro env.
+      rewrite bind_or_left. reflexivity.
+    + rewrite (H p); rewrite (H q).
+      repeat rewrite <- zappl_toZContext.
+      repeat rewrite invert_zappl_zor1.
+      repeat rewrite <- appl_fromZContext.
+      change (fun env => bind (?r env) (fun x => k x env))
+        with (obind r k).
+      apply P.
+    + apply b.
+  - repeat rewrite <- invert_zbappl_zbor2.
+    apply IHz.
+    intros.
+    unfold obind.
+    assert (H: forall (r: OProg E1 A),
+               (fun env => bind (Or (o env) (r env)) (fun x => k x env))
+               =
+               (fun env =>
+                  Or (bind (o env) (fun x => k x env))
+                     (bind (r env) (fun x => k x env)))).
+    + intro r; apply functional_extensionality; intro env.
+      apply bind_or_left.
+    + rewrite (H p); rewrite (H q).
+      repeat rewrite <- zappl_toZContext.
+      repeat rewrite invert_zappl_zor2.
+      repeat rewrite <- appl_fromZContext.
+      apply P.
+    + apply b.
+  - repeat rewrite <- invert_zbappl_zbput; apply IHz; intros; unfold obind.
+    assert (H: forall (r: OProg E1 A),
+               (fun env => bind (Put (s env) (r env)) (fun x => k x env))
+               =
+               (fun env =>
+                  Put (s env) (bind (r env) (fun x => k x env)))).
+    + auto.
+    + rewrite (H p); rewrite (H q).
+      repeat rewrite <-zappl_toZContext;
+        repeat rewrite invert_zappl_zput;
+        repeat rewrite <- appl_fromZContext.
+      apply P.
+    + apply b.
+  - repeat rewrite <- invert_zbappl_zbget.
+    apply IHz.
+    intros.
+    unfold obind.
+    assert (H: forall (r: OProg (S :: E1) A),
+               (fun env =>
+                  bind (Get (fun s =>
+                               if b0 s then cpush s r env else o s env))
+                       (fun x => k x env))
+               =
+               (fun env =>
+                  Get (fun s
+                       => if b0 s
+                          then cpush s (fun env' =>
+                                          bind (r env')
+                                               (fun x => k x env)) env
+                          else bind (o s env) (fun x => k x env)))).
+    + intro r; apply functional_extensionality; intro env.
+      simpl.
+      assert (H':
+                (fun s => bind (if b0 s then cpush s r env else o s env)
+                               (fun x => k x env))
+                =
+                (fun s => if b0 s
+                          then cpush s
+                                     (fun env' =>
+                                        bind (r env') (fun x => k x env))
+                                     env
+                          else bind (o s env) (fun x => k x env))).
+      * apply functional_extensionality; intro s.
+        rewrite bind_if.
+        unfold cpush, comap.
+        reflexivity.
+      * rewrite H'; reflexivity.
+    + rewrite (H p); rewrite (H q).
+      repeat rewrite <- zappl_toZContext.
+      repeat rewrite invert_zappl_zget.
+      unfold clift, comap, cpush, comap.
+      repeat rewrite invert_zappl_zdelay.
+      repeat rewrite <- appl_fromZContext.
+
+
+      assert (H': forall (r: OProg (S::E1) A),
+                 (fun env => bind (r (Cons (head env) (tail env)))
+                                  (fun x => k x (tail env)))
+                 =
+                 (obind r (fun x env => k x (tail env)))).
+      * intro r.
+        unfold obind.
+        apply functional_extensionality; intro env.
+        rewrite cons_head_tail.
+        reflexivity.
+      * rewrite (H' p); rewrite (H' q).
+        apply P.
+    + apply (fromZBContext z).
+  - repeat rewrite <- invert_zbappl_zbdelay.
+    apply IHz. intros. unfold obind.
+    assert (H: forall (r: OProg E1 A),
+               (fun env => bind (if b0 env then r env else o env)
+                                (fun x => k x env))
+               =
+               (fun env => if b0 env
+                           then bind (r env) (fun x => k x env)
+                           else bind (o env) (fun x => k x env))).
+    intro r; apply functional_extensionality; intro env.
+    apply bind_if.
+    rewrite (H p); rewrite (H q).
+    repeat rewrite <- zappl_toZContext.
+    repeat rewrite invert_zappl_zdelay.
+    repeat rewrite <- appl_fromZContext.
+    rewrite obind_from_bind.
+    apply P.
+    apply b.
+  - repeat rewrite <- invert_zbappl_zbpush.
+    apply IHz. intros. unfold obind.
+    assert (H: forall (r: OProg (C :: E1) A),
+               (fun env => bind (cpush c r env) (fun x => k x env))
+               =
+               (cpush c (fun env' => bind (r env')
+                                          (fun x => k x (tail env'))))).
+    intro r; apply functional_extensionality; intro env.
     unfold cpush, comap.
-   change (oevl (fun env : Env E2 => bappl b0 ?p (Cons s0 env)) env0) with
-               (oevl (bappl b0 p) (Cons s0 env0)).
-   rewrite (IHb p q); auto. auto.
-  - apply functional_extensionality; intro env0.
-   change (oevl (fun env : Env E2 => if b env then bappl b0 ?p env else o env) env0)
-    with (oevl (fun env : Env E2 => if b env0 then bappl b0 p env else o env) env0).
-   destruct (b env0).
-   change (fun env => bappl b0 ?p env) with (bappl b0 p); rewrite (IHb p q) ; auto.
-   auto.
-  - unfold cpush, comap.
-     change (oevl (fun env : Env E2 => bappl b ?p (Cons c env))) with
-                (fun env0 => oevl (bappl b p) (Cons c env0)).
-    rewrite (IHb p q); auto.
-  - unfold clift, comap.
-     change (oevl (fun env : Env (C :: E2) => bappl b ?p (tail env))) with
-                (fun env0 => oevl (bappl b p) (@tail C _ env0)).
-    rewrite (IHb p q); auto.
-  - unfold oevl, otrans, orun; apply functional_extensionality. intro env.
-    induction b; simpl.
-    + admit. (* apply IHb in P.
-      simpl in P.
-      change (fun env => ?r env) with (r) in P.
-      (* induction on p and q? that would be lots of work :( *)
-      induction p, q.
-      * simpl.
-
-      admit.
-*)
-
-    + rewrite (IHb0 p q P); auto.
-      intros.
-      apply IHb in P.
-      rewrite (oevl_bappl_bor1 p0 q0 o0 b); auto.
-    + rewrite (IHb0 p q P); auto.
-      intros.
-      apply IHb in P.
-      rewrite (oevl_bappl_bor2 p0 q0 o0 b); auto.
-    + rewrite (IHb0 p q P); auto.
-      intros.
-      admit.
-Admitted.
-(*
-  - unfold oevl, otrans, orun; apply functional_extensionality; intro env.
-    induction (o env); auto.
-    + simpl.
-      unfold cpush, comap.
-      unfold oevl, otrans, orun in P.
-      unfold oevl, otrans, orun in IHb.
-      apply IHb in P.
-      change (run (trans (bappl b ?r (Cons a env))))
-        with ((fun env0 => run (trans (bappl b r env0))) (Cons a env)).
-      rewrite P.
-      auto.
-    + simpl.
-      rewrite IHp0_1; auto.
-      rewrite IHp0_2; auto.
-    + simpl.
-      f_equal.
-      apply functional_extensionality; intro s.
-      rewrite H; auto.
-    + simpl.
-      f_equal.
-      apply functional_extensionality; intro s0.
-      f_equal; f_equal.
-      rewrite IHp0; auto.
-Qed.      
-*)
+    simpl.
+    reflexivity.
+    rewrite (H p); rewrite (H q).
+    repeat rewrite <- zappl_toZContext.
+    repeat rewrite invert_zappl_zpush.
+    repeat rewrite <- appl_fromZContext.
+    repeat rewrite obind_from_bind.
+    apply P.
+    apply (fromZBContext z).
+  - admit.
+  - repeat rewrite <- invert_zbappl_zbbind1.
+    apply IHz. intros.
+    repeat rewrite obind_obind.
+    apply P.
+    apply (fromZBContext z).
+  - admit (* TODO continue *)
 
 Lemma get_get_L:
   forall {A B E1 E2}
