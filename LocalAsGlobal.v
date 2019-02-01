@@ -1866,6 +1866,16 @@ Lemma invert_zbappl_zbbind1:
 Proof.
   intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
 Qed.
+
+Lemma invert_zbappl_zbbind2:
+  forall {E1 E2 A B C}
+         (z: ZBContext E1 B E2 C) (p: OProg E1 A) (q: OProg (A::E1) B),
+    zbappl z (obind p (fun x => cpush x q))
+    =
+    zbappl (ZBBind2 z p) q.
+Proof.
+  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
+Qed.
 (*
 Lemma invert_zbappl_zbor2_:
   forall {E1 E2 A B} (c: BContext E1 A E2 B)  (p q: OProg E1 A),
@@ -1934,13 +1944,6 @@ Proof.
   rewrite H.
   reflexivity.
 Qed.
-
-
-Lemma oevl_bappl_bor2:
-  forall {E1 E2 A B} (p q: OProg E1 A) (o: OProg E2 B) (b: BContext E1 A E2 B)
-  (H: oevl (bappl (BOr2 o b) p) = oevl (bappl (BOr2 o b) q)),
-  oevl (bappl b p) = oevl (bappl b q).
-Admitted.
 
 Lemma bapp_from_appl:
   forall {A B E1 E2} (p q: OProg E1 A)
@@ -2110,7 +2113,16 @@ Proof.
     repeat rewrite obind_obind.
     apply P.
     apply (fromZBContext z).
-  - admit (* TODO continue *)
+  - repeat rewrite <- invert_zbappl_zbbind2.
+    apply IHz; intros.
+    change (oevl (appl c ?b))
+      with (fun env => oevl (appl c b) env).
+    apply functional_extensionality; intro env.
+    apply Meta1.
+    intros; apply P.
+    apply (fromZBContext z).
+Admitted.
+    
 
 Lemma get_get_L:
   forall {A B E1 E2}
