@@ -2072,7 +2072,8 @@ Proof.
         apply P.
     + apply (fromZBContext z).
   - repeat rewrite <- invert_zbappl_zbdelay.
-    apply IHz. intros. unfold obind.
+    apply IHz.
+    + intros. unfold obind.
     assert (H: forall (r: OProg E1 A),
                (fun env => bind (if b0 env then r env else o env)
                                 (fun x => k x env))
@@ -2088,7 +2089,7 @@ Proof.
     repeat rewrite <- appl_fromZContext.
     rewrite obind_from_bind.
     apply P.
-    apply b.
+    + apply b.
   - repeat rewrite <- invert_zbappl_zbpush.
     apply IHz. intros. unfold obind.
     assert (H: forall (r: OProg (C :: E1) A),
@@ -2107,7 +2108,19 @@ Proof.
     repeat rewrite obind_from_bind.
     apply P.
     apply (fromZBContext z).
-  - admit.
+  - simpl.
+    apply IHz.
+    + intros.
+(*
+
+   obind (clift p) k)
+ = fun x :: env => bind (clift p (x :: env)) (fun y => k y (x::env))
+ = fun x :: env => bind (p env) (fun y => k y (x::env))
+ = fun x :: env => obind p (fun y => cpush (k y) x) env
+
+ *)
+         admit.
+    + apply (fromZBContext z).
   - repeat rewrite <- invert_zbappl_zbbind1.
     apply IHz. intros.
     repeat rewrite obind_obind.
