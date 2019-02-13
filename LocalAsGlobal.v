@@ -1945,12 +1945,86 @@ Proof.
   reflexivity.
 Qed.
 
+
+Lemma for_koen:
+  forall {E1 A} (p q: OProg E1 A)
+  (P : forall (C : Type) (E2 : list Type) (B : Type) (c : Context E1 C E2 B) (k : A -> OProg E1 C),
+        oevl (appl c (obind p k)) = oevl (appl c (obind q k))),
+    (forall (C0 C: Type) (E0 : list Type) (B0 : Type) (c : Context (C :: E1) C0 E0 B0)
+      (k : A -> OProg (C :: E1) C0),
+       oevl (appl c (obind (clift p) k)) = oevl (appl c (obind (clift q) k))).
+Proof.
+  intros; dependent induction c.
+  + simpl.
+    assert (forall p, (fun env : Env (C :: E1) => obind (clift p) k env) =
+            (fun env : Env (C :: E1) => obind (clift p) k (Cons (head env) (tail env)))).
+    - intros. apply functional_extensionality; intro env. 
+      rewrite cons_head_tail; auto.
+    - rewrite H; rewrite (H q). 
+      unfold obind.
+      change (fun env : Env (C :: E1) => bind (clift ?p (Cons (head env) (tail env)))
+                    (fun x : A => k x (Cons (head env) (tail env))))
+       with  (fun env : Env (C :: E1) => 
+                 (fun env' : Env E1 => bind (p env') (fun x : A => k x (Cons (head env) env')))
+                 (tail env)).
+      change (fun env : Env (C :: E1) => bind (clift q (Cons (head env) (tail env)))
+                    (fun x : A => k x (Cons (head env) (tail env))))
+       with  (fun env : Env (C :: E1) => 
+                 (fun env' : Env E1 => bind (q env') (fun x : A => k x (Cons (head env) env')))
+                 (tail env)).
+      change (fun env : Env (C :: E1) =>
+   (fun env' : Env E1 =>
+    bind (p env')
+      (fun x : A => k x (Cons (head env) env')))
+     (tail env))
+        with (fun env : Env (C :: E1) =>(obind p (fun (x : A) env'' => k x (Cons (head env) env''))) (tail env)).
+      change (fun env : Env (C :: E1) =>
+   (fun env' : Env E1 =>
+    bind (q env')
+      (fun x : A => k x (Cons (head env) env')))
+     (tail env))
+        with (fun env : Env (C :: E1) =>(obind q (fun (x : A) env'' => k x (Cons (head env) env''))) (tail env)).
+change (oevl
+  (fun env : Env (C :: E1) =>
+   obind ?p
+     (fun (x : A) (env'' : Env E1) =>
+      k x (Cons (head env) env'')) (tail env)))
+  with 
+  (fun env : Env (C :: E1) =>
+   oevl ((fun e : Env E1 => obind p
+     (fun (x : A) (env'' : Env E1) =>
+      k x (Cons (head env) env'')) e)) (tail env)).
+  apply functional_extensionality; intro env.
+  pose proof (P _ _ _ CHole (fun (x : A) (env'' : Env E1) =>
+      k x (Cons (head env) env''))).
+  unfold appl in H0.
+  rewrite H0.
+  reflexivity.
+  + simpl appl.
+    repeat rewrite oevl_or.
+    apply functional_extensionality; intro env.
+    rewrite (IHc p q P).
+    auto.
+  + simpl appl.
+    repeat rewrite oevl_or.
+    apply functional_extensionality; intro env.
+    rewrite (IHc p q P).
+    auto.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+Admitted.
+
 Lemma bapp_from_appl:
   forall {A B E1 E2} (p q: OProg E1 A)
          (P: forall {C E2 B} (c: Context E1 C E2 B) (k: A -> OProg E1 C),
              oevl (appl c (obind p k)) = oevl (appl c (obind q k)))
          (b: BContext E1 A E2 B),
     oevl (bappl b p) = oevl (bappl b q).
+
+
 Proof.
   intros a B E1 E2 p q P b.
   repeat rewrite <- zbappl_toZBContext.
@@ -2110,16 +2184,7 @@ Proof.
     apply (fromZBContext z).
   - simpl.
     apply IHz.
-    + intros.
-(*
-
-   obind (clift p) k)
- = fun x :: env => bind (clift p (x :: env)) (fun y => k y (x::env))
- = fun x :: env => bind (p env) (fun y => k y (x::env))
- = fun x :: env => obind p (fun y => cpush (k y) x) env
-
- *)
-         admit.
+    + intros; apply for_koen; auto. 
     + apply (fromZBContext z).
   - repeat rewrite <- invert_zbappl_zbbind1.
     apply IHz. intros.
@@ -2134,7 +2199,7 @@ Proof.
     apply Meta1.
     intros; apply P.
     apply (fromZBContext z).
-Admitted.
+Qed.
     
 
 Lemma get_get_L:
