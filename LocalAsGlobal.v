@@ -223,7 +223,9 @@ Definition head {C E} (env: Env (C :: E)): C := head_ env.
 Lemma cons_head_tail:
   forall {A E} (env: Env (A::E)),
     Cons (head env) (tail env) = env.
-Admitted.
+Proof.
+  intros. dependent destruction env. auto.
+Qed.
 
 (* We represent open programs (programs with free variables) abstractly
    as a function that produces a closed program when given an environment
@@ -1945,76 +1947,116 @@ Proof.
   reflexivity.
 Qed.
 
+(* TODO delete *)
+Lemma asdf: forall {E1 E2 A B} (c: Context E1 A E2 B) (f: OProg E1 A) (env: Env E2),
+    oevl (fun env0 => appl c f env0) env
+    =
+    oevl (appl c f) env.
+Proof.
+  auto.
+Qed.
+
+Lemma qwer:
+  forall {E A} (f: OProg E A -> Env E -> D A) (g g' h: OProg E A) (b: Env E -> bool),
+    (f (fun env => g env) = f (fun env => g' env))
+    ->
+    (f (fun env => if b env then g env else h env)
+     =
+     f (fun env => if b env then g' env else h env)).
+Admitted.
 
 Lemma for_koen:
   forall {E1 A} (p q: OProg E1 A)
-  (P : forall (C : Type) (E2 : list Type) (B : Type) (c : Context E1 C E2 B) (k : A -> OProg E1 C),
-        oevl (appl c (obind p k)) = oevl (appl c (obind q k))),
-    (forall (C0 C: Type) (E0 : list Type) (B0 : Type) (c : Context (C :: E1) C0 E0 B0)
-      (k : A -> OProg (C :: E1) C0),
-       oevl (appl c (obind (clift p) k)) = oevl (appl c (obind (clift q) k))).
+         (P : forall {C : Type}
+                     {E2 : list Type}
+                     {B : Type}
+                     (c : Context E1 C E2 B)
+                     (k : A -> OProg E1 C),
+             oevl (appl c (obind p k)) = oevl (appl c (obind q k))),
+    (forall {C0 C: Type}
+            {E0 : list Type}
+            {B0 : Type}
+            (c : Context (C :: E1) C0 E0 B0)
+            (k : A -> OProg (C :: E1) C0),
+        oevl (appl c (obind (clift p) k)) = oevl (appl c (obind (clift q) k))).
 Proof.
   intros; dependent induction c.
-  + simpl.
+  - simpl.
     assert (forall p, (fun env : Env (C :: E1) => obind (clift p) k env) =
             (fun env : Env (C :: E1) => obind (clift p) k (Cons (head env) (tail env)))).
-    - intros. apply functional_extensionality; intro env. 
+    + intros. apply functional_extensionality; intro env. 
       rewrite cons_head_tail; auto.
-    - rewrite H; rewrite (H q). 
+    + rewrite H; rewrite (H q). 
       unfold obind.
-      change (fun env : Env (C :: E1) => bind (clift ?p (Cons (head env) (tail env)))
-                    (fun x : A => k x (Cons (head env) (tail env))))
-       with  (fun env : Env (C :: E1) => 
-                 (fun env' : Env E1 => bind (p env') (fun x : A => k x (Cons (head env) env')))
-                 (tail env)).
-      change (fun env : Env (C :: E1) => bind (clift q (Cons (head env) (tail env)))
-                    (fun x : A => k x (Cons (head env) (tail env))))
-       with  (fun env : Env (C :: E1) => 
-                 (fun env' : Env E1 => bind (q env') (fun x : A => k x (Cons (head env) env')))
-                 (tail env)).
+
+
       change (fun env : Env (C :: E1) =>
-   (fun env' : Env E1 =>
-    bind (p env')
-      (fun x : A => k x (Cons (head env) env')))
-     (tail env))
-        with (fun env : Env (C :: E1) =>(obind p (fun (x : A) env'' => k x (Cons (head env) env''))) (tail env)).
-      change (fun env : Env (C :: E1) =>
-   (fun env' : Env E1 =>
-    bind (q env')
-      (fun x : A => k x (Cons (head env) env')))
-     (tail env))
-        with (fun env : Env (C :: E1) =>(obind q (fun (x : A) env'' => k x (Cons (head env) env''))) (tail env)).
-change (oevl
-  (fun env : Env (C :: E1) =>
-   obind ?p
-     (fun (x : A) (env'' : Env E1) =>
-      k x (Cons (head env) env'')) (tail env)))
-  with 
-  (fun env : Env (C :: E1) =>
-   oevl ((fun e : Env E1 => obind p
-     (fun (x : A) (env'' : Env E1) =>
-      k x (Cons (head env) env'')) e)) (tail env)).
-  apply functional_extensionality; intro env.
-  pose proof (P _ _ _ CHole (fun (x : A) (env'' : Env E1) =>
-      k x (Cons (head env) env''))).
-  unfold appl in H0.
-  rewrite H0.
-  reflexivity.
-  + simpl appl.
+                bind (clift ?p (Cons (head env) (tail env)))
+                     (fun x : A => k x (Cons (head env) (tail env))))
+        with (fun env : Env (C :: E1) =>
+                (obind p (fun (x : A) env'' => k x (Cons (head env) env'')))
+                  (tail env)).
+      change (oevl (fun env : Env (C :: E1) =>
+                      obind ?p
+                            (fun (x : A) (env'' : Env E1) =>
+                               k x (Cons (head env) env'')) (tail env)))
+        with 
+          (fun env : Env (C :: E1) =>
+             oevl ((fun e : Env E1 =>
+                      obind p
+                            (fun (x : A) (env'' : Env E1) =>
+                               k x (Cons (head env) env'')) e)) (tail env)).
+      apply functional_extensionality; intro env.
+      pose proof (P _ _ _ CHole (fun (x : A) (env'' : Env E1) =>
+                                   k x (Cons (head env) env''))).
+      unfold appl in H0.
+      rewrite H0.
+      reflexivity.
+  - simpl appl.
     repeat rewrite oevl_or.
     apply functional_extensionality; intro env.
-    rewrite (IHc p q P).
-    auto.
-  + simpl appl.
+    rewrite (IHc E1 p q P); auto.
+  - simpl appl.
     repeat rewrite oevl_or.
     apply functional_extensionality; intro env.
-    rewrite (IHc p q P).
-    auto.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
+    rewrite (IHc E1 p q P); auto.
+  - simpl appl.
+    repeat rewrite oevl_put.
+    apply functional_extensionality; intro env.
+    rewrite (IHc E1 p q P); auto.
+  - simpl appl.
+    repeat rewrite oevl_get.
+    apply functional_extensionality; intro env.
+    apply f_equal.
+    apply functional_extensionality; intro s.
+    destruct (b s); auto.
+    unfold cpush, comap.
+    unfold obind.
+    change (oevl (fun env0 => appl c ?f (Cons s env0)) env)
+      with (oevl (appl c f) (Cons s env)).
+    change (oevl
+              (appl c
+                    (fun env0 => bind (clift ?r env0) (fun x => k x env0)))
+              (Cons s env))
+      with (oevl (appl c (obind (clift r) k)) (Cons s env)).
+    rewrite (IHc E1 p q P); auto.
+
+  - simpl.
+    apply (qwer oevl
+                (appl c (obind (clift p) k))
+                (appl c (obind (clift q) k))
+                o
+                b).
+    change (fun env => appl c (obind (clift ?r) k) env)
+      with (appl c (obind (clift r) k)).
+    apply IHc; auto.
+
+  - rename c into y, C0 into Y, c1 into c, C into X.
+    simpl appl.
+    unfold cpush, comap.
+    unfold obind.
+    admit.
+  - admit.
 Admitted.
 
 Lemma bapp_from_appl:
