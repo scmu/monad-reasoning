@@ -110,6 +110,7 @@ Proof.
     reflexivity.
 Qed.
 
+(* TODO: delete? *)
 Parameter get_fail_G_D:
   forall {A},
     getD (fun _ => failD) = (failD : D A).
@@ -1964,7 +1965,8 @@ Lemma qwer:
      =
      f (fun env => if b env then g' env else h env)).
 Admitted.
-
+  
+  
 Lemma for_koen:
   forall {E1 A} (p q: OProg E1 A)
          (P : forall {C : Type}
@@ -2051,13 +2053,18 @@ Proof.
       with (appl c (obind (clift r) k)).
     apply IHc; auto.
 
-  - rename c into y, C0 into Y, c1 into c, C into X.
-    simpl appl.
+  - simpl appl.
     unfold cpush, comap.
-    unfold obind.
-    admit.
-  - admit.
-Admitted.
+    change (oevl (fun env => appl c1 (obind (clift ?r) k) (Cons c env)))
+      with (fun env0 => (oevl (fun env => appl c1 (obind (clift r) k) env) (Cons c env0))).
+    apply functional_extensionality; intro env0.
+    rewrite (IHc E1 p q P); auto.
+  - simpl.
+    unfold clift at 1; unfold clift at 2. unfold comap.
+    change (oevl (fun env : Env (C0 :: E2) => ?f (tail env)))
+      with (fun env : Env (C0 :: E2) => oevl f (tail env)).
+    rewrite (IHc E1 p q P); reflexivity.
+Qed.
 
 Lemma bapp_from_appl:
   forall {A B E1 E2} (p q: OProg E1 A)
