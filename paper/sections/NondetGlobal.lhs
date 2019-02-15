@@ -84,7 +84,6 @@ This last property is a ``global'' property.
 In order to formulate it correctly, we first need to develop a notation that
 allows us to distinguish between local and global properties.
 We will do this in Section~\ref{sec:ctxt-trans}.
-\todo{is this satisfactory?}
 
 \subsection{Chaining Using Non-deterministic Choice}
 \label{sec:chaining}
@@ -556,7 +555,6 @@ lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
   |Put s1 (Put s2 p)| &\CEq |Put s2 p|
 \end{align*}
-\todo{we don't prove this (yet) for contexts with bind!}
 
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
 easily follow from the analogous semantic domain laws. The formulation of a
@@ -628,8 +626,6 @@ To this end we prove laws analogous to \eqref{eq:mplus-bind-dist} and
   |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \\
   |m >> mzero|                      &\CEqLS |mzero|
 \end{align*}
-\todo{expand upon these proofs}
-\todo{actually prove them}
 %\begin{align*}
 %  % put_fail_L_2
 %  |Put x mzero|               &\CEqLS |mzero| \mbox{~~,}\\
