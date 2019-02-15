@@ -43,6 +43,7 @@ Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails
 These significantly limit the properties we may have.
 
 \subsection{Laws for Global State}
+\label{sec:laws-global-state}
 We have already discussed general laws for nondeterministic monads
 (laws~\eqref{eq:mplus-assoc} through~\eqref{eq:bind-mzero-zero}),
 as well as laws which govern the interaction between state and nondeterminism in
@@ -51,13 +52,11 @@ a local state setting (laws~\eqref{eq:mplus-bind-dist} and
 For global state semantics, alternative laws are required to govern the
 interactions between nondeterminism and state.
 We call these the \emph{global state laws}.
+The most important law is the {\bf put-or} law:
 \begin{alignat}{2}
 &\mbox{\bf put-or}:\quad&
   |(put x >> m) `mplus` n| &=~ |put x >> (m `mplus` n)|~ \mbox{~~,}
-    \label{eq:put-or}\\
-&\mbox{\bf put-return-or}:\quad&
-  |put x >> (return w `mplus` q)|~ &=~ |(put x >> return w) `mplus` (put x >> q))| ~~\mbox{~~.}
-    \label{eq:put-ret-or}
+    \label{eq:put-or}
 \end{alignat}
 Law~\eqref{eq:put-or} allows the lifting of a |put| operation from the left
 branch of a nondeterministic choice, an operation which does not preserve
@@ -68,28 +67,24 @@ the equation is equal to |n|, whereas by
 ~\eqref{eq:mzero-mplus},
 the right-hand side of the equation is equal to |put x >> n|.
 
+We will also require another property which we will only introduce informally
+here (and formulate more clearly later).
 In global state semantics, the right-distributivity rule does not hold in
 general. However, there are some cases where an operation does distribute over
 non-deterministic choice while preserving semantics; more precisely, this is the
 case when
 \begin{enumerate}
-\item the left branch of the choice operator does not modify the state, and
+\item the left branch of the choice operator does not modify the state,
 \item the operation that is distributed over the choice operator is idempotent
-  with respect to the state.
+  with respect to the state, and
+\item this operation is at the top-level of the program (i.e. it is not a
+  subterm of a larger term).
 \end{enumerate}
-Law~\eqref{eq:put-ret-or} is a much weaker variant of this general idea
-(requiring the left branch to only consist of a |return| expression and the
-operation to be distributed to be a simple |put| operation), but
-\todo{choose between ``it turns out we don't need the law in its full generality
-  for our purposes'' and ``we believe the more general statement to follow from
-  it''}.
-
-\todo{Not formulated correctly as put-return-or does not hold when bind is
-  available. How to fix?
-  Intro semantic domain with continuation-based get/put here already,
-  either fully formally or informally?
-  Or maybe specify somehow that put-return-or only holds at the top-level?
-}
+This last property is a ``global'' property.
+In order to formulate it correctly, we first need to develop a notation that
+allows us to distinguish between local and global properties.
+We will do this in Section~\ref{sec:ctxt-trans}.
+\todo{is this satisfactory?}
 
 \subsection{Chaining Using Non-deterministic Choice}
 \label{sec:chaining}
@@ -374,23 +369,21 @@ from |Prog|'s definition of |(>>=)|.
   |failD <||||> m| = |m <||||> failD| &= |m| \mbox{~~.}
 \end{align}
 
-following |put|-|or| law to impose global-state semantics.
-\todo{intro earlier}
-It allows us to lift a |putD| operation from the left branch of an |(<||||>)|,
-an operation which would not preserve meaning under local-state semantics.
+We also formulate the global-state laws.
+Law~\eqref{eq:put-or} can be straightforwardly reformulated as:
 \begin{align}
-|putD x p <||||> q| = |putD x (p <||||> q)| \label{eq:put-or-g-d}
+|putD x p <||||> q|        &= |putD x (p <||||> q)| \label{eq:put-or-g-d}
 \end{align}
-
-Finally, we wish to stipulate that |putD| \emph{does} distribute over |(<||||>)|
-in those cases where the left branch does not modify the state.
-We introduce a weaker |put|-|ret|-|or| law which only requires |putD| to distribute
-over |(<||||>)| when the left branch does nothing but returning a value; this will be sufficient to
-prove the properties we need later on.
+In Section~\ref{sec:laws-global-state} we also mentioned that a law should exist
+which mandates a limited form of right-distribitivity which only holds on a
+global level.
+The continuation-passing style of our semantic domain operators allows us to
+express a weaker version of this global property (which suffices for our goals)
+as follows:
 \begin{align}
-|putD x (retD w <||||> q)| = |putD x (retD w) <||||> putD x q| \label{eq:put-ret-or-g-d}
+|putD x (retD w <||||> q)| &= |putD x (retD w) <||||> putD x q| \label{eq:put-ret-or-g-d}
 \end{align}
-This law only holds if the implementation of |Dom| does not permit the definition
+The law only holds if the implementation of |Dom| does not permit the definition
 of a bind operator |(>>=) :: Dom a -> (a -> Dom b) -> Dom b|.
 Consider for instance the following program:
 \begin{code}
