@@ -2489,8 +2489,6 @@ Lemma run_trans_trans:
     =
     run (trans p).
 Proof.
-Admitted.
-(*
   intros; induction p; auto; simpl trans.
   - rewrite run_or.
     rewrite IHp1; rewrite IHp2.
@@ -2504,28 +2502,74 @@ Admitted.
     rewrite H'.
     auto.
   - rewrite run_get.
-    assert (H': (fun s0 =>
-                   run (Or (Get (fun s1 =>
-                                   Or (Put s (trans (trans p))) (Put s1 Fail)))
-                           (Get (fun s1 =>
-                                   Or (Put s0 Fail) (Put s1 Fail)))))
-                =
-                (fun s0 =>
-                   run (Put 
-                     (Or (Put s0 Fail)
+    cut (getD (fun s0 =>
+            run (Or (Get (fun s1 =>
+                            Or (Put s (trans (trans p))) (Put s1 Fail)))
+                    (Get (fun s1 =>
+                            Or (Put s0 Fail) (Put s1 Fail)))))
+         =
+         getD (fun s0 =>
+            (putD s0
+                  (run (Or (Put s0 Fail)
                            (Get (fun s1 =>
                                    Or (Put s (trans (trans p)))
-                                      (Put s1 Fail)))))).
-    + admit.
-    + rewrite H'.
-      rewrite <- run_get.
-      
+                                      (Put s1 Fail)))))))).
+    + intro H. rewrite H.
+      rewrite get_put_G_D'.
+      cut (forall (q : Prog A),
+              (fun s0 => run (Or (Put s0 Fail) q))
+              =
+              (fun s0 => run (Put s0 q))).
+      * intro H'; rewrite H'.
+        rewrite <- run_get.
+        rewrite get_put_G'.
+        simpl run.
+        rewrite IHp.
+        reflexivity.
+      * intro q; apply functional_extensionality; intro s0.
+        simpl.
+        rewrite put_or_G_D.
+        rewrite or1_fail_D.
+        reflexivity.
+    + 
+      cut ((fun s0 => run (Or (Get (fun s1 =>
+                                      Or (Put s (trans (trans p)))
+                                         (Put s1 Fail)))
+                              (Get (fun s1 =>
+                                      Or (Put s0 Fail) (Put s1 Fail)))))
+           =
+           (fun s0 => run (Get (fun s1 =>
+                                      Or (Put s (trans (trans p)))
+                                         (Put s1 Fail))))).
+      * intro H. rewrite H.
+        simpl.
+        rewrite get_get_G_D.
+        f_equal; apply functional_extensionality; intro s0.
+        rewrite put_or_G_D.
+        rewrite put_or_G_D.
+        rewrite or1_fail_D.
+        rewrite put_put_G_D.
+        rewrite put_get_G_D.
+        rewrite put_or_G_D.
+        rewrite put_put_G_D.
+        reflexivity.
 
-    f_equal; apply functional_extensionality; intro s'.
-    repeat rewrite run_or.
-    rewrite run_get.
-    rewrite run_or.
-*)
+      * apply functional_extensionality; intro s0.
+        simpl.
+        cut ((fun s1 => orD (putD s0 failD) (putD s1 (failD : D A)))
+            =
+            (fun s1 => putD s1 failD)).
+        intro H. rewrite H.
+        rewrite get_put_G_D.
+        rewrite or2_fail_D.
+        reflexivity.
+        
+        apply functional_extensionality; intro s1.
+        rewrite put_or_G_D.
+        rewrite or1_fail_D.
+        rewrite put_put_G_D.
+        reflexivity.
+Qed.
     
 Lemma get_get_lambdas_G_D:
   forall {A} (p : S -> D A),
