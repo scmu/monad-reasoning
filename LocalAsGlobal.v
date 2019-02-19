@@ -2621,7 +2621,7 @@ Proof.
   (* need new axiom? *)
 Admitted.
 
-Lemma right_distr:
+Lemma right_distr_L_0:
   forall {A B} (m: Prog A) (f1 f2: A -> Prog B),
     evl (bind m (fun x => Or (f1 x) (f2 x)))
     =
@@ -2759,7 +2759,7 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma right_distr':
+Lemma right_distr_L_1':
   forall {A B C E1 E2 X}
          (c: Context E1 C E2 B)
          (m: X -> Prog A)
@@ -2787,7 +2787,84 @@ Proof.
                        (f env)).
   apply evl_meta.
   intro x.
-  apply right_distr.
+  apply right_distr_L_0.
+Qed.
+
+Lemma right_distr_L_1:
+  forall {A B C E1 E2}
+         (c: Context E1 C E2 B)
+         (m: OProg E1 A)
+         (f1 f2: A -> OProg E1 C),
+    oevl (appl c (obind m (fun x env => Or (f1 x env) (f2 x env))))
+    =
+    oevl (appl c (fun env =>
+                    (Or (bind (m env) (fun x => f1 x env))
+                        (bind (m env) (fun x => f2 x env))))).
+Proof.
+  intros.
+  apply right_distr_L_1'.
+Qed.
+
+Lemma right_distr_L_2:
+  forall {A B C D E1 E2}
+         (c: Context E1 D E2 B)
+         (m: OProg E1 A)
+         (f1 f2: A -> OProg E1 C)
+         (q: C -> OProg E1 D),
+    oevl (appl c (obind
+                    (obind m (fun x env => Or (f1 x env) (f2 x env)))
+                    q))
+    =
+    oevl (appl c (obind
+                    (fun env =>
+                       (Or (bind (m env) (fun x => f1 x env))
+                           (bind (m env) (fun x => f2 x env))))
+                    q)).
+Proof.
+  intros.
+  unfold obind.
+  simpl.
+  assert (H: (fun env =>
+                bind (bind (m env) (fun x => Or (f1 x env) (f2 x env)))
+                     (fun x => q x env))
+             =
+             (obind m (fun x env => Or (bind (f1 x env) (fun y => q y env))
+                                       (bind (f2 x env) (fun y => q y env))))).
+  unfold obind; apply functional_extensionality; intro env.
+  rewrite bind_bind.
+  auto.
+  rewrite H.
+  rewrite right_distr_L_1.
+  assert (H':
+            (fun env =>
+               Or (bind (m env) (fun x => bind (f1 x env) (fun y => q y env)))
+                  (bind (m env) (fun x => bind (f2 x env) (fun y => q y env))))
+            =
+            (fun env =>
+               Or (bind (bind (m env) (fun x => f1 x env)) (fun x => q x env))
+                  (bind (bind (m env) (fun x => f2 x env)) (fun x => q x env)))).
+  apply functional_extensionality; intro env.
+  repeat rewrite bind_bind.
+  reflexivity.
+  rewrite H'.
+  reflexivity.
+Qed.
+    
+Lemma right_distr_L:
+  forall {A B C E1 E2}
+         (b: BContext E1 C E2 B)
+         (m: OProg E1 A)
+         (f1 f2: A -> OProg E1 C),
+    oevl (bappl b (obind m (fun x env => Or (f1 x env) (f2 x env))))
+    =
+    oevl (bappl b (fun env =>
+                     (Or (bind (m env) (fun x => f1 x env))
+                         (bind (m env) (fun x => f2 x env))))).
+Proof.
+  intros.
+  apply bapp_from_appl.
+  intros.
+  apply right_distr_L_2.
 Qed.
 
 Definition side {A} (m: Prog A) : Prog A :=
