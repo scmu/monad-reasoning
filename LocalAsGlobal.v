@@ -115,11 +115,6 @@ Parameter or_comm_ret:
   forall {A} (x y: D A),
     orD (retD x) (retD y) = orD (retD y) (retD x).
 
-Lemma or_comm:
-  forall {A} (p q: D A),
-    orD p q = orD q p.
-Admitted.
-
 (* TODO: delete? *)
 Parameter get_fail_G_D:
   forall {A},
@@ -2488,65 +2483,14 @@ Proof.
   reflexivity.
 Qed.
 
-Fixpoint flat_or_D {A} (l: list (D A)) : D A :=
-  match l with
-  | nil       => failD
-  | (q :: qs) => orD q (flat_or_D qs)
-  end.
-
-Lemma step_flat_or_D:
-  forall {A} (p : D A) (ps : list (D A)),
-    flat_or_D (p :: ps) = orD p (flat_or_D ps).
-Proof.
-  auto.
-Qed.
-
-Lemma flat_or_comm_D:
-  forall {A} (p q : D A) (qs : list (D A)),
-    flat_or_D (p :: q :: qs) = flat_or_D (q :: p :: qs).
-Proof.
-  intros.
-  simpl.
-  rewrite <- or_or_D.
-  assert (H: forall t, orD (orD p q) t = orD (orD q p) t).
-  intro t; f_equal; apply or_comm.
-  rewrite H.
-  rewrite or_or_D.
-  reflexivity.
-Qed.
-
-Lemma flat_or_append_D:
-  forall {A} (ps qs : list (D A)),
-    orD (flat_or_D ps) (flat_or_D qs) = flat_or_D (ps ++ qs).
-Proof.
-  intros.
-  induction ps.
-  - simpl. apply or1_fail_D.
-  - simpl.
-    rewrite or_or_D.
-    rewrite IHps.
-    reflexivity.
-Qed.
-
-Lemma flat_or_flatten_D:
-  forall {A} (ps qs : list (D A)),
-    flat_or_D (flat_or_D qs :: ps) = flat_or_D (qs ++ ps) .
-Proof.
-  intros.
-  destruct qs.
-  - simpl.
-    apply or1_fail_D.
-  - simpl.
-    rewrite or_or_D.
-    rewrite flat_or_append_D.
-    reflexivity.
-Qed.
 
 Lemma or_abcd:
   forall {A} (a b c d : D A),
     orD (orD a c) (orD b d)
     =
     orD (orD a b) (orD c d).
+Admitted.
+(*
 Proof.
   intros.
   assert (H1: forall (p q r s : D A),
@@ -2563,14 +2507,53 @@ Proof.
   rewrite flat_or_comm_D.
   reflexivity.
 Qed.
+*)
+
 
 Lemma run_trans_trans:
   forall {A} (p : Prog A),
     run (trans (trans p))
     =
     run (trans p).
+Proof.
 Admitted.
+(*
+  intros; induction p; auto; simpl trans.
+  - rewrite run_or.
+    rewrite IHp1; rewrite IHp2.
+    auto.
+  - rewrite run_get.
+    assert (H': (fun s => run (trans (trans (p s))))
+                =
+                (fun s => run (trans (p s)))).
+    apply functional_extensionality; intro s.
+    apply H.
+    rewrite H'.
+    auto.
+  - rewrite run_get.
+    assert (H': (fun s0 =>
+                   run (Or (Get (fun s1 =>
+                                   Or (Put s (trans (trans p))) (Put s1 Fail)))
+                           (Get (fun s1 =>
+                                   Or (Put s0 Fail) (Put s1 Fail)))))
+                =
+                (fun s0 =>
+                   run (Put 
+                     (Or (Put s0 Fail)
+                           (Get (fun s1 =>
+                                   Or (Put s (trans (trans p)))
+                                      (Put s1 Fail)))))).
+    + admit.
+    + rewrite H'.
+      rewrite <- run_get.
+      
 
+    f_equal; apply functional_extensionality; intro s'.
+    repeat rewrite run_or.
+    rewrite run_get.
+    rewrite run_or.
+*)
+    
 Lemma get_get_lambdas_G_D:
   forall {A} (p : S -> D A),
     getD (fun s1 => getD (fun _  => p s1))
@@ -2621,6 +2604,11 @@ Proof.
   (* need new axiom? *)
 Admitted.
 
+Lemma or_trans_G':
+  forall {A} (p q: Prog A),
+    run (Or (trans p) (trans q)) = run (Or (trans q) (trans p)).
+Admitted.
+
 Lemma right_distr_L_0:
   forall {A B} (m: Prog A) (f1 f2: A -> Prog B),
     evl (bind m (fun x => Or (f1 x) (f2 x)))
@@ -2649,10 +2637,12 @@ Proof.
               (orD (run (trans (bind m2 f1)))
                    (orD (run (trans (bind m1 f2)))
                         (run (trans (bind m2 f2)))))).
-    + rewrite or_comm.
-      rewrite or_or_D.
-      f_equal.
-      apply or_comm.
+    + repeat rewrite <- run_or.
+      repeat rewrite <- or_or'.
+      rewrite run_or.
+      rewrite or_trans_G'.
+      rewrite <- run_or.
+      reflexivity.
     + rewrite H.
       rewrite <- or_or_D.
       reflexivity.
