@@ -19,7 +19,7 @@ import Queens
 \section{From Pure to Stateful |scanl|}
 \label{sec:monadic-scanl}
 
-The aim of this section is to turn the filtering phase |assert (all ok . scanlp oplus st)| into a |foldr|. For that we introduce a state monad to pass the state around.
+The aim of this section is to turn the filtering phase |filt (all ok . scanlp oplus st)| into a |foldr|. For that we introduce a state monad to pass the state around.
 
 \paragraph{State} The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retrieves the state, while |put :: S s `mem` eps =>  s -> Me eps ()| overwrites the state by the given value. They are supposed to satisfy the \emph{state laws}:
 \begin{alignat}{2}
@@ -62,7 +62,7 @@ It behaves like |scanlp|, but stores the accumulated information in a monadic st
 
 To relate |scanlp| and |scanlM|, one would like to have |return (scanlp oplus st xs) = scanlM oplus st xs|.
 However, the lefthand side does not alter the state, while the righthand side does.
-To make the equality hold we need to manually backup and restore the state.
+One of the ways to make the equality hold is to manually backup and restore the state.
 Define
 %if False
 \begin{code}
@@ -70,7 +70,7 @@ protect :: MonadState s m => m b -> m b
 \end{code}
 %endif
 \begin{code}
-protect m = get >>= \ini -> m >>= \x -> put ini >> return x {-"~~,"-}
+protect m {-"~"-}={-"~"-} get >>= \ini -> m >>= \x -> put ini >> return x {-"~~,"-}
 \end{code}
 We have
 \begin{theorem}\label{lma:scanl-loop}
@@ -132,8 +132,8 @@ This proof is instructive due to the use of properties \eqref{eq:put-put} and \e
 
 We have learned that |scanlp oplus st| can be turned into |scanlM oplus st|, defined in terms of a stateful |foldr|.
 In the definition, state is the only effect involved.
-The next task is to transform |assert (scanlp oplus st)| into a |foldr|.
-The operator |assert| is defined using non-determinism. The transform therefore involves the interaction between two effects, a tricky topic this pearl tries to deal with.
+The next task is to transform |filt (scanlp oplus st)| into a |foldr|.
+The operator |filt| is defined using non-determinism. The transform therefore involves the interaction between two effects, a tricky topic this pearl tries to deal with.
 
 \subsection{Right-Distributivity and Local State}
 \label{sec:right-distr-local-state}
@@ -159,7 +159,7 @@ These requirements imply that each non-deterministic branch has its own copy of 
 One monad having such property is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}.
 With effect handling~\cite{Wu:14:Effect, KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
 
-The advantage of having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning. In particular, non-determinism commutes with other effects.
+The advantage of having the local state laws \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning. In particular, non-determinism commutes with other effects.
 \begin{definition}
 Let |m :: Me eps a| where |x| does not occur free, and |n :: Me delta b| where |y| does not occur free. We say |m| and |n| commute if
 \begin{equation} \label{eq:commute}
@@ -169,7 +169,7 @@ Let |m :: Me eps a| where |x| does not occur free, and |n :: Me delta b| where |
 \end{split}
 \end{equation}
 (Notice that |m| and |n| can also be typed as |Me (eps `union` delta)|.) We say that |m| commutes with effect |delta| if |m| commutes with any |n| of type |Me delta b|, and that effects |eps| and |delta| commute if any |m :: Me eps a| and |n :: Me delta b| commute.
-\end{definition}
+\end{definition}``
 
 \begin{theorem} \label{thm:nondet-commute}
 If right-distributivity \eqref{eq:mplus-bind-dist} and right-zero \eqref{eq:mzero-bind-zero} hold
@@ -205,18 +205,18 @@ A more complete treatment is a work in progress, which cannot be fully covered i
 \label{sec:monadic-state-passing-local}
 
 Having dealt with |scanlp oplus st| in Section \ref{sec:scanl-scanlM},
-in this section we aim to turn an assertion of the form |assert (all ok . scanlp oplus st)| to a stateful and non-deterministic |foldr|.
+in this section we aim to turn a filter of the form |filt (all ok . scanlp oplus st)| to a stateful and non-deterministic |foldr|.
 
 We calculate, for all |ok|, |oplus|, |st|, and |xs|:
 %if False
 \begin{code}
-assert_safe_der :: (MonadState s m, MonadPlus m) =>
+filt_safe_der :: (MonadState s m, MonadPlus m) =>
      (s -> a -> s) -> s -> (s -> Bool) -> [a] -> m [a]
-assert_safe_der oplus st ok xs =
+filt_safe_der oplus st ok xs =
 \end{code}
 %endif
 \begin{code}
-      assert (all ok . scanlp oplus st) xs
+      filt (all ok . scanlp oplus st) xs
  ===  guard (all ok (scanlp oplus st xs)) >> return xs
  ===  return (scanlp oplus st xs) >>= \ys ->
       guard (all ok ys) >> return xs
@@ -227,7 +227,7 @@ assert_safe_der oplus st ok xs =
       get >>= \ini -> scanlM oplus st xs >>= \ys ->
       guard (all ok ys) >> put ini >> return xs
  ===    {- definition of |protect|, monad laws -}
-      protect (scanlM oplus st xs >>= \ys -> guard (all ok ys) >> return xs) {-"~~."-}
+      protect (scanlM oplus st xs >>= (guard . all ok) >> return xs) {-"~~."-}
 \end{code}
 %if False
 \begin{code}
@@ -243,7 +243,7 @@ The following theorem fuses a monadic |foldr| with a |guard| that uses its resul
 Assume that state and non-determinism commute.
 Let |otimes| be defined as that in |scanlM| for any given |oplus :: s -> a -> s|. We have that for all |ok :: s -> Bool| and |xs :: [a]|:
 \begin{spec}
-  foldr otimes (return []) xs >>= \ys -> guard (all ok ys) >> return xs =
+  foldr otimes (return []) xs >>= (guard . all ok) >> return xs =
       foldr odot (return []) xs {-"~~,"-}
     where x `odot` m =  get >>= \st -> guard (ok (st `oplus` x)) >>
                         put (st `oplus` x) >> ((x:) <$> m) {-"~~."-}
@@ -258,12 +258,11 @@ loop_guard_fusion_2 oplus ok x xs =
 \end{code}
 %endif
 \begin{code}
-      (x `otimes` foldr otimes (return []) xs) >>= \ys ->
-      guard (all ok ys) >> return (x:xs)
+      (x `otimes` foldr otimes (return []) xs) >>= (guard . all ok) >> return (x:xs)
  ===    {- definition of |otimes| -}
       get >>= \st ->
-      (((st `oplus` x):) <$> (put (st `oplus` x) >> foldr otimes (return []) xs)) >>= \ys ->
-      guard (all ok ys) >> return (x:xs)
+      (((st `oplus` x):) <$> (put (st `oplus` x) >> foldr otimes (return []) xs)) >>=
+      (guard . all ok) >> return (x:xs)
  ===    {- monad laws, \eqref{eq:comp-bind-ap}, and \eqref{eq:ap-bind-ap} -}
       get >>= \st -> put (st `oplus` x) >>
       foldr otimes (return []) xs >>= \ys ->
@@ -298,18 +297,18 @@ loop_guard_fusion_2 oplus ok x xs =
 \end{proof}
 This proof is instructive due to extensive use of commutativity.
 
-In summary, we now have this corollary performing |assert (all ok . scanlp oplus st)| using a non-deterministic and stateful foldr:
-\begin{corollary}\label{thm:assert-scanlp-foldr} Let |odot| be defined as in Theorem \ref{lma:foldr-guard-fusion}. If state and non-determinism commute, we have:
+In summary, we now have this corollary performing |filt (all ok . scanlp oplus st)| using a non-deterministic and stateful foldr:
+\begin{corollary}\label{thm:filt-scanlp-foldr} Let |odot| be defined as in Theorem \ref{lma:foldr-guard-fusion}. If state and non-determinism commute, we have:
 %if False
 \begin{code}
-assertScanlpFoldr :: (MonadPlus m, MonadState s m) =>
+filtScanlpFoldr :: (MonadPlus m, MonadState s m) =>
   (s -> Bool) -> (s -> a -> s) -> s -> [a] ->
   (a -> m [a] -> m [a]) -> m [a]
-assertScanlpFoldr ok oplus st xs odot =
+filtScanlpFoldr ok oplus st xs odot =
 \end{code}
 %endif
 \begin{code}
- assert (all ok . scanlp oplus st) xs ===
+ filt (all ok . scanlp oplus st) xs ===
    protect (put st >> foldr odot (return []) xs) {-"~~."-}
 \end{code}
 \end{corollary}

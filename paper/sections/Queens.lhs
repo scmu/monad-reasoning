@@ -20,7 +20,7 @@ import Monads
 Reasoning about monadic programs gets more interesting when more than one effect is involved.
 Backtracking algorithms make good examples of programs that are stateful and non-deterministic, and the |n|-queens problem, also dealt with by Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just}, is among the most well-known examples of backtracking.\footnote{Curiously, Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just} did not finish their derivation and stopped at a program that exhaustively generates all permutations and tests each of them. Perhaps it was sufficient to demonstrate their point.}
 
-In this section we present a specification of the problem, before transforming it into the form |unfoldM p f >=> assert (all ok . scanlp oplus st)| (whose components will be defined later), which is the general form of problems we will deal with in this pearl.
+In this section we present a specification of the problem, before transforming it into the form |unfoldM p f >=> filt (all ok . scanlp oplus st)| (whose components will be defined later), which is the general form of problems we will deal with in this pearl.
 The specification is non-deterministic, but not stateful.
 In the next few sections we will introduce state into the specification,
 under different assumptions of the interaction between non-determinism and state.
@@ -120,23 +120,23 @@ $
 The aim of the puzzle is to place |n| queens on a |n| by |n| chess board such that no two queens can attack each other. Given |n|, we number the rows and columns by |[0..n-1]|. Since all queens should be placed on distinct rows and distinct columns, a potential solution can be represented by a permutation |xs| of the list |[0..n-1]|, such that |xs !! i = j| denotes that the queen on the $i$th column is placed on the $j$th row (see Figure \ref{fig:queens-examples}(a)). In this representation queens cannot be put on the same row or column, and the problem is reduced to filtering, among permutations of |[0..n-1]|, those placements in which no two queens are put on the same diagonal. The specification can be written as a non-deterministic program:
 \begin{spec}
 queens :: N `mem` eps => Int -> Me eps [Int]
-queens n = perm [0..n-1] >>= assert safe {-"~~,"-}
+queens n = perm [0..n-1] >>= filt safe {-"~~,"-}
 \end{spec}
 %if False
 \begin{code}
 queens :: MonadPlus m => Int -> m [Int]
-queens n = perm [0..n-1] >>= assert safe
+queens n = perm [0..n-1] >>= filt safe
 \end{code}
 %endif
-where |perm| non-deterministically computes a permutation of its input, and the pure function |safe :: [Int] -> Bool| determines whether no queens are on the same diagonal. The monadic function |assert p x| returns |x| if |p x| holds, and fails otherwise:
+where |perm| non-deterministically computes a permutation of its input, and the pure function |safe :: [Int] -> Bool| determines whether no queens are on the same diagonal. The monadic function |filt p x| returns |x| if |p x| holds, and fails otherwise:
 \begin{spec}
-assert :: N `mem` eps => (a -> Bool) -> a -> Me eps a
-assert p x = guard (p x) >> return x {-"~~,"-}
+filt :: N `mem` eps => (a -> Bool) -> a -> Me eps a
+filt p x = guard (p x) >> return x {-"~~,"-}
 \end{spec}
 %if False
 \begin{code}
-assert :: MonadPlus m => (a -> Bool) -> a -> m a
-assert p x = guard (p x) >> return x {-"~~,"-}
+filt :: MonadPlus m => (a -> Bool) -> a -> m a
+filt p x = guard (p x) >> return x {-"~~,"-}
 \end{code}
 %endif
 where |guard| is a standard monadic function defined by:
@@ -145,7 +145,7 @@ guard :: N `mem` eps => Bool -> Me eps ()
 guard b = if b then return () else mzero {-"~~."-}
 \end{spec}
 
-This specification of |queens| generates all the permutations, before checking them one by one, in two separate phases. We wish to fuse the two phases and produce a faster implementation. The overall idea is to define |perm| in terms of an unfold, transform |assert safe| into a fold, and fuse the two phases into a {\em hylomorphism}~\cite{Meijer:91:Functional}. During the fusion, some non-safe choices can be pruned off earlier, speeding up the computation.
+This specification of |queens| generates all the permutations, before checking them one by one, in two separate phases. We wish to fuse the two phases and produce a faster implementation. The overall idea is to define |perm| in terms of an unfold, transform |filt safe| into a fold, and fuse the two phases into a {\em hylomorphism}~\cite{Meijer:91:Functional}. During the fusion, some non-safe choices can be pruned off earlier, speeding up the computation.
 
 \paragraph{Permutation}
 The monadic function |perm| can be written both as a fold or an unfold.
@@ -217,7 +217,7 @@ nodup (x:xs) = not (x `elem` xs) && nodup xs
 \end{code}
 %endif
 
-The eventual goal is to transform |assert safe| into a |foldr|, to be fused with |perm|, an unfold that generates a list from left to right.
+The eventual goal is to transform |filt safe| into a |foldr|, to be fused with |perm|, an unfold that generates a list from left to right.
 In order to do so, it helps if |safe| can be expressed in a computation that processes the list left-to-right, that is, a |foldl| or a |scanl|.
 To derive such a definition we use the standard trick --- introducing accumulating parameters, and generalising |safe| to |safeAcc| below:
 \begin{code}
@@ -261,6 +261,6 @@ probSpec p f ok oplus st =
 \end{code}
 %endif
 \begin{code}
-  unfoldM p f >=> assert (all ok . scanlp oplus st)  {-"~~."-}
+  unfoldM p f >=> filt (all ok . scanlp oplus st)  {-"~~."-}
 \end{code}
-This is the form of problems we will consider for the rest of this paper: problems whose solutions are generated by an monadic unfold, before being filtered by an |assert| that takes the result of a |scanlp|.
+This is the form of problems we will consider for the rest of this paper: problems whose solutions are generated by an monadic unfold, before being filtered by an |filt| that takes the result of a |scanlp|.
