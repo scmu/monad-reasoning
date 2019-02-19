@@ -2483,33 +2483,6 @@ Proof.
   reflexivity.
 Qed.
 
-
-Lemma or_abcd:
-  forall {A} (a b c d : D A),
-    orD (orD a c) (orD b d)
-    =
-    orD (orD a b) (orD c d).
-Admitted.
-(*
-Proof.
-  intros.
-  assert (H1: forall (p q r s : D A),
-             orD (orD p q) (orD r s) = flat_or_D (p :: q :: r :: s :: nil)).
-  intros.
-  simpl flat_or_D.
-  rewrite or_or_D.
-  rewrite or2_fail_D.
-  reflexivity.
-  rewrite (H1 a b c d).
-  rewrite step_flat_or_D.
-  rewrite (H1 a c b d).
-  rewrite step_flat_or_D.
-  rewrite flat_or_comm_D.
-  reflexivity.
-Qed.
-*)
-
-
 Lemma run_trans_trans:
   forall {A} (p : Prog A),
     run (trans (trans p))
@@ -2590,24 +2563,19 @@ Proof.
   apply get_get_or_lambdas_G_D.
 Qed.
 
-Lemma dupl_put_fail:
-  forall {A} (s : S),
-    putD s (failD : D A) = orD (putD s failD) (putD s failD).
-Proof.
-  intros.
-  assert (H: putD s (failD : D A) = putD s (orD failD failD)).
-  f_equal.
-  rewrite or1_fail_D.
-  reflexivity.
-  rewrite H.
-  rewrite <- put_or_G_D.
-  (* need new axiom? *)
-Admitted.
-
 Lemma or_trans_G':
   forall {A} (p q: Prog A),
     run (Or (trans p) (trans q)) = run (Or (trans q) (trans p)).
 Admitted.
+
+Lemma or_abcd_focus_bc:
+  forall {A} (a b c d : D A),
+    orD (orD a b) (orD c d) = orD a (orD (orD b c) d).
+Proof.
+  intros.
+  repeat rewrite or_or_D.
+  reflexivity.
+Qed.
 
 Lemma right_distr_L_0:
   forall {A B} (m: Prog A) (f1 f2: A -> Prog B),
@@ -2696,9 +2664,15 @@ Proof.
     intros.
     apply functional_extensionality; intro s0.
     rewrite put_or_trans'.
-    rewrite dupl_put_fail.
     simpl.
-    apply or_abcd.
+    rewrite or_abcd_focus_bc.
+    cut (orD (putD s0 failD) (putD s (run q)) = putD s (run q)).
+    intro H. rewrite H. rewrite <- or_or_D. reflexivity.
+    rewrite put_or_G_D.
+    rewrite or1_fail_D.
+    rewrite put_put_G_D.
+    reflexivity.
+    
     rewrite H2.
     rewrite <- run_get.
     change (fun s0 : S =>
