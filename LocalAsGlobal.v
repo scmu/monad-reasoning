@@ -120,6 +120,15 @@ Parameter get_fail_G_D:
   forall {A},
     getD (fun _ => failD) = (failD : D A).
 
+Lemma get_const:
+  forall {A} (p : D A),
+    getD (fun s => p) = p.
+Proof.
+  intros.
+  rewrite <- get_put_G_D'.
+  apply get_put_G_D.
+Qed.
+
 End SemanticInterface.
 
 Module Type Syntax (Sem: SemanticInterface).
@@ -2571,31 +2580,6 @@ Proof.
         reflexivity.
 Qed.
     
-Lemma get_get_lambdas_G_D:
-  forall {A} (p : S -> D A),
-    getD (fun s1 => getD (fun _  => p s1))
-    =
-    getD (fun _  => getD (fun s2 => p s2)).
-Admitted.
-  
-Lemma get_get_lambdas_G':
-  forall {A} (p : S -> Prog A),
-    run (Get (fun s1 => Get (fun _  => p s1)))
-    =
-    run (Get (fun _  => Get (fun s2 => p s2))).
-Proof.
-  intros.
-  simpl.
-  apply get_get_lambdas_G_D.
-Qed.
-
-Lemma get_get_or_lambdas_G_D:
-  forall {A} (p q : S -> D A),
-    getD (fun s1 => getD (fun s2 => orD (p s1) (q s1)))
-    =
-    getD (fun s1 => getD (fun s2 => orD (p s2) (q s1))).
-Admitted.
-
 Lemma get_get_or_lambdas_G':
   forall {A} (p q : S -> Prog A),
     run (Get (fun s1 => Get (fun s2 => Or (p s1) (q s1))))
@@ -2603,15 +2587,143 @@ Lemma get_get_or_lambdas_G':
     run (Get (fun s1 => Get (fun s2 => Or (p s2) (q s1)))).
 Proof.
   intros.
-  simpl.
-  apply get_get_or_lambdas_G_D.
+  repeat rewrite get_get_G'.
+  reflexivity.
 Qed.
+
+Lemma get_or_trans_trans:
+  forall {A} (p : Prog A) (q : S -> Prog A),
+    run (Get (fun s => Or (trans p) (trans (q s))))
+    =
+    run (Or (trans p) (Get (fun s => trans (q s)))).
+Proof.
+  intros.
+  rewrite get_or_trans.
+  repeat rewrite run_or.
+  rewrite run_get.
+  rewrite <- get_put_G_D'.
+  rewrite get_put_G_D.
+  reflexivity.
+Qed.
+
+Lemma or_trans_put_put:
+  forall {A} (p : Prog A) (s : S),
+    run (Put s (trans p)) = run (Or (trans (Put s p)) (Put s Fail)).
+Proof.
+  intros.
+  simpl.
+  rewrite <- get_or_G_D.
+  cut ((fun s0 : S =>
+          orD (orD (putD s (run (trans p))) (putD s0 failD)) (putD s failD))
+       =
+       (fun s0 => putD s (run (trans p)))).
+  intro H. rewrite H.
+  rewrite get_const.
+  reflexivity.
+  apply functional_extensionality; intro s0.
+  rewrite or_or_D.
+  rewrite (put_or_G_D failD (putD s failD) s0).
+  rewrite or1_fail_D.
+  rewrite put_put_G_D.
+  rewrite <- run_fail; repeat rewrite <- run_put; rewrite <- run_or.
+  rewrite <- put_or_trans'.
+  simpl.
+  rewrite or2_fail_D.
+  reflexivity.
+Qed.
+
+Lemma get_put_trans_G':
+  forall {A} (p : S -> Prog A) (q : Prog A),
+    run (Get (fun s => Or (Put s (trans q)) (p s)))
+    =
+    run (Or (trans q) (Get p)).
+Admitted.
 
 Lemma or_trans_G':
   forall {A} (p q: Prog A),
     run (Or (trans p) (trans q)) = run (Or (trans q) (trans p)).
+Proof.
+  intros.
+  induction p.
+  - simpl.
+    admit.
+  - simpl.
+    rewrite or1_fail_D; rewrite or2_fail_D.
+    reflexivity.
+  - simpl trans.
+    rewrite or_or'.
+    rewrite run_or.
+    rewrite IHp2.
+    rewrite <- run_or.
+    rewrite <- or_or'.
+    rewrite run_or.
+    rewrite IHp1.
+    rewrite <- run_or.
+    rewrite or_or'.
+    reflexivity.
+  - simpl trans.
+    rewrite <- get_or_G'.
+    rewrite run_get.
+    cut ((fun s => run (Or (trans (p s)) (trans q)))
+         = 
+         (fun s => run (Or (trans q) (trans (p s))))).
+    + intro H'; rewrite H'.
+      rewrite <- run_get.
+      apply get_or_trans_trans.
+    + apply functional_extensionality; intro s.
+      apply H.
+  - simpl trans.
+    rewrite <- get_or_G'.
+    simpl run.
+    
+    assert (H: (fun s0 : S =>
+                  orD (orD (putD s (run (trans p))) (putD s0 failD))
+                      (run (trans q)))
+               =
+               (fun s0 =>
+                  run (Or (Put s (Or (trans (Put s0 q)) (trans p))) (Put s0 Fail)))).
+    + apply functional_extensionality; intro s0.
+      rewrite or_or_D.
+      rewrite (put_or_G_D failD (run (trans q)) s0).
+      rewrite or1_fail_D.
+      rewrite <- (run_put s0 (trans q)).
+      rewrite or_trans_put_put.
+      rewrite run_or.
+      rewrite <- or_or_D.
+      rewrite put_or_G_D.
+      rewrite <- run_or.
+      rewrite IHp.
+      auto.
+    + rewrite H.
+      assert (H' : (fun s0 =>
+                      run (Or (Put s (Or (trans (Put s0 q)) (trans p)))
+                              (Put s0 Fail)))
+                   =
+                   (fun s0 =>
+                      run (Or (Put s0 (trans q))
+                              (Or (Put s (trans p))
+                                  (Put s0 Fail))))).
+      * apply functional_extensionality; intro t.
+        rewrite run_or.
+        rewrite <- put_or_G'.
+        simpl (trans (Put t q)).
+        simpl run.
+        rewrite put_get_G_D.
+        rewrite put_or_G_D.
+        rewrite put_or_G_D.
+        rewrite put_or_G_D.
+        rewrite put_or_G_D.
+        rewrite or_or_D.
+        rewrite (put_or_G_D failD (run (trans p)) s).
+        rewrite or1_fail_D.
+        rewrite <- put_or_G_D.
+        rewrite put_put_G_D.
+        rewrite <- put_or_G_D.
+        rewrite or_or_D.
+        reflexivity.
 Admitted.
-
+        
+    
 Lemma or_abcd_focus_bc:
   forall {A} (a b c d : D A),
     orD (orD a b) (orD c d) = orD a (orD (orD b c) d).
