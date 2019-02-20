@@ -5,6 +5,9 @@
 %% For final camera-ready submission
 %\documentclass[acmlarge]{acmart}\settopmatter{}
 
+% build using
+%    lhs2TeX der-monad.lhs | pdflatex --jobname=der-monad
+
 %include lhs2TeX.fmt
 %include forall.fmt
 %include polycode.fmt
@@ -24,6 +27,7 @@
 \usepackage{subfig}
 \usepackage{enumitem}
 \usepackage{mdframed}
+\usepackage{multicol}
 
 % %% Some recommended packages.
 % \usepackage{booktabs}   %% For formal tables:
@@ -131,7 +135,7 @@
 %\email{scm@iis.sinica.edu.tw}          %% \email is recommended
 
 \begin{abstract}
-Equational reasoning is among the most important tools that functional programming provides us. Curiously, relatively less attention has been paid to reasoning about monadic programs. In this pearl we aim to develop theorems and patterns useful for the derivation of monadic programs, focusing on the intricate interaction between state and non-determinism, and derive two backtracking algorithms, respectively using local and global states, to solve the $n$-queens and Sudoku puzzles.
+Equational reasoning is among the most important tools that functional programming provides us. Curiously, relatively less attention has been paid to reasoning about monadic programs. In this pearl we aim to develop theorems and patterns useful for the derivation of monadic programs, focusing on the intricate interaction between state and non-determinism. We derive a backtracking algorithm for the $n$-queens puzzle when each non-deterministic branch has its own local state. For the scenario where a global state is shared, we propose laws the monad should satisfy, and develop programming patterns and techniques to simulate local states.
 \end{abstract}
 
 %% 2012 ACM Computing Classification System (CSS) concepts

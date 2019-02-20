@@ -22,7 +22,7 @@ m1 >> m2 = m1 >>= const m2
 \section{Non-Determinism with Global State}
 \label{sec:nd-state-global}
 
-For a monad with both non-determinism and state, right-distributivity \eqref{eq:mplus-bind-dist} implies that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
+For a monad with both non-determinism and state, the local state laws imply that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
 
 Non-deterministic monads with a global state, however, is rather tricky.
 One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
@@ -44,6 +44,7 @@ These significantly limit the properties we may have.
 
 \subsection{Laws for Global State}
 \label{sec:laws-global-state}
+
 We have already discussed general laws for nondeterministic monads
 (laws~\eqref{eq:mplus-assoc} through~\eqref{eq:bind-mzero-zero}),
 as well as laws which govern the interaction between state and nondeterminism in
@@ -51,8 +52,9 @@ a local state setting (laws~\eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}).
 For global state semantics, alternative laws are required to govern the
 interactions between nondeterminism and state.
-We call these the \emph{global state laws}.
-The most important law is the {\bf put-or} law:
+We call these the \emph{global state laws}, to be presented in Section~\ref{sec:model-global-state-sem}.
+To the best of our knowledge, we are the first to propose these laws.
+The most important among them is the {\bf put-or} law:
 \begin{alignat}{2}
 &\mbox{\bf put-or}:\quad&
   |(put x >> m) `mplus` n| &=~ |put x >> (m `mplus` n)|~ \mbox{~~,}
@@ -108,7 +110,7 @@ Let the initial state be |st| and assume that |search| found three choices |m1 `
                      (m2 >>= modReturn prev) `mplus`
                      (m3 >>= modReturn prev)) {-"~~,"-}
 \end{spec}
-which, with a shared state, means that |m2| starts with state |st|, after which the state is rolled back too early to |prev st|. The computation |m3| starts with |prev st|, after which the state is rolled too far to |prev (prev st)|.
+which, with a global state, means that |m2| starts with state |st|, after which the state is rolled back too early to |prev st|. The computation |m3| starts with |prev st|, after which the state is rolled too far to |prev (prev st)|.
 
 In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails, we get |modify next >> solve >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
 
@@ -177,7 +179,8 @@ However, \ref{ex:putR-pitfalls-3} does {\em not} behave identically to \ref{ex:p
 For example, in the context |(>> get)|, we can tell them apart:
 |return x >> get| returns |s0|, while |putR s >> return x >> get| returns |s|, even though the program yields final state |s0|.
 
-We wish that |putR|, when run with a global state, still satisfies laws \eqref{eq:put-put} through \eqref{eq:mzero-bind-zero}.
+We wish that |putR|, when run with a global state, satisfies laws \eqref{eq:put-put} through \eqref{eq:mzero-bind-zero} ---
+the state laws and the \emph{local} state laws.
 If so, one could take a program written for a local state monad, replace all occurrences of |put| by |putR|, and run the program with a global state.
 Unfortunately this is not the case: |putR| does satisfy |put|-|put|~\eqref{eq:put-put} and |put|-|get|~\eqref{eq:put-get}, but |get|-|put|~\eqref{eq:get-put} fails ---
 |get >>= putR| and |return ()| can be
@@ -204,6 +207,7 @@ So it is difficult to reason about programs compositionally in this setting --- 
 
 It turns out that all properties we need do hold, provided that {\em all} occurrences of |put| are replaced by |putR| --- problematic contexts such as |put t| above are thus ruled out.
 However, that ``all |put| are replaced by |putR|'' is a global property, and to properly talk about it we have to formally define contexts, which is what we will do in Section~\ref{sec:ctxt-trans}.
+
 \subsection{Contexts and Translation}
 \label{sec:ctxt-trans}
 
@@ -223,6 +227,7 @@ prove that this translation is correct.
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
+%format <>>=> = "\mathbin{\scaleobj{0.8}{\langle\hstretch{0.7}{>\!\!>\!\!=}\rangle}}"
 %format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
 %format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
 %format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
@@ -300,10 +305,10 @@ In the previous sections we have been mixing syntax and semantics,
 which we avoid in this section by defining the program syntax as a free monad.
 This way we avoid the need for a type-level distinction between programs
 with local-state semantics and programs with global-state semantics.
-Figure~\ref{fig:context-semantics}(a), defines a syntax for
+Figure~\ref{fig:context-semantics}(a) defines a syntax for
 nondeterministic, stateful, closed programs |Prog|, where
 the |Get| and |Put| constructors take continuations as arguments, and
-the |(>>=)| operator is defined as follows.
+the |(>>=)| operator is defined as follows:
 \begin{samepage}
 \begin{spec}
   (>>=) :: Prog a -> (a -> Prog b) -> Prog b
@@ -311,9 +316,9 @@ the |(>>=)| operator is defined as follows.
   mzero          >>= f = mzero
   (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
   Get k          >>= f = Get (\x -> k x >>= f)
-  Put x e        >>= f = Put x (e >>= k)
+  Put x e        >>= f = Put x (e >>= k) {-"~~."-}
 \end{spec}
-\end{samepage}
+\end{samepage}%
 One can see that |(>>=)| is defined as a purely syntactical manipulation, and
 its definition has laws \eqref{eq:bind-mplus-dist} and
 \eqref{eq:bind-mzero-zero} built-in.
@@ -323,23 +328,24 @@ choosing, which we denote with |Dom|, and its corresponding
 domain operators |retD|, |failD|, |getD|, |putD| and |(<||||>)|
 (see figure~\ref{fig:context-semantics}(d)).
 The |run :: Prog a -> Dom a| function ``runs'' a program |Prog a| into a value
-in the semantic domain |Dom a|.
+in the semantic domain |Dom a|:
 \begin{samepage}
 \begin{spec}
 run (Return x)       = retD x
 run mzero            = failD
-run (m1 `mplus` m2)  = run m1 <||> run m2 {-"~~,"-}
-run (Get k)          = getD (\s -> run (k s)) {-"~~,"-}
+run (m1 `mplus` m2)  = run m1 <||> run m2
+run (Get k)          = getD (\s -> run (k s))
 run (Put x m)        = putD x (run m) {-"~~."-}
 \end{spec}
-\end{samepage}
-Note that no |langle>>=rangle| operator is required to define |run|;
+\end{samepage}%
+Note that no |<>>=>| operator is required to define |run|;
 in other words, |Dom| need not be a monad.
 In fact, as we will see later, we will choose our implementation in such a way
 that there does not exist a bind operator for |run|.
 
 \subsubsection{Modeling Global State Semantics}
-We impose laws upon |Dom| and the domain operators to ensure the semantics of a
+\label{sec:model-global-state-sem}
+We impose the \emph{global state laws} upon |Dom| and the domain operators to ensure the semantics of a
 non-backtracking (global-state),
 nondeterministic, stateful computation for our programs.
 Naturally, we need laws analogous to the state laws and nondeterminism laws to
@@ -371,7 +377,7 @@ from |Prog|'s definition of |(>>=)|.
 We also formulate the global-state laws.
 Law~\eqref{eq:put-or} can be straightforwardly reformulated as:
 \begin{align}
-|putD x p <||||> q|        &= |putD x (p <||||> q)| \label{eq:put-or-g-d}
+|putD x p <||||> q|        &= |putD x (p <||||> q)| \mbox{~~.}\label{eq:put-or-g-d}
 \end{align}
 In Section~\ref{sec:laws-global-state} we also mentioned that a law should exist
 which mandates a limited form of right-distribitivity which only holds on a
@@ -380,17 +386,17 @@ The continuation-passing style of our semantic domain operators allows us to
 express a weaker version of this global property (which suffices for our goals)
 as follows:
 \begin{align}
-|putD x (retD w <||||> q)| &= |putD x (retD w) <||||> putD x q| \label{eq:put-ret-or-g-d}
+|putD x (retD w <||||> q)| &= |putD x (retD w) <||||> putD x q| \mbox{~~.}\label{eq:put-ret-or-g-d}
 \end{align}
 The law only holds if the implementation of |Dom| does not permit the definition
-of a bind operator |(>>=) :: Dom a -> (a -> Dom b) -> Dom b|.
+of a bind operator |(<>>=>) :: Dom a -> (a -> Dom b) -> Dom b|.
 Consider for instance the following program:
 \begin{code}
-  putD x (retD w <||> getD retD) langle>>=rangle \z -> putD y (retD z)
+  putD x (retD w <||> getD retD) <>>=> \z -> putD y (retD z) {-"~~."-}
 \end{code}
 If \eqref{eq:put-ret-or-g-d} holds, this program should be equal to
 \begin{code}
-  (putD x (retD w) <||> putD x (getD retD)) langle>>=rangle \z -> putD y (retD z)
+  (putD x (retD w) <||> putD x (getD retD)) <>>=> \z -> putD y (retD z) {-"~~."-}
 \end{code}
 However, Figure~\ref{fig:put-ret-or-vs-bind} proves that the first program can
 be reduced to |putD y (retD w <||||> retD y)|,
@@ -511,7 +517,7 @@ Yet wrapping both sides of an equation in |run| applications
 is not enough as such statements only apply at the top-level of a program.
 For instance, while |run (Put x (Put y p)) = run (Put y p)| is a correct statement,
 we cannot prove
-|run (Return w `mplus` Put x (Put y p)) = run (Return w `mplus` Put y p)| 
+|run (Return w `mplus` Put x (Put y p)) = run (Return w `mplus` Put y p)|
 from such a law.
 
 So the concept of semantical equivalence in itself is not sufficient; we require
@@ -538,7 +544,7 @@ Environments, in turn, are defined as heterogeneous lists.
 We also define a function for mapping open programs onto the semantic domain.
 \begin{spec}
   orun :: OProg e a -> Env e -> Dom a
-  orun p env = run (p env)
+  orun p env = run (p env) {-"~~."-}
 \end{spec}
 
 We can then assert that two programs are contextually equivalent if, for
@@ -546,14 +552,14 @@ We can then assert that two programs are contextually equivalent if, for
 yield the same result:
 \newcommand{\CEq}{=_\mathtt{GS}}
 \begin{align*}
-  |m1| \CEq |m2| \triangleq \forall C. |orun (apply C m1)| = |orun (apply C m2)|
+  |m1| \CEq |m2| \triangleq \forall C. |orun (apply C m1)| = |orun (apply C m2)| \mbox{~~.}
 \end{align*}
 
 We can then straightforwardly formulate variants of the state laws, the
 nondeterminism laws and the |put|-|or| law for this global state monad as
 lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
-  |Put s1 (Put s2 p)| &\CEq |Put s2 p|
+  |Put s1 (Put s2 p)| &\CEq |Put s2 p| \mbox{~~.}
 \end{align*}
 
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
@@ -566,9 +572,9 @@ that it does not hold in arbitrary contexts:
 \end{align}
 
 \subsubsection{Simulating Local-State Semantics}
+
 We simulate local-state semantics by replacing each occurrence of |Put| by a
-variant that restores the state, as described in subsection
-\ref{subsec:state-restoring-ops}. This transformation is implemented by the
+variant that restores the state, as described in Section~\ref{subsec:state-restoring-ops}. This transformation is implemented by the
 function |trans| for closed programs, and |otrans| for open programs:
 \begin{samepage}
 \begin{spec}
@@ -577,31 +583,31 @@ function |trans| for closed programs, and |otrans| for open programs:
   trans (p `mplus` q)  = trans p `mplus` trans q
   trans mzero          = mzero
   trans (Get p)        = Get (\s -> trans (p s))
-  trans (Put s p)      = Get (\s' -> Put s (trans p) `mplus` Put s' mzero)
+  trans (Put s p)      = Get (\s' -> Put s (trans p) `mplus` Put s' mzero) {-"~~,"-}
 
   otrans  :: OProg e a -> OProg e a
-  otrans p             = \env -> trans (p env)
+  otrans p             = \env -> trans (p env) {-"~~."-}
 \end{spec}
-\end{samepage}
+\end{samepage}%
 We then define the function |eval|, which runs a transformed program (in other
 words, it runs a program with local-state semantics).
 \begin{spec}
 eval :: Prog a -> Dom a
-eval = run . trans
+eval = run . trans {-"~~."-}
 \end{spec}
 We show that the transformation works by proving that our free monad equipped
 with |eval| is a correct
 implementation for a nondeterministic, stateful monad with local-state semantics.
 We introduce notation for ``contextual equivalence under simulated backtracking
-semantics''.
+semantics'':
 \newcommand{\CEqLS}{=_\mathtt{LS}}
 \begin{align*}
-  |m1| \CEqLS |m2| \triangleq \forall C. |eval (apply C m1)| = |eval (apply C m2)|
+  |m1| \CEqLS |m2| \triangleq \forall C. |eval (apply C m1)| = |eval (apply C m2)| \mbox{~~.}
 \end{align*}
 For example, we formulate the statement that the |put|-|put|
 law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
 \begin{align*}
-  |Put s1 (Put s2 p)| &\CEqLS |Put s2 p|
+  |Put s1 (Put s2 p)| &\CEqLS |Put s2 p| \mbox{~~.}
 \end{align*}
 Proofs for the nondeterminism laws follow trivially from the nondeterminism laws
 for global state.
@@ -620,11 +626,11 @@ reason why this law was introduced).
 
 Finally, we show that the interaction of state and nondeterminism in this
 implementation produces backtracking semantics.
-To this end we prove laws analogous to \eqref{eq:mplus-bind-dist} and
+To this end we prove laws analogous to the local state laws \eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}
 \begin{align*}
-  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \\
-  |m >> mzero|                      &\CEqLS |mzero|
+  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,}\\
+  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~.}
 \end{align*}
 %\begin{align*}
 %  % put_fail_L_2
@@ -730,190 +736,190 @@ queensBody xs  =  select xs >>= \(x,ys) ->
          ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
 \end{spec}
 
-\delete{
-\paragraph{Properties} In absence of \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, we instead assume the following properties.
-\begin{align}
-  |side m1 `mplus` side m2| &= |side (m1 >> m2)| \mbox{~~,}
-    \label{eq:side-side} \\
-  |put s >> (m1 `mplus` m2)| &= |(put s >> m1) `mplus` m2| \mbox{~~,}
-    \label{eq:put-mplus}\\
-  |get >>= (\x -> f x `mplus` m)| &=~ |(get >>= f) `mplus` m| \mbox{~~, |x| not free in |m|,}
-      \label{eq:get-mplus}\\
-  |(put s >> return x) `mplus`  m| &= |return x `mplus` (put s >> m)| ~~\mbox{,}
-      \label{eq:put-ret-side}\\
-  |side m `mplus` n| &=~ |n `mplus` side m| \mbox{~~, for |m :: Me N a|.}
-        \label{eq:side-nd-mplus}
-\end{align}
-%if False
-\begin{code}
-propSideSide m1 m2 = (side m1 `mplus` side m2) === side (m1 >> m2)
-propPutMPlus s m1 m2 = (put s >> (m1 `mplus` m2)) === ((put s >> m1) `mplus` m2)
-propGetMPlus f m = (get >>= (\x -> f x `mplus` m)) === ((get >>= f) `mplus` m)
-propPutRetSide s x m = ((put s >> return x) `mplus`  m) === (return x `mplus` (put s >> m))
-propSideNdMPlus m n = (side m `mplus` n) === (n `mplus` side m)
-\end{code}
-%endif
-They all show the sequential nature of |mplus| in this setting: in \eqref{eq:side-side}, adjacent |side| commands can be combined; in \eqref{eq:put-mplus} and \eqref{eq:get-mplus}, state operators bound before |mplus| branches can be bound to the leftmost branch, and in \eqref{eq:put-ret-side}, the effect of |put s >> return x| can be moved to the next branch. Finally, \eqref{eq:side-nd-mplus} allows side effects to commute with branches that only returns non-deterministic results.
-By \eqref{eq:side-side} we have
-\begin{equation}
- |side (put s) `mplus` side (put t) = side (put t)| \mbox{~~.}
-  \label{eq:side-put-put}
-\end{equation}
-While we do not have right-distributivity in general, we may still assume distributivity for specific cases:
-\begin{align}
- |get >>= \s -> f1 s `mplus` f2 s| &=~ |(get >>= f1) `mplus` (get >>= f2)| \mbox{~~, if |f1 s :: Me N a|}
-    \label{eq:get-mplus-distr}\\
- |get >>= \s -> f1 s `mplus` f2 s| &=~ |(get >>= (\s -> f1 s `mplus` side (put s))) `mplus` (get >>= f2)| \mbox{~~.}
-      \label{eq:get-mplus-side-distr}
-\end{align}
-%if False
-\begin{code}
-propGetMPlusDistr f1 f2 = (get >>= \x -> f1 x `mplus` f2 x) === ((get >>= f1) `mplus` (get >>= f2))
-propGetMPlusSideDistr f1 f2 = (get >>= \x -> f1 x `mplus` f2 x) === ((get >>= (\x -> f1 x `mplus` side (put x))) `mplus` (get >>= f2))
-\end{code}
-%endif
-Property \eqref{eq:get-mplus-distr} allows right-distributivity of |get| if the branches are only non-deterministic.
-It helps to prove that |get| commutes with non-determinism.
-In general cases, we need a |side (put x)| in the first branch to ensure that the second branch gets the correct value, as in \eqref{eq:get-mplus-side-distr}.
-} %delete
-
-
-\delete{
-\subsection{State-Restoring Programs}
-\label{sec:state-restoring}
-
-In this section we present an interesting programming pattern that exploits left-distributivity \eqref{eq:bind-mplus-dist}.
-Define the following variation of |put|:%
-\footnote{The author owes the idea of |putR| to Tom Schrijvers. See Section \ref{sec:conclusion} for more details.}
-
-\begin{lemma}\label{lma:putR-basics}
-The following laws regarding |putR| are true:
-\begin{align*}
-    |putR s >>= get| ~&=~ |putR s >>= return s| \mbox{~~,} \\
-    |putR s >> putR s'| ~&=~ |putR s'|  \mbox{~~.}
-\end{align*}
-\end{lemma}
-
-\begin{lemma}\label{lma:putR-nd-commute}
-|putR| commutes with non-determinism. That is, |m >>= \x -> putR s >> return x = putR s >> m| for |m :: Me N a|.
-\end{lemma}
-
-Proof of Lemma \ref{lma:putR-basics} is a routine exercise. Lemma \ref{lma:putR-nd-commute} can be proved by induction on the syntax of |m|, using properties including \eqref{eq:side-side}, \eqref{eq:put-ret-side}, \eqref{eq:side-nd-mplus}, and \eqref{eq:get-mplus-side-distr}.
-
-% \begin{proof}
-% We present the proof for the |putR|-|putR| law for illustrative purpose. The proof demonstrates the use of \eqref{eq:put-mplus} and \eqref{eq:side-put-put}.
+% \delete{
+% \paragraph{Properties} In absence of \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, we instead assume the following properties.
+% \begin{align}
+%   |side m1 `mplus` side m2| &= |side (m1 >> m2)| \mbox{~~,}
+%     \label{eq:side-side} \\
+%   |put s >> (m1 `mplus` m2)| &= |(put s >> m1) `mplus` m2| \mbox{~~,}
+%     \label{eq:put-mplus}\\
+%   |get >>= (\x -> f x `mplus` m)| &=~ |(get >>= f) `mplus` m| \mbox{~~, |x| not free in |m|,}
+%       \label{eq:get-mplus}\\
+%   |(put s >> return x) `mplus`  m| &= |return x `mplus` (put s >> m)| ~~\mbox{,}
+%       \label{eq:put-ret-side}\\
+%   |side m `mplus` n| &=~ |n `mplus` side m| \mbox{~~, for |m :: Me N a|.}
+%         \label{eq:side-nd-mplus}
+% \end{align}
+% %if False
+% \begin{code}
+% propSideSide m1 m2 = (side m1 `mplus` side m2) === side (m1 >> m2)
+% propPutMPlus s m1 m2 = (put s >> (m1 `mplus` m2)) === ((put s >> m1) `mplus` m2)
+% propGetMPlus f m = (get >>= (\x -> f x `mplus` m)) === ((get >>= f) `mplus` m)
+% propPutRetSide s x m = ((put s >> return x) `mplus`  m) === (return x `mplus` (put s >> m))
+% propSideNdMPlus m n = (side m `mplus` n) === (n `mplus` side m)
+% \end{code}
+% %endif
+% They all show the sequential nature of |mplus| in this setting: in \eqref{eq:side-side}, adjacent |side| commands can be combined; in \eqref{eq:put-mplus} and \eqref{eq:get-mplus}, state operators bound before |mplus| branches can be bound to the leftmost branch, and in \eqref{eq:put-ret-side}, the effect of |put s >> return x| can be moved to the next branch. Finally, \eqref{eq:side-nd-mplus} allows side effects to commute with branches that only returns non-deterministic results.
+% By \eqref{eq:side-side} we have
+% \begin{equation}
+%  |side (put s) `mplus` side (put t) = side (put t)| \mbox{~~.}
+%   \label{eq:side-put-put}
+% \end{equation}
+% While we do not have right-distributivity in general, we may still assume distributivity for specific cases:
+% \begin{align}
+%  |get >>= \s -> f1 s `mplus` f2 s| &=~ |(get >>= f1) `mplus` (get >>= f2)| \mbox{~~, if |f1 s :: Me N a|}
+%     \label{eq:get-mplus-distr}\\
+%  |get >>= \s -> f1 s `mplus` f2 s| &=~ |(get >>= (\s -> f1 s `mplus` side (put s))) `mplus` (get >>= f2)| \mbox{~~.}
+%       \label{eq:get-mplus-side-distr}
+% \end{align}
+% %if False
+% \begin{code}
+% propGetMPlusDistr f1 f2 = (get >>= \x -> f1 x `mplus` f2 x) === ((get >>= f1) `mplus` (get >>= f2))
+% propGetMPlusSideDistr f1 f2 = (get >>= \x -> f1 x `mplus` f2 x) === ((get >>= (\x -> f1 x `mplus` side (put x))) `mplus` (get >>= f2))
+% \end{code}
+% %endif
+% Property \eqref{eq:get-mplus-distr} allows right-distributivity of |get| if the branches are only non-deterministic.
+% It helps to prove that |get| commutes with non-determinism.
+% In general cases, we need a |side (put x)| in the first branch to ensure that the second branch gets the correct value, as in \eqref{eq:get-mplus-side-distr}.
+% } %delete
+%
+%
+% \delete{
+% \subsection{State-Restoring Programs}
+% \label{sec:state-restoring}
+%
+% In this section we present an interesting programming pattern that exploits left-distributivity \eqref{eq:bind-mplus-dist}.
+% Define the following variation of |put|:%
+% \footnote{The author owes the idea of |putR| to Tom Schrijvers. See Section \ref{sec:conclusion} for more details.}
+%
+% \begin{lemma}\label{lma:putR-basics}
+% The following laws regarding |putR| are true:
+% \begin{align*}
+%     |putR s >>= get| ~&=~ |putR s >>= return s| \mbox{~~,} \\
+%     |putR s >> putR s'| ~&=~ |putR s'|  \mbox{~~.}
+% \end{align*}
+% \end{lemma}
+%
+% \begin{lemma}\label{lma:putR-nd-commute}
+% |putR| commutes with non-determinism. That is, |m >>= \x -> putR s >> return x = putR s >> m| for |m :: Me N a|.
+% \end{lemma}
+%
+% Proof of Lemma \ref{lma:putR-basics} is a routine exercise. Lemma \ref{lma:putR-nd-commute} can be proved by induction on the syntax of |m|, using properties including \eqref{eq:side-side}, \eqref{eq:put-ret-side}, \eqref{eq:side-nd-mplus}, and \eqref{eq:get-mplus-side-distr}.
+%
+% % \begin{proof}
+% % We present the proof for the |putR|-|putR| law for illustrative purpose. The proof demonstrates the use of \eqref{eq:put-mplus} and \eqref{eq:side-put-put}.
+% % \begin{spec}
+% %    putR s >> putR s'
+% % =  (get >>= \s0 -> (put s `mplus` side (put s0))) >>
+% %    (get >>= \s0 -> (put s' `mplus` side (put s0)))
+% % =    {- left-distributivity \eqref{eq:bind-mplus-dist} -}
+% %    get >>= \s0 -> (put s >> get >>= \s0 -> (put s' `mplus` side (put s0))) `mplus` side (put s0)
+% % =    {- |put|-|get| \eqref{eq:get-put} -}
+% %    get >>= \s0 -> (put s >> (put s' `mplus` side (put s))) `mplus` side (put s0)
+% % =    {- by \eqref{eq:put-mplus} -}
+% %    get >>= \s0 -> (put s >> puts') `mplus` side (put s) `mplus` side (put s0)
+% % =    {- |put|-|put| \eqref{eq:put-put} and \eqref{eq:side-put-put} -}
+% %    get >>= \s0 -> put s' `mplus` side (put s0)
+% % =  putR s' {-"~~."-}
+% % \end{spec}
+% % \end{proof}
+% Note that we do not have a |get|-|putR| law: |get >>= putR| does not equal |return ()|. To see that, observe that |(get >>= putR) >> put t| terminates with the initial state, while |return () >> put t| terminates with state |t|.
+%
+% \paragraph{State-Restoration, Compositionally} Pushing the idea a bit further, we say that a monadic program |m| is {\em state-restoring} if, for all |comp|, the initial state in which |m >>= comp| is run is always restored when the computation finishes. Formally, it can be written as:
+% \begin{definition} |m :: {N, S s} `sse` eps => Me eps a| is called {\em state-restoring} if
+%   |m = get >>= \s0 -> m `mplus` side (put s0)|.
+% \end{definition}
+% Certainly, |putR s| is state-restoring. In fact, state-restoring programs can be built compositionally, using the following properties:
+% \begin{lemma} We have that
+% \begin{enumerate}
+% \item |mzero| is state-restoring,
+% \item |putR s| is state-restoring,
+% \item |guard p >> m| is state-restoring if |m| is,
+% \item |get >>= f| is state-restoring if |f x| is state-storing for all |x|, and
+% \item |m >>= f| is state restoring if |m| is state-restoring.
+% \end{enumerate}
+% \end{lemma}
+% Proof of these properties are routine exercises.
+%
+% \paragraph{Incremental Updating and Restoration}
+% Identifying state-restoring programs helps to discover when we can update and restore the state in an incremental manner.
+% When the state |s| is a big structure, such as an array, it might not be feasible to perform |put s| that rewrites an entire array.
+% Instead one might use another command |modify f| that applies the function |f| to the state. It can be characterised by:
 % \begin{spec}
-%    putR s >> putR s'
-% =  (get >>= \s0 -> (put s `mplus` side (put s0))) >>
-%    (get >>= \s0 -> (put s' `mplus` side (put s0)))
-% =    {- left-distributivity \eqref{eq:bind-mplus-dist} -}
-%    get >>= \s0 -> (put s >> get >>= \s0 -> (put s' `mplus` side (put s0))) `mplus` side (put s0)
-% =    {- |put|-|get| \eqref{eq:get-put} -}
-%    get >>= \s0 -> (put s >> (put s' `mplus` side (put s))) `mplus` side (put s0)
-% =    {- by \eqref{eq:put-mplus} -}
-%    get >>= \s0 -> (put s >> puts') `mplus` side (put s) `mplus` side (put s0)
-% =    {- |put|-|put| \eqref{eq:put-put} and \eqref{eq:side-put-put} -}
-%    get >>= \s0 -> put s' `mplus` side (put s0)
-% =  putR s' {-"~~."-}
+%   modify f = get >>= \s -> put (f s) {-"~~,"-}
 % \end{spec}
+% but one may assume that, for commands such as |modify (\arr -> arr // [(i,x)])| (where |(// [(i,x)])| updates the |i|-th entry of the array to |x|), there exists a quicker implementation that mutates the array rather than creating a new array.
+%
+% Given a function |next :: s -> s| that alters the state, and |prev :: s -> s| that is the inverse of |next|, we define the following state-restoring variation of |modify|:
+% \begin{spec}
+% modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
+% modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
+% \end{spec}
+% %if False
+% \begin{code}
+% modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
+% modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
+% \end{code}
+% %endif
+% such that |modifyR next prev >> comp| performs |modify next| before computation in |comp|, and |modify prev| afterwards. We have that:
+% \begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
+% If |m| is state-restoring, we have
+% %if False
+% \begin{code}
+% putRSRModifyR ::
+%   (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
+% putRSRModifyR next prev m =
+% \end{code}
+% %endif
+% \begin{code}
+%   get >>= \s -> putR (next s) >> m {-"~~"-}=== {-"~~"-}
+%     modifyR next prev >> m {-"~~."-}
+% \end{code}
+% \end{lemma}
+% We look at its proof, which demonstrates the use of \eqref{eq:side-side} -- \eqref{eq:get-mplus}, monad laws, and laws regarding |get| and |put|.
+% For the rest of this pearl we use the following abbreviations:
+% \begin{code}
+% sidePut st  = side (put st)    {-"~~,"-}
+% sideMod f   = side (modify f)  {-"~~."-}
+% \end{code}
+% \begin{proof} We calculate:
+% %if False
+% \begin{code}
+% putRSRModifyRDer1 ::
+%   (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
+% putRSRModifyRDer1 next prev m =
+% \end{code}
+% %endif
+% \begin{code}
+%       modifyR next prev >> m
+%  ===    {- definiton of |modifyR|, |modify|, and left-distributivity \eqref{eq:bind-mplus-dist} -}
+%       (get >>= \s -> put (next s) >> m) `mplus` sideMod prev
+%  ===    {- by \eqref{eq:get-mplus} -}
+%       get >>= \s -> (put (next s) >> m) `mplus` sideMod prev {-"~~."-}
+% \end{code}
+% We focus on the part within |(get >>= \s -> _)|:
+% %if False
+% \begin{code}
+% putRSRModifyRDer2 ::
+%   (MonadPlus m, MonadState s m) =>
+%   (s -> s) -> (s -> s) -> s -> m a -> m a
+% putRSRModifyRDer2 next prev s m =
+% \end{code}
+% %endif
+% \begin{code}
+%       (put (next s) >> m) `mplus` sideMod prev
+%  ===    {- |m| state-restoring -}
+%       (put (next s) >> get >>= \s' -> m `mplus` sidePut s') `mplus` sideMod prev
+%  ===    {- |put|-|get| \eqref{eq:get-put} -}
+%       (put (next s) >> (m `mplus` sidePut (next s))) `mplus` sideMod prev
+%  ===    {- by \eqref{eq:put-mplus} -}
+%       put (next s) >> (m `mplus` sidePut (next s) `mplus` sideMod prev)
+%  ===    {- by \eqref{eq:side-side}, and |prev . next = id| -}
+%       put (next s) >> (m `mplus` sidePut s)
+%  ===    {- by \eqref{eq:put-mplus} -}
+%       (put (next s) >> m) `mplus` sidePut s {-"~~."-}
+% \end{code}
+% Put it back to the context |(get >>= \s -> _)|, and the expression simplifies to |get >>= \s -> putR (next s) >> m|.
 % \end{proof}
-Note that we do not have a |get|-|putR| law: |get >>= putR| does not equal |return ()|. To see that, observe that |(get >>= putR) >> put t| terminates with the initial state, while |return () >> put t| terminates with state |t|.
-
-\paragraph{State-Restoration, Compositionally} Pushing the idea a bit further, we say that a monadic program |m| is {\em state-restoring} if, for all |comp|, the initial state in which |m >>= comp| is run is always restored when the computation finishes. Formally, it can be written as:
-\begin{definition} |m :: {N, S s} `sse` eps => Me eps a| is called {\em state-restoring} if
-  |m = get >>= \s0 -> m `mplus` side (put s0)|.
-\end{definition}
-Certainly, |putR s| is state-restoring. In fact, state-restoring programs can be built compositionally, using the following properties:
-\begin{lemma} We have that
-\begin{enumerate}
-\item |mzero| is state-restoring,
-\item |putR s| is state-restoring,
-\item |guard p >> m| is state-restoring if |m| is,
-\item |get >>= f| is state-restoring if |f x| is state-storing for all |x|, and
-\item |m >>= f| is state restoring if |m| is state-restoring.
-\end{enumerate}
-\end{lemma}
-Proof of these properties are routine exercises.
-
-\paragraph{Incremental Updating and Restoration}
-Identifying state-restoring programs helps to discover when we can update and restore the state in an incremental manner.
-When the state |s| is a big structure, such as an array, it might not be feasible to perform |put s| that rewrites an entire array.
-Instead one might use another command |modify f| that applies the function |f| to the state. It can be characterised by:
-\begin{spec}
-  modify f = get >>= \s -> put (f s) {-"~~,"-}
-\end{spec}
-but one may assume that, for commands such as |modify (\arr -> arr // [(i,x)])| (where |(// [(i,x)])| updates the |i|-th entry of the array to |x|), there exists a quicker implementation that mutates the array rather than creating a new array.
-
-Given a function |next :: s -> s| that alters the state, and |prev :: s -> s| that is the inverse of |next|, we define the following state-restoring variation of |modify|:
-\begin{spec}
-modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
-modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
-\end{spec}
-%if False
-\begin{code}
-modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
-modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
-\end{code}
-%endif
-such that |modifyR next prev >> comp| performs |modify next| before computation in |comp|, and |modify prev| afterwards. We have that:
-\begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
-If |m| is state-restoring, we have
-%if False
-\begin{code}
-putRSRModifyR ::
-  (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
-putRSRModifyR next prev m =
-\end{code}
-%endif
-\begin{code}
-  get >>= \s -> putR (next s) >> m {-"~~"-}=== {-"~~"-}
-    modifyR next prev >> m {-"~~."-}
-\end{code}
-\end{lemma}
-We look at its proof, which demonstrates the use of \eqref{eq:side-side} -- \eqref{eq:get-mplus}, monad laws, and laws regarding |get| and |put|.
-For the rest of this pearl we use the following abbreviations:
-\begin{code}
-sidePut st  = side (put st)    {-"~~,"-}
-sideMod f   = side (modify f)  {-"~~."-}
-\end{code}
-\begin{proof} We calculate:
-%if False
-\begin{code}
-putRSRModifyRDer1 ::
-  (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
-putRSRModifyRDer1 next prev m =
-\end{code}
-%endif
-\begin{code}
-      modifyR next prev >> m
- ===    {- definiton of |modifyR|, |modify|, and left-distributivity \eqref{eq:bind-mplus-dist} -}
-      (get >>= \s -> put (next s) >> m) `mplus` sideMod prev
- ===    {- by \eqref{eq:get-mplus} -}
-      get >>= \s -> (put (next s) >> m) `mplus` sideMod prev {-"~~."-}
-\end{code}
-We focus on the part within |(get >>= \s -> _)|:
-%if False
-\begin{code}
-putRSRModifyRDer2 ::
-  (MonadPlus m, MonadState s m) =>
-  (s -> s) -> (s -> s) -> s -> m a -> m a
-putRSRModifyRDer2 next prev s m =
-\end{code}
-%endif
-\begin{code}
-      (put (next s) >> m) `mplus` sideMod prev
- ===    {- |m| state-restoring -}
-      (put (next s) >> get >>= \s' -> m `mplus` sidePut s') `mplus` sideMod prev
- ===    {- |put|-|get| \eqref{eq:get-put} -}
-      (put (next s) >> (m `mplus` sidePut (next s))) `mplus` sideMod prev
- ===    {- by \eqref{eq:put-mplus} -}
-      put (next s) >> (m `mplus` sidePut (next s) `mplus` sideMod prev)
- ===    {- by \eqref{eq:side-side}, and |prev . next = id| -}
-      put (next s) >> (m `mplus` sidePut s)
- ===    {- by \eqref{eq:put-mplus} -}
-      (put (next s) >> m) `mplus` sidePut s {-"~~."-}
-\end{code}
-Put it back to the context |(get >>= \s -> _)|, and the expression simplifies to |get >>= \s -> putR (next s) >> m|.
-\end{proof}
-
-} %delete
+%
+% } %delete

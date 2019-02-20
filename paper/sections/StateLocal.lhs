@@ -20,15 +20,19 @@ import MonadicScanL
 \section{Monadic Hylomorphism}
 \label{sec:nd-state-local}
 
-To recap what we have done: for all |p|, |ok|, |oplus|, |st|, and |f :: b -> Me N (a,b)|,
+To recap what we have done,
+we started with a specification of the form
+|unfoldM p f z >>= filt (all ok . scanlp oplus st)|, where
+|f :: b -> Me N (a,b)|, and have shown that
+% for all |p|, |ok|, |oplus|, |st|, and |f :: b -> Me N (a,b)|,
 %if False
 \begin{code}
 stateLocalDer1 p f z ok oplus st odot xs =
 \end{code}
 %endif
 \begin{code}
-      unfoldM p f z >>= assert (all ok . scanlp oplus st)
- ===    {- Corollary \ref{thm:assert-scanlp-foldr}, with |odot| defined as in Theorem \ref{lma:foldr-guard-fusion} -}
+      unfoldM p f z >>= filt (all ok . scanlp oplus st)
+ ===    {- Corollary \ref{thm:filt-scanlp-foldr}, with |odot| defined as in Theorem \ref{lma:foldr-guard-fusion} -}
       unfoldM p f z >>= \xs -> protect (put st >> foldr odot (return []) xs)
  ===   {- nondeterminism commutes with state -}
       protect (put st >> unfoldM p f z >>= foldr odot (return [])) {-"~~."-}
@@ -121,14 +125,17 @@ hyloFusion2 otimes x m p f z =
 To understand the first step, note that
 |h xs >>= ((x `otimes`) . return) {-"\,"-}= {-"\,"-} (h >=> ((x `otimes`) . return)) xs|.
 
-Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude that it equals |hyloM otimes m p f| if the latter has a unique fixed-point. See the note below.
+Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude that it equals |hyloM otimes m p f| if the latter has a unique fixed-point,
+which is guaranteed by the well-foundedness condition.
+See the note below.
 \end{proof}
 
 \paragraph{Note} Let |q| be a predicate, |q?| is a relation defined by |{(x,x) `mid` q x}|. The parameter |y| in |unfoldM| is called the {\em seed} used to generate the list. The relation |(not.p)? . snd . (=<<) . f| maps one seed to the next seed (where |(=<<)| is |(>>=)| written reversed). If it is {\em well-founded}, intuitively speaking, the seed generation cannot go on forever and |p| will eventually hold. It is known that inductive types (those can be folded) and coinductive types (those can be unfolded) do not coincide in {\sf SET}. To allow a fold to be composed after an unfold, typically one moves to a semantics based on complete partial orders. However, it was shown~\cite{DoornbosBackhouse:95:Induction} that, in {\sf Rel}, when the relation generating seeds is well-founded, hylo-equations do have unique solutions. One may thus stay within a set-theoretic semantics. Such an approach is recently explored again~\cite{Hinze:15:Conjugate}. ({\em End of Note})
 
 \vspace{1em}
-Theorem \ref{thm:hylo-fusion} does not rely on \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, and does not put restriction on |eps|.
-To apply the theorem to our particular case, we have to show that the precondition holds for our particular |odot|. Fortunately it is indeed the case, although we do need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}. In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard-fusion}:
+Theorem \ref{thm:hylo-fusion} does not rely on the \emph{local state laws} \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, and does not put restriction on |eps|.
+To apply the theorem to our particular case, we have to show that its preconditions hold for our particular |odot| ---
+for that we will need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}. In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard-fusion}:
 \begin{lemma} Assuming that state and non-determinism commute, and |m >>= mzero = mzero|. Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
 \begin{spec}
   x `odot` m =  get >>= \st -> guard (p x st) >>
@@ -143,7 +150,7 @@ Routine, using commutativity of state and non-determinism.
 \subsection{Summary, and Solving |n|-Queens}
 \label{sec:solve-n-queens}
 
-To conclude our derivation, a problem formulated as |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
+To conclude our derivation, a problem formulated as |unfoldM p f z >>= filt (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
 \begin{spec}
 solve :: {N, S s} `sse` eps => (b -> Bool) -> (b -> Me eps (a, b)) -> (s -> Bool) -> (s -> a -> s) -> s -> b -> Me eps [a]
 solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z)
@@ -160,19 +167,19 @@ solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z)
                       put (st `oplus` x) >> ((x:) <$> m)
 \end{code}
 %endif
-\begin{corollary} \label{cor:unfold-assert-scanl-local}
+\begin{corollary} \label{cor:unfold-filt-scanl-local}
 % Given |p :: b -> Bool|, |f :: b -> Me eps (a,b)|, |z :: b|, |ok :: s -> Bool|, |oplus :: s -> a -> s|, |st :: s|, where |{N, S s} `sse` eps|,
 If the relation |(not . p)? . snd . (=<<) . f| is well-founded, and \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold in addition to the other laws, we have
 %if False
 \begin{code}
-corUnfoldAssertScanlLocal :: (MonadPlus m, MonadState s m) =>
+corUnfoldfiltScanlLocal :: (MonadPlus m, MonadState s m) =>
   (b -> Bool) -> (b -> m (a, b)) -> b -> (s -> Bool) -> (s -> a -> s)
   -> s -> m [a]
-corUnfoldAssertScanlLocal p f z ok oplus st =
+corUnfoldfiltScanlLocal p f z ok oplus st =
 \end{code}
 %endif
 \begin{code}
- unfoldM p f z >>= assert (all ok . scanlp oplus st) ===
+ unfoldM p f z >>= filt (all ok . scanlp oplus st) ===
     solve p f ok oplus st z {-"~~."-}
 \end{code}
 \end{corollary}
@@ -180,12 +187,12 @@ corUnfoldAssertScanlLocal p f z ok oplus st =
 \paragraph{|n|-Queens Solved}
 Recall that
 \begin{spec}
-queens n  = perm [0 .. n-1] >>= assert safe
-          = unfoldM null select [0..n-1] >>= assert (all ok . scanlp oplus (0,[],[])) {-"~~,"-}
+queens n  = perm [0 .. n-1] >>= filt safe
+          = unfoldM null select [0..n-1] >>= filt (all ok . scanlp oplus (0,[],[])) {-"~~,"-}
 \end{spec}
 where the auxiliary functions |select|, |ok|, |oplus| are defined in Section \ref{sec:queens}.
 The function |select| cannot be applied forever since the length of the given list decreases after each call.
-Therefore, Corollary \ref{cor:unfold-assert-scanl-local} applies, and we have |queens n = solve null select ok oplus (0,[],[]) [0..n-1]|.
+Therefore, Corollary \ref{cor:unfold-filt-scanl-local} applies, and we have |queens n = solve null select ok oplus (0,[],[]) [0..n-1]|.
 Expanding the definitions we get:
 \begin{spec}
 queens :: {N, S (Int, [Int], [Int])} `sse` eps => Int -> Me eps [Int]
