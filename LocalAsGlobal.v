@@ -2862,7 +2862,31 @@ Proof.
  *)
 
 
-  - admit.
+  - simpl trans.
+    assert (H':
+              (fun s : S =>
+                 run
+                 (Or
+                   (Or (Put (t s) (Return x))
+                       (Put (u s) (Get (fun s0 : S => trans (p s0))))) 
+                   (Put s Fail)))
+              =
+              (fun s =>
+                 run
+                 (Or
+                   (Or (Put (t s) (Return x))
+                       (Put (u s) (trans (p (u s)))))
+                   (Put s Fail)))).
+    + apply functional_extensionality; intro s.
+      simpl.
+      rewrite put_get_G_D.
+      reflexivity.
+    + rewrite run_get.
+      rewrite H'.
+      rewrite <- run_get.
+      
+    rewrite put_get_G_D.
+
   - simpl trans.
     assert (H: (fun h =>
                   run (Or
