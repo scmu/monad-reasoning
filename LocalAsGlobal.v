@@ -2722,10 +2722,6 @@ Proof.
                                       (Put (u s) (Or (trans q2)
                                                      (Put s Fail))))))).
 
-               (*fun s => run (Or (Or (Put (t s) (Return x))
-                                  (Put (u s) (trans q1)))
-                             (Or (Put (u s) (trans q2))
-                                  (Put s Fail))))*)
     + apply functional_extensionality; intro s.
       simpl.
       rewrite <- run_or.
@@ -2850,42 +2846,36 @@ Proof.
            *** rewrite assoc'.
                reflexivity.
 
-
-
-
-
-
-(*
-    run (Get (fun s => Or (Put s (trans q)) (p s)))
-    =
-    run (Or (trans q) (Get p)).
- *)
-
-
   - simpl trans.
     assert (H':
-              (fun s : S =>
-                 run
-                 (Or
-                   (Or (Put (t s) (Return x))
-                       (Put (u s) (Get (fun s0 : S => trans (p s0))))) 
-                   (Put s Fail)))
-              =
-              (fun s =>
-                 run
-                 (Or
-                   (Or (Put (t s) (Return x))
-                       (Put (u s) (trans (p (u s)))))
-                   (Put s Fail)))).
-    + apply functional_extensionality; intro s.
+      run (Get (fun s : S => Or (Or (Put (t s) (Return x)) (Put (u s) (Get (fun s0 : S => trans (p s0))))) (Put s Fail)))
+      =
+      run (Get (fun a => Get (fun s =>
+        Or (Or (Put (t s) (Return x)) (Put (u s) (trans (p (u a)))))
+           (Put s Fail))))).
+    + rewrite get_get_G'.
+      repeat rewrite run_get.
+      f_equal; apply functional_extensionality; intro s.
       simpl.
       rewrite put_get_G_D.
       reflexivity.
-    + rewrite run_get.
-      rewrite H'.
-      rewrite <- run_get.
-      
-    rewrite put_get_G_D.
+    
+    + rewrite H'.
+      repeat rewrite run_get.
+      assert (H'':
+        (fun s : S =>
+   run (Get (fun s0 : S => Or (Or (Put (t s0) (Return x)) (Put (u s0) (trans (p (u s))))) (Put s0 Fail))))
+        =
+        (fun s =>
+          run (Get (fun s0 => Or (Or (Put (u s0) (trans (p (u s)))) (Put (t s0) (Return x))) (Put s0 Fail))))).
+      * apply functional_extensionality; intro a.
+        apply H.
+      * rewrite H''.
+        simpl.
+        rewrite get_get_G_D.
+        f_equal; apply functional_extensionality; intro s.
+        rewrite put_get_G_D.
+        reflexivity.
 
   - simpl trans.
     assert (H: (fun h =>
@@ -2956,7 +2946,7 @@ Proof.
         rewrite <- run_get.
         reflexivity.
         
-Admitted.
+Qed.
 
 Lemma or_trans_G':
   forall {A} (p q : Prog A),
@@ -3019,39 +3009,6 @@ Proof.
     reflexivity.
     auto.
 
-(*
-    induction q.
-    + simpl.
-      apply or_comm_ret.
-    + simpl.
-      rewrite or1_fail_D; rewrite or2_fail_D.
-      reflexivity.
-    + simpl.
-      change (run (trans ?r)) with (evl r).
-      change (run (trans ?r)) with (evl r) in IHq1.
-      change (run (trans ?r)) with (evl r) in IHq2.
-      rewrite <- or_or_D.
-      rewrite IHq1.
-      rewrite or_or_D.
-      rewrite IHq2.
-      rewrite or_or_D.
-      reflexivity.
-    + simpl.
-      change (run (trans ?r)) with (evl r).
-      change (run (trans ?r)) with (evl r) in H.
-      rewrite <- (get_const (retD a)) at 1.
-      rewrite <- get_ret_or_G_D'.
-      cut ((fun s => orD (retD a) (evl (p s)))
-           =
-           (fun s => orD (evl (p s)) (retD a))).
-      intro H'; rewrite H'.
-      rewrite get_or_G_D.
-      reflexivity.
-      apply functional_extensionality; intro s.
-      apply H.
-    + simpl.
- *)     
-      
   - simpl.
     rewrite or1_fail_D; rewrite or2_fail_D.
     reflexivity.
@@ -3127,9 +3084,17 @@ Proof.
         rewrite or_or_D.
         reflexivity.
       * rewrite H'.
+        
+        rewrite <- (get_const (run (trans q))).
+        change (orD (getD (fun _ : S => run (trans q))) (getD (fun s0 : S => orD (putD s (run (trans p))) (putD s0 failD))))
+        with (run (Or (Get (fun _ => trans q)) (Get (fun s0 => Or (Put s (trans p)) (Put s0 Fail))))).
+        rewrite <- get_or_trans.
         simpl.
-        admit.
-Admitted.
+        rewrite <- (get_put_G_D' (fun s0 : S => orD (run (trans q)) (orD (putD s (run (trans p))) (putD s0 failD)))).
+        f_equal; apply functional_extensionality; intro s0.
+        rewrite put_or_G_D.
+        reflexivity.
+Qed.
         
     
 Lemma or_abcd_focus_bc:
