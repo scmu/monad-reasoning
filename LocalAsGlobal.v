@@ -137,11 +137,6 @@ Proof.
   reflexivity.
 Qed.
 
-(* TODO: delete? *)
-Parameter get_fail_G_D:
-  forall {A},
-    getD (fun _ => failD) = (failD : D A).
-
 Lemma get_const:
   forall {A} (p : D A),
     getD (fun s => p) = p.
@@ -822,6 +817,7 @@ Lemma get_or_G:
     =
     orun (appl c (fun env => Or (Get (fun s => p s env)) (q env))).
 Admitted.
+  
 
 
 (* TODO: G variant? not necessary for any proofs afaik, but we claim we prove it in the paper *)
@@ -1916,83 +1912,6 @@ Lemma invert_zbappl_zbbind2:
 Proof.
   intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
 Qed.
-(*
-Lemma invert_zbappl_zbor2_:
-  forall {E1 E2 A B} (c: BContext E1 A E2 B)  (p q: OProg E1 A),
-     zbappl (toZBContext b) (fun env => Or (p env) (q env))
-     =
-     zbappl (toZBContext (BOr2 b p)) q.
-Proof.
-*)
-
-(*
-Lemma invert_zappl_zput:
-  forall {E1 E2 A B} (z: ZContext E1 A E2 B) (v: Env E1 -> S) (q: OProg E1 A),
-     zappl z (fun env => Put (v env) (q env))
-     =
-     zappl (ZPut z v) q.
-Proof.
-  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
-Qed.
-
-Lemma invert_zappl_zget:
-  forall {E1 E2 A B} (z: ZContext E1 A E2 B)  (p: S -> OProg E1 A),
-     zappl z (fun env => Get (fun s => p s env))
-     =
-     zappl (ZGet z (fun _ => true) (fun _ _ => Fail)) (fun env' => clift (p (head env')) env').
-Proof.
-  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
-Qed.
-
-Lemma invert_zappl_zget_or:
-  forall {E1 E2 A B} (z: ZContext E1 A E2 B)  (p q: S -> OProg E1 A),
-     zappl z (fun env => Get (fun s => Or (p s env) (q s env)))
-     =
-     zappl (ZOr1 (ZGet z (fun _ => true) (fun _ _ => Fail)) (fun env' => clift (q (head env')) env')) (fun env' => clift (p (head env')) env').
-Proof.
-  intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
-Qed.
-*)
-
-(* oevl (fun env : Env E2 => bind (bappl b p env) (fun x : B => o x env)) *)
-
-(* TODO: address this in the paper? *)
-Parameter or1_inv_D:
-  forall {A} (p q o: D A),
-    orD p o = orD q o -> p = q.
-
-Lemma oevl_bappl_bor1:
-  forall {E1 E2 A B} (p q: OProg E1 A) (o: OProg E2 B) (b: BContext E1 A E2 B)
-  (H: oevl (bappl (BOr1 b o) p) = oevl (bappl (BOr1 b o) q)),
-  oevl (bappl b p) = oevl (bappl b q).
-Proof.
-  intros.
-  unfold oevl, orun, otrans.
-  apply functional_extensionality; intro env.
-  rewrite <- (or1_inv_D
-                (run (trans (bappl b p env)))
-                (run (trans (bappl b q env)))
-                (run (trans (o env)))
-             ); auto.
-  simpl in H.
-  unfold oevl, orun, otrans in H.
-  simpl in H.
-  change (orD (run (trans (bappl b ?r env))) (run (trans (o env))))
-    with ((fun env0 : Env E2 =>
-             orD (run (trans (bappl b r env0))) (run (trans (o env0))))
-            env).
-  rewrite H.
-  reflexivity.
-Qed.
-
-(* TODO delete *)
-Lemma asdf: forall {E1 E2 A B} (c: Context E1 A E2 B) (f: OProg E1 A) (env: Env E2),
-    oevl (fun env0 => appl c f env0) env
-    =
-    oevl (appl c f) env.
-Proof.
-  auto.
-Qed.
 
 Lemma qwer:
   forall {E A} (f: OProg E A -> Env E -> D A) (g g' h: OProg E A) (b: Env E -> bool),
@@ -2002,6 +1921,7 @@ Lemma qwer:
      =
      f (fun env => if b env then g' env else h env)).
 Admitted.
+  
   
   
 Lemma for_koen:
@@ -2402,7 +2322,7 @@ Proof.
       apply H.
     + rewrite H'.
       unfold evl, trans, run.
-      apply get_fail_G_D.
+      apply get_const.
   - change (bind (Put s m) ?k)
       with (Put s (bind m k)).
     change (evl (Put s ?k))
@@ -2476,12 +2396,143 @@ Proof.
   apply bind_or_right_zero_L_2.
 Qed.
 
+Lemma get_swap_vars:
+  forall {A} (k : S -> D A),
+    getD (fun _ => getD (fun s => k s))
+    =
+    getD (fun t => getD (fun _ => k t)).
+Proof.
+  intros.
+  repeat rewrite get_get_G_D.
+  reflexivity.
+Qed.
+
+Lemma get_get_or_lambdas_G':
+  forall {A} (p q : S -> Prog A),
+    run (Get (fun s1 => Get (fun s2 => Or (p s1) (q s1))))
+    =
+    run (Get (fun s1 => Get (fun s2 => Or (p s2) (q s1)))).
+Proof.
+  intros.
+  repeat rewrite get_get_G'.
+  reflexivity.
+Qed.
+
 Lemma get_or_trans:
   forall {A} (p q: S -> Prog A),
     run (Get (fun s => Or (trans (p s)) (q s)))
     =
     run (Or (Get (fun s => trans (p s))) (Get q)).
-Admitted.
+Proof.
+  intros.
+  simpl.
+  change (           fun s => run (trans (p s))    )
+    with (fun s' => (fun s => run (trans (p s))) s').
+  rewrite <- get_get_G_D.
+  change (          (fun s => orD (run (trans (p s))) (run (q s)))    )
+    with (fun s' => (fun s => orD (run (trans (p s))) (run (q s))) s').
+  rewrite <- get_get_G_D.
+  
+  assert (H_get_vars :
+    getD (fun _ => getD (fun s' => orD (run (trans (p s'))) (run (q s'))))
+    =
+    getD (fun s => getD (fun s' => orD (run (trans (p s ))) (run (q s'))))).
+  repeat rewrite get_get_G_D;  reflexivity.
+  
+  rewrite H_get_vars.
+  rewrite get_swap_vars.
+  rewrite <- get_or_G_D.
+  f_equal; apply functional_extensionality; intro s.
+  induction (p s); simpl.
+  - rewrite get_ret_or_G_D'.
+    reflexivity.
+  - rewrite get_const.
+    rewrite or1_fail_D.
+    f_equal; apply functional_extensionality; intro t.
+    rewrite or1_fail_D.
+    reflexivity.
+  - assert (H :
+      (fun s' : S => orD (orD (run (trans p0_1)) (run (trans p0_2))) (run (q s')))
+      =
+      (fun s'     => orD (run (trans p0_1)) (run (Or (trans p0_2) (q s'))))).
+    apply functional_extensionality; intro s'; apply or_or_D.
+    rewrite H.
+    
+    assert (H_get_vars_p1 :
+      getD (fun _ : S => getD (fun s' : S => orD (run (trans (p s'))) (run (Or (trans p0_2) (q s'))))) =
+      getD (fun s : S => getD (fun s' : S => orD (run (trans (p s))) (run (Or (trans p0_2) (q s')))))).
+    repeat rewrite get_get_G_D; reflexivity.
+    rewrite (IHp0_1 _ _ H_get_vars_p1).
+    simpl run.
+    
+    assert (H_get_vars_p2 :
+      getD (fun _ : S => getD (fun s' : S => orD (run (trans (p s'))) (run (q s')))) =
+      getD (fun s : S => getD (fun s' : S => orD (run (trans (p s))) (run (q s'))))).
+    repeat rewrite get_get_G_D; reflexivity.
+    rewrite (IHp0_2 _ _ H_get_vars_p2).
+    
+    rewrite <- or_or_D.
+    assert (H_get_vars_p1' :
+      getD (fun _ : S => getD (fun s' : S => orD (run (trans (p s'))) (run (trans p0_2)))) =
+      getD (fun s : S => getD (fun s' : S => orD (run (trans (p s))) (run (trans p0_2))))).
+    repeat rewrite get_get_G_D; reflexivity.
+      
+    rewrite (IHp0_1 _ _ H_get_vars_p1').
+    reflexivity.
+  - rewrite get_swap_vars.
+    assert (get_or_H :
+      (fun s' : S => orD (getD (fun s0 : S => run (trans (p0 s0)))) (run (q s')))
+      =
+      (fun s' : S => (getD (fun s0 : S => orD (run (trans (p0 s0))) (run (q s')))))).
+    apply functional_extensionality; intro s'; rewrite get_or_G_D; reflexivity.
+    rewrite get_or_H.
+    assert (swap_vars :
+      getD (fun s' : S => getD (fun s0 : S => orD (run (trans (p0 s0))) (run (q s'))))
+      =
+      getD (fun s' : S => getD (fun s0 : S => orD (run (trans (p0 s'))) (run (q s0))))).
+    repeat rewrite get_get_G_D; reflexivity.
+    rewrite swap_vars.
+    assert (apply_IH:
+      (fun s' : S => getD (fun s0 : S => orD (run (trans (p0 s'))) (run (q s0))))
+      =
+      (fun s' : S => orD (getD (fun _ => run (trans (p0 s')))) (getD (fun s0 => run (q s0))))).
+    apply functional_extensionality; intro. 
+    assert (H' : getD (fun _ : S => getD (fun s' : S => orD (run (trans (p s'))) (run (q s')))) 
+                   =
+                   getD (fun s0 : S => getD (fun s' : S => orD (run (trans (p s0))) (run (q s'))))).
+    repeat rewrite get_get_G_D; reflexivity.
+    rewrite (H _ _ _ H'); reflexivity.
+    rewrite apply_IH.
+    rewrite get_or_G_D.
+    reflexivity.
+  - rewrite get_get_G_D.
+    rewrite <- get_or_G_D.
+    assert (or_get_H :
+      (fun s' : S => orD (getD (fun s1 : S => orD (putD s0 (run (trans p0))) (putD s1 failD))) (run (q s')))
+      =
+      (fun s' : S => (getD (fun s1 : S => orD (orD (putD s0 (run (trans p0))) (putD s1 failD)) (run (q s')))))).
+    apply functional_extensionality; intro s'.
+    rewrite get_or_G_D.
+    reflexivity.
+    rewrite or_get_H.
+    assert (H :
+      (fun s1 : S => orD (orD (putD s0 (run (trans p0))) (putD s1 failD)) (getD (fun s2 : S => run (q s2))))
+      =
+      (fun s1 => orD (putD s0 (run (trans p0))) (putD s1 (run (q s1))))).
+    + apply functional_extensionality; intro s1.
+      rewrite or_or_D.
+      rewrite (put_or_G_D failD _ _).
+      rewrite or1_fail_D.
+      rewrite put_get_G_D.
+      reflexivity.
+    + rewrite H.
+      rewrite get_get_G_D.
+      f_equal; apply functional_extensionality; intro s1.
+      rewrite or_or_D.
+      rewrite (put_or_G_D failD _ _).
+      rewrite or1_fail_D.
+      reflexivity.
+Qed.
 
 Lemma put_or_trans':
   forall {A} (p: Prog A) (v: S) (q: Prog A),
@@ -2602,17 +2653,6 @@ Proof.
         reflexivity.
 Qed.
     
-Lemma get_get_or_lambdas_G':
-  forall {A} (p q : S -> Prog A),
-    run (Get (fun s1 => Get (fun s2 => Or (p s1) (q s1))))
-    =
-    run (Get (fun s1 => Get (fun s2 => Or (p s2) (q s1)))).
-Proof.
-  intros.
-  repeat rewrite get_get_G'.
-  reflexivity.
-Qed.
-
 Lemma get_or_trans_trans:
   forall {A} (p : Prog A) (q : S -> Prog A),
     run (Get (fun s => Or (trans p) (trans (q s))))
@@ -2654,7 +2694,7 @@ Proof.
   reflexivity.
 Qed.
 
-
+(* TODO delete? *)
 Lemma get_put_trans_G':
   forall {A} (p : S -> Prog A) (q : Prog A),
     run (Get (fun s => Or (Put s (trans q)) (p s)))
@@ -2662,6 +2702,7 @@ Lemma get_put_trans_G':
     run (Or (trans q) (Get p)).
 Admitted.
 
+(* TODO describe in paper, prove implementation *)
 Parameter put_or_comm:
   forall {A} (p q : D A) (t u : S -> S),
     getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
@@ -3360,6 +3401,10 @@ Proof.
   apply right_distr_L_2.
 Qed.
 
+(******************************************************************************)
+(******************************************************************************)
+(******************************************************************************)
+
 Definition side {A} (m: Prog A) : Prog A :=
   bind m (fun _ => Fail).
 Definition modify {A} (f: S -> S) (p: Prog A) : Prog A :=
@@ -3384,19 +3429,7 @@ Proof.
     + apply functional_extensionality; intro s.
       apply H.
     + rewrite H'.
-      (* TODO:
-         I added a new axiom "get_fail_G_D" to the semantic domain.
-         It can be seen as an instance of a more general (reasonable,
-         but currently unmentioned) axiom
-         forall m, state_restoring m -> m >> fail = fail.
-         Is this ok?
-         If yes, I should describe it in the paper.
-         Maybe I should go for another axiom?
-         forall m, getD (fun _ => m) = m
-         (ie, if you don't use the result of the get, might as well
-          ditch the whole get)
-       *)
-      apply get_fail_G_D.
+      apply get_const.
   - assert (H: (fun s0 => orD (putD s (run (bind (trans m) (fun _ => Fail)))) (putD s0 (failD : D B)))
                =
                (fun s0 => putD s0 failD)).
