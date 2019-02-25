@@ -115,6 +115,13 @@ Parameter or_comm_ret:
   forall {A} (x y: A),
     orD (retD x) (retD y) = orD (retD y) (retD x).
 
+(* TODO describe in paper, prove implementation *)
+Parameter put_or_comm:
+  forall {A} (p q : D A) (t u : S -> S),
+    getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
+    =
+    getD (fun s => orD (orD (putD (u s) q) (putD (t s) p)) (putD s failD)).
+
 Lemma get_ret_or_G_D':
   forall {A} (f : S -> A) (p : S -> D A),
     getD (fun s => orD (retD (f s)) (p s))
@@ -1913,17 +1920,6 @@ Proof.
   intros; simpl; unfold cpush, clift, comap, head, tail, head_, tail_; auto.
 Qed.
 
-Lemma qwer:
-  forall {E A} (f: OProg E A -> Env E -> D A) (g g' h: OProg E A) (b: Env E -> bool),
-    (f (fun env => g env) = f (fun env => g' env))
-    ->
-    (f (fun env => if b env then g env else h env)
-     =
-     f (fun env => if b env then g' env else h env)).
-Admitted.
-  
-  
-  
 Lemma for_koen:
   forall {E1 A} (p q: OProg E1 A)
          (P : forall {C : Type}
@@ -2001,15 +1997,12 @@ Proof.
     rewrite (IHc E1 p q P); auto.
 
   - simpl.
-    apply (qwer oevl
-                (appl c (obind (clift p) k))
-                (appl c (obind (clift q) k))
-                o
-                b).
-    change (fun env => appl c (obind (clift ?r) k) env)
-      with (appl c (obind (clift r) k)).
-    apply IHc; auto.
-
+    unfold oevl, orun, otrans.
+    apply functional_extensionality; intro env.
+    destruct (b env); auto.
+    change (run (trans (appl c (obind (clift ?r) k) env)))
+      with (oevl (appl c (obind (clift r) k)) env).
+    rewrite (IHc E1 p q P); auto.
   - simpl appl.
     unfold cpush, comap.
     change (oevl (fun env => appl c1 (obind (clift ?r) k) (Cons c env)))
@@ -2693,21 +2686,6 @@ Proof.
   rewrite or2_fail_D.
   reflexivity.
 Qed.
-
-(* TODO delete? *)
-Lemma get_put_trans_G':
-  forall {A} (p : S -> Prog A) (q : Prog A),
-    run (Get (fun s => Or (Put s (trans q)) (p s)))
-    =
-    run (Or (trans q) (Get p)).
-Admitted.
-
-(* TODO describe in paper, prove implementation *)
-Parameter put_or_comm:
-  forall {A} (p q : D A) (t u : S -> S),
-    getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
-    =
-    getD (fun s => orD (orD (putD (u s) q) (putD (t s) p)) (putD s failD)).
 
 Lemma split_get_or_G_D:
   forall {A} (p q : S -> D A),
@@ -3557,132 +3535,231 @@ End Syntax.
 
 Module Implementation <: SemanticInterface.
 
-Require Import Coq.Lists.List.
-Require Import Coq.Logic.FunctionalExtensionality.
+Definition Bag (A: Type) := A -> nat.
 
+Parameter eqDec: forall A (x y: A), (x = y) + (x <> y).
+
+Definition singleton {A: Type}: A -> Bag A :=
+ fun x =>
+   (fun y => match (eqDec _ x y) with
+             | inl _ => 1
+             | inr _ => 0
+             end).
+
+Definition emptyBag {A: Type}: Bag A :=
+ fun y => 0.
+
+Definition union {A: Type}: Bag A -> Bag A -> Bag A :=
+ fun xs ys =>
+   (fun z => xs z + ys z).
 
 Parameter S : Type.
 
-Definition D : Type -> Type := 
-  fun A => S -> (list (A * S) * S).
+Definition D : Type -> Type :=
+  fun A => S -> (Bag (A * S) * S).
 
 Definition retD : forall {A}, A -> D A :=
-  fun A => (fun x => (fun s => ((x,s) :: nil, s))).
+ fun A => (fun x => (fun s => (singleton (x,s), s))).
 
 Definition failD : forall {A}, D A :=
-  fun A => (fun s => (nil, s)).
+ fun A => (fun s => (emptyBag, s)).
 
 Definition orD : forall {A}, D A -> D A -> D A :=
-  fun A xs ys => 
-    (fun s => match xs s with
-              | (ansx, s') => match ys s' with
-                              | (ansy, s'') => (ansx ++ ansy, s'')
-                              end
-              end).
+ fun A xs ys =>
+   (fun s => match xs s with
+             | (ansx, s') => match ys s' with
+                             | (ansy, s'') => (union ansx ansy, s'')
+                             end
+             end).
 
 Definition getD : forall {A}, (S -> D A) -> D A :=
-  fun A k => 
-     (fun s => k s s).
+ fun A k =>
+    (fun s => k s s).
 
 Definition putD : forall {A}, S -> D A -> D A :=
-  fun A s k =>
-    (fun _ => k s).
+ fun A s k =>
+   (fun _ => k s).
 
-Definition andD : forall {A}, D A -> D A -> D A :=
-  fun A xs ys =>
-    (fun s => match xs s, ys s with
-                   | (ansx,_), (ansy, s') => (ansx ++ ansy, s')
-                  end).
+Require Coq.Logic.FunctionalExtensionality.
+Import Coq.Logic.FunctionalExtensionality.
+
+Lemma or1_fail_D:
+ forall {A} (q: D A),
+ orD failD q
+ =
+ q.
+Proof.
+ intros; simpl; unfold orD, failD, emptyBag, union.
+ change q with (fun s => q s).
+ apply functional_extensionality; intros s.
+ simpl.
+ destruct (q s).
+ auto.
+Qed.
+
+Lemma or2_fail_D:
+ forall {A} (p: D A),
+ orD p failD
+ =
+ p.
+Proof.
+ intros; unfold failD, orD, union, emptyBag.
+ change p with (fun s => p s) at 2.
+ apply functional_extensionality; intro s.
+ destruct (p s).
+ assert ((fun z : A * S => b z + 0) = b).
+   - change b with (fun z => b z).
+     apply functional_extensionality; intro z.
+      auto.
+   - rewrite H; auto.
+Qed.
+
+Require Import Coq.Arith.Plus.
+
+Lemma or_or_D:
+ forall {A} (p q r: D A),
+ orD (orD p q) r
+ =
+ orD p (orD q r).
+Proof.
+ intros; unfold orD, union.
+ apply functional_extensionality; intro s0.
+ destruct (p s0).
+ destruct (q s).
+ destruct (r s1).
+ assert ((fun z : A * S => b z + b0 z + b1 z) = (fun z : A * S => b z + (b0 z + b1 z))).
+ - apply functional_extensionality; intro z. rewrite plus_assoc. reflexivity.
+ - rewrite H; reflexivity.
+Qed.
 
 Lemma get_get_G_D:
-  forall {A} (k: S -> S -> D A),
-    getD (fun s => getD (fun s' => k s s'))
-    =
-    getD (fun s => k s s).
+ forall {A} (k: S -> S -> D A),
+   getD (fun s => getD (fun s' => k s s'))
+   =
+   getD (fun s => k s s).
+Proof.
+auto.
+Qed.
+
+Lemma put_get_G_D:
+ forall {A} (s: S) (k: S -> D A),
+ putD s (getD k)
+ =
+ putD s (k s).
 Proof.
  auto.
 Qed.
 
-Lemma put_get_G_D:
-  forall {A} (s: S) (k: S -> D A),
-  putD s (getD k)
-  =
-  putD s (k s).
-Proof.
-  auto.
-Qed.
-
 Lemma get_put_G_D:
-  forall {A} (p: D A),
-    getD (fun s => putD s p)
-   =
-   p.
-Proof.
-  auto.
-Qed.
-
-Lemma put_put_G_D:
-  forall {A} (s s': S) (p: D A),
-  putD s (putD s' p)
-  =
-  putD s' p.
-Proof.
-  auto.
-Qed.
-
-Lemma put_or_G_D:
-  forall {A} (p q: D A) (s: S),
-   orD (putD s p) q
-   = 
-   putD s (orD p q).
-Proof.
-  auto.
-Qed.
-
-Lemma or_or_D:
-  forall {A} (p q r: D A),
-  orD (orD p q) r
-  =
-  orD p (orD q r).
-Proof.
-  intros; unfold orD.
-  apply functional_extensionality; intro s0.
-  destruct (p s0); destruct (q s); destruct (r s1).
-  rewrite app_assoc.
-  auto.
-Qed.
-
-Lemma or1_fail_D:
-  forall {A} (q: D A),
-  orD failD q
-  =
-  q.
-Proof.
-  intros; unfold orD, failD; simpl.
-  change q with (fun s => q s); simpl.
-  apply functional_extensionality; intro s0; destruct (q s0); auto.
-Qed.
-
-Lemma or2_fail_D:
-  forall {A} (p: D A),
-  orD p failD
+ forall {A} (p: D A),
+   getD (fun s => putD s p)
   =
   p.
 Proof.
-  intros; unfold orD, failD. 
-  change p with (fun s => p s); simpl.
-  apply functional_extensionality; intro s0; destruct (p s0);  
-  rewrite app_nil_r; auto.
+ auto.
+Qed.
+
+Lemma put_put_G_D:
+ forall {A} (s s': S) (p: D A),
+ putD s (putD s' p)
+ =
+ putD s' p.
+Proof.
+ auto.
+Qed.
+
+Lemma put_or_G_D:
+ forall {A} (p q: D A) (s: S),
+  orD (putD s p) q
+  =
+  putD s (orD p q).
+Proof.
+ auto.
 Qed.
 
 Lemma put_ret_or_G_D:
-  forall {A}  (v: S) (w: A) (q: D A),
-  putD v (orD (retD w) q)
-  =
-  andD (putD v (retD w)) (putD v q).
+ forall {A}  (v: S) (w: A) (q: D A),
+ putD v (orD (retD w) q)
+ =
+ orD (putD v (retD w)) (putD v q).
 Proof.
-  auto.
+ auto.
 Qed.
+
+Lemma or_ret_ret_G_D:
+ forall {A} (x y: A),
+   (orD (retD x) (retD y)) = (orD (retD y) (retD x)).
+Proof.
+ intros; unfold orD, retD, singleton, union.
+ apply functional_extensionality; intro s.
+ assert ((fun z : A * S =>
+match eqDec (A * S) (x, s) z with
+| inl _ => 1
+| inr _ => 0
+end + match eqDec (A * S) (y, s) z with
+      | inl _ => 1
+      | inr _ => 0
+      end) = (fun z : A * S =>
+match eqDec (A * S) (y, s) z with
+| inl _ => 1
+| inr _ => 0
+end + match eqDec (A * S) (x, s) z with
+      | inl _ => 1
+      | inr _ => 0
+      end)).
+ - apply functional_extensionality; intro z.
+   destruct (eqDec (A * S) (x, s) z); destruct (eqDec (A * S) (y, s) z); auto.
+ - rewrite H; reflexivity.
+Qed. 
+
+Lemma put_ret_or_G_D':
+  forall {A} (v: S) (w: A) (q: D A),
+    putD v (orD (retD w) q)
+    =
+    orD (putD v (retD w)) (putD v q).
+Proof.
+  intros; unfold putD, orD, retD.
+  reflexivity.
+Qed.
+
+Lemma or_comm_ret:
+  forall {A} (x y: A),
+    orD (retD x) (retD y) = orD (retD y) (retD x).
+Proof.
+  intros; unfold orD, retD, union.
+  apply functional_extensionality; intro s.
+  apply injective_projections; auto.
+  simpl; apply functional_extensionality; intro z.
+  intuition.
+Qed.
+
+Lemma put_or_comm:
+  forall {A} (p q : D A) (t u : S -> S),
+    getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
+    =
+    getD (fun s => orD (orD (putD (u s) q) (putD (t s) p)) (putD s failD)).
+Proof.
+  intros.
+  unfold getD.
+  apply functional_extensionality; intro s.
+  f_equal.
+  unfold orD, putD, failD.
+  apply functional_extensionality; intro x.
+  unfold union.
+
+  assert (H: (let (ansx, _) := p (t s) in
+              let (ansy, s'') := q (u s)
+              in (fun z : A * S => ansx z + ansy z, s''))
+             =
+             (let (ansy, s'') := q (u s)
+              in (fun z : A * S => fst (p (t s)) z + ansy z, s''))).
+  - admit.
+  - rewrite H.
+
+  intuition.
+  rewrite add_comm.
+  simpl.
+Admitted.
 
 End Implementation.
 
