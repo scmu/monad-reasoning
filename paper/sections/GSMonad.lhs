@@ -9,24 +9,40 @@ module GSMonad where
 
 We present an implementation of |Dom| that satisfies the
 axioms demanded by Section~\ref{sec:ctxt-trans}.
+The implementation is based on a multiset or |Bag| data structure.
 We let |Dom| be the union of |M s a| for all |a| and
-for a given |s|.
+for a given |s|. \todo{Equality for |s|?}
 
 {
 \setlength{\columnsep}{-4cm}
 \begin{multicols}{2}
 \begin{samepage}
 \begin{code}
-type M s a = s -> ([(a,s)],s)
+type Bag a = a -> Nat
 
-fail :: M s a
-fail = \s -> ([],s)
+singleton :: Eq a => a -> Bag a
+singleton x y  | x ==  y  = 1
+               | x /=  y  = 0
+
+emptyBag :: Bag a
+emptyBag _ = 0
+
+union :: Bag a -> Bag a -> Bag a
+union xs ys = \z -> xs z + ys z
 \end{code}
 \end{samepage}
 \begin{samepage}
 \begin{code}
-ret :: a -> M s a
-ret x = \s -> ([(x,s)],s)
+type M s a = s -> (Bag (a,s),s)
+
+failD :: M s a
+failD = \s -> (emptyBag,s)
+\end{code}
+\end{samepage}
+\begin{samepage}
+\begin{code}
+retD :: a -> M s a
+retD x = \s -> (singleton (x,s),s)
 \end{code}
 \end{samepage}
 \begin{samepage}
@@ -43,40 +59,10 @@ putD s k = \ _ -> k s
 \end{samepage}
 \begin{samepage}
 \begin{code}
-get :: M s s
-get = getD ret
-\end{code}
-\end{samepage}
-\begin{samepage}
-\begin{code}
-put :: s -> M s ()
-put s = putD s (ret ())
-\end{code}
-\end{samepage}
-\begin{samepage}
-\begin{code}
 (<||>) :: M s a -> M s a -> M s a
-(p <||> q) s0 =  let  (xs,s1)  = p s0
-                      (ys,s2)  = p s1
-                 in (xs ++ ys, s2)
-\end{code}
-\end{samepage}
-\begin{samepage}
-\begin{code}
-(<&>) :: M s a -> M s a -> M s a
-(p <&> q) s0 =  let  (xs,s1)  = p s0
-                     (ys,s2)  = p s0
-                in (xs ++ ys, s2)
-\end{code}
-\end{samepage}
-\begin{samepage}
-\begin{code}
-run :: ntP -> M s a
-run mzero          = fail
-run (return x)     = ret x
-run (p `mplus` q)  = run p <||> run q
-run (Get k)        = getD (run . k)
-run (Put s p)      = putD s (run p)
+(xs <||> ys) s =  let  (ansx, s')   = xs s
+                       (ansy, s'')  = ys s'
+                  in (union ansx ansy, s'')
 \end{code}
 \end{samepage}
 \end{multicols}

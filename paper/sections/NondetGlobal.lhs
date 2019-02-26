@@ -42,7 +42,7 @@ Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is glo
 Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
 These significantly limit the properties we may have.
 
-\subsection{Laws for Global State}
+\subsection{The Global State Law}
 \label{sec:laws-global-state}
 
 We have already discussed general laws for nondeterministic monads
@@ -50,42 +50,51 @@ We have already discussed general laws for nondeterministic monads
 as well as laws which govern the interaction between state and nondeterminism in
 a local state setting (laws~\eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}).
-For global state semantics, alternative laws are required to govern the
+For global state semantics, an alternative law is required to govern the
 interactions between nondeterminism and state.
-We call these the \emph{global state laws}, to be presented in Section~\ref{sec:model-global-state-sem}.
-To the best of our knowledge, we are the first to propose these laws.
-The most important among them is the {\bf put-or} law:
+We call this the \emph{global state law}, to be presented in Section~\ref{sec:model-global-state-sem}.
+To the best of our knowledge, we are the first to propose it.
 \begin{alignat}{2}
 &\mbox{\bf put-or}:\quad&
-  |(put x >> m) `mplus` n| &=~ |put x >> (m `mplus` n)|~ \mbox{~~,}
+  |(put s >> m) `mplus` n| &=~ |put s >> (m `mplus` n)|~ \mbox{~~,}
     \label{eq:put-or}
 \end{alignat}
-Law~\eqref{eq:put-or} allows the lifting of a |put| operation from the left
+This law allows the lifting of a |put| operation from the left
 branch of a nondeterministic choice, an operation which does not preserve
 meaning under local-state semantics:
 suppose for example that |m = mzero|, then by
 \eqref{eq:mzero-bind-zero} and~\eqref{eq:mzero-mplus}, the left-hand side of
 the equation is equal to |n|, whereas by
 ~\eqref{eq:mzero-mplus},
-the right-hand side of the equation is equal to |put x >> n|.
+the right-hand side of the equation is equal to |put s >> n|.
 
-We will also require another property which we will only introduce informally
-here (and formulate more clearly later).
-In global state semantics, the right-distributivity rule does not hold in
-general. However, there are some cases where an operation does distribute over
-non-deterministic choice while preserving semantics; more precisely, this is the
-case when
-\begin{enumerate}
-\item the left branch of the choice operator does not modify the state,
-\item the operation that is distributed over the choice operator is idempotent
-  with respect to the state, and
-\item this operation is at the top-level of the program (i.e. it is not a
-  subterm of a larger term).
-\end{enumerate}
-This last property is a ``global'' property.
-In order to formulate it correctly, we first need to develop a notation that
-allows us to distinguish between local and global properties.
-We will do this in Section~\ref{sec:ctxt-trans}.
+By itself, this law leaves us free to choose from a large space of semantic domain
+implementations with different properties.
+For example, in any given implementation, the programs |return x `mplus` return y| and
+|return y `mplus` return x| may be considered semantically identical, or they may be
+considered semantically distinct.
+The same goes for the programs |return x `mplus` return x| and |return x|,
+or the programs |(put s >> return x) `mplus` m| and
+|(put s >> return x) `mplus` put s >> m|.
+Additional axioms will be introduced as needed to cover these properties.
+
+%We will also require another property which we will only introduce informally
+%here (and formulate more clearly later).
+%In global state semantics, the right-distributivity rule does not hold in
+%general. However, there are some cases where an operation does distribute over
+%non-deterministic choice while preserving semantics; more precisely, this is the
+%case when
+%\begin{enumerate}
+%\item the left branch of the choice operator does not modify the state,
+%\item the operation that is distributed over the choice operator is idempotent
+%  with respect to the state, and
+%\item this operation is at the top-level of the program (i.e. it is not a
+%  subterm of a larger term).
+%\end{enumerate}
+%This last property is a ``global'' property.
+%In order to formulate it correctly, we first need to develop a notation that
+%allows us to distinguish between local and global properties.
+%We will do this in Section~\ref{sec:ctxt-trans}.
 
 \subsection{Chaining Using Non-deterministic Choice}
 \label{sec:chaining}
@@ -315,8 +324,8 @@ the |(>>=)| operator is defined as follows:
   Return x       >>= f = f x
   mzero          >>= f = mzero
   (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
-  Get k          >>= f = Get (\x -> k x >>= f)
-  Put x e        >>= f = Put x (e >>= k) {-"~~."-}
+  Get k          >>= f = Get (\s -> k s >>= f)
+  Put s m        >>= f = Put s (m >>= k) {-"~~."-}
 \end{spec}
 \end{samepage}%
 One can see that |(>>=)| is defined as a purely syntactical manipulation, and
@@ -335,7 +344,7 @@ run (Return x)       = retD x
 run mzero            = failD
 run (m1 `mplus` m2)  = run m1 <||> run m2
 run (Get k)          = getD (\s -> run (k s))
-run (Put x m)        = putD x (run m) {-"~~."-}
+run (Put s m)        = putD s (run m) {-"~~."-}
 \end{spec}
 \end{samepage}%
 Note that no |<>>=>| operator is required to define |run|;
@@ -358,10 +367,10 @@ given the laws we impose on it), the state laws
 must be reformulated to fit the continuation-passing style of the semantic domain
 operators.
 \begin{align}
-  |putD s1 (putD s2 p)| &= |putD s2 p| \mbox{~~,} \label{eq:put-put-g-d} \\
+  |putD s (putD t p)| &= |putD t p| \mbox{~~,} \label{eq:put-put-g-d} \\
   |putD s (getD k)| &= |putD s (k s)| \mbox{~~,} \label{eq:put-get-g-d} \\
-  |getD (\s -> putD s p)| &= |p| \mbox{~~,} \label{eq:get-put-g-d} \\
-  |getD (\s1 -> getD (\s2 -> k s1 s2))| &= |getD (\s -> k s s)| \mbox{~~.} \label{eq:get-get-g-d}
+  |getD (\s -> putD s m)| &= |m| \mbox{~~,} \label{eq:get-put-g-d} \\
+  |getD (\s -> getD (\t -> k s t))| &= |getD (\s -> k s s)| \mbox{~~.} \label{eq:get-get-g-d}
 \end{align}
 As for the nondeterminism laws
 (\eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus}, \eqref{eq:bind-mplus-dist},
@@ -370,25 +379,63 @@ we can simply omit the ones that mention at the semantic level |(>>=)|
 as these are proven at the syntactic level: their proof follows immediately
 from |Prog|'s definition of |(>>=)|.
 \begin{align}
-  |(m <||||> n) <||||> k| &= |m <||||> (n <||||> k)| \mbox{~~,} \\
+  |(m <||||> n) <||||> p| &= |m <||||> (n <||||> p)| \mbox{~~,} \\
   |failD <||||> m| = |m <||||> failD| &= |m| \mbox{~~.}
 \end{align}
 
-We also formulate the global-state laws.
-Law~\eqref{eq:put-or} can be straightforwardly reformulated as:
+We also reformulate the global-state law~\eqref{eq:put-or}:
 \begin{align}
-|putD x p <||||> q|        &= |putD x (p <||||> q)| \mbox{~~.}\label{eq:put-or-g-d}
+|putD s p <||||> q|        &= |putD s (p <||||> q)| \mbox{~~.}\label{eq:put-or-g-d}
 \end{align}
-In Section~\ref{sec:laws-global-state} we also mentioned that a law should exist
-which mandates a limited form of right-distribitivity which only holds on a
-global level.
-The continuation-passing style of our semantic domain operators allows us to
-express a weaker version of this global property (which suffices for our goals)
-as follows:
+%In Section~\ref{sec:laws-global-state} we also mentioned that a law should exist
+%which mandates a limited form of right-distribitivity which only holds on a
+%global level.
+%The continuation-passing style of our semantic domain operators allows us to
+%express a weaker version of this global property (which suffices for our goals)
+%as follows:
+It turns out that, apart from the {\bf put-or} law,
+our proofs require certain additional properties regarding commutativity and
+distributivity which we introduce here:
 \begin{align}
-|putD x (retD w <||||> q)| &= |putD x (retD w) <||||> putD x q| \mbox{~~.}\label{eq:put-ret-or-g-d}
+|retD x <||||> retD y|     &= |retD y <||||> retD x| \mbox{~~,} \label{eq:or-comm-ret-g-d} \\
+|getD (\s -> putD (t s) p <||||> putD (u s) q <||||> putD s failD)|
+                           &= |getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,} \label{eq:put-or-comm-g-d} \\
+|putD s (retD x <||||> p)| &= |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
 \end{align}
-The law only holds if the implementation of |Dom| does not permit the definition
+
+These laws are not considered general ``global state'' laws, because it is
+possible to define reasonable implementations of global state semantics that
+violate these laws, and because they are not exclusive to global state
+semantics.
+
+The |<||||>| operator is not, in general, commutative in a global state setting.
+However, we will require that the order in which results are computed does not
+matter.
+This is enforced by law~\eqref{eq:or-comm-ret-g-d}.
+Implementations that present the results as an ordered list violate this law.
+
+Without law~\eqref{eq:put-or-comm-g-d}, it is still possible to define
+implementations for the semantic domain where the order of |putD| operations
+matters even if the exact same results are computed, with the exact same state
+at the time of their computation.
+One might, for example, imagine an implementation where the order of proper
+state changes is recorded.
+
+Finally, in global-state semantics, |putD| operations cannot, in general,
+distribute over |<||||>|.
+However, an implementation may permit distributivity if certain conditions are
+met.
+Law~\eqref{eq:put-ret-or-g-d} states that a |putD| operation distributes over a
+nondeterministic choice if the left branch of that choice simply returns a
+value.
+An example of an implementation that violates this law would be one that
+applies a given function |f :: s -> s| to the state after each return.
+Such an implementation would conform to an alternative law
+|putD x (retD w <||||> q) = putD x (retD w) <||||> putD (f x) q|.
+\todo{write about applications of such an implementation? or is that too much
+  detail?}
+Law~\eqref{eq:put-ret-or-g-d} only holds if the implementation of |Dom| does not
+permit the definition
 of a bind operator |(<>>=>) :: Dom a -> (a -> Dom b) -> Dom b|.
 Consider for instance the following program:
 \begin{code}
@@ -492,9 +539,10 @@ which clearly does not always have the same result.
 
 It is worth remarking that this requirement disqualifies the most
 straightforward candidate for the semantic domain, |ListT (State s)|, as a
-bind operator can be defined for it.
+bind operator can be defined for it. \todo{commutativity forbids lists altogether}
 In Appendix~\ref{sec:GSMonad} we present an implementation of |Dom| and its
-operators that satisfy all the laws in this section, and which does not permit
+operators that satisfy all the laws in this section (we provide
+machine-verifiable proofs for this), and which does not permit
 the implementation of a sensible bind operator.
 
 \subsubsection{Contextual Equivalence}
@@ -559,7 +607,7 @@ We can then straightforwardly formulate variants of the state laws, the
 nondeterminism laws and the |put|-|or| law for this global state monad as
 lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
-  |Put s1 (Put s2 p)| &\CEq |Put s2 p| \mbox{~~.}
+  |Put s (Put t p)| &\CEq |Put t p| \mbox{~~.}
 \end{align*}
 
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
@@ -568,7 +616,7 @@ easily follow from the analogous semantic domain laws. The formulation of a
 more care: because there exists a bind operator for |Prog|, we must stipulate
 that it does not hold in arbitrary contexts:
 \begin{align}
-|run (Put x (Return w `mplus` q))| = |run (Put x (Return w) `mplus` Put x q)| \label{eq:put-ret-or-g} \mbox{~~.}
+|run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)| \label{eq:put-ret-or-g} \mbox{~~.}
 \end{align}
 
 \subsubsection{Simulating Local-State Semantics}
@@ -607,7 +655,7 @@ semantics'':
 For example, we formulate the statement that the |put|-|put|
 law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
 \begin{align*}
-  |Put s1 (Put s2 p)| &\CEqLS |Put s2 p| \mbox{~~.}
+  |Put s (Put t p)| &\CEqLS |Put t p| \mbox{~~.}
 \end{align*}
 Proofs for the nondeterminism laws follow trivially from the nondeterminism laws
 for global state.
@@ -624,20 +672,49 @@ This property only holds at the top-level.
 Proof of this lemma depends on the |put|-|ret|-|or| law (in fact, this lemma is the
 reason why this law was introduced).
 
-Finally, we show that the interaction of state and nondeterminism in this
+Finally, we arrive at the core of our proof:
+to show that the interaction of state and nondeterminism in this
 implementation produces backtracking semantics.
-To this end we prove laws analogous to the local state laws \eqref{eq:mplus-bind-dist} and
-\eqref{eq:mzero-bind-zero}
+To this end we prove laws analogous to the local state laws
+\eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}
 \begin{align*}
-  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,}\\
-  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~.}
+  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \\ 
+  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,} \label{eq:mplus-bind-dist-l} \\
 \end{align*}
-%\begin{align*}
-%  % put_fail_L_2
-%  |Put x mzero|               &\CEqLS |mzero| \mbox{~~,}\\
-%  % put_or_G? geen lokale variant van bewezen?
-%  |Put x m1 `mplus` Put x m2| &\CEqLS |Put x (m1 `mplus` m2)| \mbox{~~.}
-%\end{align*}
+The proof for~\eqref{eq:mplus-bind-zero-l} follows by straightforward induction.
+
+The inductive proof (with induction on |m|) of law~\eqref{eq:mplus-bind-dist-l}
+requires some additional lemmas.
+
+For the case |m = m1 `mplus` m2|, we require the property that, at the top-level
+of a global-state program, |mplus| is commutative if both its operands are
+state-restoring.
+Formally:
+\begin{align}
+  |run (trans p `mplus` trans q)| = |run (trans q `mplus` trans p)|\mbox{~~.}
+\end{align}
+The proof of this property motivated the introduction of
+law~\eqref{eq:put-or-comm-g-d}.
+
+The proof for both the |m = Get k| and |m = Put s m'| cases requires that |Get|
+distributes
+over |mplus| at the top-level of a global-state program if the left branch is
+state restoring.
+\begin{align}
+  % get_or_trans
+|run (Get (\s -> trans (m1 s) `mplus` (m2 s)))| = |run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.}
+\end{align}
+
+And finally, we require that the |trans| function is, semantically speaking,
+idempotent, to prove the case |m = Put s m'|.
+\begin{align}
+  % get_or_trans
+|run (trans (trans p)) = run (trans p)| \label{eq:run-trans-trans} \mbox{~~.}
+\end{align}
+(We see no reason why this property wouldn't hold under arbitrary contexts, but
+we have not proven it.)
+\todo{}
+
 \noindent
 
 \subsection{Backtracking with a Global State Monad}
