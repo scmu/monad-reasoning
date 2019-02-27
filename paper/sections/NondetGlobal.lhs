@@ -669,8 +669,7 @@ This property only holds at the top-level.
   % put_or_trans
 |run (Put x (trans m1 `mplus` m2))| = |run (Put x (trans m1) `mplus` Put x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.}
 \end{align}
-Proof of this lemma depends on the |put|-|ret|-|or| law (in fact, this lemma is the
-reason why this law was introduced).
+Proof of this lemma depends on the |put|-|ret|-|or| law.
 
 Finally, we arrive at the core of our proof:
 to show that the interaction of state and nondeterminism in this
@@ -681,6 +680,9 @@ To this end we prove laws analogous to the local state laws
   |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \\ 
   |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,} \label{eq:mplus-bind-dist-l} \\
 \end{align*}
+We provide machine-verifiable proofs for these theorems. \todo{link? not for
+  anonymous version I presume?}
+
 The proof for~\eqref{eq:mplus-bind-zero-l} follows by straightforward induction.
 
 The inductive proof (with induction on |m|) of law~\eqref{eq:mplus-bind-dist-l}
@@ -711,9 +713,6 @@ idempotent, to prove the case |m = Put s m'|.
   % get_or_trans
 |run (trans (trans p)) = run (trans p)| \label{eq:run-trans-trans} \mbox{~~.}
 \end{align}
-(We see no reason why this property wouldn't hold under arbitrary contexts, but
-we have not proven it.)
-\todo{}
 
 \noindent
 
@@ -722,59 +721,123 @@ There is still one technical detail to to deal with before we deliver a backtrac
 As mentioned in Section~\ref{sec:chaining}, rather than using |put|, such algorithms typically use a pair of commands |modify prev| and |modify next|, with |prev . next = id|, to update and restore the state.
 This is especially true when the state is implemented using an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled by:
-\begin{spec}
-modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
-modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
-\end{spec}
-%if False
-\begin{code}
-modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
-modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
-\end{code}
-%endif
-One can see that |modifyR next prev >> m| expands to
-|(modify next >> m) `mplus` side (modify prev)|, thus the two |modify|s are performed before and after |m|.
 
-Assume that |s0| is the current state.
-Is it safe to replace |putR (next s0) >> m| by |modifyR next prev >> m|?
-We can do so if we are sure that |m| always restores the state to |s0| before |modify prev| is performed.
-We say that a monadic program |m| is {\em state-restoring} if, for all |comp|, the initial state in which |m >>= comp| is run is always restored when the computation finishes. Formally, it can be written as:
-\begin{definition} |m :: {N, S s} `sse` eps => Me eps a| is called {\em state-restoring} if
-  |m = get >>= \s0 -> m `mplus` side (put s0)|.
+%\begin{spec}
+%data Prog' a where
+%  Return  :: a -> Prog' a
+%  mzero   :: Prog' a
+%  mplus   :: Prog' a -> Prog' a -> Prog' a
+%  Get     :: (S -> Prog' a) -> Prog' a
+%  Modify  :: (S -> S) -> (S -> S) -> Prog' a -> Prog' a
+%\end{spec}
+%
+%\begin{spec}
+%run' :: Prog' a -> D a
+%run' (Return x)         = retD x
+%run' mzero              = failD
+%run' (m1 `mplus` m2)    = run' m1 <||> run' m2
+%run' (Get k)            = getD (\s -> run' (k s))
+%run' (Modify next _ p)  = getD (\s -> putD (next s) p)
+%\end{spec}
+%
+%\begin{spec}
+%  trans' :: Prog' a -> Prog' a
+%  trans' (Return x)      = Return x
+%  trans' (p `mplus` q)   = trans' p `mplus` trans' q
+%  trans' mzero           = mzero
+%  trans' (Get p)         = Get (\s -> trans' (p s))
+%  trans' (Modify next p) = 
+%\end{spec}
+
+\begin{spec}
+  modifyR :: (S -> S) -> (S -> S) -> Prog a -> Prog a
+  modifyR next prev p = modify next p `mplus` modify prev Fail
+    where modify f p = Get (\s -> Put (f s) p)
+\end{spec}
+
+Is it always safe to replace |Get (\s -> Put (next s) m)| by |modifyR next prev m|?
+In general, we can do this if |m| is a \emph{state-restoring operation}.
+\begin{definition}
+We say that a program |m| is state-restoring if a program |m'| exists such that:
+|run m = eval m'|.
+
+\todo{does this make sense?}
+We say that a context |C| is state-restoring if a context |C'| exists such that
+for all programs |m|:
+|run (apply C (trans m)) = eval (apply C' m)|.
 \end{definition}
-Certainly, |putR s| is state-restoring. In fact, the following properties allow state-restoring programs to be built compositionally:
-\begin{lemma} We have that
-\begin{enumerate}
-\item |mzero| is state-restoring,
-\item |putR s| is state-restoring,
-\item |guard p >> m| is state-restoring if |m| is,
-\item |get >>= f| is state-restoring if |f x| is state-storing for all |x|, and
-\item |m >>= f| is state restoring if |m| is state-restoring.
-\end{enumerate}
+
+\begin{lemma}
+  Let |next| and |prev| be such that |prev . next = id|.
+  Let |putR s m = Get (\t -> Put s m `mplus` Put t Fail)|.
+  If |m| is a state-restoring program, and |C| a state-restoring context
+  \todo{necessary?}, then
+  \begin{code}
+    run (apply C (Get (\s -> putR (next s) m))) = run (apply C (modifyR next prev m))
+  \end{code}.
 \end{lemma}
-\noindent Proof of these properties are routine exercises.
-With these properties, we also have that, for a program |m| written using our program syntax, |trans m| is always state-restoring.
-The following lemma then allows us to replace certain |putR| by |modifyR|:
-\begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
-If |m| is state-restoring, we have
-%if False
-\begin{code}
-putRSRModifyR ::
-  (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
-putRSRModifyR next prev m =
-\end{code}
-\begin{code}
-  get >>= \s -> putR (next s) >> m {-"~~"-}=== {-"~~"-}
-    modifyR next prev >> m {-"~~."-}
-\end{code}
-%endif
-\begin{equation*}
-  |get >>= \s -> putR (next s) >> m| ~=~
-    |modifyR next prev >> m| \mbox{~~.}
-\end{equation*}
-\end{lemma}
+\todo{Should we indicate that we don't prove this?}
+%\begin{align*}
+%  |eval (apply C (Get (\s -> Put (next s) m)))|
+%  =
+%  |run (apply (transC C) (modifyR next prev (trans m)))| \mbox{~~.}
+%\end{align*}
+
+
+%\begin{spec}
+%modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
+%modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
+%\end{spec}
+%%if False
+%\begin{code}
+%modifyR :: (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m ()
+%modifyR next prev =  modify next `mplus` side (modify prev) {-"~~,"-}
+%\end{code}
+%%endif
+%One can see that |modifyR next prev >> m| expands to
+%|(modify next >> m) `mplus` side (modify prev)|, thus the two |modify|s are performed before and after |m|.
+%
+%Assume that |s0| is the current state.
+%Is it safe to replace |putR (next s0) >> m| by |modifyR next prev >> m|?
+%We can do so if we are sure that |m| always restores the state to |s0| before |modify prev| is performed.
+%We say that a monadic program |m| is {\em state-restoring} if, for all |comp|, the initial state in which |m >>= comp| is run is always restored when the computation finishes. Formally, it can be written as:
+%\begin{definition} |m :: {N, S s} `sse` eps => Me eps a| is called {\em state-restoring} if
+%  |m = get >>= \s0 -> m `mplus` side (put s0)|.
+%\end{definition}
+%Certainly, |putR s| is state-restoring. In fact, the following properties allow state-restoring programs to be built compositionally:
+%\begin{lemma} We have that
+%\begin{enumerate}
+%\item |mzero| is state-restoring,
+%\item |putR s| is state-restoring,
+%\item |guard p >> m| is state-restoring if |m| is,
+%\item |get >>= f| is state-restoring if |f x| is state-storing for all |x|, and
+%\item |m >>= f| is state restoring if |m| is state-restoring.
+%\end{enumerate}
+%\end{lemma}
+%\noindent Proof of these properties are routine exercises.
+%With these properties, we also have that, for a program |m| written using our program syntax, |trans m| is always state-restoring.
+%The following lemma then allows us to replace certain |putR| by |modifyR|:
+%\begin{lemma} Let |next| and |prev| be such that |prev . next = id|.
+%If |m| is state-restoring, we have
+%%if False
+%\begin{code}
+%putRSRModifyR ::
+%  (MonadPlus m, MonadState s m) => (s -> s) -> (s -> s) -> m b -> m b
+%putRSRModifyR next prev m =
+%\end{code}
+%\begin{code}
+%  get >>= \s -> putR (next s) >> m {-"~~"-}=== {-"~~"-}
+%    modifyR next prev >> m {-"~~."-}
+%\end{code}
+%%endif
+%\begin{equation*}
+%  |get >>= \s -> putR (next s) >> m| ~=~
+%    |modifyR next prev >> m| \mbox{~~.}
+%\end{equation*}
+%\end{lemma}
 
 \paragraph{Backtracking using a global-state monad}
+\todo{Maybe indicate that we're switching notation again?}
 Recall that, in Section~\ref{sec:solve-n-queens},
 we showed that a problem formulated by |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism |solve p f ok oplus st z|,
 run in a non-deterministic local-state monad.

@@ -74,6 +74,29 @@ Parameter put_ret_or_G_D':
     =
     orD (putD v (retD w)) (putD v q).
 
+(* TODO: add to paper *)
+Parameter or_comm_ret:
+  forall {A} (x y: A),
+    orD (retD x) (retD y) = orD (retD y) (retD x).
+
+(* TODO describe in paper *)
+Parameter put_or_comm:
+  forall {A} (p q : D A) (t u : S -> S),
+    getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
+    =
+    getD (fun s => orD (orD (putD (u s) q) (putD (t s) p)) (putD s failD)).
+
+End SemanticInterface.
+
+Module Type Syntax (Sem: SemanticInterface).
+
+Import Sem.
+
+Import Coq.Lists.List.
+Import Coq.Program.Equality.
+Import Coq.Logic.FunctionalExtensionality.
+Import Coq.Program.Basics.
+
 Lemma get_put_G_D':
   forall {A} (p: S -> D A),
     getD (fun s => putD s (p s))
@@ -110,18 +133,6 @@ Proof.
     reflexivity.
 Qed.
 
-(* TODO: add to paper *)
-Parameter or_comm_ret:
-  forall {A} (x y: A),
-    orD (retD x) (retD y) = orD (retD y) (retD x).
-
-(* TODO describe in paper, prove implementation *)
-Parameter put_or_comm:
-  forall {A} (p q : D A) (t u : S -> S),
-    getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
-    =
-    getD (fun s => orD (orD (putD (u s) q) (putD (t s) p)) (putD s failD)).
-
 Lemma get_ret_or_G_D':
   forall {A} (f : S -> A) (p : S -> D A),
     getD (fun s => orD (retD (f s)) (p s))
@@ -153,16 +164,6 @@ Proof.
   apply get_put_G_D.
 Qed.
 
-End SemanticInterface.
-
-Module Type Syntax (Sem: SemanticInterface).
-
-Import Sem.
-
-Import Coq.Lists.List.
-Import Coq.Program.Equality.
-Import Coq.Logic.FunctionalExtensionality.
-Import Coq.Program.Basics.
 (* Programs -- the free monad over the signature of fail + or + get + put.
    These programs are closed, i.e. they contain no free variables.
  *)
@@ -773,7 +774,7 @@ Lemma put_put_G:
   forall {E1 E2 A B} (c: Context E1 A E2 B) (v1 v2: Env E1 -> S) (k: OProg E1 A),
     orun (appl c (fun env => Put (v1 env) (Put (v2 env) (k env))))
     =
-   orun (appl c (fun env => Put (v2 env) (k env))).
+    orun (appl c (fun env => Put (v2 env) (k env))).
 Proof.
   intros.
    apply (@meta_G A B E1 E2 ((S * S) * (Prog A))
@@ -816,18 +817,22 @@ Proof.
   intros; apply get_or_G_D.
 Qed.  
 
-(* TODO *)
 Lemma get_or_G:
   forall {E1 E2 A B}
          (c: Context E1 A E2 B) (p: S -> OProg E1 A) (q: OProg E1 A),
-    orun (appl c (fun env => Get (fun s => Or (p s env) (q env))))
+    orun (appl c (fun env => Get (fun s =>
+                                    Or ((fun s' => p s' env) s) (q env))))
     =
-    orun (appl c (fun env => Or (Get (fun s => p s env)) (q env))).
-Admitted.
-  
-
-
-(* TODO: G variant? not necessary for any proofs afaik, but we claim we prove it in the paper *)
+    orun (appl c (fun env => Or (Get (fun s =>
+                                        ((fun s' => p s' env) s))) (q env))).
+Proof.
+  intros.
+  apply (@meta_G A B E1 E2 ((S -> Prog A) * Prog A)
+                 (fun t => Get (fun s => Or (fst t s) (snd t)))
+                 (fun t => Or (Get (fun s => (fst t s))) (snd t))
+                 (fun t => get_or_G' (fst t) (snd t))
+                 (fun env => ((fun s => p s env), q env))).
+Qed.
 
 Lemma or_fail':
   forall {A} (q: Prog A),
@@ -2264,7 +2269,6 @@ Proof.
   intros.
   apply put_fail_L_2.
 Qed.
-(* right distributivity *)
 
 Lemma put_fail_L_0:
   forall {A} (s: S),
@@ -3740,43 +3744,13 @@ Lemma put_or_comm:
     getD (fun s => orD (orD (putD (u s) q) (putD (t s) p)) (putD s failD)).
 Proof.
   intros.
-  unfold getD.
+  unfold getD, orD, putD, failD.
   apply functional_extensionality; intro s.
-  f_equal.
-  unfold orD, putD, failD.
-  apply functional_extensionality; intro x.
+  destruct (p (t s)); destruct (q (u s)); simpl.
+  apply injective_projections; simpl; auto.
   unfold union.
-
-  assert (H: (let (ansx, _) := p (t s) in
-              let (ansy, s'') := q (u s)
-              in (fun z : A * S => ansx z + ansy z, s''))
-             =
-             (let (ansy, s'') := q (u s)
-              in (fun z : A * S => fst (p (t s)) z + ansy z, s''))).
-  - admit.
-  - rewrite H.
-
+  apply functional_extensionality; intro z.
   intuition.
-  rewrite add_comm.
-  simpl.
-Admitted.
+Qed.
 
 End Implementation.
-
-(*
-TO PROVE?
-[X] left-zero: bind Fail m = Fail     -- don't need it for other proofs
-
-[ ] right-distr: bind m (fun x => Or (f1 x) (f2 x)) = Or (bind m f1) (bind m f2)
-
-[ ] right-zero: bind m Fail = Fail
-
-[ ] prev . next = id ->
-      get >>= fun s => putR (next s) >> m = modifyR next prev >> m
-
-[X] state laws in context with bind
-
-[ ] right-distr, right-zero in context with bind
-
-[ ] probably not: bind cannot be defined for implementation?
-*)
