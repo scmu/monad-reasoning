@@ -10,25 +10,21 @@ module GSMonad where
 We present an implementation of |Dom| that satisfies the
 axioms demanded by Section~\ref{sec:ctxt-trans}.
 The implementation is based on a multiset or |Bag| data structure.
+We have proven its compliance to the axioms laid out in
+Section~\ref{sec:model-global-state-sem} by writing a machine-verified proof.
 We let |Dom| be the union of |M s a| for all |a| and
-for a given |s|. \todo{Equality for |s|?}
+for a given |s|.
 
 {
 \setlength{\columnsep}{-4cm}
 \begin{multicols}{2}
 \begin{samepage}
 \begin{code}
-type Bag a = a -> Nat
+type Bag a
 
-singleton :: Eq a => a -> Bag a
-singleton x y  | x ==  y  = 1
-               | x /=  y  = 0
-
+singleton :: a -> Bag a
 emptyBag :: Bag a
-emptyBag _ = 0
-
 union :: Bag a -> Bag a -> Bag a
-union xs ys = \z -> xs z + ys z
 \end{code}
 \end{samepage}
 \begin{samepage}

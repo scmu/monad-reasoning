@@ -107,7 +107,8 @@ To implement such pattern as a monadic program, one might come up with something
 \begin{spec}
 modify next >> search >>= modReturn prev {-"~~."-}
 \end{spec}
-where |next| advances the state, |prev| undoes the modification of |next|, and |modify| and |modReturn| are defined by:
+where |next| advances the state, |prev| undoes the modification of |next|
+(|prev . next = id|), and |modify| and |modReturn| are defined by:
 \begin{spec}
 modify f       = get >>= (put . f) {-"~~,"-}
 modReturn f v  = modify f >> return v {-"~~."-}
@@ -121,7 +122,7 @@ Let the initial state be |st| and assume that |search| found three choices |m1 `
 \end{spec}
 which, with a global state, means that |m2| starts with state |st|, after which the state is rolled back too early to |prev st|. The computation |m3| starts with |prev st|, after which the state is rolled too far to |prev (prev st)|.
 
-In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails, we get |modify next >> solve >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
+In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails, we get |modify next >> search >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
 
 We need a way to say that ``|modify next| and |modReturn prev| are run exactly once, respectively before and after all non-deterministic branches in |solve|.'' Fortunately, we have discovered a curious technique. Define
 \begin{spec}
@@ -144,7 +145,8 @@ executes |modify next| and |modify prev| once, respectively before and after all
 \label{subsec:state-restoring-ops}
 
 The discussion above suggests that one can implement backtracking, in a global-state setting, by using |mplus| and |side| appropriately.
-We can even go a bit further by defining the following variations of |put|:
+We can even go a bit further by defining the following variations of |put|,
+which restores the original state when it is backtracked over:
 \begin{spec}
 putR :: {S s, N} `sse` eps => s -> Me eps ()
 putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
@@ -397,12 +399,11 @@ It turns out that, apart from the {\bf put-or} law,
 our proofs require certain additional properties regarding commutativity and
 distributivity which we introduce here:
 \begin{align}
-|retD x <||||> retD y|     &= |retD y <||||> retD x| \mbox{~~,} \label{eq:or-comm-ret-g-d} \\
 |getD (\s -> putD (t s) p <||||> putD (u s) q <||||> putD s failD)|
                            &= |getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,} \label{eq:put-or-comm-g-d} \\
 |putD s (retD x <||||> p)| &= |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
 \end{align}
-
+% TODO: prove ret x || ret y = ret y || ret x
 These laws are not considered general ``global state'' laws, because it is
 possible to define reasonable implementations of global state semantics that
 violate these laws, and because they are not exclusive to global state
@@ -411,17 +412,14 @@ semantics.
 The |<||||>| operator is not, in general, commutative in a global state setting.
 However, we will require that the order in which results are computed does not
 matter.
-This is enforced by law~\eqref{eq:or-comm-ret-g-d}.
-Implementations that present the results as an ordered list violate this law.
+Furthermore we require that the implementation is agnostic with repect to the
+order of |putD| operations as long as the exact same results are computed with
+the exact same state at the time of their computation.
+These properties are enforced by law~\eqref{eq:put-or-comm-g-d}.
+Implementations that present the results as an ordered list violate this law,
+as are implementations that record the order of proper state changes.
 
-Without law~\eqref{eq:put-or-comm-g-d}, it is still possible to define
-implementations for the semantic domain where the order of |putD| operations
-matters even if the exact same results are computed, with the exact same state
-at the time of their computation.
-One might, for example, imagine an implementation where the order of proper
-state changes is recorded.
-
-Finally, in global-state semantics, |putD| operations cannot, in general,
+In global-state semantics, |putD| operations cannot, in general,
 distribute over |<||||>|.
 However, an implementation may permit distributivity if certain conditions are
 met.
@@ -432,8 +430,6 @@ An example of an implementation that violates this law would be one that
 applies a given function |f :: s -> s| to the state after each return.
 Such an implementation would conform to an alternative law
 |putD x (retD w <||||> q) = putD x (retD w) <||||> putD (f x) q|.
-\todo{write about applications of such an implementation? or is that too much
-  detail?}
 Law~\eqref{eq:put-ret-or-g-d} only holds if the implementation of |Dom| does not
 permit the definition
 of a bind operator |(<>>=>) :: Dom a -> (a -> Dom b) -> Dom b|.
@@ -537,12 +533,14 @@ which clearly does not always have the same result.
 %  [put-ret-or]
 %put y (return w || return x)
 
-It is worth remarking that this requirement disqualifies the most
+It is worth remarking that, even if we don't impose law~\eqref{eq:put-or-comm-g-d},
+this requirement disqualifies the most
 straightforward candidate for the semantic domain, |ListT (State s)|, as a
-bind operator can be defined for it. \todo{commutativity forbids lists altogether}
+bind operator can be defined for it.
+
 In Appendix~\ref{sec:GSMonad} we present an implementation of |Dom| and its
-operators that satisfy all the laws in this section (we provide
-machine-verifiable proofs for this), and which does not permit
+operators that satisfies all the laws in this section, for which we provide
+\emph{machine-verified proofs}, and which does not permit
 the implementation of a sensible bind operator.
 
 \subsubsection{Contextual Equivalence}
@@ -609,15 +607,17 @@ lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
   |Put s (Put t p)| &\CEq |Put t p| \mbox{~~.}
 \end{align*}
-
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
 easily follow from the analogous semantic domain laws. The formulation of a
 |put|-|ret|-|or| law-like property \eqref{eq:put-ret-or-g-d} requires somewhat
 more care: because there exists a bind operator for |Prog|, we must stipulate
 that it does not hold in arbitrary contexts:
 \begin{align}
-|run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)| \label{eq:put-ret-or-g} \mbox{~~.}
+|run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)| \label{eq:put-ret-or-g} \mbox{~~.} \checkmark
 \end{align}
+The proof of this statement has been machine-verified in Coq.
+We annotate theorems which have been verified in Coq with a $\checkmark$.
+
 
 \subsubsection{Simulating Local-State Semantics}
 
@@ -667,21 +667,20 @@ has been transformed (in which case the left branch leaves the state unmodified)
 This property only holds at the top-level.
 \begin{align}
   % put_or_trans
-|run (Put x (trans m1 `mplus` m2))| = |run (Put x (trans m1) `mplus` Put x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.}
+|run (Put x (trans m1 `mplus` m2))| = |run (Put x (trans m1) `mplus` Put x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
-Proof of this lemma depends on the |put|-|ret|-|or| law.
+Proof of this lemma depends on law~\eqref{eq:put-ret-or-g-d}.
 
 Finally, we arrive at the core of our proof:
 to show that the interaction of state and nondeterminism in this
 implementation produces backtracking semantics.
 To this end we prove laws analogous to the local state laws
 \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}
-\begin{align*}
-  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \\ 
-  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,} \label{eq:mplus-bind-dist-l} \\
-\end{align*}
-We provide machine-verifiable proofs for these theorems. \todo{link? not for
-  anonymous version I presume?}
+\begin{align}
+  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\ 
+  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.} \checkmark \label{eq:mplus-bind-dist-l}
+\end{align}
+We provide machine-verified proofs for these theorems.
 
 The proof for~\eqref{eq:mplus-bind-zero-l} follows by straightforward induction.
 
@@ -693,7 +692,7 @@ of a global-state program, |mplus| is commutative if both its operands are
 state-restoring.
 Formally:
 \begin{align}
-  |run (trans p `mplus` trans q)| = |run (trans q `mplus` trans p)|\mbox{~~.}
+  |run (trans p `mplus` trans q)| = |run (trans q `mplus` trans p)|\mbox{~~.} \checkmark
 \end{align}
 The proof of this property motivated the introduction of
 law~\eqref{eq:put-or-comm-g-d}.
@@ -704,14 +703,14 @@ over |mplus| at the top-level of a global-state program if the left branch is
 state restoring.
 \begin{align}
   % get_or_trans
-|run (Get (\s -> trans (m1 s) `mplus` (m2 s)))| = |run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.}
+|run (Get (\s -> trans (m1 s) `mplus` (m2 s)))| = |run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 
 And finally, we require that the |trans| function is, semantically speaking,
 idempotent, to prove the case |m = Put s m'|.
 \begin{align}
   % get_or_trans
-|run (trans (trans p)) = run (trans p)| \label{eq:run-trans-trans} \mbox{~~.}
+|run (trans (trans p)) = run (trans p)| \label{eq:run-trans-trans} \mbox{~~.} \checkmark
 \end{align}
 
 \noindent
@@ -721,62 +720,61 @@ There is still one technical detail to to deal with before we deliver a backtrac
 As mentioned in Section~\ref{sec:chaining}, rather than using |put|, such algorithms typically use a pair of commands |modify prev| and |modify next|, with |prev . next = id|, to update and restore the state.
 This is especially true when the state is implemented using an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled by:
-
-%\begin{spec}
-%data Prog' a where
-%  Return  :: a -> Prog' a
-%  mzero   :: Prog' a
-%  mplus   :: Prog' a -> Prog' a -> Prog' a
-%  Get     :: (S -> Prog' a) -> Prog' a
-%  Modify  :: (S -> S) -> (S -> S) -> Prog' a -> Prog' a
-%\end{spec}
-%
-%\begin{spec}
-%run' :: Prog' a -> D a
-%run' (Return x)         = retD x
-%run' mzero              = failD
-%run' (m1 `mplus` m2)    = run' m1 <||> run' m2
-%run' (Get k)            = getD (\s -> run' (k s))
-%run' (Modify next _ p)  = getD (\s -> putD (next s) p)
-%\end{spec}
-%
-%\begin{spec}
-%  trans' :: Prog' a -> Prog' a
-%  trans' (Return x)      = Return x
-%  trans' (p `mplus` q)   = trans' p `mplus` trans' q
-%  trans' mzero           = mzero
-%  trans' (Get p)         = Get (\s -> trans' (p s))
-%  trans' (Modify next p) = 
-%\end{spec}
-
 \begin{spec}
-  modifyR :: (S -> S) -> (S -> S) -> Prog a -> Prog a
-  modifyR next prev p = modify next p `mplus` modify prev Fail
-    where modify f p = Get (\s -> Put (f s) p)
+  modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
+  modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
 \end{spec}
 
-Is it always safe to replace |Get (\s -> Put (next s) m)| by |modifyR next prev m|?
-In general, we can do this if |m| is a \emph{state-restoring operation}.
-\begin{definition}
-We say that a program |m| is state-restoring if a program |m'| exists such that:
-|run m = eval m'|.
+Is it always safe to replace |get >>= (\s -> put (next s) >> m)| by
+|modifyR next prev >> m|?
+We can explore this question by extending our |Prog| syntax with an additional
+|ModifyR| construct, thus obtaining a new |Prog_m| syntax:
+\begin{spec}
+data Prog_m a where
+  Return_m   :: a -> Prog_m a
+ ...
+  Or_m       :: Prog_m a -> Prog_m a -> Prog_m a
+ ...
+  Modify_R  :: (S -> S) -> (S -> S) -> Prog_m a -> Prog_m a
+\end{spec}
 
-\todo{does this make sense?}
-We say that a context |C| is state-restoring if a context |C'| exists such that
-for all programs |m|:
-|run (apply C (trans m)) = eval (apply C' m)|.
-\end{definition}
+We assume that in each value of |Prog_m a|,
+for each |Modify_R next prev p| that occurs, |prev . next = id|.
 
+We can then define two translation functions from |Prog_m a| to |Prog a|,
+which both also replace |Put|s with |putR|s along the way, like the regular
+|trans| function.
+The first replaces each |Modify_R| in the program by a direct analogue of the
+definition given above, while the second replaces it by 
+|Get (\s -> Put (next s) (trans2 p))|:
+
+\begin{spec}
+   trans1 :: Prog_m a -> Prog a
+   trans1 (Return_m x)             = Return x
+   trans1 (Or_m p q)               = trans1 p `mplus` trans1 q
+   trans1 mzero _m                = mzero
+   trans1 (Get_m p)                = Get (\s -> trans1 (p s))
+   trans1 (Put_m s p)              =
+     Get (\s' -> Put s (trans1 p) `mplus` Put s' mzero)
+   trans1 (Modify_R next prev p)  =
+     Get (\s -> Put (next s) (trans1 p) `mplus` Get (\t -> Put (prev t) mzero))
+
+
+   trans2 :: Prog_m a -> Prog a
+   ... -- similar implementation to trans1
+   trans2 (Modify_R next prev p)  =
+     Get (\s -> Put (next s) (trans2 p))
+\end{spec}
+
+Proving that it is safe to replace |get >>= (\s -> put (next s) >> m)|
+|modify_R|s then boils down to proving that these two translation functions from
+|Prog_m|s to |Prog|s always yield semantically identical programs:
 \begin{lemma}
-  Let |next| and |prev| be such that |prev . next = id|.
-  Let |putR s m = Get (\t -> Put s m `mplus` Put t Fail)|.
-  If |m| is a state-restoring program, and |C| a state-restoring context
-  \todo{necessary?}, then
-  \begin{code}
-    run (apply C (Get (\s -> putR (next s) m))) = run (apply C (modifyR next prev m))
-  \end{code}.
+  |run (trans1 (apply c p)) = run (trans2 (apply c p))| \mbox{~~.}
 \end{lemma}
-\todo{Should we indicate that we don't prove this?}
+Strictly speaking we also need a new definition of contexts and
+context application for the |Prog_m| datatype; we omitted this here for brevity.
+
 %\begin{align*}
 %  |eval (apply C (Get (\s -> Put (next s) m)))|
 %  =
@@ -837,7 +835,6 @@ for all programs |m|:
 %\end{lemma}
 
 \paragraph{Backtracking using a global-state monad}
-\todo{Maybe indicate that we're switching notation again?}
 Recall that, in Section~\ref{sec:solve-n-queens},
 we showed that a problem formulated by |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism |solve p f ok oplus st z|,
 run in a non-deterministic local-state monad.
