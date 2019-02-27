@@ -74,12 +74,6 @@ Parameter put_ret_or_G_D':
     =
     orD (putD v (retD w)) (putD v q).
 
-(* TODO: add to paper *)
-Parameter or_comm_ret:
-  forall {A} (x y: A),
-    orD (retD x) (retD y) = orD (retD y) (retD x).
-
-(* TODO describe in paper *)
 Parameter put_or_comm:
   forall {A} (p q : D A) (t u : S -> S),
     getD (fun s => orD (orD (putD (t s) p) (putD (u s) q)) (putD s failD))
@@ -96,6 +90,29 @@ Import Coq.Lists.List.
 Import Coq.Program.Equality.
 Import Coq.Logic.FunctionalExtensionality.
 Import Coq.Program.Basics.
+
+Lemma or_comm_ret:
+  forall {A} (x y: A),
+    orD (retD x) (retD y) = orD (retD y) (retD x).
+Proof.
+  intros.
+  rewrite <- (get_put_G_D (orD (retD x) (retD y))).
+  rewrite <- (get_put_G_D (orD (retD y) (retD x))).
+  assert (H : forall (a b : A),
+             (fun s => putD s (orD (retD a) (retD b)))
+             =
+             (fun s => orD (orD (putD s (retD a)) (putD s (retD b))) (putD s failD))).
+  - intros; apply functional_extensionality; intro s.
+    rewrite put_ret_or_G_D'.
+    rewrite <- (or2_fail_D (putD s (retD b))) at 1.
+    rewrite (put_or_G_D (retD b) failD s).
+    rewrite put_ret_or_G_D'.
+    rewrite or_or_D.
+    reflexivity.
+  - rewrite (H x y); rewrite (H y x).
+    apply put_or_comm.
+Qed.
+
 
 Lemma get_put_G_D':
   forall {A} (p: S -> D A),
