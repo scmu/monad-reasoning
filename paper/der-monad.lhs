@@ -1,9 +1,13 @@
-%% For double-blind review submission
-\documentclass[acmlarge,review,anonymous]{acmart}\settopmatter{printfolios=true}
-%% For single-blind review submission
-%\documentclass[acmlarge,review]{acmart}\settopmatter{printfolios=true}
-%% For final camera-ready submission
-%\documentclass[acmlarge]{acmart}\settopmatter{}
+%% For double-blind review submission, w/o CCS and ACM Reference (max submission space)
+\documentclass[acmsmall,review,anonymous]{acmart}\settopmatter{printfolios=true,printccs=false,printacmref=false}
+%% For double-blind review submission, w/ CCS and ACM Reference
+%\documentclass[acmsmall,review,anonymous]{acmart}\settopmatter{printfolios=true}
+%% For single-blind review submission, w/o CCS and ACM Reference (max submission space)
+%\documentclass[acmsmall,review]{acmart}\settopmatter{printfolios=true,printccs=false,printacmref=false}
+%% For single-blind review submission, w/ CCS and ACM Reference
+%\documentclass[acmsmall,review]{acmart}\settopmatter{printfolios=true}
+%% For final camera-ready submission, w/ required CCS and ACM Reference
+%\documentclass[acmsmall]{acmart}\settopmatter{}
 
 % build using
 %    lhs2TeX der-monad.lhs | pdflatex --jobname=der-monad
@@ -59,15 +63,18 @@
 % \startPage{1}
 % \else
 \makeatother
-%% Conference information (used by SIGPLAN proceedings format)
-%% Supplied to authors by publisher for camera-ready submission
-\acmConference[ICFP'18]{ACM SIGPLAN International Conference on Functional Programming}{September 23--29, 2018}{St. Louis, Missouri, United States}
-\acmYear{2018}
-\acmISBN{978-x-xxxx-xxxx-x/YY/MM}
-\acmDOI{10.1145/nnnnnnn.nnnnnnn}
-\startPage{1}
-% \fi
 
+%% Journal information
+%% Supplied to authors by publisher for camera-ready submission;
+%% use defaults for review submission.
+\acmJournal{PACMPL}
+\acmVolume{1}
+\acmNumber{CONF} % CONF = POPL or ICFP or OOPSLA
+\acmArticle{1}
+\acmYear{2019}
+\acmMonth{1}
+\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
 
 %% Copyright information
 %% Supplied to authors (based on authors' rights management selection;
@@ -89,12 +96,14 @@
 
 \allowdisplaybreaks
 
+\newcommand{\scm}[1]{\textcolor{teal}{#1}}}
+
 \begin{document}
 
 
 %% Title information
 \title[Deriving Monadic Programs]%
-{Functional Pearl: Reasoning and Derivation of Monadic Programs}
+{Reasoning and Derivation of Monadic Programs}
 %% [Short Title] is optional;
                                         %% when present, will be used in
                                         %% header instead of Full Title.
@@ -134,6 +143,38 @@
   \country{Taiwan}
 }
 %\email{scm@iis.sinica.edu.tw}          %% \email is recommended
+
+\author{Tom Schrijvers}
+%\authornote{with author1 note}          %% \authornote is optional;
+                                        %% can be repeated if necessary
+%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+%  \position{Position1}
+  \department{Department of Computer Science}              %% \department is recommended
+  \institution{KU Leuven}            %% \institution is required
+%  \streetaddress{Street1 Address1}
+%  \city{City1}
+%  \state{State1}
+%  \postcode{Post-Code1}
+  \country{Belgium}
+}
+%\email{tom.schrijvers@cs.kuleuven.be} %% \email is recommended
+
+\author{Koen Pauwels}
+%\authornote{with author1 note}          %% \authornote is optional;
+                                         %% can be repeated if necessary
+%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+%  \position{Position1}
+  \department{Department of Computer Science}              %% \department is recommended
+  \institution{KU Leuven}            %% \institution is required
+%  \streetaddress{Street1 Address1}
+%  \city{City1}
+%  \state{State1}
+%  \postcode{Post-Code1}
+  \country{Belgium}
+}
+%\email{koen.pauwels@student.kuleuven.be} %% \email is recommended
 
 \begin{abstract}
 Equational reasoning is among the most important tools that functional programming provides us. Curiously, relatively less attention has been paid to reasoning about monadic programs. In this pearl we aim to develop theorems and patterns useful for the derivation of monadic programs, focusing on the intricate interaction between state and non-determinism. We derive a backtracking algorithm for the $n$-queens puzzle when each non-deterministic branch has its own local state. For the scenario where a global state is shared, we propose laws the monad should satisfy, and develop programming patterns and techniques to simulate local states.

@@ -31,7 +31,7 @@ The usual, naive implementation of |(>>=)| using this representation, however, d
 \footnote{
 The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
 More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT, Volkov:14:list-t}.
-Effect handlers, such as that of Wu~\shortcite{Wu:14:Effect} and Kiselyov and Ishii~\shortcite{KiselyovIshii:15:Freer}, do produce correct implementations by running the handler for non-determinism before that of state.
+Effect handlers (e.g. Wu~\shortcite{Wu:14:Effect} and Kiselyov and Ishii~\shortcite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
 }
 
 Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
@@ -41,6 +41,12 @@ As mentioned in Section \ref{sec:right-distr-local-state}, right-distributivity 
 Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is global.
 Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
 These significantly limit the properties we may have.
+
+\scm{
+The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
+what pitfall we may encounter, and what programming pattern we may use,
+to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
+} %scm
 
 \subsection{The Global State Law}
 \label{sec:laws-global-state}
@@ -52,8 +58,7 @@ a local state setting (laws~\eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}).
 For global state semantics, an alternative law is required to govern the
 interactions between nondeterminism and state.
-We call this the \emph{global state law}, to be presented in Section~\ref{sec:model-global-state-sem}.
-To the best of our knowledge, we are the first to propose it.
+We call this the \emph{global state law}, to be discussed in more detail in Section~\ref{sec:model-global-state-sem}.
 \begin{alignat}{2}
 &\mbox{\bf put-or}:\quad&
   |(put s >> m) `mplus` n| &=~ |put s >> (m `mplus` n)|~ \mbox{~~,}
@@ -139,7 +144,18 @@ Since non-deterministic branches are executed sequentially, the program
 \begin{spec}
 side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modify prev)
 \end{spec}
-executes |modify next| and |modify prev| once, respectively before and after all the non-deterministic branches, even if they fail. Note that |side m| does not generate a result. Its presence is merely for the side-effect of |m|, hence the name. Note also that the type of |side m| need not be the same as that of |m|.
+executes |modify next| and |modify prev| once, respectively before and after all the non-deterministic branches, even if they fail.
+Note that |side m| does not generate a result.
+Its presence is merely for the side-effect of |m|, hence the name.
+%Note also that the type of |side m| need not be the same as that of |m|.
+
+\scm{
+The reader might wonder: now that we are using |(`mplus`)| as a sequencing oprator, is it the same as |(>>)|? Recall that we still have
+left-distributivity \eqref{eq:bind-mplus-dist} and, therefore,
+|(m1 `mplus` m2) >> n| equals |(m1 >> n) `mplus` (m2 >> n)|.
+That is, |(`mplus`)| acts as ``insertion points'', where future code connected by |(>>)| can be inserted into!
+We will exploit this feature in the next section.
+}%scm
 
 \subsection{State-Restoring Operations}
 \label{subsec:state-restoring-ops}
@@ -239,21 +255,32 @@ So it is difficult to reason about programs compositionally in this setting --- 
 It turns out that all properties we need do hold, provided that {\em all} occurrences of |put| are replaced by |putR| --- problematic contexts such as |put t| above are thus ruled out.
 However, that ``all |put| are replaced by |putR|'' is a global property, and to properly talk about it we have to formally define contexts, which is what we will do in Section~\ref{sec:ctxt-trans}.
 
-\subsection{Contexts and Translation}
+\section{Laws and Translation for Global State Monad}
 \label{sec:ctxt-trans}
 
-This section shows that we can automatically translate a
-program into another program which, when run under global-state semantics,
-has the same result as the original program run under local-state semantics.
-We do this by systematically replacing each occurrence of |put| by |putR|.
+\scm{
+In this section we give a more formal treatment of non-deterministic global state monad.
+We propose laws such a monad should satisfy --- to the best of our knowledge, we are the first to propose these laws.
+The laws turn out to be rather intricate.
+To make sure that there exists a model, an implementation is proposed in the appendix, and it is verified in Coq that the laws and some additional theorems are satisfied.
+}%scm
 
+\scm{
+The ultimate goal, however, is to show the following property:
+given a program written for a local-state monad,
+if we replace all occurrences of |put| by |putR|, the resulting
+program yields the same result when run with a global-state monad.
+This allows us to painlessly port our previous algorithm to work
+with a global state.
 To show this we first introduce a syntax for nondeterministic and stateful
 monadic programs and contexts.
 Then we imbue these programs with global-state semantics.
-Finally we define the function that performs the translation just described, and
-prove that this translation is correct.
+Finally we define the function that performs the translation just described, and prove that this translation is correct.
+}%
 
-\subsubsection{Programs and Contexts}
+
+
+\subsection{Programs and Contexts}
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
@@ -374,7 +401,7 @@ in other words, |Dom| need not be a monad.
 In fact, as we will see later, we will choose our implementation in such a way
 that there does not exist a bind operator for |run|.
 
-\subsubsection{Modeling Global State Semantics}
+\subsection{Modeling Global State Semantics}
 \label{sec:model-global-state-sem}
 We impose the \emph{global state laws} upon |Dom| and the domain operators to ensure the semantics of a
 non-backtracking (global-state),
@@ -401,8 +428,8 @@ we can simply omit the ones that mention at the semantic level |(>>=)|
 as these are proven at the syntactic level: their proof follows immediately
 from |Prog|'s definition of |(>>=)|.
 \begin{align}
-  |(m <||||> n) <||||> p| &= |m <||||> (n <||||> p)| \mbox{~~,} \\
-  |failD <||||> m| = |m <||||> failD| &= |m| \mbox{~~.}
+  &|(m <||||> n) <||||> p| = |m <||||> (n <||||> p)| \mbox{~~,} \\
+  &|failD <||||> m| = |m <||||> failD| = |m| \mbox{~~.}
 \end{align}
 
 We also reformulate the global-state law~\eqref{eq:put-or}:
@@ -419,9 +446,11 @@ It turns out that, apart from the {\bf put-or} law,
 our proofs require certain additional properties regarding commutativity and
 distributivity which we introduce here:
 \begin{align}
-|getD (\s -> putD (t s) p <||||> putD (u s) q <||||> putD s failD)|
-                           &= |getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,} \label{eq:put-or-comm-g-d} \\
-|putD s (retD x <||||> p)| &= |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
+\begin{split}
+|getD (\s -> putD (t s) p <||||> putD (u s) q <||||> putD s failD)| = \\
+~~~~~~|getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,}
+\end{split} \label{eq:put-or-comm-g-d} \\
+& |putD s (retD x <||||> p)| = |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
 \end{align}
 These laws are not considered general ``global state'' laws, because it is
 possible to define reasonable implementations of global state semantics that
@@ -467,12 +496,12 @@ whereas the second program is equal to
 which clearly does not always have the same result.
 \begin{figure}
   \centering
-  \small
+  \scriptsize
   \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{code}
-      putD x (retD w <||> getD retD) langle>>=rangle \z -> putD y (retD z)
-      === {- definition of |langle>>=rangle| -}
+      putD x (retD w <||> getD retD) <>>=> \z -> putD y (retD z)
+      === {- definition of |(<>>=>)| -}
       putD x (putD y (retD w) <||> getD (\s -> putD y (retD s)))
       === {- by \eqref{eq:put-or-g-d} and \eqref{eq:put-put-g-d} -}
       putD y (retD w <||> getD (\s -> putD y (retD s)))
@@ -489,8 +518,8 @@ which clearly does not always have the same result.
   \begin{minipage}{0.5\textwidth}
     \begin{code}
       (putD x (retD w) <||> putD x (getD retD))
-        langle>>=rangle \z -> putD y (retD z)
-      === {- definition of |langle>>=rangle| -}
+        <>>=> \z -> putD y (retD z)
+      === {- definition of |(<>>=>)| -}
       putD x (putD y (retD w)) <||> putD x (getD (\s -> putD y (retD s)))
       === {- by \eqref{eq:put-put-g-d} and \eqref{eq:put-get-g-d} -}
       putD y (retD w) <||> putD x (putD y (retD x))
@@ -562,7 +591,7 @@ operators that satisfies all the laws in this section, for which we provide
 \emph{machine-verified proofs}, and which does not permit
 the implementation of a sensible bind operator.
 
-\subsubsection{Contextual Equivalence}
+\subsection{Contextual Equivalence}
 \label{subsec:contextual-equivalence}
 With our semantic domain sufficiently specified, we can prove analogous
 properties for programs interpreted through this domain.
@@ -637,8 +666,7 @@ that it does not hold in arbitrary contexts:
 The proof of this statement has been machine-verified in Coq.
 We annotate theorems which have been verified in Coq with a $\checkmark$.
 
-
-\subsubsection{Simulating Local-State Semantics}
+\subsection{Simulating Local-State Semantics}
 
 We simulate local-state semantics by replacing each occurrence of |Put| by a
 variant that restores the state, as described in Section~\ref{subsec:state-restoring-ops}. This transformation is implemented by the
@@ -696,7 +724,7 @@ implementation produces backtracking semantics.
 To this end we prove laws analogous to the local state laws
 \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}
 \begin{align}
-  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\ 
+  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\
   |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.} \checkmark \label{eq:mplus-bind-dist-l}
 \end{align}
 We provide machine-verified proofs for these theorems.
@@ -759,7 +787,7 @@ We can then define two translation functions from |Prog_m a| to |Prog a|,
 which both also replace |Put|s with |putR|s along the way, like the regular
 |trans| function.
 The first replaces each |Modify_R| in the program by a direct analogue of the
-definition given above, while the second replaces it by 
+definition given above, while the second replaces it by
 |Get (\s -> Put (next s) (trans_2 p))|:
 
 \begin{spec}
@@ -1024,7 +1052,7 @@ queensBody xs  =  select xs >>= \(x,ys) ->
 % \end{code}
 % \end{lemma}
 % We look at its proof, which demonstrates the use of \eqref{eq:side-side} -- \eqref{eq:get-mplus}, monad laws, and laws regarding |get| and |put|.
-% For the rest of this pearl we use the following abbreviations:
+% For the rest of this paper we use the following abbreviations:
 % \begin{code}
 % sidePut st  = side (put st)    {-"~~,"-}
 % sideMod f   = side (modify f)  {-"~~."-}

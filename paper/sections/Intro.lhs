@@ -16,16 +16,14 @@ We believe that the observation is still true today, perhaps due to the impressi
 In fact, the laws of monads and their operators are sufficient to prove quite a number of useful properties about monadic programs.
 The validity of these properties, proved using only these laws, is independent from the particular implementation of the monad.
 
-This pearl follows the trail of Hutton and Fulger~\shortcite{HuttonFulger:08:Reasoning} and~Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just}, aiming to develop theorems and patterns that are useful for reasoning about monadic programs.
+This paper follows the trail of Hutton and Fulger~\shortcite{HuttonFulger:08:Reasoning} and~Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just}, aiming to develop theorems and patterns that are useful for reasoning about monadic programs.
 We focus on two effects --- non-determinism and state.
 The interaction between non-determinism and state is known to be intricate.
 When each non-deterministic branch has its own local state, we get a relatively well-behaved monad, providing a richer collection of properties to work with.
-When all the non-deterministic branches share one global state, the properties of the monad is much less intuitive, as we shall see in this pearl.
+When all the non-deterministic branches share one global state, the properties of the monad is much less intuitive, as we shall see in this paper.
 
-In this pearl we consider problem specifications that use a monadic unfold to generate possible solutions, which are filtered using a |scanl|-like predicate.
+In this paper we consider problem specifications that use a monadic unfold to generate possible solutions, which are filtered using a |scanl|-like predicate.
 We construct backtracking algorithms for such problems in two scenarios, in which the state is respectively local and global.
 In the local-state case, we develop theorems that convert a variation of |scanl| to a |foldr| that uses the state monad, as well as theorems constructing hylomorphism.
 For the case of global state, we study programming patterns that guarantee to restore the initial state after all non-deterministic branches, propose laws the global state monad should satisfy, and show that one may simulate local states using a global state.
 The algorithms are used to solve the |n|-queens puzzle, our running example.
-
-%Code accompanying this pearl can be retrieved from \url{http://www.iis.sinica.edu.tw/~scm/sw/2017_monad_reasoning.zip}.

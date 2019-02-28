@@ -20,7 +20,7 @@ import Monads
 Reasoning about monadic programs gets more interesting when more than one effect is involved.
 Backtracking algorithms make good examples of programs that are stateful and non-deterministic, and the |n|-queens problem, also dealt with by Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just}, is among the most well-known examples of backtracking.\footnote{Curiously, Gibbons and Hinze~\shortcite{GibbonsHinze:11:Just} did not finish their derivation and stopped at a program that exhaustively generates all permutations and tests each of them. Perhaps it was sufficient to demonstrate their point.}
 
-In this section we present a specification of the problem, before transforming it into the form |unfoldM p f >=> filt (all ok . scanlp oplus st)| (whose components will be defined later), which is the general form of problems we will deal with in this pearl.
+In this section we present a specification of the problem, before transforming it into the form |unfoldM p f >=> filt (all ok . scanlp oplus st)| (whose components will be defined later), which is the general form of problems we will deal with in this paper.
 The specification is non-deterministic, but not stateful.
 In the next few sections we will introduce state into the specification,
 under different assumptions of the interaction between non-determinism and state.
