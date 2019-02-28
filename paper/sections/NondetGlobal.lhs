@@ -151,13 +151,33 @@ which restores the original state when it is backtracked over:
 putR :: {S s, N} `sse` eps => s -> Me eps ()
 putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{spec}
+
+\begin{figure}
+  \centering
+  \includegraphics{sections/putR}
+  \caption{Illustration of state-restoring put}
+  \label{fig:putR}
+\end{figure}
+
 %if False
 \begin{code}
 putR :: (MonadPlus m, MonadState s m) => s -> m ()
 putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{code}
 %endif
-For some intuition about |putR|, consider |putR s >> comp| where |comp| is some arbitrary computation:
+
+To help build understanding for |putR|,
+Figure~\ref{fig:putR} shows the flow of execution for the expression
+|(putR t >> ret x) `mplus` ret y|. Initially, the state is |s|; it gets
+modified to |t| at the |put t| node after which the value |x| is output
+with the working state |t|.
+Then, we backtrack (since we're using global-state semantics, the state
+modification caused by |put t| is not reversed), arriving at |put s|, which
+resets the state to |s|, immediately fails, and backtracks to the right
+branch of the topmost |mplus|. There the value |y| is output with working
+state |s|.
+
+For some further intuition about |putR|, consider |putR s >> comp| where |comp| is some arbitrary computation:
 %if False
 \begin{code}
 putRExplain :: (MonadPlus m, MonadState s m) => s -> m b -> m b

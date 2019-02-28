@@ -28,6 +28,7 @@
 \usepackage{enumitem}
 \usepackage{mdframed}
 \usepackage{multicol}
+\usepackage{graphicx}
 
 % %% Some recommended packages.
 % \usepackage{booktabs}   %% For formal tables:
