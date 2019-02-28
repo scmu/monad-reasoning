@@ -31,7 +31,7 @@ The usual, naive implementation of |(>>=)| using this representation, however, d
 \footnote{
 The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
 More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT, Volkov:14:list-t}.
-Effect handlers, such as that of Wu~\shortcite{Wu:14:Effect} and Kiselyov and Ishii~\shortcite{KiselyovIshii:15:Freer}, do produce correct implementations by running the handler for non-determinism before that of state.
+Effect handlers (e.g. Wu~\shortcite{Wu:14:Effect} and Kiselyov and Ishii~\shortcite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
 }
 
 Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
@@ -139,7 +139,16 @@ Since non-deterministic branches are executed sequentially, the program
 \begin{spec}
 side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modify prev)
 \end{spec}
-executes |modify next| and |modify prev| once, respectively before and after all the non-deterministic branches, even if they fail. Note that |side m| does not generate a result. Its presence is merely for the side-effect of |m|, hence the name. Note also that the type of |side m| need not be the same as that of |m|.
+executes |modify next| and |modify prev| once, respectively before and after all the non-deterministic branches, even if they fail.
+Note that |side m| does not generate a result.
+Its presence is merely for the side-effect of |m|, hence the name.
+%Note also that the type of |side m| need not be the same as that of |m|.
+
+The reader might wonder: now that we are using |(`mplus`)| as a sequencing oprator, is it the same as |(>>)|? Recall that we still have
+left-distributivity \eqref{eq:bind-mplus-dist} and, therefore,
+|(m1 `mplus` m2) >> n| equals |(m1 >> n) `mplus` (m2 >> n)|.
+That is, |(`mplus`)| acts as ``insertion points'', where future code connected by |(>>)| can be inserted into!
+We will exploit this feature in the next section.
 
 \subsection{State-Restoring Operations}
 \label{subsec:state-restoring-ops}
@@ -381,8 +390,8 @@ we can simply omit the ones that mention at the semantic level |(>>=)|
 as these are proven at the syntactic level: their proof follows immediately
 from |Prog|'s definition of |(>>=)|.
 \begin{align}
-  |(m <||||> n) <||||> p| &= |m <||||> (n <||||> p)| \mbox{~~,} \\
-  |failD <||||> m| = |m <||||> failD| &= |m| \mbox{~~.}
+  &|(m <||||> n) <||||> p| = |m <||||> (n <||||> p)| \mbox{~~,} \\
+  &|failD <||||> m| = |m <||||> failD| = |m| \mbox{~~.}
 \end{align}
 
 We also reformulate the global-state law~\eqref{eq:put-or}:
@@ -399,9 +408,11 @@ It turns out that, apart from the {\bf put-or} law,
 our proofs require certain additional properties regarding commutativity and
 distributivity which we introduce here:
 \begin{align}
-|getD (\s -> putD (t s) p <||||> putD (u s) q <||||> putD s failD)|
-                           &= |getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,} \label{eq:put-or-comm-g-d} \\
-|putD s (retD x <||||> p)| &= |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
+\begin{split}
+|getD (\s -> putD (t s) p <||||> putD (u s) q <||||> putD s failD)| = \\
+~~~~~~|getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,}
+\end{split} \label{eq:put-or-comm-g-d} \\
+& |putD s (retD x <||||> p)| = |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
 \end{align}
 These laws are not considered general ``global state'' laws, because it is
 possible to define reasonable implementations of global state semantics that
@@ -447,12 +458,12 @@ whereas the second program is equal to
 which clearly does not always have the same result.
 \begin{figure}
   \centering
-  \small
+  \scriptsize
   \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{code}
-      putD x (retD w <||> getD retD) langle>>=rangle \z -> putD y (retD z)
-      === {- definition of |langle>>=rangle| -}
+      putD x (retD w <||> getD retD) <>>=> \z -> putD y (retD z)
+      === {- definition of |(<>>=>)| -}
       putD x (putD y (retD w) <||> getD (\s -> putD y (retD s)))
       === {- by \eqref{eq:put-or-g-d} and \eqref{eq:put-put-g-d} -}
       putD y (retD w <||> getD (\s -> putD y (retD s)))
@@ -469,8 +480,8 @@ which clearly does not always have the same result.
   \begin{minipage}{0.5\textwidth}
     \begin{code}
       (putD x (retD w) <||> putD x (getD retD))
-        langle>>=rangle \z -> putD y (retD z)
-      === {- definition of |langle>>=rangle| -}
+        <>>=> \z -> putD y (retD z)
+      === {- definition of |(<>>=>)| -}
       putD x (putD y (retD w)) <||> putD x (getD (\s -> putD y (retD s)))
       === {- by \eqref{eq:put-put-g-d} and \eqref{eq:put-get-g-d} -}
       putD y (retD w) <||> putD x (putD y (retD x))
@@ -616,7 +627,6 @@ that it does not hold in arbitrary contexts:
 \end{align}
 The proof of this statement has been machine-verified in Coq.
 We annotate theorems which have been verified in Coq with a $\checkmark$.
-
 
 \subsubsection{Simulating Local-State Semantics}
 

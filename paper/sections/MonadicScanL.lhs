@@ -21,7 +21,7 @@ import Queens
 
 The aim of this section is to turn the filtering phase |filt (all ok . scanlp oplus st)| into a |foldr|. For that we introduce a state monad to pass the state around.
 
-\paragraph{State} The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retrieves the state, while |put :: S s `mem` eps =>  s -> Me eps ()| overwrites the state by the given value. They are supposed to satisfy the \emph{state laws}:
+The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retrieves the state, while |put :: S s `mem` eps =>  s -> Me eps ()| overwrites the state by the given value. They are supposed to satisfy the \emph{state laws}:
 \begin{alignat}{2}
 &\mbox{\bf put-put}:\quad &
 |put st >> put st'| &= |put st'|~~\mbox{,} \label{eq:put-put}\\
@@ -138,7 +138,8 @@ The operator |filt| is defined using non-determinism. The transform therefore in
 \subsection{Right-Distributivity and Local State}
 \label{sec:right-distr-local-state}
 
-We now digress a little to discuss one form of interaction between non-determinism and state. When mixed with other effects, the following \emph{local state laws} hold for some monads with non-determinism, but not all:
+We now digress a little to discuss one form of interaction between non-determinism and state.
+When mixed with other effects, the following laws hold for some monads with non-determinism, but not all:
 \begin{alignat}{2}
 &\mbox{\bf right-distributivity}:\quad&
   |m >>= (\x -> f1 x `mplus` f2 x)|~ &=~ |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~,}
@@ -156,10 +157,12 @@ Implementation of such non-deterministic monads have been studied by Fischer~\sh
 When mixed with state, one consequence of \eqref{eq:mplus-bind-dist} is that |get >>= (\s -> f1 s `mplus` f2 s) = (get >>= f1 `mplus` get >>= f2)|. That is, |f1| and |f2| get the same state regardless of whether |get| is performed outside or inside the non-deterministic branch.
 Similarly, \eqref{eq:mzero-bind-zero} implies |put s >> mzero = mzero| --- when a program fails, the changes it performed on the state can be discarded.
 These requirements imply that each non-deterministic branch has its own copy of the state.
-One monad having such property is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}.
+Therefore, we will refer to \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} as \emph{local state laws} in this paper --- even though they do not explicitly mention state operators at all!
+One monad satisfying the laws is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}.
 With effect handling~\cite{Wu:14:Effect, KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
 
-The advantage of having the local state laws \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning. In particular, non-determinism commutes with other effects.
+The advantage of having the local state laws is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning.
+In particular, non-determinism commutes with other effects.
 \begin{definition}
 Let |m :: Me eps a| where |x| does not occur free, and |n :: Me delta b| where |y| does not occur free. We say |m| and |n| commute if
 \begin{equation} \label{eq:commute}
@@ -169,7 +172,7 @@ Let |m :: Me eps a| where |x| does not occur free, and |n :: Me delta b| where |
 \end{split}
 \end{equation}
 (Notice that |m| and |n| can also be typed as |Me (eps `union` delta)|.) We say that |m| commutes with effect |delta| if |m| commutes with any |n| of type |Me delta b|, and that effects |eps| and |delta| commute if any |m :: Me eps a| and |n :: Me delta b| commute.
-\end{definition}``
+\end{definition}
 
 \begin{theorem} \label{thm:nondet-commute}
 If right-distributivity \eqref{eq:mplus-bind-dist} and right-zero \eqref{eq:mzero-bind-zero} hold

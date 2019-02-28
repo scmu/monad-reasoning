@@ -152,8 +152,9 @@ Routine, using commutativity of state and non-determinism.
 
 To conclude our derivation, a problem formulated as |unfoldM p f z >>= filt (all ok . scanlp oplus st)| can be solved by a hylomorphism. Define:
 \begin{spec}
-solve :: {N, S s} `sse` eps => (b -> Bool) -> (b -> Me eps (a, b)) -> (s -> Bool) -> (s -> a -> s) -> s -> b -> Me eps [a]
-solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z)
+solve :: {N, S s} `sse` eps =>  (b -> Bool) -> (b -> Me eps (a, b)) -> (s -> Bool) ->
+                                (s -> a -> s) -> s -> b -> Me eps [a]
+solve p f ok oplus st z = protect (put st >> hyloM odot (return []) p f z) {-"~~,"-}
   where x `odot` m =  get >>= \st -> guard (ok (st `oplus` x)) >>
                       put (st `oplus` x) >> ((x:) <$> m) {-"~~."-}
 \end{spec}
