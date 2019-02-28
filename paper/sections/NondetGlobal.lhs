@@ -676,7 +676,7 @@ implementation produces backtracking semantics.
 To this end we prove laws analogous to the local state laws
 \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}
 \begin{align}
-  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\ 
+  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\
   |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.} \checkmark \label{eq:mplus-bind-dist-l}
 \end{align}
 We provide machine-verified proofs for these theorems.
@@ -739,7 +739,7 @@ We can then define two translation functions from |Prog_m a| to |Prog a|,
 which both also replace |Put|s with |putR|s along the way, like the regular
 |trans| function.
 The first replaces each |Modify_R| in the program by a direct analogue of the
-definition given above, while the second replaces it by 
+definition given above, while the second replaces it by
 |Get (\s -> Put (next s) (trans_2 p))|:
 
 \begin{spec}
@@ -1004,7 +1004,7 @@ queensBody xs  =  select xs >>= \(x,ys) ->
 % \end{code}
 % \end{lemma}
 % We look at its proof, which demonstrates the use of \eqref{eq:side-side} -- \eqref{eq:get-mplus}, monad laws, and laws regarding |get| and |put|.
-% For the rest of this pearl we use the following abbreviations:
+% For the rest of this paper we use the following abbreviations:
 % \begin{code}
 % sidePut st  = side (put st)    {-"~~,"-}
 % sideMod f   = side (modify f)  {-"~~."-}

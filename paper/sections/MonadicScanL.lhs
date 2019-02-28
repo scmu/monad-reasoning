@@ -133,7 +133,7 @@ This proof is instructive due to the use of properties \eqref{eq:put-put} and \e
 We have learned that |scanlp oplus st| can be turned into |scanlM oplus st|, defined in terms of a stateful |foldr|.
 In the definition, state is the only effect involved.
 The next task is to transform |filt (scanlp oplus st)| into a |foldr|.
-The operator |filt| is defined using non-determinism. The transform therefore involves the interaction between two effects, a tricky topic this pearl tries to deal with.
+The operator |filt| is defined using non-determinism. The transform therefore involves the interaction between two effects, a tricky topic this paper tries to deal with.
 
 \subsection{Right-Distributivity and Local State}
 \label{sec:right-distr-local-state}
@@ -196,7 +196,7 @@ For the rest of Section \ref{sec:monadic-scanl} and \ref{sec:nd-state-local}, we
 Finite monadic programs can be represented by the free monad constructed out of |return| and the effect operators, which can be represented by an inductively defined data structure, and interpreted by effect handlers~\cite{Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
 When we say two programs |m1| and |m2| are equal, we mean that they have the same denotation when interpreted by the effect handlers of the corresponding effects, for example, |hdNondet (hdState s m1) = hdNondet (hdState s m2)|, where |hdNondet| and |hdState| are respectively handlers for nondeterminism and state.
 Such equality can be proved by induction on some sub-expression in |m1| or |m2|, which are treated like any inductively defined data structure.
-A more complete treatment is a work in progress, which cannot be fully covered in this pearl.
+A more complete treatment is a work in progress, which cannot be fully covered in this paper.
 ({\em End of Note})
 
 

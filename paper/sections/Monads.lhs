@@ -67,10 +67,10 @@ Monads are used to model effects, and each effect comes with its collection of o
 
 A program may involve more than one effect.
 In Haskell, the type class constraint |MonadPlus| in the type of a program denotes that the program may use |mzero| or |mplus|, and possibly other effects, while |MonadState s| denotes that it may use |get| and |put|.
-Some theorems in this pearl, however, apply only to programs that, for example, use non-determinism and no other effects.
+Some theorems in this paper, however, apply only to programs that, for example, use non-determinism and no other effects.
 To talk about such programs, we use a slightly different notation.
 We let the type |Me eps a| denote a monad whose return type is |a| and, during whose execution, effects in the set |eps| may occur.
-This pearl considers only two effects: non-determinism and state.
+This paper considers only two effects: non-determinism and state.
 Non-determinism is denoted by |N|, for which we assume two operators |mzero :: Me eps a| and |mplus :: Me eps a -> Me eps a -> Me eps a|, where |N `mem` eps|.
 A state effect is denoted by |S s|, where |s| is the type of the state, with two operators |get :: Me eps s| and |put :: s -> Me eps ()| where |S s `mem` eps|.
 
@@ -138,6 +138,6 @@ ntEff  = S a | S c | N                                                         {
 \label{figure:type-system}
 \end{figure}
 
-\paragraph{Total, Finite Programs} Like in other literature on program derivation, we assume a set-theoretic semantics in which functions are total. Lists in this pearl are inductive types, and unfolds generate finite lists too. Non-deterministic choices are finitely branching.
+\paragraph{Total, Finite Programs} Like in other literature on program derivation, we assume a set-theoretic semantics in which functions are total. Lists in this paper are inductive types, and unfolds generate finite lists too. Non-deterministic choices are finitely branching.
 %In such a setting, hylomorphisms have unique solutions.
 Given a concrete input, a function always expands to a finitely-sized expression consisting of syntax allowed by its type. We may therefore prove properties of a monad of type |Me eps a| by structural induction over its syntax.
