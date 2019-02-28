@@ -403,7 +403,6 @@ distributivity which we introduce here:
                            &= |getD (\s -> putD (u s) q <||||> putD (t s) p <||||> putD s failD)| \mbox {~~,} \label{eq:put-or-comm-g-d} \\
 |putD s (retD x <||||> p)| &= |putD s (retD x) <||||> putD s p| \mbox{~~.}\label{eq:put-ret-or-g-d}
 \end{align}
-% TODO: prove ret x || ret y = ret y || ret x
 These laws are not considered general ``global state'' laws, because it is
 possible to define reasonable implementations of global state semantics that
 violate these laws, and because they are not exclusive to global state
@@ -726,51 +725,42 @@ Following a style similar to |putR|, this can be modelled by:
 \end{spec}
 
 Is it always safe to replace |get >>= (\s -> put (next s) >> m)| by
-|modifyR next prev >> m|?
+|modify_R next prev >> m|?
 We can explore this question by extending our |Prog| syntax with an additional
-|ModifyR| construct, thus obtaining a new |Prog_m| syntax:
+|Modify_R| construct, thus obtaining a new |Prog_m| syntax:
 \begin{spec}
 data Prog_m a where
-  Return_m   :: a -> Prog_m a
- ...
-  Or_m       :: Prog_m a -> Prog_m a -> Prog_m a
- ...
   Modify_R  :: (S -> S) -> (S -> S) -> Prog_m a -> Prog_m a
 \end{spec}
 
-We assume that in each value of |Prog_m a|,
-for each |Modify_R next prev p| that occurs, |prev . next = id|.
+We assume that |prev . next = id| for every |Modify_R next prev p| in a |Prog_m a| program.
 
 We can then define two translation functions from |Prog_m a| to |Prog a|,
 which both also replace |Put|s with |putR|s along the way, like the regular
 |trans| function.
 The first replaces each |Modify_R| in the program by a direct analogue of the
 definition given above, while the second replaces it by 
-|Get (\s -> Put (next s) (trans2 p))|:
+|Get (\s -> Put (next s) (trans_2 p))|:
 
 \begin{spec}
-   trans1 :: Prog_m a -> Prog a
-   trans1 (Return_m x)             = Return x
-   trans1 (Or_m p q)               = trans1 p `mplus` trans1 q
-   trans1 mzero _m                = mzero
-   trans1 (Get_m p)                = Get (\s -> trans1 (p s))
-   trans1 (Put_m s p)              =
-     Get (\s' -> Put s (trans1 p) `mplus` Put s' mzero)
-   trans1 (Modify_R next prev p)  =
-     Get (\s -> Put (next s) (trans1 p) `mplus` Get (\t -> Put (prev t) mzero))
+   trans_1 :: Prog_m a -> Prog a
+   ...
+   trans_1 (Modify_R next prev p)  =
+     Get (\s -> Put (next s) (trans_1 p) `mplus` Get (\t -> Put (prev t) mzero))
 
 
-   trans2 :: Prog_m a -> Prog a
-   ... -- similar implementation to trans1
-   trans2 (Modify_R next prev p)  =
-     Get (\s -> Put (next s) (trans2 p))
+   trans_2 :: Prog_m a -> Prog a
+   ...
+   trans_2 (Modify_R next prev p)  =
+     Get (\s -> Put (next s) (trans_2 p))
 \end{spec}
 
-Proving that it is safe to replace |get >>= (\s -> put (next s) >> m)|
-|modify_R|s then boils down to proving that these two translation functions from
+Proving that it is safe to replace each occurrence of
+|get >>= (\s -> put (next s) >> m)| by a
+|modify_R| then boils down to proving that these two translation functions from
 |Prog_m|s to |Prog|s always yield semantically identical programs:
 \begin{lemma}
-  |run (trans1 (apply c p)) = run (trans2 (apply c p))| \mbox{~~.}
+  |run (trans_1 (apply c p)) = run (trans_2 (apply c p))| \mbox{~~.}
 \end{lemma}
 Strictly speaking we also need a new definition of contexts and
 context application for the |Prog_m| datatype; we omitted this here for brevity.
