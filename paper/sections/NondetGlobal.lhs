@@ -42,6 +42,12 @@ Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is glo
 Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
 These significantly limit the properties we may have.
 
+\scm{
+The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
+what pitfall we may encounter, and what programming pattern we may use,
+to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
+} %scm
+
 \subsection{The Global State Law}
 \label{sec:laws-global-state}
 
@@ -52,8 +58,7 @@ a local state setting (laws~\eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}).
 For global state semantics, an alternative law is required to govern the
 interactions between nondeterminism and state.
-We call this the \emph{global state law}, to be presented in Section~\ref{sec:model-global-state-sem}.
-To the best of our knowledge, we are the first to propose it.
+We call this the \emph{global state law}, to be discussed in more detail in Section~\ref{sec:model-global-state-sem}.
 \begin{alignat}{2}
 &\mbox{\bf put-or}:\quad&
   |(put s >> m) `mplus` n| &=~ |put s >> (m `mplus` n)|~ \mbox{~~,}
@@ -144,11 +149,13 @@ Note that |side m| does not generate a result.
 Its presence is merely for the side-effect of |m|, hence the name.
 %Note also that the type of |side m| need not be the same as that of |m|.
 
+\scm{
 The reader might wonder: now that we are using |(`mplus`)| as a sequencing oprator, is it the same as |(>>)|? Recall that we still have
 left-distributivity \eqref{eq:bind-mplus-dist} and, therefore,
 |(m1 `mplus` m2) >> n| equals |(m1 >> n) `mplus` (m2 >> n)|.
 That is, |(`mplus`)| acts as ``insertion points'', where future code connected by |(>>)| can be inserted into!
 We will exploit this feature in the next section.
+}%scm
 
 \subsection{State-Restoring Operations}
 \label{subsec:state-restoring-ops}
@@ -228,21 +235,32 @@ So it is difficult to reason about programs compositionally in this setting --- 
 It turns out that all properties we need do hold, provided that {\em all} occurrences of |put| are replaced by |putR| --- problematic contexts such as |put t| above are thus ruled out.
 However, that ``all |put| are replaced by |putR|'' is a global property, and to properly talk about it we have to formally define contexts, which is what we will do in Section~\ref{sec:ctxt-trans}.
 
-\subsection{Contexts and Translation}
+\section{Laws and Translation for Global State Monad}
 \label{sec:ctxt-trans}
 
-This section shows that we can automatically translate a
-program into another program which, when run under global-state semantics,
-has the same result as the original program run under local-state semantics.
-We do this by systematically replacing each occurrence of |put| by |putR|.
+\scm{
+In this section we give a more formal treatment of non-deterministic global state monad.
+We propose laws such a monad should satisfy --- to the best of our knowledge, we are the first to propose these laws.
+The laws turn out to be rather intricate.
+To make sure that there exists a model, an implementation is proposed in the appendix, and it is verified in Coq that the laws and some additional theorems are satisfied.
+}%scm
 
+\scm{
+The ultimate goal, however, is to show the following property:
+given a program written for a local-state monad,
+if we replace all occurrences of |put| by |putR|, the resulting
+program yields the same result when run with a global-state monad.
+This allows us to painlessly port our previous algorithm to work
+with a global state.
 To show this we first introduce a syntax for nondeterministic and stateful
 monadic programs and contexts.
 Then we imbue these programs with global-state semantics.
-Finally we define the function that performs the translation just described, and
-prove that this translation is correct.
+Finally we define the function that performs the translation just described, and prove that this translation is correct.
+}%
 
-\subsubsection{Programs and Contexts}
+
+
+\subsection{Programs and Contexts}
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
@@ -363,7 +381,7 @@ in other words, |Dom| need not be a monad.
 In fact, as we will see later, we will choose our implementation in such a way
 that there does not exist a bind operator for |run|.
 
-\subsubsection{Modeling Global State Semantics}
+\subsection{Modeling Global State Semantics}
 \label{sec:model-global-state-sem}
 We impose the \emph{global state laws} upon |Dom| and the domain operators to ensure the semantics of a
 non-backtracking (global-state),
@@ -553,7 +571,7 @@ operators that satisfies all the laws in this section, for which we provide
 \emph{machine-verified proofs}, and which does not permit
 the implementation of a sensible bind operator.
 
-\subsubsection{Contextual Equivalence}
+\subsection{Contextual Equivalence}
 \label{subsec:contextual-equivalence}
 With our semantic domain sufficiently specified, we can prove analogous
 properties for programs interpreted through this domain.
@@ -628,7 +646,7 @@ that it does not hold in arbitrary contexts:
 The proof of this statement has been machine-verified in Coq.
 We annotate theorems which have been verified in Coq with a $\checkmark$.
 
-\subsubsection{Simulating Local-State Semantics}
+\subsection{Simulating Local-State Semantics}
 
 We simulate local-state semantics by replacing each occurrence of |Put| by a
 variant that restores the state, as described in Section~\ref{subsec:state-restoring-ops}. This transformation is implemented by the

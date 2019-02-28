@@ -74,13 +74,6 @@
 \acmMonth{1}
 \acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
 \startPage{1}
-% \acmConference[ICFP'18]{ACM SIGPLAN International Conference on Functional Programming}{September 23--29, 2018}{St. Louis, Missouri, United States}
-% \acmYear{2019}
-% \acmISBN{978-x-xxxx-xxxx-x/YY/MM}
-% \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-% \startPage{1}
-% \fi
-
 
 %% Copyright information
 %% Supplied to authors (based on authors' rights management selection;
@@ -101,6 +94,8 @@
 
 
 \allowdisplaybreaks
+
+\newcommand{\scm}[1]{\textcolor{teal}{#1}}}
 
 \begin{document}
 
