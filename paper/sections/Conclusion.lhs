@@ -34,7 +34,7 @@ In this paper, we have used two different techniques to distinguish between
 effect operators from their implementations: type classes and free monads. In
 both cases, the meaning of the effect operators is given by a set of externally
 applied axioms.
-\todo{(Lukšič and Pretnar, 2019)} explore another approach using algebraic
+\cite{Pretnar:19} explores another approach using algebraic
 effects and handlers.
 In their approach, axioms (or ``effect theories'') are encoded in the type
 system: the type of an effectful function declares the operators used in the

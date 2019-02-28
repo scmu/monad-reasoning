@@ -42,11 +42,9 @@ Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is glo
 Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
 These significantly limit the properties we may have.
 
-\scm{
 The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
 what pitfall we may encounter, and what programming pattern we may use,
 to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
-} %scm
 
 \subsection{The Global State Law}
 \label{sec:laws-global-state}
@@ -149,13 +147,11 @@ Note that |side m| does not generate a result.
 Its presence is merely for the side-effect of |m|, hence the name.
 %Note also that the type of |side m| need not be the same as that of |m|.
 
-\scm{
-The reader might wonder: now that we are using |(`mplus`)| as a sequencing oprator, is it the same as |(>>)|? Recall that we still have
+The reader might wonder: now that we are using |(`mplus`)| as a sequencing operator, is it the same as |(>>)|? Recall that we still have
 left-distributivity \eqref{eq:bind-mplus-dist} and, therefore,
 |(m1 `mplus` m2) >> n| equals |(m1 >> n) `mplus` (m2 >> n)|.
 That is, |(`mplus`)| acts as ``insertion points'', where future code connected by |(>>)| can be inserted into!
 We will exploit this feature in the next section.
-}%scm
 
 \subsection{State-Restoring Operations}
 \label{subsec:state-restoring-ops}
@@ -258,14 +254,11 @@ However, that ``all |put| are replaced by |putR|'' is a global property, and to 
 \section{Laws and Translation for Global State Monad}
 \label{sec:ctxt-trans}
 
-\scm{
 In this section we give a more formal treatment of non-deterministic global state monad.
 We propose laws such a monad should satisfy --- to the best of our knowledge, we are the first to propose these laws.
 The laws turn out to be rather intricate.
 To make sure that there exists a model, an implementation is proposed in the appendix, and it is verified in Coq that the laws and some additional theorems are satisfied.
-}%scm
 
-\scm{
 The ultimate goal, however, is to show the following property:
 given a program written for a local-state monad,
 if we replace all occurrences of |put| by |putR|, the resulting
@@ -276,7 +269,6 @@ To show this we first introduce a syntax for nondeterministic and stateful
 monadic programs and contexts.
 Then we imbue these programs with global-state semantics.
 Finally we define the function that performs the translation just described, and prove that this translation is correct.
-}%
 
 
 
@@ -403,7 +395,7 @@ that there does not exist a bind operator for |run|.
 
 \subsection{Modeling Global State Semantics}
 \label{sec:model-global-state-sem}
-We impose the \emph{global state laws} upon |Dom| and the domain operators to ensure the semantics of a
+We impose the laws upon |Dom| and the domain operators to ensure the semantics of a
 non-backtracking (global-state),
 nondeterministic, stateful computation for our programs.
 Naturally, we need laws analogous to the state laws and nondeterminism laws to
@@ -702,7 +694,7 @@ semantics'':
 For example, we formulate the statement that the |put|-|put|
 law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
 \begin{align*}
-  |Put s (Put t p)| &\CEqLS |Put t p| \mbox{~~.}
+  |Put s (Put t p)| &\CEqLS |Put t p| \mbox{~~.} \checkmark
 \end{align*}
 Proofs for the nondeterminism laws follow trivially from the nondeterminism laws
 for global state.
