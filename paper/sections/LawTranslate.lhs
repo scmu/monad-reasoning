@@ -524,7 +524,9 @@ idempotent, to prove the case |m = Put s m'|.
 
 \subsection{Backtracking with a Global State Monad}
 There is still one technical detail to to deal with before we deliver a backtracking algorithm that uses a global state.
-As mentioned in Section~\ref{sec:chaining}, rather than using |put|, such algorithms typically use a pair of commands |modify prev| and |modify next|, with |prev . next = id|, to update and restore the state.
+As mentioned in Section~\ref{sec:chaining}, rather than using |put|, some
+algorithms typically use a pair of commands |modify next| and |modify prev|,
+with |prev . next = id|, to respectively update and roll back the state.
 This is especially true when the state is implemented using an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled by:
 \begin{spec}
@@ -536,7 +538,7 @@ Is it safe to use an alternative translation, where the pattern
 |get >>= (\s -> put (next s) >> m)| is not translated into
 |get >>= (\s -> putR (next s) >> trans m)|, but rather into
 |modify_R next prev >> trans m|?
-We can explore this question by extending our |Prog| syntax with an additional
+We explore this question by extending our |Prog| syntax with an additional
 |Modify_R| construct, thus obtaining a new |Prog_m| syntax:
 \begin{spec}
 data Prog_m a where
@@ -546,8 +548,8 @@ data Prog_m a where
 
 We assume that |prev . next = id| for every |Modify_R next prev p| in a |Prog_m a| program.
 
-We can then define two translation functions from |Prog_m a| to |Prog a|,
-which both also replace |Put|s with |putR|s along the way, like the regular
+We then define two translation functions from |Prog_m a| to |Prog a|,
+which both replace |Put|s with |putR|s along the way, like the regular
 |trans| function.
 The first replaces each |Modify_R| in the program by a direct analogue of the
 definition given above, while the second replaces it by
@@ -556,20 +558,17 @@ definition given above, while the second replaces it by
 \begin{spec}
    trans_1 :: Prog_m a -> Prog a
    ...
-   trans_1 (Modify_R next prev p)  =
-     Get (\s -> Put (next s) (trans_1 p) `mplus` Get (\t -> Put (prev t) mzero))
+   trans_1 (Modify_R next prev p)  = Get (\s -> Put (next s) (trans_1 p) `mplus` Get (\t -> Put (prev t) mzero))
 
 
    trans_2 :: Prog_m a -> Prog a
    ...
-   trans_2 (Modify_R next prev p)  =
-     Get (\s -> Put (next s) (trans_2 p))
+   trans_2 (Modify_R next prev p)  = Get (\s -> Put (next s) (trans_2 p))
 \end{spec}
 
-It is clear that |trans p| is the exact same program as
-|trans_2 p'| where |p'| is |p| but with possibly some occurrences of the pattern
-|Get (\s -> Put (next s) p)| replaced by a
-|ModifyR next prev p| with an appropriately chosen |prev|.
+It is clear that |trans_2 p| is the exact same program as |trans p'|, where |p'|
+is |p| but with each |ModifyR next prev p| with an appropriately chosen |prev|
+replaced by |Get (\s -> Put (next s) p)|.
 
 We then prove that these two transformations lead to semantically identical
 instances of |Prog a|.
