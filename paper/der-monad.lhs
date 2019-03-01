@@ -110,7 +110,7 @@
 %\titlenote{with title note}             %% \titlenote is optional;
                                         %% can be repeated if necessary;
                                         %% contents suppressed with 'anonymous'
-\subtitle{A Case Study of Non-determinism and States}
+\subtitle{A Case Study of Non-determinism and State}
 %% \subtitle is optional
 %\subtitlenote{with subtitle note}       %% \subtitlenote is optional;
                                         %% can be repeated if necessary;
@@ -213,6 +213,7 @@ Equational reasoning is among the most important tools that functional programmi
 %include sections/MonadicScanL.lhs
 %include sections/StateLocal.lhs
 %include sections/NondetGlobal.lhs
+%include sections/LawTranslate.lhs
 %include sections/Conclusion.lhs
 
 
