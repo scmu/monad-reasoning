@@ -532,12 +532,15 @@ Following a style similar to |putR|, this can be modelled by:
   modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
 \end{spec}
 
-Is it always safe to replace |get >>= (\s -> put (next s) >> m)| by
-|modify_R next prev >> m|?
+Is it safe to use an alternative translation, where the pattern
+|get >>= (\s -> put (next s) >> m)| is not translated into
+|get >>= (\s -> putR (next s) >> trans m)|, but rather into
+|modify_R next prev >> trans m|?
 We can explore this question by extending our |Prog| syntax with an additional
 |Modify_R| construct, thus obtaining a new |Prog_m| syntax:
 \begin{spec}
 data Prog_m a where
+...
   Modify_R  :: (S -> S) -> (S -> S) -> Prog_m a -> Prog_m a
 \end{spec}
 
@@ -563,15 +566,16 @@ definition given above, while the second replaces it by
      Get (\s -> Put (next s) (trans_2 p))
 \end{spec}
 
-Proving that it is safe to replace each occurrence of
-|get >>= (\s -> put (next s) >> m)| by a
-|modify_R| then boils down to proving that these two translation functions from
-|Prog_m|s to |Prog|s always yield semantically identical programs:
+It is clear that |trans p| is the exact same program as
+|trans_2 p'| where |p'| is |p| but with possibly some occurrences of the pattern
+|Get (\s -> Put (next s) p)| replaced by a
+|ModifyR next prev p| with an appropriately chosen |prev|.
+
+We then prove that these two transformations lead to semantically identical
+instances of |Prog a|.
 \begin{lemma}
-  |run (trans_1 (apply c p)) = run (trans_2 (apply c p))| \mbox{~~.}
+  |run (trans_1 p) = run (trans_2 p)|. \checkmark
 \end{lemma}
-Strictly speaking we also need a new definition of contexts and
-context application for the |Prog_m| datatype; we omitted this here for brevity.
 
 %\begin{align*}
 %  |eval (apply C (Get (\s -> Put (next s) m)))|

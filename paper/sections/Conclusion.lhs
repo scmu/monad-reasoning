@@ -20,7 +20,7 @@ In particular, |putR| still commutes with non-determinism.
 
 \subsection{Related Work}
 \paragraph{Prolog Four-Port Box Model}
-One of the authors applied an idea, similar to |putR|, to implement debugging for the {\em 4-port box model} of Prolog.
+Unpublished work from \cite{SchrijversSlides} applied an idea, similar to |putR|, to implement debugging for the {\em 4-port box model} of Prolog.
 In this model, upon the first entrance of a Prolog procedure it is {\em called}; it may yield a result and {\em exits}; when the subsequent procedure fails and backtracks, it is asked to {\em redo} its computation, possibly yielding the next result; finally it may {\em fail}.
 Given a Prolog procedure |p| implemented in Haskell, the following program prints debugging messages when each of the four ports are used:
 \begin{spec}

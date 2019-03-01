@@ -1,5 +1,6 @@
 Require Coq.Lists.List.
 Require Coq.Program.Equality.
+Require Coq.Init.Specif.
 
 Require Coq.Logic.FunctionalExtensionality.
 
@@ -93,6 +94,7 @@ Import Coq.Lists.List.
 Import Coq.Program.Equality.
 Import Coq.Logic.FunctionalExtensionality.
 Import Coq.Program.Basics.
+Import Coq.Init.Specif.
 
 (* We start out by proving some useful lemmas about the semantic domain. *)
 Lemma or_comm_ret_G_D:
@@ -3299,6 +3301,191 @@ Proof.
   apply bapp_from_appl.
   intros.
   apply right_distr_L_2.
+Qed.
+
+
+(* Proof of Lemma 7.1 in the paper. *)
+Inductive MProg : Type -> Type :=
+  | MReturn : forall {A}, A -> MProg A
+  | MFail : forall {A}, MProg A
+  | MOr : forall {A}, MProg A -> MProg A -> MProg A
+  | MGet : forall {A}, (S -> MProg A) ->MProg A
+  | MPut : forall {A}, S -> MProg A ->MProg A
+  | ModifyR : forall {A} (next prev: S -> S),
+      (forall s, prev (next s) = s) -> MProg A -> MProg A.
+
+Fixpoint trans_1 {A} (p: MProg A): Prog A :=
+  match p with
+  | MReturn x             => Return x
+  | MOr p q               => Or (trans_1 p) (trans_1 q)
+  | MFail                 => Fail
+  | MGet p                => Get (fun s => trans_1 (p s))
+  | MPut s p              => Get (fun s0 => Or (Put s (trans_1 p)) (Put s0 Fail))
+  | ModifyR next prev _ p => Get (fun s => Or (Put (next s) (trans_1 p)) (Get (fun t => Put (prev t) Fail)))
+  end.
+
+Definition putR {A} (s : S) (m : Prog A) : Prog A :=
+  Get (fun t => Or (Put s m) (Put t Fail)).
+
+Fixpoint trans_2 {A} (p: MProg A): Prog A :=
+  match p with
+  | MReturn x             => Return x
+  | MOr p q               => Or (trans_2 p) (trans_2 q)
+  | MFail                 => Fail
+  | MGet p                => Get (fun s => trans_2 (p s))
+  | MPut s p              => Get (fun s0 => Or (Put s (trans_2 p)) (Put s0 Fail))
+  | ModifyR next prev _ p => Get (fun s => putR (next s) (trans_2 p))
+  end.
+
+Fixpoint unmod {A} (p : MProg A) : Prog A :=
+  match p with
+  | MReturn x             => Return x
+  | MOr p q               => Or (unmod p) (unmod q)
+  | MFail                 => Fail
+  | MGet p                => Get (fun s => unmod (p s))
+  | MPut s p              => Put s (unmod p)
+  | ModifyR next prev _ p => Get (fun s => Put (next s) (unmod p))
+  end.
+
+Lemma trans_unmod:
+  forall {A} (p : MProg A),
+    trans (unmod p) = trans_2 p.
+Proof.
+  intros. induction p; simpl; auto.
+  - rewrite IHp1.
+    rewrite IHp2.
+    reflexivity.
+  - f_equal; apply functional_extensionality; intro s.
+    apply H.
+  - f_equal; apply functional_extensionality; intro s0.
+    rewrite IHp.
+    reflexivity.
+  - f_equal; apply functional_extensionality; intro s.
+    unfold putR.
+    f_equal; apply functional_extensionality; intro t.
+    rewrite IHp.
+    reflexivity.
+Qed.
+
+Lemma run_trans_trans_2:
+  forall {A} (p : MProg A),
+    run (trans (trans_2 p)) = run (trans_2 p).
+Proof.
+  intros.
+  induction p; simpl trans_2; simpl trans; auto.
+  - simpl.
+    rewrite IHp1, IHp2.
+    reflexivity.
+  - simpl.
+    f_equal; apply functional_extensionality; intro s.
+    apply H.
+  - simpl.
+    cut ((fun s0 : S =>
+     orD
+       (getD
+          (fun s1 : S => orD (putD s (run (trans (trans_2 p)))) (putD s1 failD)))
+       (getD (fun s1 : S => orD (putD s0 failD) (putD s1 failD))))
+         =
+         (fun s0 => getD (fun s1 => orD (orD (putD s (run (trans (trans_2 p)))) (putD s1 failD)) ((getD (fun s1 : S => orD (putD s0 failD) (putD s1 failD))))))).
+    + intro H; rewrite H.
+      rewrite get_get_G_D.
+      f_equal; apply functional_extensionality; intro s0.
+      rewrite or_or_G_D.
+      rewrite (put_or_G_D failD _ s0).
+      rewrite or1_fail_G_D.
+      rewrite put_get_G_D.
+      rewrite (put_or_G_D failD _ _).
+      rewrite put_put_G_D.
+      rewrite or1_fail_G_D.
+      rewrite put_put_G_D.
+      rewrite IHp.
+      reflexivity.
+    + apply functional_extensionality; intro s0.
+      rewrite get_or_G_D.
+      reflexivity.
+  - simpl.
+    rewrite get_get_G_D.
+    assert (H:
+              (fun s : S =>
+                 orD
+                   (getD
+                      (fun s0 : S =>
+                         orD (putD (next s) (run (trans (trans_2 p)))) (putD s0 failD)))
+                   (getD (fun s0 : S => orD (putD s failD) (putD s0 failD))))
+              =
+              (fun s : S =>
+                 (getD
+                    (fun s0 : S =>
+                       orD
+                         (orD (putD (next s) (run (trans (trans_2 p)))) (putD s0 failD))
+                         (getD (fun s0 : S => orD (putD s failD) (putD s0 failD))))))).
+    + apply functional_extensionality; intro s.
+      rewrite get_or_G_D.
+      reflexivity.
+    + rewrite H.
+      repeat rewrite get_get_G_D.
+      f_equal; apply functional_extensionality; intro s.
+      rewrite IHp.
+      rewrite or_or_G_D.
+      rewrite (put_or_G_D failD _ s).
+      rewrite or1_fail_G_D.
+      rewrite put_get_G_D.
+      rewrite (put_or_G_D failD _ s).
+      rewrite put_put_G_D.
+      rewrite or1_fail_G_D.
+      rewrite put_put_G_D.
+      reflexivity.
+Qed.
+
+Lemma put_or_trans_2':
+  forall {A} (p : MProg A) (v : S) (q : Prog A),
+    run (Put v (Or (trans_2 p) q)) = run (Or (Put v (trans_2 p)) (Put v q)).
+Proof.
+  intros.
+  rewrite run_put, run_or.
+  rewrite <- run_trans_trans_2.
+  rewrite <- run_or, <- run_put.
+  rewrite put_or_trans'.
+  simpl.
+  rewrite run_trans_trans_2.
+  reflexivity.
+Qed.
+
+Lemma modify_lemma:
+  forall {A} (p : MProg A),
+    run (trans_1 p) = run (trans_2 p).
+Proof.
+  intros.
+  induction p; simpl trans_1; simpl trans_2; auto.
+  - rewrite run_or.
+    rewrite IHp1; rewrite IHp2.
+    reflexivity.
+  - repeat rewrite run_get.
+    f_equal; apply functional_extensionality; intro s.
+    apply H.
+  - simpl.
+    f_equal; apply functional_extensionality; intro s0.
+    rewrite IHp.
+    reflexivity.
+  - simpl.
+    rewrite IHp.
+    rewrite get_get_G_D.
+    assert (H: (fun s => orD (putD (next s) (run (trans_2 p))) (putD s failD))
+               =
+               (fun s => run (Or (Put (next s) (trans_2 p)) (Get (fun t => (Put (prev t) Fail)))))).
+    + apply functional_extensionality; intro s.
+      rewrite put_or_G'.
+      rewrite put_or_trans_2'.
+      rewrite run_or.
+      rewrite put_get_G'.
+      rewrite e.
+      rewrite <- run_or.
+      rewrite <- put_or_trans_2'.
+      simpl.
+      rewrite put_or_G_D.
+      auto.
+    + rewrite H.
+      auto.
 Qed.
 
 End Syntax.
