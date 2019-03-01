@@ -3494,6 +3494,9 @@ End Syntax.
 (* Finally, we define an implementation for our semantic domain, and prove that it
    conforms to all the semantic domain axioms.
  *)
+Require Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Arith.Plus.
+
 Module Implementation <: SemanticInterface.
 
 Definition Bag (A: Type) := A -> nat.
@@ -3507,10 +3510,10 @@ Definition singleton {A: Type}: A -> Bag A :=
              | inr _ => 0
              end).
 
-Definition emptyBag {A: Type}: Bag A :=
+Definition empty_bag {A: Type}: Bag A :=
  fun y => 0.
 
-Definition union {A: Type}: Bag A -> Bag A -> Bag A :=
+Definition bag_sum {A: Type}: Bag A -> Bag A -> Bag A :=
  fun xs ys =>
    (fun z => xs z + ys z).
 
@@ -3523,13 +3526,13 @@ Definition retD : forall {A}, A -> D A :=
  fun A => (fun x => (fun s => (singleton (x,s), s))).
 
 Definition failD : forall {A}, D A :=
- fun A => (fun s => (emptyBag, s)).
+ fun A => (fun s => (empty_bag, s)).
 
 Definition orD : forall {A}, D A -> D A -> D A :=
  fun A xs ys =>
    (fun s => match xs s with
              | (ansx, s') => match ys s' with
-                             | (ansy, s'') => (union ansx ansy, s'')
+                             | (ansy, s'') => (bag_sum ansx ansy, s'')
                              end
              end).
 
@@ -3541,7 +3544,6 @@ Definition putD : forall {A}, S -> D A -> D A :=
  fun A s k =>
    (fun _ => k s).
 
-Require Coq.Logic.FunctionalExtensionality.
 Import Coq.Logic.FunctionalExtensionality.
 
 Lemma or1_fail_G_D:
@@ -3550,7 +3552,7 @@ Lemma or1_fail_G_D:
  =
  q.
 Proof.
- intros; simpl; unfold orD, failD, emptyBag, union.
+ intros; simpl; unfold orD, failD, empty_bag, bag_sum.
  change q with (fun s => q s).
  apply functional_extensionality; intros s.
  simpl.
@@ -3564,7 +3566,7 @@ Lemma or2_fail_G_D:
  =
  p.
 Proof.
- intros; unfold failD, orD, union, emptyBag.
+ intros; unfold failD, orD, bag_sum, empty_bag.
  change p with (fun s => p s) at 2.
  apply functional_extensionality; intro s.
  destruct (p s).
@@ -3575,15 +3577,13 @@ Proof.
    - rewrite H; auto.
 Qed.
 
-Require Import Coq.Arith.Plus.
-
 Lemma or_or_G_D:
  forall {A} (p q r: D A),
  orD (orD p q) r
  =
  orD p (orD q r).
 Proof.
- intros; unfold orD, union.
+ intros; unfold orD, bag_sum.
  apply functional_extensionality; intro s0.
  destruct (p s0).
  destruct (q s).
@@ -3651,7 +3651,7 @@ Lemma or_ret_ret_G_D:
  forall {A} (x y: A),
    (orD (retD x) (retD y)) = (orD (retD y) (retD x)).
 Proof.
- intros; unfold orD, retD, singleton, union.
+ intros; unfold orD, retD, singleton, bag_sum.
  apply functional_extensionality; intro s.
  assert ((fun z : A * S =>
 match eqDec (A * S) (x, s) z with
@@ -3677,7 +3677,7 @@ Lemma or_comm_ret_G_D:
   forall {A} (x y: A),
     orD (retD x) (retD y) = orD (retD y) (retD x).
 Proof.
-  intros; unfold orD, retD, union.
+  intros; unfold orD, retD, bag_sum.
   apply functional_extensionality; intro s.
   apply injective_projections; auto.
   simpl; apply functional_extensionality; intro z.
@@ -3695,7 +3695,7 @@ Proof.
   apply functional_extensionality; intro s.
   destruct (p (t s)); destruct (q (u s)); simpl.
   apply injective_projections; simpl; auto.
-  unfold union.
+  unfold bag_sum.
   apply functional_extensionality; intro z.
   intuition.
 Qed.
