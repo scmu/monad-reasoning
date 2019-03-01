@@ -16,7 +16,7 @@ We let |Dom| be the union of |M s a| for all |a| and
 for a given |s|.
 
 {
-\setlength{\columnsep}{-4cm}
+%\setlength{\columnsep}{-4cm}
 \begin{multicols}{2}
 \begin{samepage}
 \begin{code}
