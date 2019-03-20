@@ -20,7 +20,7 @@ In particular, |putR| still commutes with non-determinism.
 
 \subsection{Related Work}
 \paragraph{Prolog Four-Port Box Model}
-\cite{SchrijversSlides} applied an idea, similar to |putR|, to implement debugging for the {\em 4-port box model} of Prolog.
+\citet{SchrijversSlides} applied an idea, similar to |putR|, to implement debugging for the {\em 4-port box model} of Prolog.
 In this model, upon the first entrance of a Prolog procedure it is {\em called}; it may yield a result and {\em exits}; when the subsequent procedure fails and backtracks, it is asked to {\em redo} its computation, possibly yielding the next result; finally it may {\em fail}.
 Given a Prolog procedure |p| implemented in Haskell, the following program prints debugging messages when each of the four ports are used:
 \begin{spec}
@@ -34,7 +34,7 @@ In this paper, we have used two different techniques to distinguish between
 effect operators from their implementations: type classes and free monads. In
 both cases, the meaning of the effect operators is given by a set of externally
 applied axioms.
-\cite{Pretnar:19} explores another approach using algebraic
+\citet{Pretnar:19} explore another approach using algebraic
 effects and handlers.
 In their approach, axioms (or ``effect theories'') are encoded in the type
 system: the type of an effectful function declares the operators used in the

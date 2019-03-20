@@ -563,12 +563,12 @@ definition given above, while the second replaces it by
 
    trans_2 :: Prog_m a -> Prog a
    ...
-   trans_2 (Modify_R next prev p)  = Get (\s -> Put (next s) (trans_2 p))
+   trans_2 (Modify_R next prev p)  = Get (\s -> putR (next s) (trans_2 p))
+     where putR s p = Get (\t -> Put s p `mplus` Put t mzero)
 \end{spec}
 
 It is clear that |trans_2 p| is the exact same program as |trans p'|, where |p'|
-is |p| but with each |ModifyR next prev p| with an appropriately chosen |prev|
-replaced by |Get (\s -> Put (next s) p)|.
+is |p| but with each |ModifyR next prev p| replaced by |Get (\s -> Put (next s) p)|.
 
 We then prove that these two transformations lead to semantically identical
 instances of |Prog a|.

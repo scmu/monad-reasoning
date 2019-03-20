@@ -55,7 +55,7 @@ retD x = \s -> (singleton (x,s),s)
 \end{samepage}
 
 \begin{samepage}
-  |getD| simply passes along the initial state to its continuiation.
+  |getD| simply passes along the initial state to its continuation.
   |putD| ignores the initial state and calls its continuation with the given
   parameter instead.
 \begin{code}
