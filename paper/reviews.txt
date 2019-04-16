@@ -1,0 +1,318 @@
+ICFP 2019 Paper #80 Reviews and Comments
+===========================================================================
+Paper #80 Reasoning and Derivation of Monadic Programs: A Case Study of
+Non-determinism and State
+
+
+Review #80A
+===========================================================================
+
+Overall merit
+-------------
+A. Good paper. I will champion it at the PC meeting.
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in the area, though not an expert.
+
+Paper summary
+-------------
+This paper is in fact two papers. There is a first paper that solves
+the n-queens problem by applying standard "program derivation"
+methodology to obtain an efficient, monadic (state and
+non-determinism) scanl/unfold implementation from a straightforward
+specification. 
+
+The second paper studies two equational theories for state and
+non-determinism, one in which state is de-duplicated in each
+non-deterministic branch (local non-determinism) and the other in
+which state is shared across all non-deterministic branches (global
+non-determinism). Local non-determinism is ideal for reasoning whereas
+global non-determinism corresponds more faithfully to an actual,
+imperative execution model. The authors then show (with supporting Coq
+proofs) that local non-determinism can be faithfully implemented with
+global non-determinism.
+
+Combining both papers, one obtains an efficient solution to the
+n-queens problem. Overall, the paper is extremely well-written, it
+illustrates both programming and reasoning about monadic programs in a
+systematic manner, going significantly beyond Hutton-Fulger's and
+Gibbons-Hinze's previous work.
+
+Comments for author
+-------------------
+l.7: "in this pearl": is that a Functional Pearl? It does not say so
+in the title, nor in the keywords. I have assumed that it is not a
+Pearl.
+
+l.923-927: first, the definition of Ctx (fig.4) is 2 pages away, which
+makes it hard to track it down. Second, it would be quite useful to
+provide some intuition for the constructors of the Ctx datatype,
+perhaps by treating a single (representative) constructor in detail.
+
+l.942: why is =_{GS} defined with 'orun' and not simply 'run'? I don't
+see were the environment comes from here.
+
+Typos:
+  * l.211: "to defined safe"
+  * l.865: "repect"
+
+
+
+Comment @A1
+---------------------------------------------------------------------------
+In Section 8.1, the emulation of Prolog's four-port box model is attributed to Schrijvers (2014). However, it is already found in Hinze's 2001 paper, "PROLOG'S control constructs in a functional setting - Axioms and implementation", Section 4.3.
+
+
+
+Review #80B
+===========================================================================
+
+Overall merit
+-------------
+B. OK paper, but I will not champion it.
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in the area, though not an expert.
+
+Paper summary
+-------------
+The paper begins by way of a functional (or proof) pearl, using classic program
+derivation techniques to turn a $n$-queens implementation using non-determinism
+into that one that also uses state that is *local* (i.e. each branch of the
+non-determinism has its own state). Then it explores what happens when the
+state is actually *global*, or shared, and points out interesting intricacies and
+offers solutions for them. The theoretical results are substantiated with a Coq
+formalization.
+
+Comments for author
+-------------------
+I am not too keen on lengthy program derivation papers that spend several pages
+to come up with code that would not have been unsurprising if someone had
+written it directly (line 569), as these always leave the impression that the
+authors did have the initial and the final implementation in their head to
+start with, and then spent a lot of effort to connect these (which is not
+useless, of course, as it proves them equal, a more direct verificaiton
+relating the two might have been less work?)
+
+But this impression was more than made up for in sections 6 and 7, which are
+full of interested insights about the interaction of non-determinism with a
+global state monad (and hence, by extension, many other monads that can be
+modeled as a stat monad). I found the presentation to be exemplary in its
+precision and rigor, with a clean separation of syntax, domain, and formal
+treatment in Coq, without making the section unnecessarily heavy on formalisms.
+
+I would be surprised if the pattern `m || side c` to do implement a form of
+`finally` that cleans up as backtracking returns is not well-known to people
+who, say, write tactics for theorem provers like Coq; but a quick grep through
+the Coq sources does not reveal anything obvious, so maybe it is!
+
+I liked that usually, after a longer proof, the authors briefly point out what
+is interesting or instructive about that particular proof.
+
+While reading the lines 710 to 717, in particular the difference between `return
+x` and `put_R s >> return x`, I felt that I am missing a nice semantic model of
+the meaning of such monadic program where I can intuitively see the difference
+between the two, and would have appreciated one, even if informal. But maybe
+that is precisely the point of the paper: Such a model is actually not simple
+or intuitive, and hence reasoning about nondeterminism with global state so
+tricky.
+
+Lines 870 to 900: The paragraph about the semantic domain not allowing a bind
+operator is very crucial; it has a good formal argument, but I still miss some
+intuition here. Maybe this is because no concrete `Dom` is presented in the
+paper, only in the Appendix. Would it be possible to at least describe `Dom`
+somewhere in the paper, to give the reader some intuition? This would also help
+with the aforementioned issue.
+
+
+Minor notes and questions
+-------------------------
+
+General note on the listings: Many of them seem to have unnecessary and
+inconsistent line breaks. Maybe the paper was previously type-set for a
+two-column layout? I suggest to go through the paper and revise all line break
+decisions, removing some where a single line would work just fine, and --
+ideally -- put either all monadic operations into one line, or all operations
+into their own line (i.e. having `>>` or `>>= \… ->` at the line end) with
+consistent indentation. Also, be consistent in whether you parenthesize a
+lambda expression on the RHS of `>>=`.
+
+
+Equation (6): Should that be “not free in $f$ or $k$”?
+
+Fig 1: This seems to exclude state that stores functions or monadic programs,
+as it only allows built-in type constants. Is that an important restriction
+here? Or is it only to to make the Coq formalization feasible?
+
+Fig 1: $\mathcal F$ is defined twice
+
+Line 211: “defined” should be “define”
+
+Line 596: `let f y = (x,y)` should probably be `let (x,y) = f y`.
+
+Line 817: “figure 4(d)” should be “Figure 4(d)”. I recommend the `cleveref` package with the `capitalize` option.
+
+Line 828: “bind operator for *run*” should be “bind operator for `Dom`”
+
+Line 935: “Environments are defined as heterogeneous lists” repeats what has
+been said a few lines earlier.
+
+
+
+Comment @A2
+---------------------------------------------------------------------------
+I have asked the authors: this submission is a regular paper. The word "pearl" in the abstract was left over by mistake.
+
+
+
+Review #80C
+===========================================================================
+
+Overall merit
+-------------
+B. OK paper, but I will not champion it.
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in the area, though not an expert.
+
+Paper summary
+-------------
+The paper aims to establish that monadic reasoning supports the
+transformation of non-deterministic programs but otherwise functional
+programs to equivalent programs that combine non-determinism and state. It
+exemplifies that by using monadic laws to iteratively transform a monadic
+non-deterministic version of a program that solves the n-queens problem
+into two backtracking implementations; one that employs local state and
+one that employs global state. The local state version, that is each
+branch of choice sees its own version of the store, hylo-fuses the unfold
+that calculates all candidate solution non-deterministically with the fold
+that filters-in the actual solutions using state as an accumulator for
+checking each candidate. The global state version, that is the store is
+shared across all branches of choice, requires sticking to a careful
+program-wide pattern that treats choice as a sequencing and injecting
+appropriate save-and-restore operations for the global store in between
+the evaluation of each branch. The paper captures the pattern as a global
+transformation and proves its correctness with a contextual equivalence
+argument that establishes that the laws for local state hold for
+transformed programs.
+
+Comments for author
+-------------------
++++++ Comments +++++
+
+++ I enjoyed reading this paper. 
+
+++ The paper shows nicely the complexity that comes with combining effects 
+and especially if some of them are of a global (undelimited) nature. And
+how this results in restricting the ability to reason locally which is the
+point of equational reasoning.
+
+-- However, I think the exposition of the material is not as clear as it 
+should be. First the paper assumes a significant background on Haskell 
+and monads. That means that a lot of things are taken for granted such 
+as what is hylomorphism or what is scanl. 
+
+-- Second and most importantly, in the middle of the paper 
+it is revealed that the reader should have
+read the paper interpreting certain things as syntax and certain as
+semantics. In addition the meaning (semantics) of = is described in vague
+terms informally in a cryptic note reference to event handlers. 
+
+-- Moreover, it is unclear and not discussed at all what are the
+implications of having a domain where bind does not exist. The CPS nature
+of the semantic domain allows to define bind using Prog and the base
+language functions but what are the implications of that for all the
+reasoning in the previous part of the paper. I found section 7 vague and
+hand-wavy. For example why do the signatures of get and put change from
+earlier in the paper? 
+
+-- Related to the above, monadic programming aims to encapsulate effects 
+and allow their composition. But the development of section 7 fixes 
+the set of effects in the language and ends up concluding that we cannot 
+reason compositionally about programs with global effects. I think this defeats 
+the purpose of the paper as a similar translation could be proven much more easily 
+with standard operational techniques. Or put differently, what is the benefit from using monads if we are going to reason about whole program properties. 
+
+-- Finally, this paper follows the example of the Just do It paper by
+Gibbons and Hinze. N Queens is one of the examples there too. The issues
+with local state and global state are discussed there too (but not the
+hylo transformation). What does this paper add to the discussion that
+equational reasoning is possible even when programs combine monads.
+
+
+
++++++ Small points/typos +++++
+
+abstract: "puzzle when" --> "puzzle where"
+
+page 5: "the indices of their" ---> "the indices of its"
+
+page 6: "generated by an monadic" ---> "generated by a monadic"
+
+page 6: "filtered by a filt" ---> "filtered by a filt"
+
+page 7: "([]) be commutative" ---> "([]) is commutative"
+
+page 9: the description of the steps is skipping certain parts such as an
+explanation about the equation involving guard and bind and the 
+use of the monadic laws in the inductive step.
+
+page 10: "the effects of m happens" ---> "the effects of m happen"
+
+page 11: "those can be folded" ---> "those that can be folded"
+
+page 11: "those can be unfolded" ---> "those that can be unfolded"
+
+page 13: "however is rather tricky" ---> "however are rather tricky"
+
+page 15: "put-get (13)" ---> "put-get (12)"
+
+page 15: "get-put (12)" ---> "get-put (13)"
+
+page 19, "analogous" ---> based on what follow I think this refers to the state laws but it is
+not clear from the context.
+
+++++++ QUESTIONS THAT THE AUTHORS ARE EXPECTED TO ANSWER ++++++ 
+
+1) What are the implications of relying on a domain that doesn't include
+bind?
+
+
+
+Review #80D
+===========================================================================
+
+Overall merit
+-------------
+C. Weak paper, though I will not fight strongly against it.
+
+Reviewer expertise
+------------------
+X. I am an expert in the subject area of this paper.
+
+Paper summary
+-------------
+Backtracking search algorithms can often be expressed using mutable state that is *local* to each branch. In n-queens for example, checking whether a set of queens is in conflict can be expressed using mutable state to keep track of which diagonals have been occupied. In generate-and-test algorithms, if the unknown structure is visited in the same order by generation and by testing, then testing can be done earlier and more efficiently -- on partially generated structures. This common technique remains valid even if testing uses local state. To help reason about this technique, this paper provides equational laws and proves equational theorems on monadic programs that use both backtracking and local state. For situations where *global* state is more readily available than local state (for example if the state is a large array), the paper also provides equational laws on monadic programs that use both backtracking and global state, and proves the correctness of a "save-and-restore" translation from backtracking with local state to backtracking with global state.
+
+Comments for author
+-------------------
+Given that
+1. testing partially generated structures using local state and
+2. a "save-and-restore" translation from local to global state
+
+are both commonly *known* and *intuitive* techniques for programming with backtracking, it seems that the contributions of this paper (lines 43-51) lie in justifying these techniques by equational reasoning on monadic programs. I find these contributions relatively thin, because rather than deriving theorems from a set of standalone equational laws, the paper freely drops down to the level of free-monad syntax trees (lines 368-381). I have serious doubts about the first side condition on line 491, proven on line 543: what if `n` or `m` changes the state in a way that does not commute with `get >>= \st -> put (next x st)`? After all, state does not commute with state itself.
+
+The assumptions that "functions are total" and "lists are inductive types" (line 96) are apparently violated by code such as the definition of `ok` on line 242 and the uses of `zipWith` on lines 235-236.
+
+Minor comments:
+
+The writing is a bit dry.
+
+Line 211 "to defined" -> "to define"
+
+Line 340: It's unclear how "(15) implies that ([]) be commutative" even with the next sentence "let ... in (15)".
+
+Line 1105: A prominent piece of related work to discuss is that in Prolog, the substitution is semantically local to the backtracking branch, but many implementations simulate it by instantiating *and un-instantiating* variables in a global substitution.
