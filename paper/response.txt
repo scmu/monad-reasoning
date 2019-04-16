@@ -1,0 +1,82 @@
+We are very grateful for the helpful comments that all reviews make, and are
+especially gladened by the expressions of appreciation. We will do our best to
+address all comments in the final version, but focus here only on the main
+issues and questions raised.
+
+- Review B: 
+
+  About Dom not having a bind:
+
+  There are two key ideas that make the emulation of local state by means
+  of local state work:
+
+    1. We impose a discipline that all uses of put are in a state-restoring
+       fashion; no `wild' puts are allowed. 
+ 
+       => Without a bind, a carefully constructed disciplined Dom value cannot
+          be extended in a sequential (i.e., bind-) fashion with a wild put.
+
+    2. The state at the end of a branch is transferred to (the beginning of)
+       the next branch.
+
+       => Without a bind, we know where a branch is at its end and can build in
+          the transfer of the state to the next branch. With a bind, we would
+	  not know when we are at the end of the branch and would have to defer
+          the transfer, leaving room for the possibility that an entirely different
+          state value is passed to the next branch.:w
+
+  We will articulate this better. You make a good point here about moving the concrete Dom 
+  from the appendix to the main text. Then we will be able to constrast with ListT-done
+  right applied to the state monad, which suffers from the above two problems.
+
+- Review C:
+
+  Novelty wrt "Just do It":
+  TODO
+
+  The use of Haskell:
+  We feel that the use of Haskell for programming and reasoning with monads is justified given
+  the extensive existing body of literature that does just that. Nevertheless,
+  we appreciate your pointing out that the accessibility of the paper will be improved when we 
+  add more explanation of concepts like hylomorphisms and scanl.
+
+  Benefits of Monads:
+  A big benefit of monads is that it provides a pureful functional model of
+  effects. This has become an actual practice in Haskell and is a good model for
+  what happens in languages with algebraic effects & handlers. Yet, we should
+  emphasize that the focus of our paper is reasoning about monadic programs, not
+  to justify the use of monads. We are not aware of any other formalism used
+  to tackle the same problem for other effect models. Even if it would exist,
+  we believe that our work is still relevant because it directly applies to 
+  the above settings where monads are used.
+
+  (Non-)Modularity:
+  There is modularity and non-modularity at different levels, which should not
+  be mixed up.
+
+    As we require a particular interaction between state and non-determinism,
+    namely the local state semantics, by definition we do not want to reason about
+    the two effects in isolation.
+
+    Reasoning about local state happens modularly, and not for a whole program 
+    at once. We use the local state laws for that.
+
+    Enabling this local reasoning about local state, when implemented by means of
+    global state, requires a global discipline of modifying state only in a 
+    restoring-upon-backtracking fashion. We carry out this proof once, which involves
+    reasoning about all disciplined whole programs, so that we can then reason
+    locally about all specific programs.
+
+    Syntax and (Algebraic) Effect Handlers Approach:
+    (Not "event handlers")
+
+    TODO
+
+- Review D:
+
+   TODO
+
+- A1:
+
+  We are grateful for a better reference of Prolog's 4-port model.
+
