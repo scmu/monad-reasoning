@@ -1,9 +1,9 @@
 We are very grateful for the helpful comments that all reviews make, and are
-especially gladened by the expressions of appreciation: 
-  
+especially gladdened by the expressions of appreciation:
+
   * "extremely well-written"
   * "going significantly beyond [...] previous work"
-  * "exemplary in its precision and rigor" 
+  * "exemplary in its precision and rigor"
   * " I enjoyed reading this paper"
   * ...
 
@@ -11,15 +11,15 @@ We will do our best to address all comments in the final version, but focus
 here only on the main issues and questions raised.
 
 
-# Review B: 
+# Review B:
 
 ## About Dom not having a bind:
 
 There are two key ideas that make the emulation of local state by means
-of local state work:
+of global state work:
 
   1. We impose a discipline that all uses of put are in a state-restoring
-     fashion; no `wild' puts are allowed. 
+     fashion; no `wild' puts are allowed.
 
      => Without a bind, a carefully constructed disciplined Dom value cannot
         be extended in a sequential (i.e., bind-) fashion with a wild put.
@@ -33,8 +33,8 @@ of local state work:
         the transfer, leaving room for the possibility that an entirely different
         state value is passed to the next branch.:w
 
-We will articulate this better. You make a good point here about moving the concrete Dom 
-from the appendix to the main text. Then we will be able to constrast with ListT-done
+We will articulate this better. You make a good point here about moving the concrete Dom
+from the appendix to the main text. Then we will be able to contrast with ListT-done
 right applied to the state monad, which suffers from the above two problems.
 
 # Review C:
@@ -55,25 +55,25 @@ Jeremy Gibbons, "Just do It" author, acknowledges our contributions as follows:
 > model of nondeterminism and state, but in fact I believe this is not even a
 > monad. Your paper contributes a useful axiomatization, experimental validation
 > of those axioms through a variant of N Queens that doesn’t copy the state, a
-> model, and a Coq verification of that model. 
+> model, and a Coq verification of that model.
 
 
 ## The use of Haskell:
 We feel that the use of Haskell for programming and reasoning with monads is justified given
 the extensive existing body of literature that does just that. Nevertheless,
-we appreciate your pointing out that the accessibility of the paper will be improved when we 
+we appreciate your pointing out that the accessibility of the paper will be improved when we
 add more explanation of concepts like hylomorphisms and scanl.
 
 
 ## Benefits of Monads:
 
-A big benefit of monads is that it provides a pureful functional model of
+A big benefit of monads is that it provides a purely functional model of
 effects. This has become an actual practice in Haskell and is a good model for
 what happens in languages with algebraic effects & handlers. Yet, we should
 emphasize that the focus of our paper is reasoning about monadic programs, not
 to justify the use of monads. We are not aware of any other formalism used
 to tackle the same problem for other effect models. Even if it would exist,
-we believe that our work is still relevant because it directly applies to 
+we believe that our work is still relevant because it directly applies to
 the above settings where monads are used.
 
 
@@ -86,11 +86,11 @@ be mixed up.
     namely the local state semantics, by definition we do not want to reason about
     the two effects in isolation.
 
- -  Reasoning about local state happens modularly, and not for a whole program 
+ -  Reasoning about local state happens modularly, and not for a whole program
     at once. We use the local state laws for that.
 
  -  Enabling this local reasoning about local state, when implemented by means of
-    global state, requires a global discipline of modifying state only in a 
+    global state, requires a global discipline of modifying state only in a
     restoring-upon-backtracking fashion. We carry out this proof once, which involves
     reasoning about all disciplined whole programs, so that we can then reason
     locally about all specific programs.
@@ -104,12 +104,12 @@ be mixed up.
 >  a cryptic note reference to event handlers"
 
 We do not intend for the the reader to have read the first part of the
-paper in this way. On the contratry, like the "Just do It" paper, we advocate
-high-level axiomatic reasoning based on algebraic laws to understand programs. 
+paper in this way. On the contrary, like the "Just do It" paper, we advocate
+high-level axiomatic reasoning based on algebraic laws to understand programs.
 However, as an auxiliary proof device, briefly sketched in the note on p.8, and
-elaborated in more detail in Sections 6-7 (and in full detail in our Coq 
+elaborated in more detail in Sections 6-7 (and in full detail in our Coq
 mechanisation), we can reason about monadic programs by separating their
-synax and semantics. Specific notions of equality are given on lines 942 and
+syntax and semantics. Specific notions of equality are given on lines 942 and
 979.
 
 
@@ -129,20 +129,19 @@ We don't think this characterisation does justice to our contributions:
 
 - Proving the correctness of global state with respect to local state has not
   been a triviality, but a substantial effort, not just to find the appropriate
-  auxiliary lemmas, but to create the appropriate proof approach. 
+  auxiliary lemmas, but to create the appropriate proof approach.
 
   We are not aware of any prior proof for this problem, mechanised or otherwise, and
   certainly not for the monadic setting that supports axiomatic reasoning about
   program equivalence. In the absence of any other approach that has been demonstrated to
   solve the problem, we do not understand what fault you see in our approach.
 
-  Moreover, we believe that having a working approach that can be rused for
+  Moreover, we believe that having a working approach that can be used for
   similar problems will be highly relevant for reasoning about algebraic effects
   and handlers (see Local Algebraic Theories in Related Work), which are
-  becoming increasinlgy more prominent and where programmers are writing algebras
+  becoming increasingly more prominent and where programmers are writing algebras
   for free-monad syntax trees all the time.
 
 # A1:
 
 We are grateful for a better reference of Prolog's 4-port model.
-
