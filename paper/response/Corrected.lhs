@@ -105,7 +105,7 @@ hyloFusion1 otimes m p f y =
  ===    {- monad law  and |foldr| -}
     f y >>= (\(x,z) -> unfoldM p f z >>= \xs -> x `otimes` foldr otimes m xs)
  ===    {- since |n >>= ((x `otimes`) . k) === x `otimes` (n >>= k)| where |n = unfoldM p f z| -}
-    f y >>= (\(x,z) -> x `otimes` unfoldM p f z >>=  foldr otimes m)
+    f y >>= (\(x,z) -> x `otimes` (unfoldM p f z >>=  foldr otimes m))
 \end{code}
 Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude that it equals |hyloM otimes m p f| if the latter has a unique fixed-point.
 \end{proof}
@@ -174,6 +174,11 @@ m1 << m2 = m2 >> m1
 
 side :: MonadPlus m => m a -> m b
 side m = m >>= const mzero
+
+unfoldM :: Monad m => (b -> Bool) -> (b -> m (a,b)) -> b -> m [a]
+unfoldM p f z  | p z        =  return []
+               | otherwise  =  f z >>= \(x,w) ->
+                               (x:) <$> unfoldM p f w {-"~~."-}
 \end{code}
 %endif
 \end{document}
