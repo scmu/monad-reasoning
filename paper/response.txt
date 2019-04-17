@@ -142,6 +142,14 @@ We don't think this characterisation does justice to our contributions:
   becoming increasingly more prominent and where programmers are writing algebras
   for free-monad syntax trees all the time.
 
+>  I have serious doubts about the first side condition on line 491, proven on line 543.
+
+  That is indeed a mistake -- we copy-and-pasted an earlier, wrong version of the lemma. Lemma 3 should come with a side-condition: m commutes with state, while the "n" in Lemma 2 should be unfoldM p f. In our particular application, unfoldM p f = perm, which does satisfy the side conditions because non-determinism is its only effect.
+
+> The assumptions that "functions are total" and "lists are inductive types" (line 96) are apparently violated
+
+  Indeed zipWith uses infinite lists, and ok is partial. These can be easily fixed at the cost of losing some clarity. We (and we think, the readers) would prefer to keep it this way. [SCM: I don't think this is worth responding and can/should be omitted, given that we are running out of space.]
+
 # A1:
 
 We are grateful for a better reference of Prolog's 4-port model.
