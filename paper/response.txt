@@ -1,7 +1,14 @@
 We are very grateful for the helpful comments that all reviews make, and are
-especially gladened by the expressions of appreciation. We will do our best to
-address all comments in the final version, but focus here only on the main
-issues and questions raised.
+especially gladened by the expressions of appreciation: 
+  
+  * "extremely well-written"
+  * "going significantly beyond [...] previous work"
+  * "exemplary in its precision and rigor" 
+  * " I enjoyed reading this paper"
+  * ...
+
+We will do our best to address all comments in the final version, but focus
+here only on the main issues and questions raised.
 
 - Review B: 
 
@@ -33,6 +40,19 @@ issues and questions raised.
 
   Novelty wrt "Just do It":
   TODO
+
+  Jeremy Gibbons, one of the authors of "Just do It" acknolwedges our contributions as follows:
+
+> The Just Do It paper deals only with the backtrackable combination of
+> nondeterminism and state, where composition distributes rightwards over failure
+> (ie failure is a right zero of composition) and over choice - your laws
+> (15,16). We don’t deal with persistent state, your law (18). We didn’t know
+> then what the right axiomatization was for persistent state, nor a suitable
+> model for it - we confidently asserted (S7) that s->([a],s) is an alternative
+> model of nondeterminism and state, but in fact I believe this is not even a
+> monad. Your paper contributes a useful axiomatization, experimental validation
+> of those axioms through a variant of N Queens that doesn’t copy the state, a
+> model, and a Coq verification of that model. 
 
   The use of Haskell:
   We feel that the use of Haskell for programming and reasoning with monads is justified given
@@ -67,8 +87,24 @@ issues and questions raised.
     reasoning about all disciplined whole programs, so that we can then reason
     locally about all specific programs.
 
-    Syntax and (Algebraic) Effect Handlers Approach:
-    (Not "event handlers")
+    (Algebraic) Effect Handlers Approach:
+    "in the middle of the paper it is revealed that the reader should have read
+     the paper interpreting certain things as syntax and certain as semantics. In
+     addition the meaning (semantics) of = is described in vague terms informally in
+     a cryptic note reference to event handlers"
+
+    We do not intend for the the reader to have read the first part of the
+    paper in this way. On the contratry, like the "Just do It" paper, we advocate
+    high-level axiomatic reasoning based on algebraic laws to understand programs. 
+    However, as an auxiliary proof device, briefly sketched in the note on p.8, and
+    elaborated in more detail in Sections 6-7 (and in full detail in our Coq 
+    mechanisation), we can reason about monadic programs by separating their
+    synax and semantics. Specific notions of equality are given on lines 942 and
+    979.
+
+    The second part of the paper presents a proof technique,
+    where 
+    (Note that we never mention event handlers, which are quite different from effect handlers.) 
 
     TODO
 
