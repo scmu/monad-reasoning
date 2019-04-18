@@ -1,14 +1,14 @@
-We are very grateful for the helpful comments that all reviews make, and are
-especially gladdened by the expressions of appreciation:
+We are grateful for your helpful comments, and are especially gladdened your
+appreciation:
 
   * "extremely well-written"
   * "going significantly beyond [...] previous work"
   * "exemplary in its precision and rigor"
-  * " I enjoyed reading this paper"
+  * "I enjoyed reading this paper"
   * ...
 
 We will do our best to address all comments in the final version, but focus
-here only on the main issues and questions raised.
+here only on the main ones.
 
 
 # Review B:
@@ -18,33 +18,80 @@ here only on the main issues and questions raised.
 There are two key ideas that make the emulation of local state by means
 of global state work:
 
-  1. We impose a discipline that all uses of put are in a state-restoring
-     fashion; no `wild' puts are allowed.
+  1. We impose a discipline that all uses of put are state-restoring;
+     no `wild' puts are allowed.
 
-     => Without a bind, a carefully constructed disciplined Dom value cannot
-        be extended in a sequential (i.e., bind-) fashion with a wild put.
+     => Without a bind, a disciplined Dom value cannot be extended in a
+        sequential (i.e., bind-) fashion with a wild put.
 
   2. The state at the end of a branch is transferred to (the beginning of)
      the next branch.
 
-     => Without a bind, we know where a branch is at its end and can build in
-        the transfer of the state to the next branch. With a bind, we would
-        not know when we are at the end of the branch and would have to defer
-        the transfer, leaving room for the possibility that an entirely different
-        state value is passed to the next branch.:w
+     => Without a bind, we know where a branch is at its end and where to transfer
+        the state to the next branch. With a bind, we would not know when we are at the
+        end of the branch and would have to defer the transfer, allowing for the
+        possibility that an entirely different state value is passed to the next
+        branch.
 
-We will articulate this better. You make a good point here about moving the concrete Dom
-from the appendix to the main text. Then we will be able to contrast with ListT-done
-right applied to the state monad, which suffers from the above two problems.
+We will articulate this better, incorporating your suggestion about moving the concrete Dom
+from the appendix to the main text. 
+
 
 # Review C:
-ur paper contributes a useful axiomatization, experimental validation
-> of those axioms through a variant of N Queens that doesn’t copy the state, a
-> model, and a Coq verification of that model.
+
+## Background
+
+Given the extensive body of work on programming and reasoning with monads, we
+believe it is justified to rely on some background from the reader.
+Nevertheless, we hear your request to improve the accessibility by explaining
+concepts like hylomorphisms and scanl in more detail.
+
+## (Algebraic) Effect Handlers Approach:
+
+> "in the middle of the paper it is revealed that the reader should have read
+>  the paper interpreting certain things as syntax and certain as semantics. In
+>  addition the meaning (semantics) of = is described in vague terms informally in
+>  a cryptic note reference to event handlers"
+
+This is not what we intended. On the contrary, like the "Just do It" paper, we
+advocate high-level axiomatic reasoning based on algebraic laws to understand
+programs. However, as an auxiliary proof device, briefly sketched on p.8, and
+elaborated in more detail in Sections 6-7 (and in our Coq mechanisation), we
+can reason about monadic programs by separating their syntax and semantics.
+Specific notions of equality are given on lines 942 and 979.
+
+## Implications of a Domain without Bind
+
+There are no implications, and that's precisely the point. The local state
+axioms act like an interface based on which we can reason, and which decouples
+the reasoning from any particular implementation. Sections 6-7 show that the
+global state domain provides a valid implementation of the 'interface'.
+The beauty of having reasoned against the interface is that we can use the
+implementation without having to revisit any of the earlier proofs.
+
+## (Non-)Modularity / Encapsulation:
+
+There is modularity and non-modularity at different levels, which should not
+be mixed up.
+
+ - As explained above, the axioms decouple the reasoning from a particular
+   implementation and thus provide modularity.
+
+ -  As we require a particular interaction between state and non-determinism,
+    namely the local state semantics, by definition we do not want to reason about
+    them in isolation.
+
+ -  Satisfying the local state axioms by means of global state, requires a
+    global discipline of only state-restoring updates.
+    We carry out this proof once for all disciplined global state programs.
+    The proof is then encapsulated in the local state axioms, so that
+    anyone can reason a locally about the equivalence of specific programs
+    based on those axioms.
 
 ## Novelty wrt "Just do It":
 
-Jeremy Gibbons, "Just do It" author, acknowledges our contributions as follows:
+In a personal communication, Jeremy Gibbons, "Just do It" author, states the
+novelty as follows:
 
 > The Just Do It paper deals only with the backtrackable combination of
 > nondeterminism and state, where composition distributes rightwards over failure
@@ -58,61 +105,6 @@ Jeremy Gibbons, "Just do It" author, acknowledges our contributions as follows:
 > model, and a Coq verification of that model.
 
 
-## The use of Haskell:
-We feel that the use of Haskell for programming and reasoning with monads is justified given
-the extensive existing body of literature that does just that. Nevertheless,
-we appreciate your pointing out that the accessibility of the paper will be improved when we
-add more explanation of concepts like hylomorphisms and scanl.
-
-
-## Benefits of Monads:
-
-A big benefit of monads is that it provides a purely functional model of
-effects. This has become an actual practice in Haskell and is a good model for
-what happens in languages with algebraic effects & handlers. Yet, we should
-emphasize that the focus of our paper is reasoning about monadic programs, not
-to justify the use of monads. We are not aware of any other formalism used
-to tackle the same problem for other effect models. Even if it would exist,
-we believe that our work is still relevant because it directly applies to
-the above settings where monads are used.
-
-
-## (Non-)Modularity:
-
-There is modularity and non-modularity at different levels, which should not
-be mixed up.
-
- -  As we require a particular interaction between state and non-determinism,
-    namely the local state semantics, by definition we do not want to reason about
-    the two effects in isolation.
-
- -  Reasoning about local state happens modularly, and not for a whole program
-    at once. We use the local state laws for that.
-
- -  Enabling this local reasoning about local state, when implemented by means of
-    global state, requires a global discipline of modifying state only in a
-    restoring-upon-backtracking fashion. We carry out this proof once, which involves
-    reasoning about all disciplined whole programs, so that we can then reason
-    locally about all specific programs.
-
-
-## (Algebraic) Effect Handlers Approach:
-
-> "in the middle of the paper it is revealed that the reader should have read
->  the paper interpreting certain things as syntax and certain as semantics. In
->  addition the meaning (semantics) of = is described in vague terms informally in
->  a cryptic note reference to event handlers"
-
-We do not intend for the the reader to have read the first part of the
-paper in this way. On the contrary, like the "Just do It" paper, we advocate
-high-level axiomatic reasoning based on algebraic laws to understand programs.
-However, as an auxiliary proof device, briefly sketched in the note on p.8, and
-elaborated in more detail in Sections 6-7 (and in full detail in our Coq
-mechanisation), we can reason about monadic programs by separating their
-syntax and semantics. Specific notions of equality are given on lines 942 and
-979.
-
-
 # Review D:
 
 > It seems that the contributions of this paper (lines 43-51) lie in justifying
@@ -121,35 +113,33 @@ syntax and semantics. Specific notions of equality are given on lines 942 and
 > of standalone equational laws, the paper freely drops down to the level of
 > free-monad syntax trees (lines 368-381).
 
-We don't think this characterisation does justice to our contributions:
+We feel that this does not do justice to our contributions:
 
-- ...
-
-- ...
+- The "Novelty wrt "Just do It"" paragraph above enumerates a range of novelties
+  compared to the earlier work.
 
 - Proving the correctness of global state with respect to local state has not
   been a triviality, but a substantial effort, not just to find the appropriate
   auxiliary lemmas, but to create the appropriate proof approach.
 
-  We are not aware of any prior proof for this problem, mechanised or otherwise, and
-  certainly not for the monadic setting that supports axiomatic reasoning about
-  program equivalence. In the absence of any other approach that has been demonstrated to
-  solve the problem, we do not understand what fault you see in our approach.
+- We are not aware of any prior proof for this problem, mechanised or
+  otherwise, for the monadic setting (or any other) that supports
+  axiomatic reasoning about program equivalence. In the absence of any other
+  approach that has been demonstrated to solve the problem, we do not understand
+  what fault you see in our approach.
 
-  Moreover, we believe that having a working approach that can be used for
-  similar problems will be highly relevant for reasoning about algebraic effects
-  and handlers (see Local Algebraic Theories in Related Work), which are
-  becoming increasingly more prominent and where programmers are writing algebras
-  for free-monad syntax trees all the time.
+- We believe that our approach is highly relevant because it can be used for 
+  similar problems when reasoning about algebraic effects and handlers (see Local
+  Algebraic Theories in Related Work), which are becoming increasingly more
+  prominent and where programmers are writing algebras for free-monad syntax
+  trees all the time.
 
->  I have serious doubts about the first side condition on line 491, proven on line 543.
 
-  That is indeed a mistake -- we copy-and-pasted an earlier, wrong version of the lemma. Lemma 5.2 should come with a side-condition: m commutes with state, while the "n" in Theorem 5.1 should be unfoldM p f z. In our particular application, unfoldM p f = perm, which does satisfy the side conditions because non-determinism is its only effect. We have attached the correct theorems and their proofs as an attachment.
+> I have serious doubts about the first side condition on line 491, proven on line 543.
 
-> The assumptions that "functions are total" and "lists are inductive types" (line 96) are apparently violated
-
-  Indeed zipWith uses infinite lists, and ok is partial. These can be easily fixed at the cost of losing some clarity. We (and we think, the readers) would prefer to keep it this way. [SCM: I don't think this is worth responding and can/should be omitted, given that we are running out of space.]
-
-# A1:
-
-We are grateful for a better reference of Prolog's 4-port model.
+That is indeed a mistake -- we inadvertently copied an earlier, wrong
+version of the lemma into the text. Lemma 5.2 should come with a
+side-condition: m commutes with state, while the "n" in Theorem 5.1 should be
+unfoldM p f z. In our particular application, unfoldM p f = perm, which does
+satisfy the side conditions because non-determinism is its only effect. We have
+included the correct theorems and their proofs in attachment.
