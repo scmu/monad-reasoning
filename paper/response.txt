@@ -144,7 +144,7 @@ We don't think this characterisation does justice to our contributions:
 
 >  I have serious doubts about the first side condition on line 491, proven on line 543.
 
-  That is indeed a mistake -- we copy-and-pasted an earlier, wrong version of the lemma. Lemma 3 should come with a side-condition: m commutes with state, while the "n" in Lemma 2 should be unfoldM p f. In our particular application, unfoldM p f = perm, which does satisfy the side conditions because non-determinism is its only effect.
+  That is indeed a mistake -- we copy-and-pasted an earlier, wrong version of the lemma. Lemma 5.2 should come with a side-condition: m commutes with state, while the "n" in Theorem 5.1 should be unfoldM p f z. In our particular application, unfoldM p f = perm, which does satisfy the side conditions because non-determinism is its only effect. We have attached the correct theorems and their proofs as an attachment.
 
 > The assumptions that "functions are total" and "lists are inductive types" (line 96) are apparently violated
 

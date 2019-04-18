@@ -72,8 +72,7 @@ hyloM otimes m p f y
   | p y        = m
   | otherwise  = f y >>= \(x,z) ->  x `otimes` hyloM otimes m p f z {-"~~,"-}
 \end{code}
-if the relation |(not . p)? . snd . (=<<) . f| is well-founded, and
-|unfoldM p f z >>= ((x `otimes`) . k) === x `otimes` (unfoldM p f z >>= k)| for all |k|.
+if |unfoldM p f z >>= ((x `otimes`) . k) === x `otimes` (unfoldM p f z >>= k)| for all |k|, and the relation |(not . p)? . snd . (=<<) . f| is well-founded.
 %if False
 \begin{code}
 hyloMFuse ::
@@ -112,12 +111,14 @@ Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude th
 
 Theorem \ref{thm:hylo-fusion} is not specific to local state. The following lemma applies to any |n| that commutes with state, for example, if |n :: Me N a|.
 
-\begin{customlemma}{5.2}\label{lma:odot-fusable} Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
+\begin{customlemma}{5.2}\label{lma:odot-fusable}
+Assuming that |m >>= mzero = mzero| for all |m|.
+Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
 \begin{spec}
   x `odot` m =  get >>= \st -> guard (p x st) >>
                 put (next x st) >> (res x <$> m) {-"~~."-}
 \end{spec}
-We have |n >>= ((x `odot`) . k) === x `odot` (n >>= k)|, if |n| commutes with state and |m >>= mzero = mzero| for all |m|.
+We have |n >>= ((x `odot`) . k) === x `odot` (n >>= k)|, if |n| commutes with state.
 \end{customlemma}
 \begin{proof} We reason:
 \begin{spec}
@@ -125,24 +126,19 @@ We have |n >>= ((x `odot`) . k) === x `odot` (n >>= k)|, if |n| commutes with st
 ===  n >>= \y -> x `odot` k y
 ===    {- definition of |odot| -}
      n >>= \y -> get >>= \st ->
-     guard (p x st) >> put (next x st) >>
-     (res x <$> k y)
-===    {- non-determinism and state commute -}
+     guard (p x st) >> put (next x st) >> (res x <$> k y)
+===    {- |n| commutes with state -}
      get >>= \st -> n >>= \y ->
-     guard (p x st) >> put (next x st) >>
-     (res x <$> (k y))
+     guard (p x st) >> put (next x st) >> (res x <$> (k y))
 ===   {- since |m >>= mzero = mzero| -}
      get >>= \st -> guard (p x st) >>
-     n >>= \y -> put (next x st) >>
-     (res x <$> (k y))
-===   {- non-determinism and state commute -}
+     n >>= \y -> put (next x st) >> (res x <$> (k y))
+===   {- |n| commutes with state  -}
      get >>= \st -> guard (p x st) >>
-     put (next x st) >> n >>= \y ->
-     (res x <$> (k y))
+     put (next x st) >> n >>= \y -> (res x <$> (k y))
 ===    {- properties of |(<$>)|  -}
      get >>= \st -> guard (p x st) >>
-     put (next x st) >>
-     (res x <$> n >>= k)
+     put (next x st) >> (res x <$> n >>= k)
 ===    {- definition of |odot| -}
      x `odot` (n >>= k) {-"~~."-}
 \end{spec}
