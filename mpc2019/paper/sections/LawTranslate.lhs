@@ -56,7 +56,7 @@ Finally we define the function that performs the translation just described, and
 \begin{figure}
 \begin{mdframed}
 \centering
-\small
+\scriptsize
 \subfloat[]{
 \begin{minipage}{0.5\textwidth}
 \begin{spec}
@@ -256,7 +256,7 @@ whereas the second program is equal to
 which clearly does not always have the same result.
 \begin{figure}
   \centering
-  \scriptsize
+  \tiny
   \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{code}
@@ -280,7 +280,8 @@ which clearly does not always have the same result.
       (putD x (retD w) <||> putD x (getD retD))
         <>>=> \z -> putD y (retD z)
       === {- definition of |(<>>=>)| -}
-      putD x (putD y (retD w)) <||> putD x (getD (\s -> putD y (retD s)))
+      putD x (putD y (retD w))
+        <||> putD x (getD (\s -> putD y (retD s)))
       === {- by \eqref{eq:put-put-g-d} and \eqref{eq:put-get-g-d} -}
       putD y (retD w) <||> putD x (putD y (retD x))
       === {- by \eqref{eq:put-put-g-d} -}
@@ -510,7 +511,8 @@ over |mplus| at the top-level of a global-state program if the left branch is
 state restoring.
 \begin{align}
   % get_or_trans
-|run (Get (\s -> trans (m1 s) `mplus` (m2 s)))| = |run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
+|run (Get (\s -> trans (m1 s) `mplus` (m2 s)))| = \\
+|run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 
 And finally, we require that the |trans| function is, semantically speaking,
@@ -558,7 +560,8 @@ definition given above, while the second replaces it by
 \begin{spec}
    trans_1 :: Prog_m a -> Prog a
    ...
-   trans_1 (Modify_R next prev p)  = Get (\s -> Put (next s) (trans_1 p) `mplus` Get (\t -> Put (prev t) mzero))
+   trans_1 (Modify_R next prev p)  =        Get (\s -> Put (next s) (trans_1 p)
+                                   `mplus`  Get (\t -> Put (prev t) mzero))
 
 
    trans_2 :: Prog_m a -> Prog a
@@ -645,7 +648,8 @@ in a non-deterministic global-state monad,
 by |run (solveR p f ok oplus ominus st z)|, where |(`ominus` x) . (`oplus` x) = id| for all |x|, and |solveR| is defined by:
 \begin{spec}
 solveR :: {N, S s} `sse` eps =>  (b -> Bool) -> (b -> Me eps (a, b)) ->
-                                 (s -> Bool) -> (s -> a -> s) -> (s -> a -> s) -> s -> b -> Me eps [a]
+                                 (s -> Bool) -> (s -> a -> s) -> (s -> a -> s) ->
+                                 s -> b -> Me eps [a]
 solveR p f ok oplus ominus st z = putR st >> hyloM odot (return []) p f z
   where x `odot` m =  (get >>= guard . ok . (`oplus` x)) >>
                       modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> m) {-"~~."-}

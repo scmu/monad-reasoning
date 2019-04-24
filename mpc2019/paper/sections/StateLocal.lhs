@@ -132,8 +132,7 @@ See the note below.
 
 \paragraph{Note} Let |q| be a predicate, |q?| is a relation defined by |{(x,x) `mid` q x}|. The parameter |y| in |unfoldM| is called the {\em seed} used to generate the list. The relation |(not.p)? . snd . (=<<) . f| maps one seed to the next seed (where |(=<<)| is |(>>=)| written reversed). If it is {\em well-founded}, intuitively speaking, the seed generation cannot go on forever and |p| will eventually hold. It is known that inductive types (those can be folded) and coinductive types (those can be unfolded) do not coincide in {\sf SET}. To allow a fold to be composed after an unfold, typically one moves to a semantics based on complete partial orders. However, it was shown~\cite{DoornbosBackhouse:95:Induction} that, in {\sf Rel}, when the relation generating seeds is well-founded, hylo-equations do have unique solutions. One may thus stay within a set-theoretic semantics. Such an approach is recently explored again~\cite{Hinze:15:Conjugate}. ({\em End of Note})
 
-\koen{TODO: LLNCS docs recommend not using vspace command}
-\vspace{1em}
+% \vspace{1em} % Koen: LLNCS docs ask to avoid vspace, can be allowed in "exceptional cases"
 Theorem \ref{thm:hylo-fusion} does not rely on the \emph{local state laws} \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, and does not put restriction on |eps|.
 To apply the theorem to our particular case, we have to show that its preconditions hold for our particular |odot| ---
 for that we will need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}. In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard-fusion}:
@@ -190,7 +189,8 @@ corUnfoldfiltScanlLocal p f z ok oplus st =
 Recall that
 \begin{spec}
 queens n  = perm [0 .. n-1] >>= filt safe
-          = unfoldM null select [0..n-1] >>= filt (all ok . scanlp oplus (0,[],[])) {-"~~,"-}
+          = unfoldM null select [0..n-1] >>=
+            filt (all ok . scanlp oplus (0,[],[])) {-"~~,"-}
 \end{spec}
 where the auxiliary functions |select|, |ok|, |oplus| are defined in Section \ref{sec:queens}.
 The function |select| cannot be applied forever since the length of the given list decreases after each call.

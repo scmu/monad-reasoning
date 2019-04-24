@@ -61,6 +61,8 @@
 %format scanlMR = "\Varid{scanlM}_{\scaleobj{0.7}{\sf R}}"
 %format solveR = "\Varid{solve}_{\scaleobj{0.7}{\sf R}}"
 %format queensR = "\Varid{queens}_{\scaleobj{0.7}{\sf R}}"
+%format trans_1 = "\Varid{trans}_{\scaleobj{0.7}{1}}"
+%format trans_2 = "\Varid{trans}_{\scaleobj{0.7}{2}}"
 
 %%format seq = "(\otimes)"
 %%format `seq` = "\mathbin{\otimes}"

@@ -159,7 +159,7 @@ Similarly, \eqref{eq:mzero-bind-zero} implies |put s >> mzero = mzero| --- when 
 These requirements imply that each non-deterministic branch has its own copy of the state.
 Therefore, we will refer to \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} as \emph{local state laws} in this paper --- even though they do not explicitly mention state operators at all!
 One monad satisfying the laws is |Me {N,S s} a = s -> [(a,s)]|, which is the same monad one gets by |StateT s (ListT Identity)| in the Monad Transformer Library~\cite{MTL:14}.
-With effect handling~\cite{Wu:14:Effect, KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
+With effect handling~\cite{Wu:14:Effect,KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
 
 The advantage of having the local state laws is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning.
 In particular, non-determinism commutes with other effects.
@@ -196,7 +196,7 @@ in addition to the monad laws stated before, non-determinism commutes with any e
 For the rest of Section \ref{sec:monadic-scanl} and \ref{sec:nd-state-local}, we assume that \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold.
 
 \paragraph{Note} We briefly justify proofs by induction on the syntax tree.
-Finite monadic programs can be represented by the free monad constructed out of |return| and the effect operators, which can be represented by an inductively defined data structure, and interpreted by effect handlers~\cite{Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
+Finite monadic programs can be represented by the free monad constructed out of |return| and the effect operators, which can be represented by an inductively defined data structure, and interpreted by effect handlers~\cite{Kiselyov:13:Extensible,KiselyovIshii:15:Freer}.
 When we say two programs |m1| and |m2| are equal, we mean that they have the same denotation when interpreted by the effect handlers of the corresponding effects, for example, |hdNondet (hdState s m1) = hdNondet (hdState s m2)|, where |hdNondet| and |hdState| are respectively handlers for nondeterminism and state.
 Such equality can be proved by induction on some sub-expression in |m1| or |m2|, which are treated like any inductively defined data structure.
 A more complete treatment is a work in progress, which cannot be fully covered in this paper.

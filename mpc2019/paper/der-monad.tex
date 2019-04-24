@@ -363,12 +363,6 @@
 \usepackage{multicol}
 \usepackage{graphicx}
 
-% %% Some recommended packages.
-% \usepackage{booktabs}   %% For formal tables:
-%                         %% http://ctan.org/pkg/booktabs
-% \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
-%                         %% http://ctan.org/pkg/subcaption
-
 \usepackage{doubleequals}
 
 
@@ -378,50 +372,6 @@
 
 \newcommand{\todo}[1]{{\bf [To do: #1]}}
 \newcommand{\delete}[1]{}
-
-% % \makeatletter\if@ACM@journal\makeatother
-% % %% Journal information (used by PACMPL format)
-% % %% Supplied to authors by publisher for camera-ready submission
-% % \acmJournal{PACMPL}
-% % \acmVolume{1}
-% % \acmNumber{1}
-% % \acmArticle{1}
-% % \acmYear{2017}
-% % \acmMonth{1}
-% % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-% % \startPage{1}
-% % \else
-% \makeatother
-% 
-% %% Journal information
-% %% Supplied to authors by publisher for camera-ready submission;
-% %% use defaults for review submission.
-% \acmJournal{PACMPL}
-% \acmVolume{1}
-% \acmNumber{CONF} % CONF = POPL or ICFP or OOPSLA
-% \acmArticle{1}
-% \acmYear{2019}
-% \acmMonth{1}
-% \acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
-% \startPage{1}
-% 
-% %% Copyright information
-% %% Supplied to authors (based on authors' rights management selection;
-% %% see authors.acm.org) by publisher for camera-ready submission
-% \setcopyright{none}             %% For review submission
-% %\setcopyright{acmcopyright}
-% %\setcopyright{acmlicensed}
-% %\setcopyright{rightsretained}
-% %\copyrightyear{2017}           %% If different from \acmYear
-
-
-%% Bibliography style
-% \bibliographystyle{ACM-Reference-Format}
-%% Citation style
-%% Note: author/year citations are required for papers published as an
-%% issue of PACMPL.
-%\citestyle{acmauthoryear}   %% For author/year citations
-
 
 \allowdisplaybreaks
 
@@ -433,105 +383,18 @@
 %% Title information
 \title{Reasoning and Derivation of Monadic Programs}
 \titlerunning{Deriving Monadic Programs}
-%% [Short Title] is optional;
-                                        %% when present, will be used in
-                                        %% header instead of Full Title.
-%\titlenote{with title note}             %% \titlenote is optional;
-                                        %% can be repeated if necessary;
-                                        %% contents suppressed with 'anonymous'
 \subtitle{A Case Study of Non-determinism and State}
-%% \subtitle is optional
-%\subtitlenote{with subtitle note}       %% \subtitlenote is optional;
-                                        %% can be repeated if necessary;
-                                        %% contents suppressed with 'anonymous'
 
-
-%% Author information
-%% Contents and number of authors suppressed with 'anonymous'.
-%% Each author should be introduced by \author, followed by
-%% \authornote (optional), \orcid (optional), \affiliation, and
-%% \email.
-%% An author may have multiple affiliations and/or emails; repeat the
-%% appropriate command.
-%% Many elements are not rendered, but should be provided for metadata
-%% extraction tools.
-
-%% Author with single affiliation.
-\institute{Institute of Information Science, Academia Sinica
-    \and Department of Computer Science, KU Leuven
+\institute{Institute of Information Science, Academia Sinica, Taiwan, \email{scm@iis.sinica.edu.tw}
+    \and Department of Computer Science, KU Leuven, Belgium, \email{first.last@cs.kuleuven.be}
     }
 \author{Shin-Cheng Mu \inst{1} \and Tom Schrijvers \inst{2} \and Koen Pauwels \inst{2}}
-%\authornote{with author1 note}          %% \authornote is optional;
-                                        %% can be repeated if necessary
-%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
-% TODO
-% \affiliation{
-% %  \position{Position1}
-%   \department{Institute of Information Science}              %% \department is recommended
-%   \institution{Academia Sinica}            %% \institution is required
-% %  \streetaddress{Street1 Address1}
-% %  \city{City1}
-% %  \state{State1}
-% %  \postcode{Post-Code1}
-%   \country{Taiwan}
-% }
-%\email{scm@iis.sinica.edu.tw}          %% \email is recommended
-
-% \author{Tom Schrijvers}
-%\authornote{with author1 note}          %% \authornote is optional;
-                                        %% can be repeated if necessary
-%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
-% \affiliation{
-% %  \position{Position1}
-%   \department{Department of Computer Science}              %% \department is recommended
-%   \institution{KU Leuven}            %% \institution is required
-% %  \streetaddress{Street1 Address1}
-% %  \city{City1}
-% %  \state{State1}
-% %  \postcode{Post-Code1}
-%   \country{Belgium}
-% }
-%\email{tom.schrijvers@cs.kuleuven.be} %% \email is recommended
-
-% \author{Koen Pauwels}
-%\authornote{with author1 note}          %% \authornote is optional;
-                                         %% can be repeated if necessary
-%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
-% \affiliation{
-% %  \position{Position1}
-%   \department{Department of Computer Science}              %% \department is recommended
-%   \institution{KU Leuven}            %% \institution is required
-% %  \streetaddress{Street1 Address1}
-% %  \city{City1}
-% %  \state{State1}
-% %  \postcode{Post-Code1}
-%   \country{Belgium}
-% }
-%\email{koen.pauwels@student.kuleuven.be} %% \email is recommended
 
 \begin{abstract}
 Equational reasoning is among the most important tools that functional programming provides us. Curiously, relatively less attention has been paid to reasoning about monadic programs. In this pearl we aim to develop theorems and patterns useful for the derivation of monadic programs, focusing on the intricate interaction between state and non-determinism. We derive a backtracking algorithm for the $n$-queens puzzle when each non-deterministic branch has its own local state. For the scenario where a global state is shared, we propose laws the monad should satisfy, and develop programming patterns and techniques to simulate local states.
 \end{abstract}
 
-%% 2012 ACM Computing Classification System (CSS) concepts
-%% Generate at 'http://dl.acm.org/ccs/ccs.cfm'.
-% \begin{CCSXML}
-% <ccs2012>
-% <concept>
-% <concept_id>10003752.10010124.10010138</concept_id>
-% <concept_desc>Theory of computation~Program reasoning</concept_desc>
-% <concept_significance>500</concept_significance>
-% </concept>
-% </ccs2012>
-% \end{CCSXML}
-
-% \ccsdesc[500]{Theory of computation~Program reasoning}
-%% End of generated code
-
-
-%% Keywords
-%% comma separated list
-% \keywords{monad, effects, program derivation, equational reasoning}  %% \keywords is optional
+\keywords{monads \and effects \and program derivation \and equational reasoning \and nondeterminism \and state}
 
 
 \maketitle
@@ -545,7 +408,7 @@ Equational reasoning is among the most important tools that functional programmi
 
 Equational reasoning is among the many gifts that functional programming offers us. Functional programs preserve a rich set of mathematical properties, which not only helps to prove properties about programs in a relatively simple and elegant manner, but also aids the development of programs. One may refine a clear but inefficient specification, stepwise through equational reasoning, to an efficient program whose correctness may not be obvious without such a derivation.
 
-It is misleading if one says that functional programming does not allow side effects. In fact, even a purely functional language may allow a variety of side effects --- in a rigorous, mathematically manageable manner. Since the introduction of {\em monads} into the functional programming community~\cite{Moggi:89:Computational, Wadler:92:Monads}, it has become the main framework in which effects are modelled. Various monads were developed for different effects, from general ones such as IO, state, non-determinism, exception, continuation, environment passing, to specific purposes such as parsing. Numerous research were also devoted to producing practical monadic programs.
+It is misleading if one says that functional programming does not allow side effects. In fact, even a purely functional language may allow a variety of side effects --- in a rigorous, mathematically manageable manner. Since the introduction of {\em monads} into the functional programming community~\cite{Moggi:89:Computational,Wadler:92:Monads}, it has become the main framework in which effects are modelled. Various monads were developed for different effects, from general ones such as IO, state, non-determinism, exception, continuation, environment passing, to specific purposes such as parsing. Numerous research were also devoted to producing practical monadic programs.
 
 % Monad transformers~\cite{Liang:95:Monad} were introduced to allow modular construction of monads. Shortcomings of this approach were noticed, and it was proposed to see execution of monadic programs as interaction between programs and handlers~\cite{Plotkin:09:Handlers, Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
 
@@ -1164,7 +1027,7 @@ Similarly, \eqref{eq:mzero-bind-zero} implies \ensuremath{\Varid{put}\;\Varid{s}
 These requirements imply that each non-deterministic branch has its own copy of the state.
 Therefore, we will refer to \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} as \emph{local state laws} in this paper --- even though they do not explicitly mention state operators at all!
 One monad satisfying the laws is \ensuremath{\Conid{M}_{\{\mskip1.5mu \Conid{N},\Conid{S}\;\Varid{s}\mskip1.5mu\}}\;\Varid{a}\mathrel{=}\Varid{s}\to [\mskip1.5mu (\Varid{a},\Varid{s})\mskip1.5mu]}, which is the same monad one gets by \ensuremath{\Conid{StateT}\;\Varid{s}\;(\Conid{ListT}\;\Conid{Identity})} in the Monad Transformer Library~\cite{MTL:14}.
-With effect handling~\cite{Wu:14:Effect, KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
+With effect handling~\cite{Wu:14:Effect,KiselyovIshii:15:Freer}, the monad meets the requirements if we run the handler for state before that for list.
 
 The advantage of having the local state laws is that we get many useful properties, which make this stateful non-determinism monad preferred for program calculation and reasoning.
 In particular, non-determinism commutes with other effects.
@@ -1201,7 +1064,7 @@ in addition to the monad laws stated before, non-determinism commutes with any e
 For the rest of Section \ref{sec:monadic-scanl} and \ref{sec:nd-state-local}, we assume that \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} hold.
 
 \paragraph{Note} We briefly justify proofs by induction on the syntax tree.
-Finite monadic programs can be represented by the free monad constructed out of \ensuremath{\Varid{return}} and the effect operators, which can be represented by an inductively defined data structure, and interpreted by effect handlers~\cite{Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
+Finite monadic programs can be represented by the free monad constructed out of \ensuremath{\Varid{return}} and the effect operators, which can be represented by an inductively defined data structure, and interpreted by effect handlers~\cite{Kiselyov:13:Extensible,KiselyovIshii:15:Freer}.
 When we say two programs \ensuremath{\Varid{m}_{1}} and \ensuremath{\Varid{m}_{2}} are equal, we mean that they have the same denotation when interpreted by the effect handlers of the corresponding effects, for example, \ensuremath{\Varid{hdNondet}\;(\Varid{hdState}\;\Varid{s}\;\Varid{m}_{1})\mathrel{=}\Varid{hdNondet}\;(\Varid{hdState}\;\Varid{s}\;\Varid{m}_{2})}, where \ensuremath{\Varid{hdNondet}} and \ensuremath{\Varid{hdState}} are respectively handlers for nondeterminism and state.
 Such equality can be proved by induction on some sub-expression in \ensuremath{\Varid{m}_{1}} or \ensuremath{\Varid{m}_{2}}, which are treated like any inductively defined data structure.
 A more complete treatment is a work in progress, which cannot be fully covered in this paper.
@@ -1552,8 +1415,7 @@ See the note below.
 
 \paragraph{Note} Let \ensuremath{\Varid{q}} be a predicate, \ensuremath{\Varid{q}\mathbin{?}} is a relation defined by \ensuremath{\{\mskip1.5mu (\Varid{x},\Varid{x})\mid\Varid{q}\;\Varid{x}\mskip1.5mu\}}. The parameter \ensuremath{\Varid{y}} in \ensuremath{\Varid{unfoldM}} is called the {\em seed} used to generate the list. The relation \ensuremath{(\neg \mathbin{\cdot}\Varid{p})\mathbin{?}\mathbin{\cdot}\Varid{snd}\mathbin{\cdot}(\mathbin{\hstretch{0.7}{=\!\!<\!\!<}})\mathbin{\cdot}\Varid{f}} maps one seed to the next seed (where \ensuremath{(\mathbin{\hstretch{0.7}{=\!\!<\!\!<}})} is \ensuremath{(\mathrel{\hstretch{0.7}{>\!\!>\!\!=}})} written reversed). If it is {\em well-founded}, intuitively speaking, the seed generation cannot go on forever and \ensuremath{\Varid{p}} will eventually hold. It is known that inductive types (those can be folded) and coinductive types (those can be unfolded) do not coincide in {\sf SET}. To allow a fold to be composed after an unfold, typically one moves to a semantics based on complete partial orders. However, it was shown~\cite{DoornbosBackhouse:95:Induction} that, in {\sf Rel}, when the relation generating seeds is well-founded, hylo-equations do have unique solutions. One may thus stay within a set-theoretic semantics. Such an approach is recently explored again~\cite{Hinze:15:Conjugate}. ({\em End of Note})
 
-\koen{TODO: LLNCS docs recommend not using vspace command}
-\vspace{1em}
+% \vspace{1em} % Koen: LLNCS docs ask to avoid vspace, can be allowed in "exceptional cases"
 Theorem \ref{thm:hylo-fusion} does not rely on the \emph{local state laws} \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, and does not put restriction on \ensuremath{\epsilon}.
 To apply the theorem to our particular case, we have to show that its preconditions hold for our particular \ensuremath{(\odot)} ---
 for that we will need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}. In the lemma below we slightly generalise \ensuremath{(\odot)} in Theorem \ref{lma:foldr-guard-fusion}:
@@ -1619,11 +1481,15 @@ Recall that
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{11}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{13}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\Varid{queens}\;\Varid{n}{}\<[11]%
 \>[11]{}\mathrel{=}\Varid{perm}\;[\mskip1.5mu \mathrm{0}\mathinner{\ldotp\ldotp}\Varid{n}\mathbin{-}\mathrm{1}\mskip1.5mu]\mathrel{\hstretch{0.7}{>\!\!>\!\!=}}\Varid{filt}\;\Varid{safe}{}\<[E]%
 \\
-\>[11]{}\mathrel{=}\Varid{unfoldM}\;\Varid{null}\;\Varid{select}\;[\mskip1.5mu \mathrm{0}\mathinner{\ldotp\ldotp}\Varid{n}\mathbin{-}\mathrm{1}\mskip1.5mu]\mathrel{\hstretch{0.7}{>\!\!>\!\!=}}\Varid{filt}\;(\Varid{all}\;\Varid{ok}\mathbin{\cdot}\Varid{scanl}_{+}\;(\oplus)\;(\mathrm{0},[\mskip1.5mu \mskip1.5mu],[\mskip1.5mu \mskip1.5mu]))~~,{}\<[E]%
+\>[11]{}\mathrel{=}\Varid{unfoldM}\;\Varid{null}\;\Varid{select}\;[\mskip1.5mu \mathrm{0}\mathinner{\ldotp\ldotp}\Varid{n}\mathbin{-}\mathrm{1}\mskip1.5mu]\mathrel{\hstretch{0.7}{>\!\!>\!\!=}}{}\<[E]%
+\\
+\>[11]{}\hsindent{2}{}\<[13]%
+\>[13]{}\Varid{filt}\;(\Varid{all}\;\Varid{ok}\mathbin{\cdot}\Varid{scanl}_{+}\;(\oplus)\;(\mathrm{0},[\mskip1.5mu \mskip1.5mu],[\mskip1.5mu \mskip1.5mu]))~~,{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 where the auxiliary functions \ensuremath{\Varid{select}}, \ensuremath{\Varid{ok}}, \ensuremath{(\oplus)} are defined in Section \ref{sec:queens}.
@@ -1676,7 +1542,7 @@ The usual, naive implementation of \ensuremath{(\mathrel{\hstretch{0.7}{>\!\!>\!
 %See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
 \footnote{
 The type \ensuremath{\Conid{ListT}\;(\Conid{State}\;\Varid{s})} generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
-More careful implementations of \ensuremath{\Conid{ListT}}, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT, Volkov:14:list-t}.
+More careful implementations of \ensuremath{\Conid{ListT}}, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT,Volkov:14:list-t}.
 Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
 }
 
@@ -1972,7 +1838,7 @@ Finally we define the function that performs the translation just described, and
 \begin{figure}
 \begin{mdframed}
 \centering
-\small
+\scriptsize
 \subfloat[]{
 \begin{minipage}{0.5\textwidth}
 \begin{hscode}\SaveRestoreHook
@@ -2289,7 +2155,7 @@ whereas the second program is equal to
 which clearly does not always have the same result.
 \begin{figure}
   \centering
-  \scriptsize
+  \tiny
   \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{hscode}\SaveRestoreHook
@@ -2337,7 +2203,10 @@ which clearly does not always have the same result.
 \\
 \>[7]{}\mathbin{=}\mbox{\commentbegin  definition of \ensuremath{(\mathbin{\scaleobj{0.8}{\langle\hstretch{0.7}{>\!\!>\!\!=}\rangle}})}  \commentend}{}\<[E]%
 \\
-\>[7]{}\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{x}\;(\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{y}\;(\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}\;\Varid{w}))\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{x}\;(\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}\;(\lambda \Varid{s}\to \scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{y}\;(\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}\;\Varid{s}))){}\<[E]%
+\>[7]{}\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{x}\;(\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{y}\;(\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}\;\Varid{w})){}\<[E]%
+\\
+\>[7]{}\hsindent{2}{}\<[9]%
+\>[9]{}\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{x}\;(\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}\;(\lambda \Varid{s}\to \scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}\;\Varid{y}\;(\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}\;\Varid{s}))){}\<[E]%
 \\
 \>[7]{}\mathbin{=}\mbox{\commentbegin  by \eqref{eq:put-put-g-d} and \eqref{eq:put-get-g-d}  \commentend}{}\<[E]%
 \\
@@ -2603,7 +2472,8 @@ over \ensuremath{(\talloblong)} at the top-level of a global-state program if th
 state restoring.
 \begin{align}
   % get_or_trans
-\ensuremath{\Varid{run}\;(\Conid{Get}\;(\lambda \Varid{s}\to \Varid{trans}\;(\Varid{m}_{1}\;\Varid{s})\mathbin{\talloblong}(\Varid{m}_{2}\;\Varid{s})))} = \ensuremath{\Varid{run}\;(\Conid{Get}\;(\lambda \Varid{s}\to \Varid{trans}\;(\Varid{m}_{1}\;\Varid{s}))\mathbin{\talloblong}\Conid{Get}\;\Varid{m}_{2})} \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
+\ensuremath{\Varid{run}\;(\Conid{Get}\;(\lambda \Varid{s}\to \Varid{trans}\;(\Varid{m}_{1}\;\Varid{s})\mathbin{\talloblong}(\Varid{m}_{2}\;\Varid{s})))} = \\
+\ensuremath{\Varid{run}\;(\Conid{Get}\;(\lambda \Varid{s}\to \Varid{trans}\;(\Varid{m}_{1}\;\Varid{s}))\mathbin{\talloblong}\Conid{Get}\;\Varid{m}_{2})} \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 
 And finally, we require that the \ensuremath{\Varid{trans}} function is, semantically speaking,
@@ -2660,40 +2530,45 @@ which both replace \ensuremath{\Conid{Put}}s with \ensuremath{\Varid{put}_{\scal
 \ensuremath{\Varid{trans}} function.
 The first replaces each \ensuremath{\Conid{Modify\char95 R}} in the program by a direct analogue of the
 definition given above, while the second replaces it by
-\ensuremath{\Conid{Get}\;(\lambda \Varid{s}\to \Conid{Put}\;(\Varid{next}\;\Varid{s})\;(\Varid{trans\char95 2}\;\Varid{p}))}:
+\ensuremath{\Conid{Get}\;(\lambda \Varid{s}\to \Conid{Put}\;(\Varid{next}\;\Varid{s})\;(\Varid{trans}_{\scaleobj{0.7}{2}}\;\Varid{p}))}:
 
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{4}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{6}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{36}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{45}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[4]{}\Varid{trans\char95 1}\mathbin{::}\Conid{Prog\char95 m}\;\Varid{a}\to \Conid{Prog}\;\Varid{a}{}\<[E]%
+\>[4]{}\Varid{trans}_{\scaleobj{0.7}{1}}\mathbin{::}\Conid{Prog\char95 m}\;\Varid{a}\to \Conid{Prog}\;\Varid{a}{}\<[E]%
 \\
 \>[4]{}\mathbin{...}{}\<[E]%
 \\
-\>[4]{}\Varid{trans\char95 1}\;(\Conid{Modify\char95 R}\;\Varid{next}\;\Varid{prev}\;\Varid{p}){}\<[36]%
-\>[36]{}\mathrel{=}\Conid{Get}\;(\lambda \Varid{s}\to \Conid{Put}\;(\Varid{next}\;\Varid{s})\;(\Varid{trans\char95 1}\;\Varid{p})\mathbin{\talloblong}\Conid{Get}\;(\lambda \Varid{t}\to \Conid{Put}\;(\Varid{prev}\;\Varid{t})\;\emptyset)){}\<[E]%
+\>[4]{}\Varid{trans}_{\scaleobj{0.7}{1}}\;(\Conid{Modify\char95 R}\;\Varid{next}\;\Varid{prev}\;\Varid{p}){}\<[36]%
+\>[36]{}\mathrel{=}{}\<[45]%
+\>[45]{}\Conid{Get}\;(\lambda \Varid{s}\to \Conid{Put}\;(\Varid{next}\;\Varid{s})\;(\Varid{trans}_{\scaleobj{0.7}{1}}\;\Varid{p}){}\<[E]%
+\\
+\>[36]{}\mathbin{\talloblong}{}\<[45]%
+\>[45]{}\Conid{Get}\;(\lambda \Varid{t}\to \Conid{Put}\;(\Varid{prev}\;\Varid{t})\;\emptyset)){}\<[E]%
 \\[\blanklineskip]%
-\>[4]{}\Varid{trans\char95 2}\mathbin{::}\Conid{Prog\char95 m}\;\Varid{a}\to \Conid{Prog}\;\Varid{a}{}\<[E]%
+\>[4]{}\Varid{trans}_{\scaleobj{0.7}{2}}\mathbin{::}\Conid{Prog\char95 m}\;\Varid{a}\to \Conid{Prog}\;\Varid{a}{}\<[E]%
 \\
 \>[4]{}\mathbin{...}{}\<[E]%
 \\
-\>[4]{}\Varid{trans\char95 2}\;(\Conid{Modify\char95 R}\;\Varid{next}\;\Varid{prev}\;\Varid{p}){}\<[36]%
-\>[36]{}\mathrel{=}\Conid{Get}\;(\lambda \Varid{s}\to \Varid{put}_{\scaleobj{0.7}{\sf R}}\;(\Varid{next}\;\Varid{s})\;(\Varid{trans\char95 2}\;\Varid{p})){}\<[E]%
+\>[4]{}\Varid{trans}_{\scaleobj{0.7}{2}}\;(\Conid{Modify\char95 R}\;\Varid{next}\;\Varid{prev}\;\Varid{p}){}\<[36]%
+\>[36]{}\mathrel{=}\Conid{Get}\;(\lambda \Varid{s}\to \Varid{put}_{\scaleobj{0.7}{\sf R}}\;(\Varid{next}\;\Varid{s})\;(\Varid{trans}_{\scaleobj{0.7}{2}}\;\Varid{p})){}\<[E]%
 \\
 \>[4]{}\hsindent{2}{}\<[6]%
 \>[6]{}\mathbf{where}\;\Varid{put}_{\scaleobj{0.7}{\sf R}}\;\Varid{s}\;\Varid{p}\mathrel{=}\Conid{Get}\;(\lambda \Varid{t}\to \Conid{Put}\;\Varid{s}\;\Varid{p}\mathbin{\talloblong}\Conid{Put}\;\Varid{t}\;\emptyset){}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 
-It is clear that \ensuremath{\Varid{trans\char95 2}\;\Varid{p}} is the exact same program as \ensuremath{\Varid{trans}\;\Varid{p'}}, where \ensuremath{\Varid{p'}}
+It is clear that \ensuremath{\Varid{trans}_{\scaleobj{0.7}{2}}\;\Varid{p}} is the exact same program as \ensuremath{\Varid{trans}\;\Varid{p'}}, where \ensuremath{\Varid{p'}}
 is \ensuremath{\Varid{p}} but with each \ensuremath{\Conid{ModifyR}\;\Varid{next}\;\Varid{prev}\;\Varid{p}} replaced by \ensuremath{\Conid{Get}\;(\lambda \Varid{s}\to \Conid{Put}\;(\Varid{next}\;\Varid{s})\;\Varid{p})}.
 
 We then prove that these two transformations lead to semantically identical
 instances of \ensuremath{\Conid{Prog}\;\Varid{a}}.
 \begin{lemma}
-  \ensuremath{\Varid{run}\;(\Varid{trans\char95 1}\;\Varid{p})\mathrel{=}\Varid{run}\;(\Varid{trans\char95 2}\;\Varid{p})}. \checkmark
+  \ensuremath{\Varid{run}\;(\Varid{trans}_{\scaleobj{0.7}{1}}\;\Varid{p})\mathrel{=}\Varid{run}\;(\Varid{trans}_{\scaleobj{0.7}{2}}\;\Varid{p})}. \checkmark
 \end{lemma}
 
 %\begin{align*}
@@ -2772,7 +2647,9 @@ by \ensuremath{\Varid{run}\;(\Varid{solve}_{\scaleobj{0.7}{\sf R}}\;\Varid{p}\;\
 \>[B]{}\Varid{solve}_{\scaleobj{0.7}{\sf R}}\mathbin{::}\{\mskip1.5mu \Conid{N},\Conid{S}\;\Varid{s}\mskip1.5mu\}\mathbin{\subseteq}\epsilon\Rightarrow {}\<[34]%
 \>[34]{}(\Varid{b}\to \Conid{Bool})\to (\Varid{b}\to \Conid{M}_{\epsilon}\;(\Varid{a},\Varid{b}))\to {}\<[E]%
 \\
-\>[34]{}(\Varid{s}\to \Conid{Bool})\to (\Varid{s}\to \Varid{a}\to \Varid{s})\to (\Varid{s}\to \Varid{a}\to \Varid{s})\to \Varid{s}\to \Varid{b}\to \Conid{M}_{\epsilon}\;[\mskip1.5mu \Varid{a}\mskip1.5mu]{}\<[E]%
+\>[34]{}(\Varid{s}\to \Conid{Bool})\to (\Varid{s}\to \Varid{a}\to \Varid{s})\to (\Varid{s}\to \Varid{a}\to \Varid{s})\to {}\<[E]%
+\\
+\>[34]{}\Varid{s}\to \Varid{b}\to \Conid{M}_{\epsilon}\;[\mskip1.5mu \Varid{a}\mskip1.5mu]{}\<[E]%
 \\
 \>[B]{}\Varid{solve}_{\scaleobj{0.7}{\sf R}}\;\Varid{p}\;\Varid{f}\;\Varid{ok}\;(\oplus)\;(\ominus)\;\Varid{st}\;\Varid{z}\mathrel{=}\Varid{put}_{\scaleobj{0.7}{\sf R}}\;\Varid{st}\mathbin{\hstretch{0.7}{>\!\!>}}\Varid{hyloM}\;(\odot)\;(\Varid{return}\;[\mskip1.5mu \mskip1.5mu])\;\Varid{p}\;\Varid{f}\;\Varid{z}{}\<[E]%
 \\
@@ -3076,14 +2953,14 @@ it complies with.
 
 
 % We noted that |M s a = \s -> ([a],s)| fails \eqref{eq:bind-mplus-dist} and is not a monad.
-% The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way. More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT, Volkov:14:list-t}.
+% The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way. More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT,Volkov:14:list-t}.
 % Effect handlers, such as that of Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}, do produce correct implementations by running the handler for non-determinism before that of state.
 
 \paragraph{Acknowledgements} to be added.
 
 
 %% Bibliography
-%\bibliographystyle{jfp}
+\bibliographystyle{splncs04}
 \bibliography{bib}
 %\input{der-monad.bbl}
 
