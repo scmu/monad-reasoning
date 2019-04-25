@@ -25,7 +25,7 @@ m1 >> m2 = m1 >>= const m2
 In this section we give a more formal treatment of non-deterministic global state monad.
 We propose laws such a monad should satisfy --- to the best of our knowledge, we are the first to propose these laws.
 The laws turn out to be rather intricate.
-To make sure that there exists a model, an implementation is proposed in the appendix, and it is verified in Coq that the laws and some additional theorems are satisfied.
+To make sure that there exists a model, an implementation is proposed, and it is verified in Coq that the laws and some additional theorems are satisfied.
 
 The ultimate goal, however, is to show the following property:
 given a program written for a local-state monad,
@@ -161,7 +161,7 @@ in other words, |Dom| need not be a monad.
 In fact, as we will see later, we will choose our implementation in such a way
 that there does not exist a bind operator for |run|.
 
-\subsection{Modeling Global State Semantics}
+\subsection{Laws for Global State Semantics}
 \label{sec:model-global-state-sem}
 We impose the laws upon |Dom| and the domain operators to ensure the semantics of a
 non-backtracking (global-state),
@@ -234,13 +234,9 @@ met.
 Law~\eqref{eq:put-ret-or-g-d} states that a |putD| operation distributes over a
 nondeterministic choice if the left branch of that choice simply returns a
 value.
-An example of an implementation that violates this law would be one that
-applies a given function |f :: s -> s| to the state after each return.
-Such an implementation would conform to an alternative law
-|putD x (retD w <||||> q) = putD x (retD w) <||||> putD (f x) q|.
-Law~\eqref{eq:put-ret-or-g-d} only holds if the implementation of |Dom| does not
-permit the definition
-of a bind operator |(<>>=>) :: Dom a -> (a -> Dom b) -> Dom b|.
+This law has a particularly striking implication: it disqualifies any
+implementation for which a bind operator
+|(<>>=>) :: Dom a -> (a -> Dom b) -> Dom b| can be defined!
 Consider for instance the following program:
 \begin{code}
   putD x (retD w <||> getD retD) <>>=> \z -> putD y (retD z) {-"~~."-}
@@ -254,6 +250,25 @@ be reduced to |putD y (retD w <||||> retD y)|,
 whereas the second program is equal to
 |putD y (retD w <||||> retD x)|,
 which clearly does not always have the same result.
+
+To gain some intuition about why law~\eqref{eq:put-ret-or-g-d} prohibits a bind
+operator, consider that the presence or absence of a bind operator influences
+what equality of programs means.
+The existence of a bind operator implies that programs can be composed, so in the
+presence of such an operator, two programs can only be equal if they are also
+\emph{compositionally} equal; that is, not only do they produce the same result
+when run, but the programmer may freely substitute one for the other in a larger
+program without changing the meaning of the whole program.
+In a domain where it is impossible to define a bind operator, programs cannot be
+freely composed, so equality of programs takes on a more limited meaning: two
+programs are equal if they produce identical results given the same inputs; no
+more, no less. \koen{can we come up with a name for this type of equality?}
+The local-state laws do not prohibit a bind operator, and as such the two
+notions of equality coincide.
+This is not the case under global-state semantics: one can come up with pairs
+of programs which produce the same results, but behave differently when
+composed, for example:
+|putD s (retD x <||||> retD y)| and |putD s (retD x) <||||> putD s (retD y)|
 \begin{figure}
   \centering
   \tiny
@@ -347,10 +362,83 @@ this requirement disqualifies the most
 straightforward candidate for the semantic domain, |ListT (State s)|, as a
 bind operator can be defined for it.
 
-In Appendix~\ref{sec:GSMonad} we present an implementation of |Dom| and its
-operators that satisfies all the laws in this section, for which we provide
-\emph{machine-verified proofs}, and which does not permit
-the implementation of a sensible bind operator.
+It is striking that these laws imply that a bind operator cannot exist for the
+semantic domain.
+As we wish to leave our readers with some deeper intuition about this fact,
+we revisit it in Section~\ref{subsec:contextual-equivalence}, 
+where we will see that this requirement is connected to the notion of
+non-contextual laws.
+
+\subsection{An Implementation of the Semantical Domain}
+\label{sec:GSMonad}
+We present an implementation of |Dom| that satisfies the
+laws of section \ref{sec:model-global-state-sem}, and we provide a
+machine-verified proof ($\checkmark$) of this fact.
+In the following implementation, we let |Dom| be the union of |M s a|
+for all |a| and for a given |s|.
+
+\begin{samepage}
+The implementation is based on a multiset or |Bag| data structure.
+\begin{code}
+type Bag a
+
+singleton  :: a -> Bag a
+emptyBag   :: Bag a
+sum        :: Bag a -> Bag a -> Bag a
+\end{code}
+\end{samepage}
+
+\begin{samepage}
+We model a stateful, nondeterministic computation with global state semantics as
+a function that maps an initial state onto a bag of results, and a final state.
+Each result is a pair of the value returned, as well as the state at that point
+in the computation.
+As we mentioned in Section~\ref{sec:model-global-state-sem}, a bind operator cannot be
+defined for this implementation (and this is by design),
+because we retain only the final result of the branch without any information on
+how to continue the branch.
+\begin{code}
+type M s a = s -> (Bag (a,s),s)
+\end{code}
+\end{samepage}
+
+\begin{samepage}
+|failD| does not modify the state and produces no results.
+|retD| does not modify the state and produces a single result.
+\begin{code}
+failD :: M s a
+failD = \s -> (emptyBag,s)
+
+retD :: a -> M s a
+retD x = \s -> (singleton (x,s),s)
+\end{code}
+\end{samepage}
+
+\begin{samepage}
+  |getD| simply passes along the initial state to its continuation.
+  |putD| ignores the initial state and calls its continuation with the given
+  parameter instead.
+\begin{code}
+getD :: (s -> M s a) -> M s a
+getD k = \s -> k s s
+
+putD :: s -> M s a -> M s a
+putD s k = \ _ -> k s
+\end{code}
+\end{samepage}
+
+\begin{samepage}
+The |<||||>| operator runs the left computation with the initial state, then
+runs the right computation with the final state of the left computation,
+and obtains the final result by merging the two bags of results.
+\begin{code}
+(<||>) :: M s a -> M s a -> M s a
+(xs <||> ys) s =  let  (ansx, s')   = xs s
+                       (ansy, s'')  = ys s'
+                  in (sum ansx ansy, s'')
+\end{code}
+\end{samepage}
+
 
 \subsection{Contextual Equivalence}
 \label{subsec:contextual-equivalence}
@@ -417,7 +505,9 @@ lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
   |Put s (Put t p)| &\CEq |Put t p| \mbox{~~.}
 \end{align*}
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
-easily follow from the analogous semantic domain laws. The formulation of a
+easily follow from the analogous semantic domain laws.
+
+The formulation of a
 |put|-|ret|-|or| law-like property \eqref{eq:put-ret-or-g-d} requires somewhat
 more care: because there exists a bind operator for |Prog|, we must stipulate
 that it does not hold in arbitrary contexts:
@@ -426,6 +516,7 @@ that it does not hold in arbitrary contexts:
 \end{align}
 The proof of this statement has been machine-verified in Coq.
 We annotate theorems which have been verified in Coq with a $\checkmark$.
+\koen{this is no longer in a logical spot}
 
 \subsection{Simulating Local-State Semantics}
 
