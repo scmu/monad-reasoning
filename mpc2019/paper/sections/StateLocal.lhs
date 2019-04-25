@@ -71,7 +71,7 @@ hyloM otimes m p f y
   | p y        = m
   | otherwise  = f y >>= \(x,z) ->  x `otimes` hyloM otimes m p f z {-"~~,"-}
 \end{code}
-if |x `otimes` n = n >>= ((x`otimes`) . return)| for all |n :: Me eps c|, and that the relation |(not . p)? . snd . (=<<) . f| is well-founded. (See the note below.)
+if |unfoldM p f z >>= ((x `otimes`) . k) === x `otimes` (unfoldM p f z >>= k)| for all |k|, and the relation |(not . p)? . snd . (=<<) . f| is well-founded. (See the note below.)
 %if False
 \begin{code}
 hyloMFuse ::
@@ -99,32 +99,12 @@ hyloFusion1 otimes m p f y =
 \begin{code}
     unfoldM p f y >>= foldr otimes m
  ===    {- definition of |unfoldM|, |not (p y)| -}
-    (f y >>= (\(x,z) -> (x:) <$> unfoldM p f z)) >>=
-    foldr otimes m
- ===    {- monadic law \eqref{eq:monad-bind-ret} and |foldr| -}
-    f y >>= (  \(x,z) -> unfoldM p f z >>= \xs ->
-               x `otimes` foldr otimes m xs) {-"~~."-}
+    (f y >>= (\(x,z) -> (x:) <$> unfoldM p f z)) >>= foldr otimes m
+ ===    {- monad law  and |foldr| -}
+    f y >>= (\(x,z) -> unfoldM p f z >>= \xs -> x `otimes` foldr otimes m xs)
+ ===    {- since |n >>= ((x `otimes`) . k) === x `otimes` (n >>= k)| where |n = unfoldM p f z| -}
+    f y >>= (\(x,z) -> x `otimes` (unfoldM p f z >>=  foldr otimes m)) {-"~~."-}
 \end{code}
-We focus on the expression inside the $\lambda$ abstraction:
-%if False
-\begin{code}
-hyloFusion2 :: Monad m =>
-  (a -> m b -> m b) -> a -> m b -> (b1 -> Bool) -> (b1 -> m (a, b1)) -> b1 -> m b
-hyloFusion2 otimes x m p f z =
-\end{code}
-%endif
-\begin{code}
-    unfoldM p f z >>= (\xs -> x `otimes` foldr otimes m xs)
- ===    {- assumption: |x `otimes` n = n >>= ((x`otimes`) . return)|, see below -}
-    unfoldM p f z >>= (foldr otimes m >=> ((x `otimes`) . return))
- ===    {- since |m >>= (f >=> g) = (m >>= f) >>= g| -}
-    (unfoldM p f z >>= foldr otimes m) >>= ((x `otimes`) . return)
- ===    {- by assumption |x `otimes` m = m >>= ((x`otimes`) . return)| -}
-   x `otimes` (unfoldM p f z >>= foldr otimes m) {-"~~."-}
-\end{code}
-To understand the first step, note that
-|h xs >>= ((x `otimes`) . return) {-"\,"-}= {-"\,"-} (h >=> ((x `otimes`) . return)) xs|.
-
 Now that |unfoldM p f z >>= foldr otimes m| is a fixed-point, we may conclude that it equals |hyloM otimes m p f| if the latter has a unique fixed-point,
 which is guaranteed by the well-foundedness condition.
 See the note below.
@@ -136,12 +116,14 @@ See the note below.
 Theorem \ref{thm:hylo-fusion} does not rely on the \emph{local state laws} \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}, and does not put restriction on |eps|.
 To apply the theorem to our particular case, we have to show that its preconditions hold for our particular |odot| ---
 for that we will need \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}. In the lemma below we slightly generalise |odot| in Theorem \ref{lma:foldr-guard-fusion}:
-\begin{lemma} Assuming that state and non-determinism commute, and |m >>= mzero = mzero|. Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
+\begin{lemma}
+Assuming that |m >>= mzero = mzero| for all |m|.
+Given |p :: a -> s -> Bool|, |next :: a -> s -> s|, |res :: a -> b -> b|, define |odot :: a -> Me eps b -> Me eps b| with |{N, S s} `sse` eps|:
 \begin{spec}
   x `odot` m =  get >>= \st -> guard (p x st) >>
                 put (next x st) >> (res x <$> m) {-"~~."-}
 \end{spec}
-We have |x `odot` m = m >>= ((x `odot`) . return)|.
+We have |n >>= ((x `odot`) . k) === x `odot` (n >>= k)|, if |n| commutes with state.
 \end{lemma}
 \begin{proof}
 Routine, using commutativity of state and non-determinism.
