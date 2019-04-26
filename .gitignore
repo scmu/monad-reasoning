@@ -36,3 +36,7 @@ notes/BacktrackGlobal\.pdf
 paper/response/Corrected\.pdf
 
 paper/response/Corrected\.tex
+
+*.out
+
+mpc2019/paper/der-monad\.pdf

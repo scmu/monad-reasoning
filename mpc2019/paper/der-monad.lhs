@@ -52,14 +52,27 @@
     }
 \author{Shin-Cheng Mu \inst{1} \and Tom Schrijvers \inst{2} \and Koen Pauwels \inst{2}}
 
+\maketitle
+
 \begin{abstract}
-Equational reasoning is among the most important tools that functional programming provides us. Curiously, relatively less attention has been paid to reasoning about monadic programs. In this pearl we aim to develop theorems and patterns useful for the derivation of monadic programs, focusing on the intricate interaction between state and non-determinism. We derive a backtracking algorithm for the $n$-queens puzzle when each non-deterministic branch has its own local state. For the scenario where a global state is shared, we propose laws the monad should satisfy, and develop programming patterns and techniques to simulate local states.
+Equational reasoning is one of the most important tools of functional
+programming. Yet, while monadic programs are ubiquitous, relatively little
+attention has been paid to reasoning about them. To help address this
+situation, we develop new theorems and patterns for the derivation of monadic
+programs. We focus specifically on the intricate interaction between state and
+non-determinism. 
+
+We first derive a backtracking algorithm for the $n$-queens puzzle where each
+non-deterministic branch has its own local state. Then we show how to simulate
+local state in terms of a global state shared by all branches. We
+propose laws that global state should satisfy along with a model that satisfies
+them. Finally, we formally prove the simulation correct using a novel
+combination of free monads and contextual equivalence.
 \end{abstract}
 
 \keywords{monads \and effects \and program derivation \and equational reasoning \and nondeterminism \and state}
 
 
-\maketitle
 
 %include sections/Intro.lhs
 %include sections/Monads.lhs
