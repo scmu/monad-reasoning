@@ -272,7 +272,7 @@ consider the subprograms of our previous example
 |(putD x (retD w) <||||> putD x (getD retD))|.
 Clearly we expect these two programs to produce the exact same results in
 isolation, yet when they are sequentially composed with the program
-|\z -> putD y (retD z)|, their different nature is revealed.
+|\z -> putD y (retD z)|, their different nature is revealed (by \eqref{eq:bind-mplus-dist}).
 \koen{I'm wondering now what a global-state implementation would look like
   without this law but with a bind operator...}
 
@@ -507,13 +507,48 @@ lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
 easily follow from the analogous semantic domain laws.
 
-The formulation of a
-|put|-|ret|-|or| law-like property \eqref{eq:put-ret-or-g-d} requires somewhat
-more care: because there exists a bind operator for |Prog|, we must stipulate
-that it does not hold in arbitrary contexts:
+More care is required when we want to adapt law~\eqref{eq:put-ret-or-g-d}
+into the |Prog| setting. At the end of Section~
+\ref{sec:model-global-state-sem}, we saw that this law precludes the existence
+of a bind operator in the semantic domain.
+Since a bind operator for |Prog|s exists, it might seem we're out of luck when
+we want to adapt law~\eqref{eq:put-ret-or-g-d} to |Prog|s.
+But because |Prog|s are merely syntax, we have much more fine-grained control
+over what equality of programs means.
+When talking about the semantic domain, we only had one notion of equality: two
+programs are equal only when one can be substituted for the other in any
+context. So if, in that setting, we want to introduce a law that does not hold
+under a particular composition (in this case, sequential composition), the only
+way we can express that is to say that that composition is impossible in the
+domain.
+But the fact that |Prog| is defined purely syntactically opens up the
+possibility of defining multiple notions of equality which may exist at the same
+time. In fact, we have already introduced syntactic equality, semantic equality, and
+contextual equality. It is precisely this choice of granularity that allows us
+to introduce laws which only hold in programs of a certain form (non-contextual
+laws), while other laws are much more general (contextual laws). A direct
+adaptation of law~\eqref{eq:put-ret-or-g-d} would look something like this:
+\begin{align*}
+  \forall C.~ C \text{ is bind-free} \Rightarrow &|orun (apply C (Put s (Return x `mplus` p)))| \\
+  = &|orun (apply C (Put s (Return x) `mplus` Put s p))| \mbox{~~.}
+\end{align*}
+In other words, the two sides of the equation can be substituted for one
+another, but only in contexts which do not contain any binds.
+However, in our mechanization, we only prove a more restricted version where
+the context must be empty (in other words, what we called semantic equivalence),
+which turns out to be enough for our purposes.
 \begin{align}
-|run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)| \label{eq:put-ret-or-g} \mbox{~~.} \checkmark
+  |run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)| \mbox{~~.} \label{eq:put-ret-or-g} \checkmark
 \end{align}
+
+% The formulation of a
+% |put|-|ret|-|or| law-like property \eqref{eq:put-ret-or-g-d} requires somewhat
+% more care: because there exists a bind operator for |Prog|, we must stipulate
+% that it does not hold in arbitrary contexts:
+% \begin{align}
+% |run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)|
+% \end{align}
+
 The proof of this statement has been machine-verified in Coq.
 We annotate theorems which have been verified in Coq with a $\checkmark$.
 \koen{this is no longer in a logical spot}
