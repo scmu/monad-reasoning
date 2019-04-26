@@ -254,21 +254,28 @@ which clearly does not always have the same result.
 To gain some intuition about why law~\eqref{eq:put-ret-or-g-d} prohibits a bind
 operator, consider that the presence or absence of a bind operator influences
 what equality of programs means.
-The existence of a bind operator implies that programs can be composed, so in the
-presence of such an operator, two programs can only be equal if they are also
-\emph{compositionally} equal; that is, not only do they produce the same result
-when run, but the programmer may freely substitute one for the other in a larger
-program without changing the meaning of the whole program.
-In a domain where it is impossible to define a bind operator, programs cannot be
-freely composed, so equality of programs takes on a more limited meaning: two
-programs are equal if they produce identical results given the same inputs; no
-more, no less. \koen{can we come up with a name for this type of equality?}
-The local-state laws do not prohibit a bind operator, and as such the two
-notions of equality coincide.
-This is not the case under global-state semantics: one can come up with pairs
-of programs which produce the same results, but behave differently when
-composed, for example:
-|putD s (retD x <||||> retD y)| and |putD s (retD x) <||||> putD s (retD y)|
+Our first intuition might be that we consider two programs equal if they produce
+the same outputs given the same inputs. But this is too narrow of a view: for
+two programs to be considered equal, they must also behave the same under
+\emph{composition}; that is, we must be able to replace one for the other within
+a larger whole, without changing the meaning of the whole.
+The bind operator allows us to compose programs \emph{sequentially}, and
+therefore its existence implies that, for two programs to be considered equal,
+they must also behave identically under sequential composition.
+Under local-state semantics, this additional requirement coincides with other
+notions of equality (\koen{prove this?}): we can't come up with a pair of
+programs which both produce the same outputs given the same inputs, but behave
+differently under sequential composition.
+But under global-state semantics, we can come up with such counterexamples:
+consider the subprograms of our previous example
+|putD x (retD w <||||> getD retD)| and
+|(putD x (retD w) <||||> putD x (getD retD))|.
+Clearly we expect these two programs to produce the exact same results in
+isolation, yet when they are sequentially composed with the program
+|\z -> putD y (retD z)|, their different nature is revealed.
+\koen{I'm wondering now what a global-state implementation would look like
+  without this law but with a bind operator...}
+
 \begin{figure}
   \centering
   \tiny
@@ -361,13 +368,6 @@ It is worth remarking that, even if we don't impose law~\eqref{eq:put-or-comm-g-
 this requirement disqualifies the most
 straightforward candidate for the semantic domain, |ListT (State s)|, as a
 bind operator can be defined for it.
-
-It is striking that these laws imply that a bind operator cannot exist for the
-semantic domain.
-As we wish to leave our readers with some deeper intuition about this fact,
-we revisit it in Section~\ref{subsec:contextual-equivalence}, 
-where we will see that this requirement is connected to the notion of
-non-contextual laws.
 
 \subsection{An Implementation of the Semantical Domain}
 \label{sec:GSMonad}

@@ -78,7 +78,7 @@ For example, in any given implementation, the programs |return x `mplus` return 
 considered semantically distinct.
 The same goes for the programs |return x `mplus` return x| and |return x|,
 or the programs |(put s >> return x) `mplus` m| and
-|(put s >> return x) `mplus` put s >> m|.
+|(put s >> return x) `mplus` (put s >> m)|.
 Additional axioms will be introduced as needed to cover these properties.
 
 %We will also require another property which we will only introduce informally
