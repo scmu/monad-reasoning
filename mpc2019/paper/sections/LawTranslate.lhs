@@ -43,13 +43,13 @@ Finally we define the function that performs the translation just described, and
 \subsection{Programs and Contexts}
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
-%format <||> = "\mathbin{\scaleobj{0.8}{\langle[\!]\rangle}}"
+%format <||> = "\overline{[\!]}" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
-%format <>>=> = "\mathbin{\scaleobj{0.8}{\langle\hstretch{0.7}{>\!\!>\!\!=}\rangle}}"
-%format getD = "\scaleobj{0.8}{\langle}\Varid{get}\scaleobj{0.8}{\rangle}"
-%format putD = "\scaleobj{0.8}{\langle}\Varid{put}\scaleobj{0.8}{\rangle}"
-%format retD = "\scaleobj{0.8}{\langle}\Varid{ret}\scaleobj{0.8}{\rangle}"
-%format failD = "\scaleobj{0.8}{\langle}\varnothing\scaleobj{0.8}{\rangle}"
+%format <>>=> = "\overline{\hstretch{0.7}{>\!\!>\!\!=}}"
+%format getD = "\overline{\Varid{get}}"
+%format putD =  "\overline{\Varid{put}}"
+%format retD = "\overline{\Varid{ret}}"
+%format failD = "\overline{\Varid{\varnothing}}"
 %format langle = "\scaleobj{0.8}{\langle}"
 %format rangle = "\scaleobj{0.8}{\rangle}"
 %format emptyListLit = "`[]"
@@ -273,8 +273,6 @@ consider the subprograms of our previous example
 Clearly we expect these two programs to produce the exact same results in
 isolation, yet when they are sequentially composed with the program
 |\z -> putD y (retD z)|, their different nature is revealed (by \eqref{eq:bind-mplus-dist}).
-\koen{I'm wondering now what a global-state implementation would look like
-  without this law but with a bind operator...}
 
 \begin{figure}
   \centering
@@ -368,17 +366,21 @@ It is worth remarking that, even if we don't impose law~\eqref{eq:put-or-comm-g-
 this requirement disqualifies the most
 straightforward candidate for the semantic domain, |ListT (State s)|, as a
 bind operator can be defined for it.
+\paragraph{Machine-Verified Proofs}
+From this point forward, we provide proofs mechanized in Coq for many theorems.
+When we do, we mark the proven statement with a check mark ($\checkmark$).
 
 \subsection{An Implementation of the Semantical Domain}
 \label{sec:GSMonad}
 We present an implementation of |Dom| that satisfies the
-laws of section \ref{sec:model-global-state-sem}, and we provide a
-machine-verified proof ($\checkmark$) of this fact.
+laws of section \ref{sec:model-global-state-sem}, and we provide
+machine-verified proofs to that effect.
 In the following implementation, we let |Dom| be the union of |M s a|
 for all |a| and for a given |s|.
 
 \begin{samepage}
-The implementation is based on a multiset or |Bag| data structure.
+The implementation is based on a multiset or |Bag| data structure. In the
+mechanization, we implement |Bag a| as a function |a -> Nat|.
 \begin{code}
 type Bag a
 
@@ -393,10 +395,17 @@ We model a stateful, nondeterministic computation with global state semantics as
 a function that maps an initial state onto a bag of results, and a final state.
 Each result is a pair of the value returned, as well as the state at that point
 in the computation.
-As we mentioned in Section~\ref{sec:model-global-state-sem}, a bind operator cannot be
-defined for this implementation (and this is by design),
-because we retain only the final result of the branch without any information on
-how to continue the branch.
+The use of an unordered data structure to return the results of the computation
+is needed to comply with law~\eqref{eq:put-or-comm-g-d}.
+
+In Section~\ref{sec:model-global-state-sem} we mentioned that, as a consequence
+of law~\eqref{eq:put-ret-or-g-d} we must design the implementation of our
+semantic domain in such a way that it is impossible to define a bind operator
+|<>>=> :: Dom a -> (a -> Dom b) -> Dom b| for it.
+This is the case for our implementation: we only retain the final result of the
+branch without any information on how to continue the branch, which makes it
+impossible to define the bind operator.
+
 \begin{code}
 type M s a = s -> (Bag (a,s),s)
 \end{code}
@@ -431,6 +440,7 @@ putD s k = \ _ -> k s
 The |<||||>| operator runs the left computation with the initial state, then
 runs the right computation with the final state of the left computation,
 and obtains the final result by merging the two bags of results.
+
 \begin{code}
 (<||>) :: M s a -> M s a -> M s a
 (xs <||> ys) s =  let  (ansx, s')   = xs s
@@ -439,6 +449,11 @@ and obtains the final result by merging the two bags of results.
 \end{code}
 \end{samepage}
 
+\begin{lemma}
+  This implementation conforms to every law introduced in
+  Section~\ref{sec:model-global-state-sem}.~$\checkmark$
+  
+\end{lemma}
 
 \subsection{Contextual Equivalence}
 \label{subsec:contextual-equivalence}
