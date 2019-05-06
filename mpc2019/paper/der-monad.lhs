@@ -39,6 +39,7 @@
 
 \newcommand{\scm}[1]{\textcolor{teal}{#1}}
 \newcommand{\koen}[1]{\textcolor{blue}{#1}}
+\newcommand{\tom}[1]{\textcolor{red}{#1}}
 \begin{document}
 
 
