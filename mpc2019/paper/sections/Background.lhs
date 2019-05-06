@@ -2,7 +2,7 @@
 \koen{Maybe make this two sections}
 
 \subsection{Monads, Nondeterminism and State}
-\paragraph{Monads and Effect Operators}
+\paragraph{Monads}
 A monad consists of a type constructor |M :: * -> *| and two operators |return :: a -> M a| and ``bind'' |(>>=) :: M a -> (a -> M b) -> M b| that satisfy the following {\em monad laws}:
 \begin{align}
   |return x >>= f| &= |f x|\mbox{~~,} \label{eq:monad-bind-ret}\\
@@ -12,37 +12,20 @@ A monad consists of a type constructor |M :: * -> *| and two operators |return :
 \end{align}
 We also define |m1 >> m2 = m1 >>= const m2|, which has type |(>>) :: m a -> m b -> m b|.
 
-Monads are used to model effects, and each effect comes with its collection of
-operators. For example, to model non-determinism we assume two operators |mzero|
-and |mplus| ($\Varid{mplus}$), respectively modeling failure and choice. A state
-effect comes with operators |get| and |put|, which respectively reads from and
-writes to an unnamed state variable.
-
-A program may involve more than one effect. In Haskell, the type class
-constraint |MonadPlus| in the type of a program denotes that the program may use
-|mzero| or |mplus|, and possibly other effects, while |MonadState s| denotes
-that it may use |get| and |put|. Some theorems in this paper, however, apply
-only to programs that, for example, use non-determinism and no other effects. To
-talk about such programs, we use a slightly different notation. We let the type
-|Me eps a| denote a monad whose return type is |a| and, during whose execution,
-effects in the set |eps| may occur. 
-\koen{I'm thinking of adopting the `Just Do It' notation instead of this
-  notation. This one is more elegant but less well-known, and since we'll be
-  switching to free monad notation quite quickly, it might not be worth the
-  extra space.}
-
 \paragraph{Nondeterminism}
 The first effect we introduce is nondeterminism.
 Following the trail of Hutton and Fulger \cite{HuttonFulger:08:Reasoning} and
 Gibbons and Hinze \cite{GibbonsHinze:11:Just}, we introduce effects 
 based on an axiomatic characterisation (a set of laws that govern how the effect
 operators behave with respect to one another) rather than a specific implementation.
-
-We denote nondeterminism by |N|, and we assume two operators
-|mzero :: N `mem` eps => Me eps a|
-and
-|mplus :: N `mem` eps => Me eps a -> Me eps a -> Me eps a|
-: the former
+We define a type class to capture this interface as follows
+(\cite{GibbonsHinze:11:Just}):
+\begin{code}
+  class Monad m => MNondet m where
+    mzero  :: m a
+    mplus  :: m a -> m a -> m a
+\end{code}
+In this interface, |mzero|
 denotes failure, while |m `mplus` n| denotes that the computation may yield
 either |m| or |n|.
 Precisely what
@@ -74,8 +57,14 @@ We will refer to the laws \eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus},
 Other properties regarding |mzero| and |mplus| will be introduced when needed.
 
 \paragraph{State}
-The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retrieves the state, while |put :: S s `mem` eps =>  s -> Me eps ()| overwrites the state by the given value. They are supposed to satisfy the \emph{state laws}:
-
+The state effect provides two operators (\cite{GibbonsHinze:11:Just}):
+\begin{code}
+  class Monad m => MState s m | m -> s where
+    get  :: m s
+    put  :: s -> m ()
+\end{code}
+The |get| operator retrieves the state, while |put| overwrites the state by the given value.
+They are supposed to satisfy the \emph{state laws}~\cite{GibbonsHinze:11:Just}:
 \begin{alignat}{2}
 &\mbox{\bf put-put}:\quad &
 |put st >> put st'| &= |put st'|~~\mbox{,} \label{eq:put-put}\\
@@ -87,4 +76,73 @@ The state effect provides two operators: |get :: S s `mem` eps => Me eps s| retr
 |get >>= (\st -> get >>= k st)| &= |get >>= (\st -> k st st)|
 ~~\mbox{.} \label{eq:get-get}
 \end{alignat}
-\koen{can we find a citation for these laws?}
+
+\subsection{Combining Effects}
+As Gibbons and Hinze already noted, an advantage of defining our effects
+axiomatically, rather than by providing some concrete implementation, is that it
+is straightforward to reason about combinations of effects
+\cite{GibbonsHinze:11:Just}.
+In this paper, we are interested in the interaction between nondeterminism and
+state, specifically.
+\begin{code}
+  class (MState s m, MNondet m) => MStateNondet s m | m -> s
+\end{code}
+The type class |MStateNondet s m| simply inherits the operators of its
+superclasses |MState s m| and |MNondet m| without adding new operators, and
+implementations of this class should comply with all laws of both superclasses.
+
+However, this is not the entire story. Without additional `interaction laws',
+the design space for implementations of this type class is left wide-open with
+respect to questions about how these effects interact.
+In particular, it seems hard to imagine that one could write nontrivial programs
+which are agnostic towards the question of what happens to the state of the
+program when we backtrack.
+We identify two possible approaches.
+
+\paragraph{Local State Semantics}
+One is what Gibbons and Hinze call ``backtrackable state'', that is, when a
+branch of the nondeterministic computation runs into a dead end and the
+continuation of the computation is picked up at the most recent branching point,
+any alterations made to the state by our terminated branch are invisible to the
+continuation.
+Because in this scheme state is local to a branch, we will refer to these
+semantics as \emph{local state semantics}.
+We characterise local state semantics with the following laws:
+\begin{alignat}{2}
+&\mbox{\bf right-zero}:\quad&
+  |m >> mzero|~ &=~ |mzero| ~~\mbox{~~,}
+    \label{eq:mzero-bind-zero}\\
+&\mbox{\bf right-distributivity}:\quad&
+  |m >>= (\x -> f1 x `mplus` f2 x)|~ &=~ |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.}
+    \label{eq:mplus-bind-dist}
+\end{alignat}
+Law~\eqref{eq:mzero-bind-zero} implies that when an effectful computation |m|
+is followed by a |mzero|, then the computation |m| might as well never have
+happened. In particular, |put s >> mzero| is equal to |mzero|, which matches our
+intuition about local (or backtrackable) state (whereas it clearly does not hold
+for non-backtrackable semantics).
+Law~\eqref{eq:mplus-bind-dist} also only holds for some monads with
+nondeterminism. The fact that sequentially composing a computation |m| with a
+nondeterministically chosen continuation might duplicate |m| (and therefore the
+effects of |m|) corresponds to our intuition for backtrackable state, but not for
+non-backtrackable state or other irriversible effects.
+
+These requirements imply that each nondeterministic branch has its own copy of
+the state. 
+One monad satisfying the laws is |M s a = s -> [(a,s)]|, which is the same monad
+one gets by |StateT s (ListT Identity)| in the Monad Transformer
+Library~\cite{MTL:14}. With effect
+handling~\cite{Wu:14:Effect,KiselyovIshii:15:Freer}, the monad meets the
+requirements if we run the handler for state before that for list.
+
+\koen{TODO: theorem 2 etc?}
+
+\paragraph{Global State Semantics}
+Alternatively, we can choose a semantics where state reigns over nondeterminism.
+In this case of non-backtrackable state, alterations to the state persist over
+backtracks.
+Because only a single state is shared over all the branches of the
+nondeterministic computation, we call this semantics \emph{global state semantics}.
+We will return later to the question of how to define laws that capture our
+intuition for this kind of semantics, because (to the best of our knowledge)
+this constitutes a novel contribution.
