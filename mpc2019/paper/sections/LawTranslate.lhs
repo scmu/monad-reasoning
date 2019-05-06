@@ -72,38 +72,6 @@ data Prog a where
 \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{spec}
-      data Env (l :: [*]) where
-        Nil  :: Env emptyListLit
-        Cons :: a -> Env l -> Env (a:l)
-
-      type OProg e a = Env e -> Prog a
-    \end{spec}
-  \end{minipage}
-}
-\quad
-\subfloat[]{
-  \begin{minipage}{0.5\textwidth}
-    \begin{spec}
-    data Ctx e1 a e2 b where
-      hole    :: Ctx e a e a
-      COr1    :: Ctx e1 a e2 b -> OProg e2 b
-              -> Ctx e1 a e2 b
-      COr2    :: OProg e2 b -> Ctx e1 a e2 b
-              -> Ctx e1 a e2 b
-      CPut    :: (Env e2 -> S) -> Ctx e1 a e2 b
-              -> Ctx e1 a e2 b
-      CGet    :: (S -> Bool) -> Ctx e1 a (S:e2) b
-              -> (S -> OProg e2 b) -> Ctx e1 a e2 b
-      CBind1  :: Ctx e1 a e2 b -> (b -> OProg e2 c)
-              -> Ctx e1 a e2 c
-      CBind2  :: OProg e2 a -> Ctx e1 b (a:e2) c
-              -> Ctx e1 b e2 c
-    \end{spec}
-  \end{minipage}
-}
-\subfloat[]{
-  \begin{minipage}{0.5\textwidth}
-    \begin{spec}
       run    :: Prog a -> Dom a
       retD   :: a -> Dom a
       failD  :: Dom a
@@ -115,15 +83,15 @@ data Prog a where
 }
 \quad
 \end{mdframed}
-\caption{(a) Syntax for programs. (b) Environments and open programs. (c) Syntax
-  for contexts. (d) Semantic domain.}
-\label{fig:context-semantics}
+\caption{(a) Syntax for programs. (b) Semantic domain.}
+\label{fig:prog-and-dom}
 \end{figure}
+
 In the previous sections we have been mixing syntax and semantics,
 which we avoid in this section by defining the program syntax as a free monad.
 This way we avoid the need for a type-level distinction between programs
 with local-state semantics and programs with global-state semantics.
-Figure~\ref{fig:context-semantics}(a) defines a syntax for
+Figure~\ref{fig:prog-and-dom}(a) defines a syntax for
 nondeterministic, stateful, closed programs |Prog|, where
 the |Get| and |Put| constructors take continuations as arguments, and
 the |(>>=)| operator is defined as follows:
@@ -144,7 +112,7 @@ its definition has laws \eqref{eq:bind-mplus-dist} and
 The meaning of such a monadic program is determined by a semantic domain of our
 choosing, which we denote with |Dom|, and its corresponding
 domain operators |retD|, |failD|, |getD|, |putD| and |(<||||>)|
-(see figure~\ref{fig:context-semantics}(d)).
+(see figure~\ref{fig:prog-and-dom}(b)).
 The |run :: Prog a -> Dom a| function ``runs'' a program |Prog a| into a value
 in the semantic domain |Dom a|:
 \begin{samepage}
@@ -263,7 +231,7 @@ The bind operator allows us to compose programs \emph{sequentially}, and
 therefore its existence implies that, for two programs to be considered equal,
 they must also behave identically under sequential composition.
 Under local-state semantics, this additional requirement coincides with other
-notions of equality (\koen{prove this?}): we can't come up with a pair of
+notions of equality: we can't come up with a pair of
 programs which both produce the same outputs given the same inputs, but behave
 differently under sequential composition.
 But under global-state semantics, we can come up with such counterexamples:
@@ -276,7 +244,7 @@ isolation, yet when they are sequentially composed with the program
 
 \begin{figure}
   \centering
-  \tiny
+  \scriptsize
   \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{code}
@@ -370,7 +338,7 @@ bind operator can be defined for it.
 From this point forward, we provide proofs mechanized in Coq for many theorems.
 When we do, we mark the proven statement with a check mark ($\checkmark$).
 
-\subsection{An Implementation of the Semantical Domain}
+\subsection{An Implementation of the Semantic Domain}
 \label{sec:GSMonad}
 We present an implementation of |Dom| that satisfies the
 laws of section \ref{sec:model-global-state-sem}, and we provide
@@ -456,6 +424,47 @@ and obtains the final result by merging the two bags of results.
 \end{lemma}
 
 \subsection{Contextual Equivalence}
+
+\begin{figure}
+\begin{mdframed}
+  \centering
+  \scriptsize
+  \subfloat[]{
+    \begin{minipage}{0.5\textwidth}
+      \begin{spec}
+    data Ctx e1 a e2 b where
+      hole    :: Ctx e a e a
+      COr1    :: Ctx e1 a e2 b -> OProg e2 b
+              -> Ctx e1 a e2 b
+      COr2    :: OProg e2 b -> Ctx e1 a e2 b
+              -> Ctx e1 a e2 b
+      CPut    :: (Env e2 -> S) -> Ctx e1 a e2 b
+              -> Ctx e1 a e2 b
+      CGet    :: (S -> Bool) -> Ctx e1 a (S:e2) b
+              -> (S -> OProg e2 b) -> Ctx e1 a e2 b
+      CBind1  :: Ctx e1 a e2 b -> (b -> OProg e2 c)
+              -> Ctx e1 a e2 c
+      CBind2  :: OProg e2 a -> Ctx e1 b (a:e2) c
+              -> Ctx e1 b e2 c
+  \end{spec}
+   \end{minipage}
+  }
+  \subfloat[]{
+    \begin{minipage}{0.5\textwidth}
+      \begin{spec}
+      data Env (l :: [*]) where
+        Nil  :: Env emptyListLit
+        Cons :: a -> Env l -> Env (a:l)
+
+      type OProg e a = Env e -> Prog a
+      \end{spec}
+    \end{minipage}
+  }
+\end{mdframed}
+\caption{(a) Environments and open programs. (b) Syntax for contexts.}
+\label{fig:env-and-context}
+\end{figure}
+
 \label{subsec:contextual-equivalence}
 With our semantic domain sufficiently specified, we can prove analogous
 properties for programs interpreted through this domain.
@@ -465,9 +474,10 @@ semantic domain, substituting |Prog| data constructors for semantic domain
 operators as needed; we must keep in mind that a term in |Prog a| describes a
 syntactical structure without ascribing meaning to it.
 For example, one cannot simply assert that |Put x (Put y p)| is \emph{equal} to
-|Put y p|, because although these two programs have the same semantics, they
+|Put y p|,
+because although these two programs have the same semantics, they
 are not structurally identical.
-It is clear that we must define a notion of ``semantical equivalence'' between
+It is clear that we must define a notion of ``semantic equivalence'' between
 programs.
 We can map the syntactical structures in |Prog a| onto the semantic domain
 |Dom a| using |run| to achieve that.
@@ -478,11 +488,11 @@ we cannot prove
 |run (Return w `mplus` Put x (Put y p)) = run (Return w `mplus` Put y p)|
 from such a law.
 
-So the concept of semantical equivalence in itself is not sufficient; we require
+So the concept of semantic equivalence in itself is not sufficient; we require
 a notion of ``contextual semantic equivalence'' of programs which allows us to
-formulate properties about semantical equivalence which hold in any surrounding
+formulate properties about semantic equivalence which hold in any surrounding
 context.
-Figure~\ref{fig:context-semantics}(c) provides the definition for single-hole
+Figure~\ref{fig:env-and-context}(a) provides the definition for single-hole
 contexts |Ctx|.
 A context |C| of type |Ctx e1 a e2 b| can be interpreted as a function that, given a
 program that returns a value of type |a| under environment |e1| (in other words:
@@ -490,11 +500,11 @@ the type and environment of the hole), produces a program that returns a value
 of type |b| under environment |e2| (the type and environment of the whole program).
 Filling the hole with |p| is denoted by |apply C p|.
 The type of environments, |Env| is defined using heterogeneous lists
-(Figure~\ref{fig:context-semantics}(b)).
+(Figure~\ref{fig:env-and-context}(b)).
 When we consider the notion of programs in contexts, we must take into account
 that these contexts may introduce variables which are referenced by the program.
 The |Prog| datatype however represents only closed programs.
-Figure~\ref{fig:context-semantics}(b) introduces the |OProg| type to represent
+Figure~\ref{fig:env-and-context}(b) introduces the |OProg| type to represent
 ``open'' programs, and the |Env| type to represent environments.
 |OProg e a| is defined as the type of functions that construct a \emph{closed}
 program of type |Prog a|, given an environment of type |Env e|.
@@ -510,7 +520,7 @@ We can then assert that two programs are contextually equivalent if, for
 yield the same result:
 \newcommand{\CEq}{=_\mathtt{GS}}
 \begin{align*}
-  |m1| \CEq |m2| \triangleq \forall C. |orun (apply C m1)| = |orun (apply C m2)| \mbox{~~.}
+  |m1| \CEq |m2| \triangleq \forall |C|. |orun (apply C m1)| = |orun (apply C m2)| \mbox{~~.}
 \end{align*}
 
 We can then straightforwardly formulate variants of the state laws, the
@@ -544,7 +554,7 @@ to introduce laws which only hold in programs of a certain form (non-contextual
 laws), while other laws are much more general (contextual laws). A direct
 adaptation of law~\eqref{eq:put-ret-or-g-d} would look something like this:
 \begin{align*}
-  \forall C.~ C \text{ is bind-free} \Rightarrow &|orun (apply C (Put s (Return x `mplus` p)))| \\
+  \forall |C|.~ |C| \text{ is bind-free} \Rightarrow &|orun (apply C (Put s (Return x `mplus` p)))| \\
   = &|orun (apply C (Put s (Return x) `mplus` Put s p))| \mbox{~~.}
 \end{align*}
 In other words, the two sides of the equation can be substituted for one
@@ -563,10 +573,6 @@ which turns out to be enough for our purposes.
 % \begin{align}
 % |run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)|
 % \end{align}
-
-The proof of this statement has been machine-verified in Coq.
-We annotate theorems which have been verified in Coq with a $\checkmark$.
-\koen{this is no longer in a logical spot}
 
 \subsection{Simulating Local-State Semantics}
 
@@ -599,7 +605,7 @@ We introduce notation for ``contextual equivalence under simulated backtracking
 semantics'':
 \newcommand{\CEqLS}{=_\mathtt{LS}}
 \begin{align*}
-  |m1| \CEqLS |m2| \triangleq \forall C. |eval (apply C m1)| = |eval (apply C m2)| \mbox{~~.}
+  |m1| \CEqLS |m2| \triangleq \forall |C|. |eval (apply C m1)| = |eval (apply C m2)| \mbox{~~.}
 \end{align*}
 For example, we formulate the statement that the |put|-|put|
 law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
@@ -656,7 +662,7 @@ state restoring.
 |run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 
-And finally, we require that the |trans| function is, semantically speaking,
+And finally, we require that the |trans| function is, semanticly speaking,
 idempotent, to prove the case |m = Put s m'|.
 \begin{align}
   % get_or_trans
@@ -714,7 +720,7 @@ definition given above, while the second replaces it by
 It is clear that |trans_2 p| is the exact same program as |trans p'|, where |p'|
 is |p| but with each |ModifyR next prev p| replaced by |Get (\s -> Put (next s) p)|.
 
-We then prove that these two transformations lead to semantically identical
+We then prove that these two transformations lead to semanticly identical
 instances of |Prog a|.
 \begin{lemma}
   |run (trans_1 p) = run (trans_2 p)|. \checkmark

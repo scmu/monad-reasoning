@@ -75,10 +75,7 @@ combination of free monads and contextual equivalence.
 
 
 %include sections/Intro.lhs
-%include sections/Monads.lhs
-%include sections/Queens.lhs
-%include sections/MonadicScanL.lhs
-%include sections/StateLocal.lhs
+%include sections/Background.lhs
 %include sections/NondetGlobal.lhs
 %include sections/LawTranslate.lhs
 %include sections/Conclusion.lhs
@@ -89,10 +86,5 @@ combination of free monads and contextual equivalence.
 \bibliography{bib}
 %\input{der-monad.bbl}
 
-%% Appendix
-\appendix
-%include sections/GSMonad.lhs
-
-%Text of appendix \ldots
 
 \end{document}
