@@ -23,6 +23,7 @@ m1 >> m2 = m1 >>= const m2
 \label{sec:nd-state-global}
 
 For a monad with both non-determinism and state, the local state laws imply that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
+\koen{remove this}
 
 Non-deterministic monads with a global state, however, is rather tricky.
 One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.

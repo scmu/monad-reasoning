@@ -77,6 +77,7 @@ combination of free monads and contextual equivalence.
 
 %include sections/Intro.lhs
 %include sections/Background.lhs
+%include sections/Motivation.lhs
 %include sections/NondetGlobal.lhs
 %include sections/LawTranslate.lhs
 %include sections/Conclusion.lhs
