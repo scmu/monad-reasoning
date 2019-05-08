@@ -80,6 +80,7 @@ They are supposed to satisfy the \emph{state laws}:
 \end{alignat}
 
 \subsection{Combining Effects}
+\label{sec:combining-effects}
 As Gibbons and Hinze already noted, an advantage of defining our effects
 axiomatically, rather than by providing some concrete implementation, is that it
 is straightforward to reason about combinations of effects.
@@ -120,8 +121,7 @@ We characterise local state semantics with the following laws:
 With some implementations of the monad, it is likely that in the lefthand side of \eqref{eq:mplus-bind-dist}, the effect of |m| happens once, while in the righthand side it happens twice. In \eqref{eq:mzero-bind-zero}, the |m| on the lefthand side may incur some effects that do not happen in the righthand side.
 
 Having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} leads to profound consequences on the semantics and implementation of monadic programs.
-To begin with, \eqref{eq:mplus-bind-dist} implies that we have at least some limited
-notion of commutativity of |mplus|.
+To begin with, \eqref{eq:mplus-bind-dist} implies that we have commutativity of |mplus|.
 For instance, both the left and right distributivity rules can be applied to
 the term |(return x `mplus` return y) >>= \z -> return z `mplus` return z|.
 It is then easy to show that this term must be equal to both
@@ -135,9 +135,9 @@ It is then easy to show that this term must be equal to both
   Law~\eqref{eq:mplus-bind-dist} is actually too strong to
   characterise all reasonable implementations of backtrackable state, but we
   will stick to this characterisation in our paper.}
+\koen{TODO: more general proof of commutativity?}
 Implementations of such non-deterministic monads have been studied by
 Fischer~\cite{Fischer:11:Purely}.
-
 
 % Law~\eqref{eq:mzero-bind-zero} implies that when an effectful computation |m|
 % is followed by a |mzero|, then the computation |m| might as well never have
@@ -161,8 +161,6 @@ handling~\cite{Wu:14:Effect,KiselyovIshii:15:Freer}, the monad behaves similarly
 (except for the commutativity implied by
 law~\eqref{eq:mplus-bind-dist}) if we run the handler for state before that for
 list.
-
-\koen{TODO: exactly which properties should we intro here?}
 
 \paragraph{Global State Semantics}
 Alternatively, we can choose a semantics where state reigns over nondeterminism.

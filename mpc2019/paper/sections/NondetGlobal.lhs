@@ -21,11 +21,8 @@ m1 >> m2 = m1 >>= const m2
 
 \section{Non-Determinism with Global State}
 \label{sec:nd-state-global}
-
-For a monad with both non-determinism and state, the local state laws imply that each non-deterministic branch has its own state. This is not costly for states consisting of linked data structures, for example the state |(Int, [Int], [Int])| in the |n|-queens problem. In some applications, however, the state might be represented by data structures, e.g. arrays, that are costly to duplicate. For such practical concerns, it is worth considering the situation when all non-deterministic branches share one global state.
-\koen{remove this}
-
-Non-deterministic monads with a global state, however, is rather tricky.
+Finding a correct characterisation of a nondeterministic monad with global state
+is rather tricky.
 One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
 The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
 %See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
@@ -38,13 +35,14 @@ Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{Kisely
 Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
 In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
 Thus |mplus| is still associative, but certainly cannot be commutative.
-As mentioned in Section \ref{sec:right-distr-local-state}, right-distributivity \eqref{eq:mplus-bind-dist} implies commutativity of |mplus|.
+
+As mentioned in Section~\ref{sec:combining-effects}, right-distributivity \eqref{eq:mplus-bind-dist} implies commutativity of |mplus|.
 Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is global.
 Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
 These significantly limit the properties we may have.
 
 The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
-what pitfall we may encounter, and what programming pattern we may use,
+what pitfalls we may encounter, and what programming pattern we may use,
 to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
 
 \subsection{The Global State Law}
@@ -130,15 +128,9 @@ In fact, one cannot guarantee that |modReturn prev| is always executed --- if |s
 
 We need a way to say that ``|modify next| and |modReturn prev| are run exactly once, respectively before and after all non-deterministic branches in |solve|.'' Fortunately, we have discovered a curious technique. Define
 \begin{spec}
-side :: N `mem` eps => Me eps a -> Me eps b
+side :: MNondet a => m a -> m b
 side m = m >> mzero {-"~~."-}
 \end{spec}
-%if False
-\begin{code}
-side :: MonadPlus m => m a -> m b
-side m = m >> mzero {-"~~."-}
-\end{code}
-%endif
 Since non-deterministic branches are executed sequentially, the program
 \begin{spec}
 side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modify prev)
