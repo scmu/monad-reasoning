@@ -79,7 +79,7 @@ equivalence. We also provide a model for global state that is necessarily
 non-monadic.
 \end{abstract}
 
-\keywords{monads \and effects \and program derivation \and equational reasoning \and nondeterminism \and state}
+\keywords{monads \and effect handlers \and equational reasoning \and nondeterminism \and state \and contextual equivalence}
 
 
 
