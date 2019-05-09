@@ -70,33 +70,93 @@ The aim of the puzzle is to place |n| queens on a |n| by |n| chess board such th
 queens :: MNondet m => Int -> m [Int]
 queens n = perm [0..n-1] >>= filt safe {-"~~."-}
 \end{code}
-where |perm| non-deterministically computes a permutation of its input, and the pure function |safe :: [Int] -> Bool| determines whether no queens are on the same diagonal. The monadic function |filt p x| returns |x| if |p x| holds, and fails otherwise:
+where |perm| non-deterministically computes a permutation of its input, and the pure function |safe :: [Int] -> Bool| determines whether no queens are on the same diagonal. The monadic function |filt p x| returns |x| if |p x| holds, and fails otherwise. It is defined in terms of standard monadic function |guard|:
 \begin{code}
 filt :: MNondet m => (a -> Bool) -> a -> m a
 filt p x = guard (p x) >> return x {-"~~,"-}
-\end{code}
-where |guard| is a standard monadic function defined by:
-\begin{code}
+
 guard :: MNondet m => Bool -> m ()
 guard b = if b then return () else mzero {-"~~."-}
 \end{code}
 This specification of |queens| generates all the permutations, before checking them one by one, in two separate phases. We wish to fuse the two phases and produce a faster implementation.
 
+\paragraph{Permutation}
+The monadic function |perm| can be written both as a fold or an unfold.
+For this problem we choose the latter.
+The function |select| non-deterministically splits a list into a pair containing one chosen element and the rest:
+\begin{code}
+select :: MNondet m => [a] -> m (a,[a]) {-"~~."-}
+select []      =  mzero
+select (x:xs)  =  return (x,xs) `mplus` ((id *** (x:)) <$> select xs) {-"~~."-}
+\end{code}
+where |(f *** g) (x,y) = (f x, g y)|.
+For example, |select [1,2,3]| yields one of |(1,[2,3])|, |(2,[1,3])| and |(3,[1,2])|. With its help, |perm| can be defined by:
+\begin{code}
+perm :: MNondet m => [a] -> m [a]
+perm []  = return []
+perm xs  = select xs >>= \(x,ys) -> (x:) <$> perm ys {-"~~."-}
+\end{code}
+
 \paragraph{Safety Check} Representing a placement as a permutation allows an easy way to check whether two queens are put on the same diagonal.
 An 8 by 8 chess board has 15 {\em up diagonals} (those running between bottom-left and top-right). Let them be indexed by |[0..14]| (see Figure \ref{fig:queens-examples}(b)).
 If we apply |zipWith (+) [0..]| to a permutation, we get the indices of the up-diagonals where the chess pieces are placed.
 Similarly, there are 15 {\em down diagonals} (those running between top-left and bottom right).
-By applying |zipWith (-) [0..]| to a permutation, we get the indices of their down-diagonals (indexed by |[-7..7]|.
-See Figure \ref{fig:queens-examples}(c)).
-A placement is safe if the diagonals contain no duplicates:
-\begin{code}
-ups, downs :: [Int] -> [Int]
-ups    xs  = zipWith (+) [0..] xs  {-"~~,"-}
-downs  xs  = zipWith (-) [0..] xs  {-"~~,"-}
+By applying |zipWith (-) [0..]| to a permutation, we get the indices of their down-diagonals (indexed by |[-7..7]|. See Figure \ref{fig:queens-examples}(c)).
+A placement is safe if the diagonals contain no duplicates.
+Simple functional program calculation shows that we can merge zipping and duplication-checking into one traversal. That is, we may define
+|safe xs = safeAcc (0,[],[]) xs|, where
+\begin{spec}
+safeAcc (i,us,ds) []      = True
+safeAcc (i,us,ds) (x:xs)  = ok (i',us',ds') && safeAcc (i',us',ds') xs {-"~~,"-}
+  where  (i',us',ds') = (i+1, (i+x : us), (i-x : ds))
+         ok (i,(x:us), (y:ds)) = x `notelem` us && y `notelem` ds {-"~~."-}
+\end{spec}
+The function |safeAcc| is essentially a fold-left followed by a reduce.
+Operationally, |(i,us,ds)| is a ``state'' kept by |safeAcc|, where |i| is the current column we are looking at, while |us| and |ds| are respectively the up and down diagonals encountered so far.
 
-safe     :: [Int] -> Bool
-safe xs  = nodup (ups xs) && nodup (downs xs) {-"~~,"-}
-\end{code}
+The function |safeAcc| uses non-determinism but not the state effect.
+One naturally wonders whether the ``state'' can be implemented using an actual state monad. Indeed, the following function |filtAcc|, which returns an arrangement if it is safe, works by saving |(i,us,ds)| in a local state:
+\begin{spec}
+filtAcc :: MStateNondet St m => St -> [Int] -> m [Int]
+filtAcc (i,us,ds) xs = put (i,us,ds) >> foldr odot (return []) xs {-"~~,"-}
+where  x `odot` m =  get >>= \(i,us,ds) ->
+                     let (i',us',ds') = (i+1, (i+x : us), (i-x : ds))
+                     in  guard (ok (i',us',ds')) >>
+                         put (i',us',ds') >> ((x:) <$> m) {-"~~,"-}
+\end{spec}
+where |St = (Int, [Int], [Int])|.
+One would expect to have |filt (safeAcc st) = filtAcc st|.
+However, since the LHS does not alter the state while the RHS does, what we actually have is:
+\begin{equation}
+  |filt (safeAcc st) xs| ~=~ |protect (filtAcc st xs) {-"~~,"-}|
+    \label{eq:filtSafeAcc}
+\end{equation}
+where |protect m = get >>= \ini -> m >>= \x -> put ini >> return x|
+saves the initial state and restores it after the computation.
+By converting |filt . safeAcc st| into |filtAcc|, we have turned a fold-left into a |foldr|.
+
+To prove \eqref{eq:filtSafeAcc}, we need the non-determinism laws, the state laws, \emph{and} \eqref{eq:mzero-bind-zero} and \eqref{eq:mplus-bind-dist}. These allows us to freely move |guard| around, a crucial property we need for the proof.
+
+\paragraph{Fusing the Phases} Now that the safety check can be performed in a |foldr|, recalling that |perm| is an unfold, it is natural trying to fuse them into one.
+Indeed, it can be proved that, with |odot| defined above, we have |perm xs >>= foldr odot (return []) = qBody xs|, where
+\begin{spec}
+qBody :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
+qBody []  =  return []
+qBody xs  =  select xs >>= \(x,ys) ->
+             get >>= \(i,us,ds) ->
+             let (i',us',ds') = (1 + i, (i+x):us, (i-x):ds)
+             in  guard (ok (i',us',ds')) >>
+                 put (i',us',ds') >> ((x:) <$> qBody ys) {-"~~,"-}
+  where  ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
+\end{spec}
+The proof again heavily relies on the property that non-determinism and state commutes --- when the state is local.
+
+To wrap up, having fused |perm| and safety checking into one phase, we may compute |queens| by:
+\begin{spec}
+queens :: MStateNondet (Int, [Int], [Int]) m => Int -> m [Int]
+queens n = protect (put (0,[],[]) >> qBody [0..n-1]) {-"~~."-}
+\end{spec}
+\todo{improve the explanation}
 
 \subsection{Space Usage of Local State Implementations}
 For a monad with both non-determinism and state, the local state laws imply that
