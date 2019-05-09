@@ -44,9 +44,8 @@
 
 
 %% Title information
-\title{Reasoning and Derivation of Monadic Programs}
-\titlerunning{Deriving Monadic Programs}
-\subtitle{A Case Study of Non-determinism and State}
+\title{Handling Local State with Global State}
+\titlerunning{Handling Local State with Global State}
 
 \institute{Institute of Information Science, Academia Sinica, Taiwan, \email{scm@@iis.sinica.edu.tw}
     \and Department of Computer Science, KU Leuven, Belgium, \email{first.last@@cs.kuleuven.be}
@@ -57,18 +56,27 @@
 
 \begin{abstract}
 Equational reasoning is one of the most important tools of functional
-programming. Yet, while monadic programs are ubiquitous, relatively little
-attention has been paid to reasoning about them. To help address this
-situation, we develop new theorems and patterns for the derivation of monadic
-programs. We focus specifically on the intricate interaction between state and
-non-determinism. 
+programming. 
 
-We first derive a backtracking algorithm for the $n$-queens puzzle where each
-non-deterministic branch has its own local state. Then we show how to simulate
-local state in terms of a global state shared by all branches. We
-propose laws that global state should satisfy along with a model that satisfies
-them. Finally, we formally prove the simulation correct using a novel
-combination of free monads and contextual equivalence.
+To facilitate its application to monadic programs, Gibbons and Hinze have
+proposed a simple axiomatic approach using laws that characterise the
+computational effects without exposing their implementation details.  At the
+same time Plotkin and Pretnar have proposed algebraic effects and handlers, a
+mechanism of layered abstract by which effects can be implemented in terms of
+other effects.
+
+This paper performs a case study that connects these two strands of research.
+We consider two ways in which the nondeterminism and state effects can
+interact: the highlevel semantics where every nondeterministic branch has a
+local copy of the state, and the lowlevel semantics where a single state is
+global to all branches and sequentially threaded through them. 
+
+We give a monadic account of the folklore technique of handling local state in
+terms of global state, provide a novel axiomatic characterisation of global
+state and prove that the handler satisfies Gibbons and Hinze's local state
+axioms by means of a novel combination of free monads and contextual
+equivalence. We also provide a model for global state that is necessarily
+non-monadic.
 \end{abstract}
 
 \keywords{monads \and effects \and program derivation \and equational reasoning \and nondeterminism \and state}
