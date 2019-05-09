@@ -170,3 +170,49 @@ nondeterministic computation, we call this semantics \emph{global state semantic
 We will return later to the question of how to define laws that capture our
 intuition for this kind of semantics, because (to the best of our knowledge)
 this constitutes a novel contribution.
+
+Even just figuring out an implementation of a global state monad that matches
+our intuition is already a bit tricky. 
+One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
+The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
+%See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
+The type |ListT (State s)| generated using the Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
+More careful implementations of |ListT|, which do satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT,Volkov:14:list-t}.
+Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
+
+We provide a direct implementation that does work to aid the intuition of the
+reader. Essentially the same
+implementation is obtained by using the type |ListT (State s)| with a correct
+implementation of |ListT|.
+This implementation has a strictly non-commutative |mplus|.
+If |G a| is the type of global state computations which return results of type
+|a|, then |G a| could be recursively defined as follows:
+\begin{code}
+  G a = s -> (Maybe (a, G a), s)
+\end{code}
+The |Maybe| in this type indicates that a computation might fail to produce a
+result. But note that the |s| is outside of the |Maybe|: even if the computation
+fails to produce any result, a modified state may be returned (this is different
+from local state semantics).
+
+|mzero|, of course, returns an empty continuation (|Nothing|) and an unmodified
+state. |mplus| first exhausts the first branch (always collecting any state
+modifications it performs), before switching to the second branch.
+\begin{code}
+  mzero        = \s -> (Nothing, s)
+  p `mplus` q  = \s -> case p s of  (Nothing      , t) -> q t
+                                    (Just (x, r)  , t) -> (Just (x, r `mplus` q), t)
+\end{code}
+The state operators are implemented in a straightforward manner. 
+\begin{code}
+  get    = \s  -> (Just (s   , mzero)   , s)
+  put s  = \t  -> (Just (()  , mzero)   , s)
+\end{code}
+And this implementation is also a monad. The implementation of |p >>= k| extends
+every branch within |p| with |k|, threading the state through this entire process.
+\koen{Not sure if I'm happy with the ``every branch within |p|'' formulation}
+\begin{code}
+  return x  = \s -> (Just (x, mzero), s)
+  p >>= k   = \s -> case p s of  (Nothing      , t)  ->  (Nothing, t)
+                                 (Just (x, q)  , t)  ->  (k x `mplus` (q >>= k)) t
+\end{code}
