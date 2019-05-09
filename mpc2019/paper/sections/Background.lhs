@@ -121,7 +121,8 @@ We characterise local state semantics with the following laws:
 With some implementations of the monad, it is likely that in the lefthand side of \eqref{eq:mplus-bind-dist}, the effect of |m| happens once, while in the righthand side it happens twice. In \eqref{eq:mzero-bind-zero}, the |m| on the lefthand side may incur some effects that do not happen in the righthand side.
 
 Having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} leads to profound consequences on the semantics and implementation of monadic programs.
-To begin with, \eqref{eq:mplus-bind-dist} implies that we have commutativity of |mplus|.
+To begin with, \eqref{eq:mplus-bind-dist} implies that for |mplus| we have some
+limited notion of commutativity.
 For instance, both the left and right distributivity rules can be applied to
 the term |(return x `mplus` return y) >>= \z -> return z `mplus` return z|.
 It is then easy to show that this term must be equal to both
@@ -135,7 +136,6 @@ It is then easy to show that this term must be equal to both
   Law~\eqref{eq:mplus-bind-dist} is actually too strong to
   characterise all reasonable implementations of backtrackable state, but we
   will stick to this characterisation in our paper.}
-\koen{TODO: more general proof of commutativity?}
 Implementations of such non-deterministic monads have been studied by
 Fischer~\cite{Fischer:11:Purely}.
 
@@ -158,7 +158,7 @@ If we ignore the unordered nature of the |Bag| type, this implementation is
 similar to |StateT s (ListT Identity)| in the Monad Transformer
 Library~\cite{MTL:14}. With effect
 handling~\cite{Wu:14:Effect,KiselyovIshii:15:Freer}, the monad behaves similarly
-(except for the commutativity implied by
+(except for the limited commutativity implied by
 law~\eqref{eq:mplus-bind-dist}) if we run the handler for state before that for
 list.
 

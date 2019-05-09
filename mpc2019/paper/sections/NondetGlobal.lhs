@@ -32,6 +32,8 @@ More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus
 Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
 }
 
+\koen{the following needs some rewriting (our commutativity story isn't entirely
+  correct)}
 Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
 In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
 Thus |mplus| is still associative, but certainly cannot be commutative.
