@@ -57,7 +57,6 @@
 \begin{abstract}
 Equational reasoning is one of the most important tools of functional
 programming. 
-
 To facilitate its application to monadic programs, Gibbons and Hinze have
 proposed a simple axiomatic approach using laws that characterise the
 computational effects without exposing their implementation details.  At the
@@ -68,8 +67,8 @@ other effects.
 This paper performs a case study that connects these two strands of research.
 We consider two ways in which the nondeterminism and state effects can
 interact: the highlevel semantics where every nondeterministic branch has a
-local copy of the state, and the lowlevel semantics where a single state is
-global to all branches and sequentially threaded through them. 
+local copy of the state, and the lowlevel semantics where a single sequentially threaded  state is
+global to all branches. 
 
 We give a monadic account of the folklore technique of handling local state in
 terms of global state, provide a novel axiomatic characterisation of global
