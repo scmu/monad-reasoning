@@ -23,26 +23,23 @@ duplicate.
 Especially when each new state is only slightly different from the previous
 (say, the array is updated in one place each time), we have a wasteful
 duplication of information.
-We would prefer it if each branch stores only the
-delta with the state upon entering the branch, rather than storing its own copy
-of the state. The state can then be backtracked by inverting these deltas.
-\koen{TODO: picture?}
 
-Programs written for global state semantics don't have the above issue; there we have
-more precise control over when copies of the state get made.
-So we might write our programs directly in the global state style. However, if
-we do this to a program that would be more naturally expressed in the local
-state style (such as our $n$-queens example), this will come at a great loss of
-clarity. Furthermore, as we shall see, global state programs are significantly
-more difficult to reason about.
-We could also write our program first in a local state style and then translate
-it to global state style.
-Doing this manually is a tedious and
-error-prone process that leaves us with code that is hard to maintain. A more
-attractive proposition is to design a systematic program transformation that
-takes a program written for local state semantics as input, and outputs a
-program that, when interpreted under global state semantics, behaves exactly the
-same as the original program interpreted under local state semantics.
+Global state semantics, on the other hand, has a more ``low-level'' feel to it.
+Because only a single state is threaded through the entire computation without
+making any implicit copies, it is easier to reason about resource usage in this
+setting. So we might write our programs directly in the global state style.
+However, if we do this to a program that would be more naturally expressed in
+the local state style (such as our $n$-queens example), this will come at a
+great loss of clarity. Furthermore, as we shall see, although it is easier to
+reason about resource usage of programs in the global state setting, it is
+significantly more difficult to reason about their semantics. We could also
+write our program first in a local state style and then translate it to global
+state style. Doing this manually is a tedious and error-prone process that
+leaves us with code that is hard to maintain. A more attractive proposition is
+to design a systematic program transformation that takes a program written for
+local state semantics as input, and outputs a program that, when interpreted
+under global state semantics, behaves exactly the same as the original program
+interpreted under local state semantics.
 
 In the remainder of the paper we define this program transformation and prove it
 correct. \koen{should we stress here that the core contribution is not the

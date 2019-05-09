@@ -18,7 +18,7 @@ Equational reasoning about pure functional programs is particularly simple and
 powerful. Yet, Hutton and Fulger~\cite{HuttonFulger:08:Reasoning} noted that a
 lot less attention has been paid to reasoning about monadic programs in that
 style. Gibbons and Hinze~\cite{GibbonsHinze:11:Just} argue that equational
-reasoning about monadic programs becomes particuarly convenient and elegant
+reasoning about monadic programs becomes particularly convenient and elegant
 when one respects the abstraction boundaries of the monad. This is possible
 by reasoning in terms of axioms or laws that characterise the monad's 
 behavior without fixing its implementation.

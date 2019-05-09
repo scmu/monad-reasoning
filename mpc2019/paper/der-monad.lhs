@@ -66,8 +66,8 @@ other effects.
 
 This paper performs a case study that connects these two strands of research.
 We consider two ways in which the nondeterminism and state effects can
-interact: the highlevel semantics where every nondeterministic branch has a
-local copy of the state, and the lowlevel semantics where a single sequentially threaded  state is
+interact: the high-level semantics where every nondeterministic branch has a
+local copy of the state, and the low-level semantics where a single sequentially threaded  state is
 global to all branches. 
 
 We give a monadic account of the folklore technique of handling local state in
