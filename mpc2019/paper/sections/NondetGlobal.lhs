@@ -21,6 +21,8 @@ m1 >> m2 = m1 >>= const m2
 
 \section{Non-Determinism with Global State}
 \label{sec:nd-state-global}
+
+\koen{TODO duplication in bg section}
 Finding a correct characterisation of a nondeterministic monad with global state
 is rather tricky.
 One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
