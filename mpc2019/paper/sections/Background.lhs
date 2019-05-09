@@ -129,13 +129,12 @@ It is then easy to show that this term must be equal to both
 |return x `mplus` return x `mplus` return y `mplus` return y| and
 |return x `mplus` return y `mplus` return x `mplus` return y|.
 \footnote{
-  This also means that
   Gibbons and Hinze~\cite{GibbonsHinze:11:Just} were mistaken in their claim
   that the type |s -> [(a,s)]| constitutes a model of their backtrackable state
-  laws.
-  Law~\eqref{eq:mplus-bind-dist} is actually too strong to
-  characterise all reasonable implementations of backtrackable state, but we
-  will stick to this characterisation in our paper.}
+  laws; it is not a model because its |mplus| does not commute with itself.
+  One could consider a relaxed semantics that admits |a -> [(a,s)]|, but that is
+  not the focus of this paper.
+}
 Implementations of such non-deterministic monads have been studied by
 Fischer~\cite{Fischer:11:Purely}.
 
