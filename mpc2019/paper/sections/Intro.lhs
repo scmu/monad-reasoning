@@ -5,16 +5,14 @@
 
 \section{Introduction}
 
-It is misleading if one says that functional programming does not allow side
-effects. In fact, even a purely functional language may allow a variety of side
-effects --- in a rigorous, mathematically manageable manner. Since the
-introduction of {\em monads} into the functional programming
-community~\cite{Moggi:89:Computational,Wadler:92:Monads}, it has become the
-main framework in which effects are modelled. Various monads were developed for
-different effects, from general ones such as IO, state, non-determinism,
-exception, continuation, environment passing, to specific purposes such as
-parsing. Much research was also devoted to producing practical monadic
-programs.
+Monads have been introduced to functional programming to support side effects
+in a rigorous, mathematically manageable
+manner~\cite{Moggi:89:Computational,Wadler:92:Monads}. Over time they have
+become the main framework in which effects are modelled. Various monads were
+developed for different effects, from general ones such as IO, state,
+non-determinism, exception, continuation, environment passing, to specific
+purposes such as parsing. Much research was also devoted to producing practical
+monadic programs.
 
 Equational reasoning about pure functional programs is particularly simple and
 powerful. Yet, Hutton and Fulger~\cite{HuttonFulger:08:Reasoning} noted that a
@@ -22,12 +20,12 @@ lot less attention has been paid to reasoning about monadic programs in that
 style. Gibbons and Hinze~\cite{GibbonsHinze:11:Just} argue that equational
 reasoning about monadic programs becomes particuarly convenient and elegant
 when one respects the abstraction boundaries of the monad. This is possible
-by reasoning in terms of axioms, or laws, that characterise the monad's 
+by reasoning in terms of axioms or laws that characterise the monad's 
 behavior without fixing its implementation.
 
 This paper carries out a case study of such axiomatic reasoning about monads.
 What is peculiar about or case study is that it involves two monads rather than
-one: Following the approach of algebraic effects and handlers~\cite{}, we
+one: Following the approach of algebraic effects and handlers~\cite{Plotkin:09:Handlers}, we
 consider how one monad can be implemented in terms of another. Both monads we
 consider combine two effects: non-determinism and state. In the monad we want
 to implement, each non-deterministic branch has its own `local' copy of the
@@ -75,7 +73,7 @@ Our specific contributions of this paper are:
             contexts.
       \end{itemize}
 
-\item Our proof comes with a mechanisation in Coq.
+\item Our proof comes with a mechanisation in Coq. \tom{Add url to repo}
 \end{itemize}
 
 \tom{Structure of the paper.}
