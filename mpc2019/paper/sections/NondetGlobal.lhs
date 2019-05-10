@@ -22,36 +22,35 @@ m1 >> m2 = m1 >>= const m2
 \section{Non-Determinism with Global State}
 \label{sec:nd-state-global}
 
-\koen{TODO duplication in bg section}
-Finding a correct characterisation of a nondeterministic monad with global state
-is rather tricky.
-One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
-The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
-%See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
-\footnote{
-The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
-More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT,Volkov:14:list-t}.
-Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
-}
+%\koen{TODO duplication in bg section}
+%\koen{the following needs some rewriting (our commutativity story isn't entirely
+%  correct)}
+%Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
+%In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
+%Thus |mplus| is still associative, but certainly cannot be commutative.
+%
+%As mentioned in Section~\ref{sec:combining-effects}, right-distributivity \eqref{eq:mplus-bind-dist} implies commutativity of |mplus|.
+%Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is global.
+%Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
+%These significantly limit the properties we may have.
+%
+%The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
+%what pitfalls we may encounter, and what programming pattern we may use,
+%to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
+So far, we have evaded giving a precise axiomatic characterisation of global
+state semantics: although in Section~\ref{sec:background} we provided an example
+implementation that matches our intuition of global state semantics, we haven't
+provided a clear formulation of that intuition. We begin this section by finally
+stating the ``global state law'', which characterises exactly the property that
+sets apart non-backtrackable state from backtrackable state.
 
-\koen{the following needs some rewriting (our commutativity story isn't entirely
-  correct)}
-Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
-In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
-Thus |mplus| is still associative, but certainly cannot be commutative.
-
-As mentioned in Section~\ref{sec:combining-effects}, right-distributivity \eqref{eq:mplus-bind-dist} implies commutativity of |mplus|.
-Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is global.
-Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
-These significantly limit the properties we may have.
-
-The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
-what pitfalls we may encounter, and what programming pattern we may use,
-to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
+In the rest of the section, we appeal to intuition and see what happens when we
+work with a global state monad: what pitfalls we may encounter, and what
+programming pattern we may use, to motivate the more formal treatment in
+Section~\ref{sec:ctxt-trans}.
 
 \subsection{The Global State Law}
 \label{sec:laws-global-state}
-
 We have already discussed general laws for nondeterministic monads
 (laws~\eqref{eq:mplus-assoc} through~\eqref{eq:bind-mzero-zero}),
 as well as laws which govern the interaction between state and nondeterminism in
@@ -59,7 +58,7 @@ a local state setting (laws~\eqref{eq:mplus-bind-dist} and
 \eqref{eq:mzero-bind-zero}).
 For global state semantics, an alternative law is required to govern the
 interactions between nondeterminism and state.
-We call this the \emph{global state law}, to be discussed in more detail in Section~\ref{sec:model-global-state-sem}.
+We call this the \emph{global state law}.
 \begin{alignat}{2}
 &\mbox{\bf put-or}:\quad&
   |(put s >> m) `mplus` n| &=~ |put s >> (m `mplus` n)|~ \mbox{~~,}
@@ -67,14 +66,14 @@ We call this the \emph{global state law}, to be discussed in more detail in Sect
 \end{alignat}
 This law allows the lifting of a |put| operation from the left
 branch of a nondeterministic choice, an operation which does not preserve
-meaning under local-state semantics:
+meaning under local state semantics:
 suppose for example that |m = mzero|, then by
 \eqref{eq:mzero-bind-zero} and~\eqref{eq:mzero-mplus}, the left-hand side of
 the equation is equal to |n|, whereas by
 ~\eqref{eq:mzero-mplus},
 the right-hand side of the equation is equal to |put s >> n|.
 
-By itself, this law leaves us free to choose from a large space of semantic domain
+By itself, this law leaves us free to choose from a large space of
 implementations with different properties.
 For example, in any given implementation, the programs |return x `mplus` return y| and
 |return y `mplus` return x| may be considered semantically identical, or they may be
@@ -82,7 +81,8 @@ considered semantically distinct.
 The same goes for the programs |return x `mplus` return x| and |return x|,
 or the programs |(put s >> return x) `mplus` m| and
 |(put s >> return x) `mplus` (put s >> m)|.
-Additional axioms will be introduced as needed to cover these properties.
+Additional axioms will be introduced as needed to cover these properties in
+Section~\ref{sec:model-global-state-sem}.
 
 %We will also require another property which we will only introduce informally
 %here (and formulate more clearly later).

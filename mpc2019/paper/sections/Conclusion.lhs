@@ -81,15 +81,18 @@ handler interprets local state in terms of global state.
 
 Starting from Gibbons and Hinze's observation~\cite{GibbonsHinze:11:Just}
 \koen{is this the first mention of this observation?}
-that the interaction between state and nondeterminism can be characterized in
+that the interaction between state and nondeterminism can be characterized
+axiomatically in
 multiple ways, we explored the differences between local state semantics (as
 characterised by Gibbons and Hinze) and global state semantics (for which we
 gave our own non-monadic characterisation).
 
 In global state semantics, we find that we may use |mplus| to simulate sequencing, and that the idea can be elegantly packaged into commands like |putR| and |modifyR|.
 The interaction between global state and non-determinism turns out to be rather tricky.
-For a more rigorous treatment, we enforce a more precise separation between syntax and semantics and, as a side contribution of this paper, propose a collection of \emph{global state laws} which the semantics should satisfy,
-and verified in Coq that there is an implementation satisfying these laws.
+For a more rigorous treatment, we enforce a more precise separation between
+syntax and semantics and, as a side contribution of this paper, propose a
+\emph{global state law}, plus some additional laws, which the semantics should satisfy.
+We verified (with the help of the Coq proof assistant) that there is an implementation satisfying these laws.
 
 Using the $n$-queens puzzle as an example, we showed that one can end up in a
 situation where a problem is naturally expressed with local state semantics, but

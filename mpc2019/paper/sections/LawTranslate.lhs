@@ -159,7 +159,6 @@ from |Prog|'s definition of |(>>=)|.
   &|(m <||||> n) <||||> p| = |m <||||> (n <||||> p)| \mbox{~~,} \\
   &|failD <||||> m| = |m <||||> failD| = |m| \mbox{~~.}
 \end{align}
-
 We also reformulate the global-state law~\eqref{eq:put-or}:
 \begin{align}
 |putD s p <||||> q|        &= |putD s (p <||||> q)| \mbox{~~.}\label{eq:put-or-g-d}
@@ -330,10 +329,15 @@ isolation, yet when they are sequentially composed with the program
 %  [put-ret-or]
 %put y (return w || return x)
 
-It is worth remarking that, even if we don't impose law~\eqref{eq:put-or-comm-g-d},
-this requirement disqualifies the most
-straightforward candidate for the semantic domain, |ListT (State s)|, as a
-bind operator can be defined for it.
+It is worth remarking that introducing either one of these additional laws
+disqualify the example implementation given in
+Section~\ref{sec:combining-effects} (even if it is adapted for the
+continuation-passing style of these laws).
+As the given implementation records the order in which results are yielded by
+the computation, law~\eqref{eq:put-or-comm-g-d} cannot be satisfied.
+And the example implementation also forms a monad, which means it is incompatible with
+law~\eqref{eq:put-ret-or-g-d}.
+
 \paragraph{Machine-Verified Proofs}
 From this point forward, we provide proofs mechanized in Coq for many theorems.
 When we do, we mark the proven statement with a check mark ($\checkmark$).

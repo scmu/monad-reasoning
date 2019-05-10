@@ -225,9 +225,7 @@ The derivation from the specification to this program relies on a number of prop
 For a monad with both non-determinism and state, the local state laws imply that
 each non-deterministic branch has its own state. This is not costly for states
 consisting of linked data structures, for example the state
-|(Int, [Int], [Int])| \koen{double check this state type after the example
-  subsection has been rewritten}
-\scm{that's right!}
+|(Int, [Int], [Int])|
 in the |n|-queens problem. In some applications, however, the state
 might be represented by data structures, e.g. arrays, that are costly to
 duplicate.
@@ -253,5 +251,4 @@ under global state semantics, behaves exactly the same as the original program
 interpreted under local state semantics.
 
 In the remainder of the paper we define this program transformation and prove it
-correct. \koen{should we stress here that the core contribution is not the
-  program transformation but the proof/proof technique?}
+correct. We believe that, in particular, the proof \emph{technique} is of interest.

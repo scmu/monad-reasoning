@@ -19,7 +19,7 @@ For a more extensive treatment we refer to the work of Gibbons and Hinze
 
 \subsection{Monads, Nondeterminism and State}
 \paragraph{Monads}
-A monad consists of a type constructor |M :: * -> *| and two operators |return :: a -> M a| and ``bind'' |(>>=) :: M a -> (a -> M b) -> M b| that satisfy the following {\em monad laws}:
+A monad consists of a type constructor |M :: * -> *| and two operators |return :: a -> M s a| and ``bind'' |(>>=) :: M s a -> (a -> M b) -> M b| that satisfy the following {\em monad laws}:
 \begin{align}
   |return x >>= f| &= |f x|\mbox{~~,} \label{eq:monad-bind-ret}\\
   |m >>= return| &= |m| \mbox{~~,} \label{eq:monad-ret-bind}\\
@@ -187,7 +187,7 @@ this constitutes a novel contribution.
 
 Even just figuring out an implementation of a global state monad that matches
 our intuition is already a bit tricky.
-One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
+One might believe that |M s a = s -> ([a],s)| is a natural implementation of such a monad.
 The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
 %See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
 The type |ListT (State s)| generated using the Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
@@ -198,9 +198,8 @@ We provide a direct implementation that does work to aid the intuition of the
 reader.
 Essentially the same implementation is obtained by using the type |ListT (State s)| with a correct implementation of |ListT|.
 This implementation has a strictly non-commutative |mplus|.
-Let |G s a| be the type of global state computations which return results of type |a| using states of type |s|, which could be recursively defined as follows:
 \begin{spec}
-G s a = s -> (Maybe (a, G s a), s) {-"~~."-}
+M s a = s -> (Maybe (a, M s a), s) {-"~~."-}
 \end{spec}
 The |Maybe| in this type indicates that a computation might fail to produce a
 result. But note that the |s| is outside of the |Maybe|: even if the computation
@@ -222,7 +221,6 @@ The state operators are implemented in a straightforward manner.
 \end{spec}
 And this implementation is also a monad. The implementation of |p >>= k| extends
 every branch within |p| with |k|, threading the state through this entire process.
-\koen{Not sure if I'm happy with the ``every branch within |p|'' formulation}
 \begin{spec}
   return x  = \s -> (Just (x, mzero), s) {-"~~,"-}
   p >>= k   = \s -> case p s of  (Nothing      , t)  ->  (Nothing, t)
