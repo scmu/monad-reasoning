@@ -47,16 +47,18 @@
 \title{Handling Local State with Global State}
 \titlerunning{Handling Local State with Global State}
 
-\institute{Institute of Information Science, Academia Sinica, Taiwan, \email{scm@@iis.sinica.edu.tw}
-    \and Department of Computer Science, KU Leuven, Belgium, \email{first.last@@cs.kuleuven.be}
-    }
-\author{Shin-Cheng Mu \inst{1} \and Tom Schrijvers \inst{2} \and Koen Pauwels \inst{2}}
+\institute{%
+Department of Computer Science, KU Leuven, Belgium, \email{first.last@@cs.kuleuven.be}
+\and
+Institute of Information Science, Academia Sinica, Taiwan, \email{scm@@iis.sinica.edu.tw}
+}%instutite
+\author{Tom Schrijvers \inst{1} \and Koen Pauwels \inst{1} \and Shin-Cheng Mu \inst{2}}
 
 \maketitle
 
 \begin{abstract}
 Equational reasoning is one of the most important tools of functional
-programming. 
+programming.
 To facilitate its application to monadic programs, Gibbons and Hinze have
 proposed a simple axiomatic approach using laws that characterise the
 computational effects without exposing their implementation details.  At the
@@ -68,7 +70,7 @@ This paper performs a case study that connects these two strands of research.
 We consider two ways in which the nondeterminism and state effects can
 interact: the high-level semantics where every nondeterministic branch has a
 local copy of the state, and the low-level semantics where a single sequentially threaded  state is
-global to all branches. 
+global to all branches.
 
 We give a monadic account of the folklore technique of handling local state in
 terms of global state, provide a novel axiomatic characterisation of global

@@ -1,3 +1,15 @@
+%if False
+\begin{code}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies,
+             FlexibleInstances #-}
+module Background ( MNondet(..), MState(..), MStateNondet(..),
+                    module ControlMonad) where
+
+import Control.Monad as ControlMonad hiding (mzero, mplus, guard)
+import Control.Arrow ((***))
+\end{code}
+%endif
+
 \section{Background}
 This section briefly summarises the main concepts we need for equational
 reasoning about effects.
@@ -13,19 +25,19 @@ A monad consists of a type constructor |M :: * -> *| and two operators |return :
   |(m >>= f) >>= g| &= |m >>= (\x -> f x >>= g)| \mbox{~~.}
     \label{eq:monad-assoc}
 \end{align}
-We also define |m1 >> m2 = m1 >>= const m2|, which has type |(>>) :: m a -> m b -> m b|.
+We also define |m1 >> m2 = m1 >>= const m2|, which has type |(>>) :: m a -> m b -> m b|, and |f <$> m = m >> (return . f)| which applies a pure function to a monadic value.
 
 \paragraph{Nondeterminism}
 The first effect we introduce is nondeterminism.
 Following the trail of Hutton and Fulger \cite{HuttonFulger:08:Reasoning} and
-Gibbons and Hinze, we introduce effects 
+Gibbons and Hinze, we introduce effects
 based on an axiomatic characterisation (a set of laws that govern how the effect
 operators behave with respect to one another) rather than a specific implementation.
 We define a type class to capture this interface as follows:
 \begin{code}
-  class Monad m => MNondet m where
+class Monad m => MNondet m where
     mzero  :: m a
-    mplus  :: m a -> m a -> m a
+    mplus  :: m a -> m a -> m a {-"~~."-}
 \end{code}
 In this interface, |mzero|
 denotes failure, while |m `mplus` n| denotes that the computation may yield
@@ -33,7 +45,7 @@ either |m| or |n|.
 Precisely what
 laws these operators should satisfy, however, can be a tricky issue.
 As discussed by Kiselyov~\cite{Kiselyov:15:Laws}, it eventually comes down to
-what we use the monad for. 
+what we use the monad for.
 
 It is usually expected that |mplus| and |mzero| form a monoid. That
 is, |mplus| is associative, with |mzero| as its zero:
@@ -61,9 +73,9 @@ Other properties regarding |mzero| and |mplus| will be introduced when needed.
 \paragraph{State}
 The state effect provides two operators:
 \begin{code}
-  class Monad m => MState s m | m -> s where
+class Monad m => MState s m | m -> s where
     get  :: m s
-    put  :: s -> m ()
+    put  :: s -> m () {-"~~."-}
 \end{code}
 The |get| operator retrieves the state, while |put| overwrites the state by the given value.
 They are supposed to satisfy the \emph{state laws}:
@@ -87,7 +99,7 @@ is straightforward to reason about combinations of effects.
 In this paper, we are interested in the interaction between nondeterminism and
 state, specifically.
 \begin{code}
-  class (MState s m, MNondet m) => MStateNondet s m | m -> s
+class (MState s m, MNondet m) => MStateNondet s m | m -> s {-"~~."-}
 \end{code}
 The type class |MStateNondet s m| simply inherits the operators of its
 superclasses |MState s m| and |MNondet m| without adding new operators, and
@@ -111,11 +123,11 @@ Because in this scheme state is local to a branch, we will refer to these
 semantics as \emph{local state semantics}.
 We characterise local state semantics with the following laws:
 \begin{alignat}{2}
-&\mbox{\bf right-zero}:\quad&
+&\mbox{\bf right-zero}:~&
   |m >> mzero|~ &=~ |mzero| ~~\mbox{~~,}
     \label{eq:mzero-bind-zero}\\
-&\mbox{\bf right-distributivity}:\quad&
-  |m >>= (\x -> f1 x `mplus` f2 x)|~ &=~ |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.}
+&\mbox{\bf right-distributivity}:~&
+  |m >>= (\x -> f1 x `mplus` f2 x)| &= |(m >>= f1) `mplus` (m >>= f2)| \mbox{.}
     \label{eq:mplus-bind-dist}
 \end{alignat}
 With some implementations of the monad, it is likely that in the lefthand side of \eqref{eq:mplus-bind-dist}, the effect of |m| happens once, while in the righthand side it happens twice. In \eqref{eq:mzero-bind-zero}, the |m| on the lefthand side may incur some effects that do not happen in the righthand side.
@@ -127,7 +139,7 @@ For instance, both the left and right distributivity rules can be applied to
 the term |(return x `mplus` return y) >>= \z -> return z `mplus` return z|.
 It is then easy to show that this term must be equal to both
 |return x `mplus` return x `mplus` return y `mplus` return y| and
-|return x `mplus` return y `mplus` return x `mplus` return y|.
+|return x `mplus` return y `mplus` return x `mplus` return y|.%
 \footnote{
   Gibbons and Hinze~\cite{GibbonsHinze:11:Just} were mistaken in their claim
   that the type |s -> [(a,s)]| constitutes a model of their backtrackable state
@@ -135,8 +147,9 @@ It is then easy to show that this term must be equal to both
   One could consider a relaxed semantics that admits |a -> [(a,s)]|, but that is
   not the focus of this paper.
 }
-Implementations of such non-deterministic monads have been studied by
-Fischer~\cite{Fischer:11:Purely}.
+%Implementations of such non-deterministic monads have been studied by
+%Fischer~\cite{Fischer:11:Purely}.
+%\scm{Removed this citation --- I don't think it is that necessary now that we mention Bags in the next paragraph.}
 
 % Law~\eqref{eq:mzero-bind-zero} implies that when an effectful computation |m|
 % is followed by a |mzero|, then the computation |m| might as well never have
@@ -150,7 +163,7 @@ Fischer~\cite{Fischer:11:Purely}.
 % non-backtrackable state or other irriversible effects.
 
 These requirements imply that each nondeterministic branch has its own copy of
-the state. 
+the state.
 One implementation satisfying the laws is |M s a = s -> Bag (a,s)|, where
 |Bag a| is an implementation of a multiset or ``bag'' data structure.
 If we ignore the unordered nature of the |Bag| type, this implementation is
@@ -172,7 +185,7 @@ intuition for this kind of semantics, because (to the best of our knowledge)
 this constitutes a novel contribution.
 
 Even just figuring out an implementation of a global state monad that matches
-our intuition is already a bit tricky. 
+our intuition is already a bit tricky.
 One might believe that |M a = s -> ([a],s)| is a natural implementation of such a monad.
 The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
 %See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
@@ -181,15 +194,13 @@ More careful implementations of |ListT|, which do satisfy \eqref{eq:bind-mplus-d
 Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
 
 We provide a direct implementation that does work to aid the intuition of the
-reader. Essentially the same
-implementation is obtained by using the type |ListT (State s)| with a correct
-implementation of |ListT|.
+reader.
+Essentially the same implementation is obtained by using the type |ListT (State s)| with a correct implementation of |ListT|.
 This implementation has a strictly non-commutative |mplus|.
-If |G a| is the type of global state computations which return results of type
-|a|, then |G a| could be recursively defined as follows:
-\begin{code}
-  G a = s -> (Maybe (a, G a), s)
-\end{code}
+Let |G s a| be the type of global state computations which return results of type |a| using states of type |s|, which could be recursively defined as follows:
+\begin{spec}
+G s a = s -> (Maybe (a, G s a), s) {-"~~."-}
+\end{spec}
 The |Maybe| in this type indicates that a computation might fail to produce a
 result. But note that the |s| is outside of the |Maybe|: even if the computation
 fails to produce any result, a modified state may be returned (this is different
@@ -198,21 +209,50 @@ from local state semantics).
 |mzero|, of course, returns an empty continuation (|Nothing|) and an unmodified
 state. |mplus| first exhausts the first branch (always collecting any state
 modifications it performs), before switching to the second branch.
-\begin{code}
-  mzero        = \s -> (Nothing, s)
+\begin{spec}
+  mzero        = \s -> (Nothing, s) {-"~~,"-}
   p `mplus` q  = \s -> case p s of  (Nothing      , t) -> q t
-                                    (Just (x, r)  , t) -> (Just (x, r `mplus` q), t)
-\end{code}
-The state operators are implemented in a straightforward manner. 
-\begin{code}
-  get    = \s  -> (Just (s   , mzero)   , s)
-  put s  = \t  -> (Just (()  , mzero)   , s)
-\end{code}
+                                    (Just (x, r)  , t) -> (Just (x, r `mplus` q), t) {-"~~."-}
+\end{spec}
+The state operators are implemented in a straightforward manner.
+\begin{spec}
+  get    = \s  -> (Just (s   , mzero)   , s) {-"~~,"-}
+  put s  = \t  -> (Just (()  , mzero)   , s) {-"~~."-}
+\end{spec}
 And this implementation is also a monad. The implementation of |p >>= k| extends
 every branch within |p| with |k|, threading the state through this entire process.
 \koen{Not sure if I'm happy with the ``every branch within |p|'' formulation}
-\begin{code}
-  return x  = \s -> (Just (x, mzero), s)
+\begin{spec}
+  return x  = \s -> (Just (x, mzero), s) {-"~~,"-}
   p >>= k   = \s -> case p s of  (Nothing      , t)  ->  (Nothing, t)
-                                 (Just (x, q)  , t)  ->  (k x `mplus` (q >>= k)) t
+                                 (Just (x, q)  , t)  ->  (k x `mplus` (q >>= k)) t {-"~~."-}
+\end{spec}
+
+%if False
+\begin{code}
+data G s a = G {unG :: s -> (Maybe (a, G s a), s)}
+
+instance Applicative (G s) where
+  pure = return
+  mf <*> mx = mf >>= \f -> mx >>= \x -> return (f x)
+
+instance Functor (G s) where
+  fmap f (G m) = G ((fmap (f *** fmap f) *** id) . m)
+
+instance Monad (G s) where
+  return x  = G (\s -> (Just (x, mzero), s))
+  G p >>= k = G (\s -> case p s of
+                         (Nothing      , t)  ->  (Nothing, t)
+                         (Just (x, q)  , t)  ->  unG (k x `mplus` (q >>= k)) t)
+
+instance MNondet (G s) where
+  mzero        = G (\s -> (Nothing, s))
+  p `mplus` q  = G (\s -> case unG p s of
+                            (Nothing      , t) -> unG q t
+                            (Just (x, r)  , t) -> (Just (x, r `mplus` q), t))
+
+instance MState s (G s) where
+  get    = G (\s  -> (Just (s   , mzero)   , s))
+  put s  = G (\t  -> (Just (()  , mzero)   , s))
 \end{code}
+%endif
