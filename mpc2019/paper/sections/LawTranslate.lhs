@@ -420,7 +420,7 @@ and obtains the final result by merging the two bags of results.
 \begin{lemma}
   This implementation conforms to every law introduced in
   Section~\ref{sec:model-global-state-sem}.~$\checkmark$
-  
+
 \end{lemma}
 
 \subsection{Contextual Equivalence}
@@ -785,42 +785,44 @@ instances of |Prog a|.
 %\end{equation*}
 %\end{lemma}
 
-\paragraph{Backtracking using a global-state monad}
-Recall that, in Section~\ref{sec:solve-n-queens},
-we showed that a problem formulated by |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism |solve p f ok oplus st z|,
-run in a non-deterministic local-state monad.
-Putting all the information in this section together,
-we conclude that solutions of the same problem can be computed,
-in a non-deterministic global-state monad,
-by |run (solveR p f ok oplus ominus st z)|, where |(`ominus` x) . (`oplus` x) = id| for all |x|, and |solveR| is defined by:
-\begin{spec}
-solveR :: {N, S s} `sse` eps =>  (b -> Bool) -> (b -> Me eps (a, b)) ->
-                                 (s -> Bool) -> (s -> a -> s) -> (s -> a -> s) ->
-                                 s -> b -> Me eps [a]
-solveR p f ok oplus ominus st z = putR st >> hyloM odot (return []) p f z
-  where x `odot` m =  (get >>= guard . ok . (`oplus` x)) >>
-                      modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> m) {-"~~."-}
-\end{spec}
-Note that the use of |run| enforces that the program is run as a whole, that is, it cannot be further composed with other monadic programs.
+% \paragraph{Backtracking using a global-state monad}
+% Recall that, in Section~\ref{sec:solve-n-queens},
+% we showed that a problem formulated by |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism |solve p f ok oplus st z|,
+% run in a non-deterministic local-state monad.
+% Putting all the information in this section together,
+% we conclude that solutions of the same problem can be computed,
+% in a non-deterministic global-state monad,
+% by |run (solveR p f ok oplus ominus st z)|, where |(`ominus` x) . (`oplus` x) = id| for all |x|, and |solveR| is defined by:
+% \begin{spec}
+% solveR :: {N, S s} `sse` eps =>  (b -> Bool) -> (b -> Me eps (a, b)) ->
+%                                  (s -> Bool) -> (s -> a -> s) -> (s -> a -> s) ->
+%                                  s -> b -> Me eps [a]
+% solveR p f ok oplus ominus st z = putR st >> hyloM odot (return []) p f z
+%   where x `odot` m =  (get >>= guard . ok . (`oplus` x)) >>
+%                       modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> m) {-"~~."-}
+% \end{spec}
+% Note that the use of |run| enforces that the program is run as a whole, that is, it cannot be further composed with other monadic programs.
 
 
 
 \paragraph{|n|-Queens using a global state}
 To wrap up, we revisit the |n|-queens puzzle.
-Recall that, for the puzzle, |(i,us,ds) `oplus` x = (1 + i,  (i+x):us,  (i-x):ds)|.
+Recall that, for the puzzle, the operator that alters the state (to check whether a chess placement is safe) is defined by
+\begin{spec}
+(i,us,ds) `oplus` x = (1 + i,  (i+x):us,  (i-x):ds) {-"~~."-}
+\end{spec}
 By defining |(i,us,ds) `ominus` x  = (i - 1, tail us, tail ds)|,
 we have |(`ominus` x) . (`oplus` x) = id|.
 One may thus compute all solutions to the puzzle,
-in a scenario with a shared global state, by |run (queensR n)|,
-where |queens| expands to:
+in a scenario with a shared global state, by |run (queensR n)|, where
 \begin{spec}
-queensR n = put (0,[],[]) >> queensBody [0..n-1] {-"~~,"-}
+queensR n = put (0,[],[]) >> qBody [0..n-1] {-"~~,"-}
 
-queensBody []  =  return []
-queensBody xs  =  select xs >>= \(x,ys) ->
-                  (get >>= (guard . ok . (`oplus` x))) >>
-                  modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> queensBody ys) {-"~~,"-}
-  where  (i,us,ds) `oplus` x   = (1 + i,  (i+x):us,  (i-x):ds)
+qBody []  =  return []
+qBody xs  =  select xs >>= \(x,ys) ->
+             (get >>= (guard . ok . (`oplus` x))) >>
+             modifyR (`oplus` x) (`ominus` x) >> ((x:) <$> qBody ys) {-"~~,"-}
+  where  (i,us,ds) `oplus` x   = (1 + i,  (i+x):us,  (i-x): ds)
          (i,us,ds) `ominus` x  = (i - 1,  tail us,   tail ds)
          ok (_,u:us,d:ds) = (u `notElem` us) && (d `notElem` ds) {-"~~."-}
 \end{spec}
