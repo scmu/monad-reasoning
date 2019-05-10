@@ -80,7 +80,6 @@ handler interprets local state in terms of global state.
 \label{sec:conclusion}
 
 Starting from Gibbons and Hinze's observation~\cite{GibbonsHinze:11:Just}
-\koen{is this the first mention of this observation?}
 that the interaction between state and nondeterminism can be characterized
 axiomatically in
 multiple ways, we explored the differences between local state semantics (as

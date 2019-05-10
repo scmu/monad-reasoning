@@ -77,9 +77,9 @@ Our specific contributions of this paper are:
 \end{itemize}
 
 The rest of the paper is structured as follows.
-Frist, Section~\ref{sec:background} gives an overview of the main concepts
-  used in the paper and define our terminology. Then, 
-Section~\ref{sec:motivation} informally explores sthe differences
+First, Section~\ref{sec:background} gives an overview of the main concepts
+  used in the paper and defines our terminology. Then, 
+Section~\ref{sec:motivation} informally explores the differences
   between local and global state semantics. Next, 
 Section~\ref{sec:nd-state-global}  explains how to handle local state 
 in terms of global state. 

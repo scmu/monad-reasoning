@@ -21,22 +21,6 @@ m1 >> m2 = m1 >>= const m2
 
 \section{Non-Determinism with Global State}
 \label{sec:nd-state-global}
-
-%\koen{TODO duplication in bg section}
-%\koen{the following needs some rewriting (our commutativity story isn't entirely
-%  correct)}
-%Even after we do have a non-deterministic, global-state passing implementation that is a monad, its semantics can sometimes be surprising.
-%In |m1 `mplus` m2|, the computation |m2| receives the state computed by |m1|.
-%Thus |mplus| is still associative, but certainly cannot be commutative.
-%
-%As mentioned in Section~\ref{sec:combining-effects}, right-distributivity \eqref{eq:mplus-bind-dist} implies commutativity of |mplus|.
-%Contravariantly, \eqref{eq:mplus-bind-dist} cannot be true when the state is global.
-%Right-zero \eqref{eq:mzero-bind-zero} does not hold either: |mzero| simply fails, while |put s >> mzero|, for example, fails with an altered global state.
-%These significantly limit the properties we may have.
-%
-%The aim of this section is to appeal to intuition and see what happens when we work with a global state monad:
-%what pitfalls we may encounter, and what programming pattern we may use,
-%to motivate the more formal treatment in Section~\ref{sec:ctxt-trans}.
 So far, we have evaded giving a precise axiomatic characterisation of global
 state semantics: although in Section~\ref{sec:background} we provided an example
 implementation that matches our intuition of global state semantics, we haven't
@@ -158,7 +142,7 @@ The discussion above suggests that one can implement backtracking, in a global-s
 We can even go a bit further by defining the following variations of |put|,
 which restores the original state when it is backtracked over:
 \begin{spec}
-putR :: {S s, N} `sse` eps => s -> Me eps ()
+putR :: MonadNondet s m => s -> M ()
 putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{spec}
 
