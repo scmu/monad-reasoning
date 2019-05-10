@@ -679,41 +679,41 @@ with |prev . next = id|, to respectively update and roll back the state.
 This is especially true when the state is implemented using an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled by:
 \begin{spec}
-  modifyR :: {N, S s} `sse` eps -> (s -> s) -> (s -> s) -> Me eps ()
+  modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
   modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
 \end{spec}
 
 Is it safe to use an alternative translation, where the pattern
 |get >>= (\s -> put (next s) >> m)| is not translated into
 |get >>= (\s -> putR (next s) >> trans m)|, but rather into
-|modify_R next prev >> trans m|?
+|ModifyR next prev >> trans m|?
 We explore this question by extending our |Prog| syntax with an additional
-|Modify_R| construct, thus obtaining a new |Prog_m| syntax:
+|ModifyR| construct, thus obtaining a new |ProgM| syntax:
 \begin{spec}
-data Prog_m a where
+data ProgM a where
 ...
-  Modify_R  :: (S -> S) -> (S -> S) -> Prog_m a -> Prog_m a
+  ModifyR  :: (S -> S) -> (S -> S) -> ProgM a -> ProgM a
 \end{spec}
 
-We assume that |prev . next = id| for every |Modify_R next prev p| in a |Prog_m a| program.
+We assume that |prev . next = id| for every |ModifyR next prev p| in a |ProgM a| program.
 
-We then define two translation functions from |Prog_m a| to |Prog a|,
+We then define two translation functions from |ProgM a| to |Prog a|,
 which both replace |Put|s with |putR|s along the way, like the regular
 |trans| function.
-The first replaces each |Modify_R| in the program by a direct analogue of the
+The first replaces each |ModifyR| in the program by a direct analogue of the
 definition given above, while the second replaces it by
 |Get (\s -> Put (next s) (trans_2 p))|:
 
 \begin{spec}
-   trans_1 :: Prog_m a -> Prog a
+   trans_1 :: ProgM a -> Prog a
    ...
-   trans_1 (Modify_R next prev p)  =        Get (\s -> Put (next s) (trans_1 p)
+   trans_1 (ModifyR next prev p)  =        Get (\s -> Put (next s) (trans_1 p)
                                    `mplus`  Get (\t -> Put (prev t) mzero))
 
 
-   trans_2 :: Prog_m a -> Prog a
+   trans_2 :: ProgM a -> Prog a
    ...
-   trans_2 (Modify_R next prev p)  = Get (\s -> putR (next s) (trans_2 p))
+   trans_2 (ModifyR next prev p)  = Get (\s -> putR (next s) (trans_2 p))
      where putR s p = Get (\t -> Put s p `mplus` Put t mzero)
 \end{spec}
 

@@ -53,7 +53,7 @@ Department of Computer Science, KU Leuven, Belgium, \email{first.last@@cs.kuleuv
 \and
 Institute of Information Science, Academia Sinica, Taiwan, \email{scm@@iis.sinica.edu.tw}
 }%instutite
-\author{Tom Schrijvers \inst{1} \and Koen Pauwels \inst{1} \and Shin-Cheng Mu \inst{2}}
+\author{Koen Pauwels \inst{1} \and Tom Schrijvers \inst{1} \and Shin-Cheng Mu \inst{2}}
 
 \maketitle
 

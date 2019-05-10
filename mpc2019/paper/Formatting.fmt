@@ -58,6 +58,8 @@
 
 %format putR = "\Varid{put}_{\scaleobj{0.7}{\sf R}}"
 %format modifyR = "\Varid{modify}_{\scaleobj{0.7}{\sf R}}"
+%format ModifyR = "\Conid{Modify}_{\scaleobj{0.7}{\sf R}}"
+%format ProgM = "\Conid{Prog}_{\scaleobj{0.7}{\sf M}}"
 %format scanlMR = "\Varid{scanlM}_{\scaleobj{0.7}{\sf R}}"
 %format solveR = "\Varid{solve}_{\scaleobj{0.7}{\sf R}}"
 %format queensR = "\Varid{queens}_{\scaleobj{0.7}{\sf R}}"
