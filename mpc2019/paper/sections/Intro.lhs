@@ -73,7 +73,8 @@ Our specific contributions of this paper are:
             contexts.
       \end{itemize}
 
-\item Our proof comes with a mechanisation in Coq. \tom{Add url to repo}
+\item Our proof comes with a mechanisation in Coq. \footnote{The proof can be found at \url{https://github.com/KoenP/LocalAsGlobal}.}
+
 \end{itemize}
 
 \tom{Structure of the paper.}
