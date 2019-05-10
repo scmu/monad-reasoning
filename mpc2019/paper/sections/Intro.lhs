@@ -75,30 +75,17 @@ Our specific contributions of this paper are:
 
 \item Our proof comes with a mechanisation in Coq. \footnote{The proof can be found at \url{https://github.com/KoenP/LocalAsGlobal}.}
 \end{itemize}
-Our paper is structured as follows.
-\begin{itemize}
-\item In Section~\ref{sec:background} we give an overview of the main concepts
-  used in the paper and define our terminology. We give axiomatic
-  characterisations of state and nondeterminism, and introduce the notions of
-  \emph{local} and \emph{global} state semantics.
-\item In Section~\ref{sec:motivation} we informally explore the differences
-  between local and global state semantics using the $n$-queens puzzle as an
-  example.
-\item In Section~\ref{sec:nd-state-global} we give an axiomatic characterisation
-  of global state semantics, and sketch a translation scheme to turn a program
-  written for local state semantics into one that, when interpreted under global
-  state semantics, behaves identically.
-\item In Section~\ref{sec:ctxt-trans} we give a more formal treatment of the
-  global state semantics. We avoid mixing syntax and semantics by defining the
-  program syntax as a free monad and introducing a separate semantic domain. We
-  introduce a notion of ``contextual equality'' of programs and use it to
-  reformulate our laws in the free monad setting. We then precisely define the
-  translation scheme introduced in the previous section, and prove it correct.
-  In conclusion, we return to the $n$-queens example.
-\item Finally, in Sections~\ref{sec:related-work} and~\ref{sec:conclusion} we
-  discuss related work and our conclusions, respectively.
 
-\end{itemize}
+The rest of the paper is structured as follows.
+First, Section~\ref{sec:background} gives an overview of the main concepts
+  used in the paper and defines our terminology. Then, 
+Section~\ref{sec:motivation} informally explores the differences
+  between local and global state semantics. Next, 
+Section~\ref{sec:nd-state-global}  explains how to handle local state 
+in terms of global state. 
+Section~\ref{sec:ctxt-trans} formalizes this approach and proves it correct.
+Finally, Sections~\ref{sec:related-work} and~\ref{sec:conclusion} respectively
+discuss related work and conclude.
 
 % \subsection{Old}
 % 
