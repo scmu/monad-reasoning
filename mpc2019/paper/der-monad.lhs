@@ -24,6 +24,7 @@
 \usepackage{mdframed}
 \usepackage{multicol}
 \usepackage{graphicx}
+\usepackage{xcolor}
 
 \usepackage{doubleequals}
 
