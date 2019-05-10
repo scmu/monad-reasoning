@@ -27,6 +27,12 @@ A monad consists of a type constructor |M :: * -> *| and two operators |return :
     \label{eq:monad-assoc}
 \end{align}
 We also define |m1 >> m2 = m1 >>= const m2|, which has type |(>>) :: m a -> m b -> m b|, and |f <$> m = m >> (return . f)| which applies a pure function to a monadic value.
+%if False
+\begin{code}
+(>>) :: Monad m => m a -> m b -> m b
+m1 >> m2 = m1 >>= const m2
+\end{code}
+%endif
 
 \paragraph{Nondeterminism}
 The first effect we introduce is nondeterminism.

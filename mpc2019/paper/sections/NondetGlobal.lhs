@@ -4,18 +4,10 @@
 
 module NondetGlobal where
 
-import Prelude hiding ((>>))
-import Control.Monad hiding ((>>))
-import Control.Monad.State hiding ((>>))
-
 import ListT  -- use option -i../../code
 
+import Background
 import Utilities
-import Monads
-import Queens
-
-(>>) :: Monad m => m a -> m b -> m b
-m1 >> m2 = m1 >>= const m2
 \end{code}
 %endif
 
@@ -95,7 +87,7 @@ In backtracking algorithms that keep a global state, it is a common pattern to
 3. roll back the state to the previous step.
 To implement such pattern as a monadic program, one might come up with something like the code below:
 \begin{spec}
-modify next >> search >>= modReturn prev {-"~~."-}
+modify next >> search >>= modReturn prev {-"~~,"-}
 \end{spec}
 where |next| advances the state, |prev| undoes the modification of |next|
 (|prev . next = id|), and |modify| and |modReturn| are defined by:
@@ -103,22 +95,25 @@ where |next| advances the state, |prev| undoes the modification of |next|
 modify f       = get >>= (put . f) {-"~~,"-}
 modReturn f v  = modify f >> return v {-"~~."-}
 \end{spec}
-Let the initial state be |st| and assume that |search| found three choices |m1 `mplus` m2 `mplus` m3|. The intention is that all of |m1|, |m2|, and |m3| start running with state |next st|, and the state is restored to |prev (next st) = st| afterwards. By \eqref{eq:bind-mplus-dist}, however,
+Let the initial state be |st| and assume that |search| found three choices |m1 `mplus` m2 `mplus` m3|.
+We wish that |m1|, |m2|, and |m3| all start running with state |next st|, and the state is restored to |prev (next st) = st| afterwards.
+Due to \eqref{eq:bind-mplus-dist}, however, it expands to
 \begin{spec}
  modify next >> (m1 `mplus` m2 `mplus` m3) >>= modReturn prev =
    modify next >> (  (m1 >>= modReturn prev) `mplus`
                      (m2 >>= modReturn prev) `mplus`
-                     (m3 >>= modReturn prev)) {-"~~,"-}
+                     (m3 >>= modReturn prev)) {-"~~."-}
 \end{spec}
-which, with a global state, means that |m2| starts with state |st|, after which the state is rolled back too early to |prev st|. The computation |m3| starts with |prev st|, after which the state is rolled too far to |prev (prev st)|.
+With a global state, it means that |m2| starts with state |st|, after which the state is rolled back further to |prev st|. The computation |m3| starts with |prev st|, after which the state is rolled too far to |prev (prev st)|.
+In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails and reduces to |mzero|, |modReturn prev| is not run at all, due to \eqref{eq:bind-mzero-zero}.
 
-In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails, we get |modify next >> search >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
+% In fact, one cannot guarantee that |modReturn prev| is always executed --- if |search| fails, we get |modify next >> search >>= modReturn prev| |= modify next >> mzero >>= modReturn prev = modify next >> mzero|. Thus the state is advanced to |next st|, but not rolled back to |st|.
 
 We need a way to say that ``|modify next| and |modReturn prev| are run exactly once, respectively before and after all non-deterministic branches in |solve|.'' Fortunately, we have discovered a curious technique. Define
-\begin{spec}
-side :: MNondet a => m a -> m b
+\begin{code}
+side :: MNondet m => m a -> m b
 side m = m >> mzero {-"~~."-}
-\end{spec}
+\end{code}
 Since non-deterministic branches are executed sequentially, the program
 \begin{spec}
 side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modify prev)
@@ -141,10 +136,10 @@ However, we will exploit this feature and develop a safer programming pattern in
 The discussion above suggests that one can implement backtracking, in a global-state setting, by using |mplus| and |side| appropriately.
 We can even go a bit further by defining the following variations of |put|,
 which restores the original state when it is backtracked over:
-\begin{spec}
-putR :: MonadNondet s m => s -> M ()
+\begin{code}
+putR :: MStateNondet s m => s -> m ()
 putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
-\end{spec}
+\end{code}
 
 \begin{figure}
   \centering
@@ -152,13 +147,6 @@ putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
   \caption{Illustration of state-restoring put}
   \label{fig:putR}
 \end{figure}
-
-%if False
-\begin{code}
-putR :: (MonadPlus m, MonadState s m) => s -> m ()
-putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
-\end{code}
-%endif
 
 To help build understanding for |putR|,
 Figure~\ref{fig:putR} shows the flow of execution for the expression
@@ -174,7 +162,7 @@ state |s|.
 For some further intuition about |putR|, consider |putR s >> comp| where |comp| is some arbitrary computation:
 %if False
 \begin{code}
-putRExplain :: (MonadPlus m, MonadState s m) => s -> m b -> m b
+putRExplain :: MStateNondet s m => s -> m b -> m b
 putRExplain s comp =
 \end{code}
 %endif
@@ -193,10 +181,10 @@ In words, |putR s >> comp| saves the current state, computes |comp| using state 
 The subscript |R| stands for ``restore.''
 Note also that |(putR s >> m1) >> m2) = putR s >> (m1 >> m2)| --- the state restoration happens in the end.
 
-The behaviour of |putR|, however, is still rather tricky. It is instructive comparing
+The behaviour of |putR| is rather tricky. It is instructive comparing
 \begin{enumerate}[label=(\alph*)]
 \item |return x|,  \label{ex:putR-pitfalls-1}
-\item |put s >> return x|, and \label{ex:putR-pitfalls-2}
+\item |put s >> return x|, \label{ex:putR-pitfalls-2}
 \item |putR s >> return x|. \label{ex:putR-pitfalls-3}
 \end{enumerate}
 When run in initial state |s0|, they all yield |x| as the result.
@@ -208,20 +196,26 @@ For example, in the context |(>> get)|, we can tell them apart:
 We wish that |putR|, when run with a global state, satisfies laws \eqref{eq:put-put} through \eqref{eq:mzero-bind-zero} ---
 the state laws and the \emph{local} state laws.
 If so, one could take a program written for a local state monad, replace all occurrences of |put| by |putR|, and run the program with a global state.
-Unfortunately this is not the case: |putR| does satisfy |put|-|put|~\eqref{eq:put-put} and |put|-|get|~\eqref{eq:put-get}, but |get|-|put|~\eqref{eq:get-put} fails ---
+Unfortunately this is not the case: |putR| does satisfy {\bf put-put}~\eqref{eq:put-put} and {\bf put-get}~\eqref{eq:put-get}, but {\bf get-put}~\eqref{eq:get-put} fails ---
 |get >>= putR| and |return ()| can be
 told apart by some contexts, for example |(>> put t)|.
 To see that, we calculate:
-\begin{spec}
-   (get >>= putR) >> put t
-=  (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
-=   {- |get|-|get| -}
-   (get >>= \s -> put s `mplus` side (put s)) >> put t
-=   {- monad laws, left-distributivity -}
-   get >>= \s -> (put s >> put t) `mplus` side (put s)
-=   {- |put|-|put| -}
-   get >>= \s -> put t `mplus` side (put s) {-"~~."-}
-\end{spec}
+%if False
+\begin{code}
+getPutExplain :: MStateNondet s m => s -> m ()
+getPutExplain t =
+\end{code}
+%endif
+\begin{code}
+      (get >>= putR) >> put t
+ ===  (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
+ ===    {- {\bf get-get} -}
+      (get >>= \s -> put s `mplus` side (put s)) >> put t
+ ===    {- monad laws, left-distributivity -}
+      get >>= \s -> (put s >> put t) `mplus` side (put s)
+ ===    {- {\bf put-put} -}
+      get >>= \s -> put t `mplus` side (put s) {-"~~."-}
+\end{code}
 Meanwhile, |return () >> put t = put t|, which does not behave in the same way as |get >>= \s -> put t `mplus` side (put s)| when $s \neq t$.
 
 In a global-state setting, the left-distributivity law \eqref{eq:bind-mplus-dist} makes it tricky to reason about combinations of |mplus| and |(>>=)| operators.
