@@ -158,7 +158,7 @@ The discussion above suggests that one can implement backtracking, in a global-s
 We can even go a bit further by defining the following variations of |put|,
 which restores the original state when it is backtracked over:
 \begin{spec}
-putR :: {S s, N} `sse` eps => s -> Me eps ()
+putR :: MonadNondet s m => s -> M ()
 putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
 \end{spec}
 

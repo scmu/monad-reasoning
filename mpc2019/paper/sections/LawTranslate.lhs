@@ -23,8 +23,10 @@ m1 >> m2 = m1 >>= const m2
 \label{sec:ctxt-trans}
 
 In this section we give a more formal treatment of non-deterministic global state monad.
-We propose laws such a monad should satisfy --- to the best of our knowledge, we are the first to propose these laws.
-The laws turn out to be rather intricate.
+Not every implementation of the global state law allows us to accurately
+simulate local state semantics though, so we propose additional laws that the
+implementation must respect.
+These laws turn out to be rather intricate.
 To make sure that there exists a model, an implementation is proposed, and it is verified in Coq that the laws and some additional theorems are satisfied.
 
 The ultimate goal, however, is to show the following property:
@@ -361,7 +363,6 @@ emptyBag   :: Bag a
 sum        :: Bag a -> Bag a -> Bag a
 \end{code}
 \end{samepage}
-
 \begin{samepage}
 We model a stateful, nondeterministic computation with global state semantics as
 a function that maps an initial state onto a bag of results, and a final state.
@@ -382,7 +383,6 @@ impossible to define the bind operator.
 type M s a = s -> (Bag (a,s),s)
 \end{code}
 \end{samepage}
-
 \begin{samepage}
 |failD| does not modify the state and produces no results.
 |retD| does not modify the state and produces a single result.
@@ -394,7 +394,6 @@ retD :: a -> M s a
 retD x = \s -> (singleton (x,s),s)
 \end{code}
 \end{samepage}
-
 \begin{samepage}
   |getD| simply passes along the initial state to its continuation.
   |putD| ignores the initial state and calls its continuation with the given
@@ -407,12 +406,10 @@ putD :: s -> M s a -> M s a
 putD s k = \ _ -> k s
 \end{code}
 \end{samepage}
-
 \begin{samepage}
 The |<||||>| operator runs the left computation with the initial state, then
 runs the right computation with the final state of the left computation,
 and obtains the final result by merging the two bags of results.
-
 \begin{code}
 (<||>) :: M s a -> M s a -> M s a
 (xs <||> ys) s =  let  (ansx, s')   = xs s
@@ -420,13 +417,10 @@ and obtains the final result by merging the two bags of results.
                   in (sum ansx ansy, s'')
 \end{code}
 \end{samepage}
-
 \begin{lemma}
   This implementation conforms to every law introduced in
   Section~\ref{sec:model-global-state-sem}.~$\checkmark$
-
 \end{lemma}
-
 \subsection{Contextual Equivalence}
 
 \begin{figure}
@@ -640,9 +634,7 @@ To this end we prove laws analogous to the local state laws
   |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.} \checkmark \label{eq:mplus-bind-dist-l}
 \end{align}
 We provide machine-verified proofs for these theorems.
-
 The proof for~\eqref{eq:mplus-bind-zero-l} follows by straightforward induction.
-
 The inductive proof (with induction on |m|) of law~\eqref{eq:mplus-bind-dist-l}
 requires some additional lemmas.
 
@@ -666,7 +658,7 @@ state restoring.
 |run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 
-And finally, we require that the |trans| function is, semanticly speaking,
+And finally, we require that the |trans| function is, semantically speaking,
 idempotent, to prove the case |m = Put s m'|.
 \begin{align}
   % get_or_trans
@@ -676,7 +668,11 @@ idempotent, to prove the case |m = Put s m'|.
 \noindent
 
 \subsection{Backtracking with a Global State Monad}
-There is still one technical detail to to deal with before we deliver a backtracking algorithm that uses a global state.
+Although we can now interpret a local state program through translation to a
+global state program, we have not quite yet delivered on our promise to address
+the space usage issue of local state semantics.
+From the definition of |putR| it is clear that we simply make the implicit
+copying of the local state semantics explicit in the global state semantics.
 As mentioned in Section~\ref{sec:chaining}, rather than using |put|, some
 algorithms typically use a pair of commands |modify next| and |modify prev|,
 with |prev . next = id|, to respectively update and roll back the state.
@@ -686,11 +682,13 @@ Following a style similar to |putR|, this can be modelled by:
   modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
   modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
 \end{spec}
-
+Unlike |putR|, |modifyR| does not keep any copies of the old state alive, 
+as it does not introduce a branching point where the right branch refers to a
+variable introduced outside the branching point.
 Is it safe to use an alternative translation, where the pattern
 |get >>= (\s -> put (next s) >> m)| is not translated into
 |get >>= (\s -> putR (next s) >> trans m)|, but rather into
-|ModifyR next prev >> trans m|?
+|modifyR next prev >> trans m|?
 We explore this question by extending our |Prog| syntax with an additional
 |ModifyR| construct, thus obtaining a new |ProgM| syntax:
 \begin{spec}
@@ -729,6 +727,9 @@ instances of |Prog a|.
 \begin{lemma}
   |run (trans_1 p) = run (trans_2 p)|. \checkmark
 \end{lemma}
+This means that, if we make some effort to rewrite parts of our program to use
+the |ModifyR| construct rather than |Put|, we can use the more efficient
+translation scheme |trans_1| to avoid introducing unnecessary copies.
 
 %\begin{align*}
 %  |eval (apply C (Get (\s -> Put (next s) m)))|

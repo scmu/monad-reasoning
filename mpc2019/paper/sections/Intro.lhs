@@ -94,7 +94,7 @@ Our paper is structured as follows.
   introduce a notion of ``contextual equality'' of programs and use it to
   reformulate our laws in the free monad setting. We then precisely define the
   translation scheme introduced in the previous section, and prove it correct.
-  In conclusion, we return to the $n$-queens example \koen{TODO}.
+  In conclusion, we return to the $n$-queens example.
 \item Finally, in Sections~\ref{sec:related-work} and~\ref{sec:conclusion} we
   discuss related work and our conclusions, respectively.
 

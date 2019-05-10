@@ -192,12 +192,15 @@ The usual, naive implementation of |(>>=)| using this representation, however, d
 %See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
 The type |ListT (State s)| generated using the Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way.
 More careful implementations of |ListT|, which do satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT,Volkov:14:list-t}.
-Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}) do produce correct implementations if we run the handler for non-determinism before that of state.
+Effect handlers (e.g. Wu~\cite{Wu:14:Effect} and Kiselyov and
+Ishii~\cite{KiselyovIshii:15:Freer}) do produce implementations which match our
+intuition of a non-backtracking computation if we run the handler for
+non-determinism before that of state.
 
-We provide a direct implementation that does work to aid the intuition of the
-reader.
-Essentially the same implementation is obtained by using the type |ListT (State s)| with a correct implementation of |ListT|.
-This implementation has a strictly non-commutative |mplus|.
+We provide a direct implementation to aid the intuition of the reader.
+Essentially the same implementation is obtained by using the type
+|ListT (State s)| where |ListT| is implemented as a correct monad transformer.
+This implementation has a non-commutative |mplus|.
 \begin{spec}
 M s a = s -> (Maybe (a, M s a), s) {-"~~."-}
 \end{spec}
@@ -205,10 +208,9 @@ The |Maybe| in this type indicates that a computation might fail to produce a
 result. But note that the |s| is outside of the |Maybe|: even if the computation
 fails to produce any result, a modified state may be returned (this is different
 from local state semantics).
-
 |mzero|, of course, returns an empty continuation (|Nothing|) and an unmodified
-state. |mplus| first exhausts the first branch (always collecting any state
-modifications it performs), before switching to the second branch.
+state. |mplus| first exhausts the left branch (always collecting any state
+modifications it performs), before switching to the right branch.
 \begin{spec}
   mzero        = \s -> (Nothing, s) {-"~~,"-}
   p `mplus` q  = \s -> case p s of  (Nothing      , t) -> q t
