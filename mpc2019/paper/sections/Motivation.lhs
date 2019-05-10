@@ -1,4 +1,5 @@
 \section{Motivation}
+\label{sec:motivation}
 In the previous section we discussed two possible semantics for the interaction
 of state and nondeterminism: global and local state semantics.
 In this section, we will further explore the differences between these two

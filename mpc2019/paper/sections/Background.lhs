@@ -11,6 +11,7 @@ import Control.Arrow ((***))
 %endif
 
 \section{Background}
+\label{sec:background}
 This section briefly summarises the main concepts we need for equational
 reasoning about effects.
 For a more extensive treatment we refer to the work of Gibbons and Hinze

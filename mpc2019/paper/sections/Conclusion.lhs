@@ -1,5 +1,6 @@
 %===============================================================================
 \section{Related Work}
+\label{sec:related-work}
 
 \subsection{Prolog}
 
@@ -57,8 +58,8 @@ satisfies the local state axioms and that another model is monadic.
 
 \paragraph{Algebraic Effects}
 
-Our formulation of implementing Glocal state with global state is directly
-inspired by the effect handlers oach of Plotkin and
+Our formulation of implementing local state with global state is directly
+inspired by the effect handlers approach of Plotkin and
 Pretnar~\cite{Plotkin:09:Handlers}. By making the free monad explicit our
 proofs benefit directly from the induction principle that Bauer and Pretnar
 establish for effect handler programs~\cite{DBLP:journals/corr/BauerP13}.
