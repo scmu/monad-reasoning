@@ -1,0 +1,251 @@
+Dear authors,
+
+On behalf of the program committee for the 13th International
+Conference on Mathematics of Program Construction (MPC 2019),
+I am delighted to inform you that your submission
+
+  Handling Local State with Global State
+
+as been accepted to appear in the conference.  Reviews are
+appended below, and are also available from EasyChair.
+
+The final 'camera ready' version of your paper is due to be
+submitted on *** 12th July 2019 ***, i.e. in four weeks time.
+Please pay particular attention to any issues or concerns
+that were raised in the reviews when preparing your final
+version, as the program committee expects authors to
+address these when revising their papers.
+
+Please note that papers must adhere to the publication format
+specified on the MPC web page (https://tinyurl.com/ybvxg8cl).
+There is no prescribed page limit, but authors should strive
+for brevity.  Revised papers will be submitted using EasyChair,
+and the process for this will be advised in due course.
+
+Graham Hutton
+Program Chair, MPC 2019
+
+SUBMISSION: 11
+TITLE: Handling Local State with Global State
+
+
+----------------------- REVIEW 1 ---------------------
+SUBMISSION: 11
+TITLE: Handling Local State with Global State
+AUTHORS: Koen Pauwels, Tom Schrijvers and Shin-Cheng Mu
+
+----------- Overall evaluation -----------
+SCORE: 2 (accept)
+----- TEXT:
+This paper describes a technique for coping with non-determinism in functional programming using a "local state" construction, which copies the top level state to each branch, together with a method for "compiling" such programs into a more efficient (but harder to understand) "global state" version that does not include copying. Equivalence for the two program representations is justified wrt contextual equivalence. Proofs are supported by Coq mechanisations.
+
+I rather liked this paper and think it should be accepted. The motivation and exposition is generally clear, and it studies, to a good degree of depth, an interesting problem. I found that the paper got progressively more difficult (and less accessible to the non-expert towards the end). In particular, the proof of contextual equivalence was rather challenging to follow. Fortunately, much of this later material is backed by Coq mechanisation, which provides the confidence needed in the results.
+
+
+There are some aspects of the paper that could be improved.
+
+1. The intro seems rushed and doesn't seem to give a good overview of what's actually in the paper. I suggest that this be revisited and revised.
+
+2. In Sect 2.1, one would also expect non-determinism to be commutative and idempotent. Please explain why it isn't here.
+
+3. I found the discussion around the justification of Theorem 1 regarding commutativity between the "state" and "non-determinism" confusing. I think it would help to give the exact equation that is desired.
+
+4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
+
+
+Detailed comments
+Abstract:
+- L6: I think you means "abstractions" instead of "abstract"?
+
+Pg2:
+- Par 2, L2: "or case" --> "our case"
+- Par 2: It seems that the last sentence should start the next paragraph?
+- Par 3, L2: "the the" --> "the"
+- Par 3: Last sentence is a bit of a jump. It think this paragraph could use some cleaning up as it is unclear upon a first read.
+- Bullet 3.2: "the simulation" of what? This is unclear at this stage.
+
+Pg 3
+- Below eqn (3):
+   - You should explain const and \cdot notations for completeness
+   - <$> isn't used until (Pg 7). This definition could be deferred until then.
+- Par "Nondeterminism": I don't think you need the "(a set of laws... )"
+
+
+Pg 4
+- Above eqn (8): Remove "are supposed to"
+
+Pg 5
+- 2nd Par of "Global State Semantics": Remove "a bit"
+
+Pg 6
+- Please remove the space after "Nothing" I found it confusing, especially in the first branch of "p >>= k"
+
+Pg 8
+- Par above safeAcc: Remove "we are looking at"
+
+Pg 9, Sect 3.2
+- Par 1: "Especially when ..." is not a sentence. Perhaps remove "Especially"?
+- Par 2: Remove "only"
+
+Pg 10
+- Sentence after eqn (14) is very long; please rewrite.
+- Remove space before (5)
+- Sect 4.2, par 1. "Roll back to the previous state" - clarify whether this only happens when a solution is not found, or if it rolls back regardless of whether a solution is found.
+
+Pg 12
+- Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
+- Par 2, last sentence: Extra ")" in the equation
+
+Pg 13
+- L2: "told apart by" --> "differentiated by"
+
+Pg 14
+- Fig 3: I'm confused by the notation. ([]) vs \overline{[]}. The second of these does not have parentheses - why? Are parentheses needed for the first?
+
+Pg 15
+- Sect 5.2, par 1, L3: Remove "can"
+- Sentence after Eqn (18) needs a rewrite
+- Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
+
+(\bar{put} s p) \bar{[]} q  = \bar{put} s (p \bar{[]} q)
+
+Pg 16
+- Overfull text middle of page
+
+
+
+----------------------- REVIEW 2 ---------------------
+SUBMISSION: 11
+TITLE: Handling Local State with Global State
+AUTHORS: Koen Pauwels, Tom Schrijvers and Shin-Cheng Mu
+
+----------- Overall evaluation -----------
+SCORE: 2 (accept)
+----- TEXT:
+Synopsis:
+
+The paper presents a whole program transformation for transforming
+monadic programs with non-determinism and state effects. The purpose
+of this transformation is to transform programs that require local
+state semantics into a form so that it is safe to use global state
+semantics. The authors also provide a case study that motivates the
+problem. In short, the local state semantics is better for equational
+reasoning while the global state semantics can yield better
+performance characteristics. Some of the proofs have been formalised
+in Coq.
+
+Evaluation:
+
+I really enjoyed reading this paper. It fits perfectly into MPC and
+solves a well-motivated problem in an interesting way. The paper is
+self-contained and written in an easy to understand style.
+
+That being said the presentation could use some improvements: First of
+all the writing could use some polish (more comments on that below).
+Secondly, the paper, feels too long. The meat of the paper (section 5)
+only starts at the bottom of page 13! This problem can be aleviated by
+removing some of the remarks that are tangential to the contribution
+of the paper. Perhaps it could be possible to move section 3
+(motivation) towards the end of the paper as an extended example or
+case study. I don't think the n-Queens example is referred to until
+the very end of section 5 anyway.
+
+
+Detailed comments:
+
+- End of section 4.1. So what makes axiom (14) so special that it gets
+ mentioned here but not the others
+
+- When giving the definition of put_R you should mention that this
+ does not give the improved performance characteristics that you
+ promised earlier in section 3.2. You can make a forward reference to
+ section 5.6 to say that this will be partially addressed later.
+
+- On page 12, you write: "We wish that put_R, when run with a global
+ state, satisﬁes laws (8) through (12)". This is confusing. Why do
+ you want these laws, but not (13)? What does it mean for put_R to
+ satisfy (12)?
+
+- On page 16 you write: "However, we will require that the order in
+ which results are computed does not matter." What does that mean
+ (especially given that the [] operator is not commutative)?
+
+Minor comments:
+- abstract: "[..] a mechanism of layered abstract by which eﬀects can
+ be implemented in terms of other eﬀects." This does not make sense.
+- page 5: "These requirements imply that each nondeterministic branch
+ has its own copy of the state." Why?
+- page 5, footnote: "a → [(a, s)]" -> "s → [(a, s)]"
+- page 8: "Routine program calculation shows that we can check whether
+ a placement [..]" This sentence needs to be reformulated.
+- page 8: "non-determinism laws and (12) and (13)." Remove the first 'and'.
+- page 11: "variations of put". I only count one variation.
+- page 12: In the last step of the calculation, you also need one of
+ the monad laws.
+- page 12: "When" -> "when"
+- page 16: "repect" -> "respect"
+- page 23, bottom: It would be nice to see the original implementation
+ of n-Queens here as well. Also: there is an additional
+ transformation performed where you insert an additional 'get' after
+ the 'guard'.
+
+
+
+----------------------- REVIEW 3 ---------------------
+SUBMISSION: 11
+TITLE: Handling Local State with Global State
+AUTHORS: Koen Pauwels, Tom Schrijvers and Shin-Cheng Mu
+
+----------- Overall evaluation -----------
+SCORE: -1 (weak reject)
+----- TEXT:
+This paper provides a case study in the kind of equational reasoning about effectful computations that has been advocated by Hutton and Fulger (2007) and Gibbons and Hinze (2011).  It adds an interesting twist in that it studies the question of how to reason about implementing one monad in terms of another, with influence from work on algebraic effects and handlers.
+
+In an engaging way, the paper exposes unexpected subtlety in how nondeterminism and state should be combined, and the choices that must be made. The notion of local state, in which, for instance, different branches of a backtracking computation see their own local copies of the state, is contrasted with global state, in which a single state is threaded through computations, continuously being modified, but not reverted when the computation in a branch ends. It is these two views that give rise to the two monads. Finding a suitable monad for the global state semantics is surprisingly tricky.
+
+Next, the n-queens example is used to motivate the need to transform a program written in local state style into one written using global state. While believing intuitively that this is indeed a useful, general transformation, I felt that the paper does not provide enough hard evidence for this. It is claimed that one might desire "the performance characteristics of global state semantics", but these are not described, either directly or via suitable citations. Section 3.2, on space usage of local state implementations, is annoyingly vague. It claims that it is easier to reason about resource usage in the global state semantics, but this claim is not justified in the paper. Earlier, in the Introduction, sequential search systems are mentioned and it is argued, very briefly, that using backtracking with undoing of state changes can be more efficient than recomputing the state from scratch. Perhaps further information and citations from this domain could provide better motivat!
+ion than the paper currently does?
+
+It is all very well to implement and prove that a transformation from local to global state preserves the functional semantics, but what about the non-functional semantics, in the form of memory use and number of computations or computation time? Surely the user needs some way to reason about these too? It seems unlikely that the n-queens example studied in the paper would actually display improved resource use after the local state to global state transformation is applied, and the paper even says this. For this reason, I think that it is a poor example to choose. It would be much better to choose an example where the transformation makes a significant change to the resource use of the program, and to demonstrate the reasoning needed to show this. Failing this, or, better still, in addition, a demonstration that the transformation can be applied to a more substantial example, leading to measured improvement in resource use in practice, would greatly strengthen the paper.
+
+Ignoring these qualms, the paper's study of global state semantics and the laws they should satisfy, of an implementation satisfying the laws, and of how to transform from local to global state, is indeed interesting. That the implementation preserves the laws, and that the transformation preserves functional semantics are proved in Coq. The proof technique combining induction over syntax with contextual equivalence seems to be a novel contribution of the paper.
+
+
+Minor comments
+
+Abstract
+a mechanism of layered abstract        ?        missing word?   abstractions?
+
+p 2
+or case study -> our case study
+the the       delete one
+
+There is a typo (in the form of an extra s parameter) in the types for monad (section 2.1).
+
+section 3.1
+both as a fold or an unfold          both -> either
+
+We wish to fuse the two phases to produce a faster implementation?
+Explain why the fused version is expected to be faster? Also, is it actually faster?
+
+it is natural trying to fuse them -> it is natural to try to fuse them
+
+end of section 4
+compaired against -> compared to
+
+section 5
+formal treatment of non-deterministic global state monad             add "the" ?
+
+as are implementations -> as do implementations
+
+too narrow of a view   delete of
+
+semanticly -> semantically
+
+section 6
+
+producere -> procedure
+
+applied the monadic setting -> applied in the monadic setting
+
+encoding axioms (or "effect theories") the type system         insert "in"
