@@ -64,7 +64,7 @@ To facilitate its application to monadic programs, Gibbons and Hinze have
 proposed a simple axiomatic approach using laws that characterise the
 computational effects without exposing their implementation details.  At the
 same time Plotkin and Pretnar have proposed algebraic effects and handlers, a
-mechanism of layered abstract by which effects can be implemented in terms of
+mechanism of layered abstractions by which effects can be implemented in terms of
 other effects.
 
 This paper performs a case study that connects these two strands of research.

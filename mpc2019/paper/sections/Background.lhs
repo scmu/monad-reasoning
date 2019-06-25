@@ -26,7 +26,9 @@ A monad consists of a type constructor |M :: * -> *| and two operators |return :
   |(m >>= f) >>= g| &= |m >>= (\x -> f x >>= g)| \mbox{~~.}
     \label{eq:monad-assoc}
 \end{align}
-We also define |m1 >> m2 = m1 >>= const m2|, which has type |(>>) :: m a -> m b -> m b|, and |f <$> m = m >> (return . f)| which applies a pure function to a monadic value.
+We also define |m1 >> m2 = m1 >>= \ _ -> m2|,
+which has type |(>>) :: m a -> m b -> m b|, and |f <$> m = m >> (return . f)|
+which applies a pure function to a monadic value.
 %if False
 \begin{code}
 (>>) :: Monad m => m a -> m b -> m b
@@ -75,7 +77,18 @@ while |mzero| is a left zero for |(>>=)|:
 We will refer to the laws \eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus},
 \eqref{eq:bind-mplus-dist}, \eqref{eq:bind-mzero-zero} collectively as the
 \emph{nondeterminism laws}.
-Other properties regarding |mzero| and |mplus| will be introduced when needed.
+
+One might might intuitively expect some additional laws from a set of non-determinism
+operators, such as idempotence (|p `mplus` p = p|) or
+commutativity (|p `mplus` q = q `mplus` p|).
+However, our primary interest lies in the study of combinations of effects and
+-- as we shall see very soon -- in particular the combination of nondeterminism with
+\emph{state}.
+One of our characterisations of this interaction would be incompatible with both
+idempotence and commutativity, at least if they are stated as strongly as we
+have done here. We will eventually introduce a weaker notion of commutativity,
+but it would not be instructive to do so here (as its properties would be
+difficult to motivate at this point).
 
 \paragraph{State}
 The state effect provides two operators:
