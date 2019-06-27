@@ -119,7 +119,7 @@ In our representation, queens cannot be put on the same row or column.
 Therefore, |safe| only needs to make sure that no two queens are put on the same diagonal.
 An 8 by 8 chess board has 15 {\em up diagonals} (those running between bottom-left and top-right). Let them be indexed by |[0..14]| (see Figure \ref{fig:queens-examples}(b)).
 Similarly, there are 15 {\em down diagonals} (running between top-left and bottom right, indexed by |[-7..7]| in Figure \ref{fig:queens-examples}(c)).
-Routine program calculation shows that we can check whether a placement is safe in one left-to-right traversal ---
+We can show, by routine program calculation, that whether a placement is safe can be checked in one left-to-right traversal ---
 define |safe xs = safeAcc (0,[],[]) xs|, where
 \begin{code}
 safeAcc :: (Int, [Int], [Int]) -> [Int] -> Bool
@@ -174,7 +174,7 @@ protect m = get >>= \ini -> m >>= \x -> put ini >> return x
 \end{code}
 %endif
 
-For Theorem~\ref{thm:filt-scanlp-foldr} to hold, however, we need state and non-determinism to commute. It is so in the local state semantics, which can be proved using the non-determinism laws \emph{and} \eqref{eq:mzero-bind-zero} and \eqref{eq:mplus-bind-dist}.
+For Theorem~\ref{thm:filt-scanlp-foldr} to hold, however, we need state and non-determinism to commute. It is so in the local state semantics, which can be proved using the non-determinism laws, \eqref{eq:mzero-bind-zero}, and \eqref{eq:mplus-bind-dist}.
 
 Now that the safety check can be performed in a |foldr|, recalling that |perm| is an unfold, it is natural trying to fuse them into one.
 Indeed, it can be proved that, with |oplus|, |ok|, and |odot| defined above, we have |perm xs >>= foldr odot (return []) = qBody xs|, where

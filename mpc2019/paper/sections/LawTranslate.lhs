@@ -189,7 +189,7 @@ semantics.
 The |<||||>| operator is not, in general, commutative in a global state setting.
 However, we will require that the order in which results are computed does not
 matter.
-Furthermore we require that the implementation is agnostic with repect to the
+Furthermore we require that the implementation is agnostic with respect to the
 order of |putD| operations as long as the exact same results are computed with
 the exact same state at the time of their computation.
 These properties are enforced by law~\eqref{eq:put-or-comm-g-d}.

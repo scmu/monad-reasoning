@@ -133,7 +133,7 @@ However, we will exploit this feature and develop a safer programming pattern in
 \label{subsec:state-restoring-ops}
 
 The discussion above suggests that one can implement backtracking, in a global-state setting, by using |mplus| and |side| appropriately.
-We can even go a bit further by defining the following variations of |put|,
+We can even go a bit further by defining the following variation of |put|,
 which restores the original state when it is backtracked over:
 \begin{code}
 putR :: MStateNondet s m => s -> m ()
@@ -170,7 +170,7 @@ putRExplain s comp =
  ===  (get >>= \s0 -> put s `mplus` side (put s0)) >> comp
  ===    {- monad law, left-distributivity \eqref{eq:bind-mplus-dist} -}
       get >>= \s0 -> (put s >> comp) `mplus` (side (put s0) >> comp)
- ===    {- by \eqref{eq:bind-mzero-zero}, |mzero >> comp = mzero| -}
+ ===    {- by \eqref{eq:bind-mzero-zero} |mzero >> comp = mzero|, monad laws -}
       get >>= \s0 -> (put s >> comp) `mplus` side (put s0) {-"~~."-}
 \end{code}
 Thanks to left-distributivity \eqref{eq:bind-mplus-dist}, |(>> comp)| is promoted into |mplus|.

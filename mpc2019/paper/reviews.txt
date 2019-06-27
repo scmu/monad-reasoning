@@ -185,24 +185,35 @@ Detailed comments:
  (especially given that the [] operator is not commutative)?
 
 Minor comments:
-[ ] - abstract: "[..] a mechanism of layered abstract by which eﬀects can
- be implemented in terms of other eﬀects." This does not make sense.
+[ ] - abstract: "[..] a mechanism of layered abstract by which effects can
+ be implemented in terms of other effects." This does not make sense.
 [ ] - page 5: "These requirements imply that each nondeterministic branch
  has its own copy of the state." Why?
-[ ] - page 5, footnote: "a → [(a, s)]" -> "s → [(a, s)]"
-[ ] - page 8: "Routine program calculation shows that we can check whether
+[X] - page 5, footnote: "a → [(a, s)]" -> "s → [(a, s)]"
+> SCM: Corrected.
+
+[X] - page 8: "Routine program calculation shows that we can check whether
  a placement [..]" This sentence needs to be reformulated.
-[ ] - page 8: "non-determinism laws and (12) and (13)." Remove the first 'and'.
-[ ] - page 11: "variations of put". I only count one variation.
-[ ] - page 12: In the last step of the calculation, you also need one of
+> SCM: Rewritten. Hope the new sentence is clearer...
+
+[X] - page 8: "non-determinism laws and (12) and (13)." Remove the first 'and'.
+[X] - page 11: "variations of put". I only count one variation.
+> SCM: changed to "variation of put".
+
+[X] - page 12: In the last step of the calculation, you also need one of
  the monad laws.
-[ ] - page 12: "When" -> "when"
-[ ] - page 16: "repect" -> "respect"
-[ ] - page 23, bottom: It would be nice to see the original implementation
+
+[?] - page 12: "When" -> "when"
+> SCM: I can't find this one..
+
+[X] - page 16: "repect" -> "respect"
+> SCM: corrected.
+
+[?] - page 23, bottom: It would be nice to see the original implementation
  of n-Queens here as well. Also: there is an additional
  transformation performed where you insert an additional 'get' after
  the 'guard'.
-
+> SCM: not sure what was meant by "original" implementation --- I don't think we need to repeat queens and qBody in Section 3.1. I don't understand what was meant by the "additional get after the guard", but I think it might be some minor transformation that we need not mention...
 
 
 ----------------------- REVIEW 3 ---------------------

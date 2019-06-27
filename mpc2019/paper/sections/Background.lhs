@@ -163,7 +163,7 @@ It is then easy to show that this term must be equal to both
   Gibbons and Hinze~\cite{GibbonsHinze:11:Just} were mistaken in their claim
   that the type |s -> [(a,s)]| constitutes a model of their backtrackable state
   laws; it is not a model because its |mplus| does not commute with itself.
-  One could consider a relaxed semantics that admits |a -> [(a,s)]|, but that is
+  One could consider a relaxed semantics that admits |s -> [(a,s)]|, but that is
   not the focus of this paper.
 }
 %Implementations of such non-deterministic monads have been studied by
