@@ -175,10 +175,11 @@ Detailed comments:
  promised earlier in section 3.2. You can make a forward reference to
  section 5.6 to say that this will be partially addressed later.
 
-[ ] - On page 12, you write: "We wish that put_R, when run with a global
+[X] - On page 12, you write: "We wish that put_R, when run with a global
  state, satisﬁes laws (8) through (12)". This is confusing. Why do
  you want these laws, but not (13)? What does it mean for put_R to
  satisfy (12)?
+> SCM: Should be (8) - (13).
 
 [ ] - On page 16 you write: "However, we will require that the order in
  which results are computed does not matter." What does that mean
@@ -189,6 +190,7 @@ Minor comments:
  be implemented in terms of other effects." This does not make sense.
 [ ] - page 5: "These requirements imply that each nondeterministic branch
  has its own copy of the state." Why?
+
 [X] - page 5, footnote: "a → [(a, s)]" -> "s → [(a, s)]"
 > SCM: Corrected.
 
@@ -239,38 +241,53 @@ Ignoring these qualms, the paper's study of global state semantics and the laws 
 Minor comments
 
 Abstract
-[ ] a mechanism of layered abstract        ?        missing word?   abstractions?
+[X] a mechanism of layered abstract        ?        missing word?   abstractions?
+> SCM: should be abstractions. Corrected.
 
 p 2
-[ ] or case study -> our case study
-[ ] the the       delete one
+[X] or case study -> our case study
+> SCM: corrected.
 
-[ ] There is a typo (in the form of an extra s parameter) in the types for monad (section 2.1).
+[X] the the       delete one
+> SCM: corrected.
+
+[X] There is a typo (in the form of an extra s parameter) in the types for monad (section 2.1).
+> SCM: corrected.
 
 section 3.1
-[ ] both as a fold or an unfold          both -> either
+[X] both as a fold or an unfold          both -> either
+> SCM: revised.
 
 [ ] We wish to fuse the two phases to produce a faster implementation?
-[ ] Explain why the fused version is expected to be faster? Also, is it actually faster?
+Explain why the fused version is expected to be faster? Also, is it actually faster?
 
-[ ] it is natural trying to fuse them -> it is natural to try to fuse them
+[X] it is natural trying to fuse them -> it is natural to try to fuse them
+> SCM: revised.
 
 end of section 4
-[ ] compaired against -> compared to
+[X] compaired against -> compared to
+> SCM: corrected.
 
 section 5
-[ ] formal treatment of non-deterministic global state monad             add "the" ?
+[X] formal treatment of non-deterministic global state monad             add "the" ?
+> SCM: added.
 
-[ ] as are implementations -> as do implementations
+[X] as are implementations -> as do implementations
+> SCM: corrected.
 
-[ ] too narrow of a view   delete of
+[X] too narrow of a view   delete of
+> SCM: corrected.
 
-[ ] semanticly -> semantically
+[X] semanticly -> semantically
+> SCM: corrected.
 
 section 6
 
-[ ] producere -> procedure
+[X] producere -> procedure
+> SCM: corrected.
 
-[ ] applied the monadic setting -> applied in the monadic setting
+[X] applied the monadic setting -> applied in the monadic setting
+> SCM: corrected.
 
-[ ] encoding axioms (or "effect theories") the type system         insert "in"
+[X] encoding axioms (or "effect theories") the type system         insert "in"
+> SCM: corrected.

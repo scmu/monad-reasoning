@@ -192,7 +192,7 @@ However, \ref{ex:putR-pitfalls-3} does {\em not} behave identically to \ref{ex:p
 For example, in the context |(>> get)|, we can tell them apart:
 |return x >> get| returns |s0|, while |putR s >> return x >> get| returns |s|, even though the program yields final state |s0|.
 
-We wish that |putR|, when run with a global state, satisfies laws \eqref{eq:put-put} through \eqref{eq:mzero-bind-zero} ---
+We wish that |putR|, when run with a global state, satisfies laws \eqref{eq:put-put} through \eqref{eq:mplus-bind-dist} ---
 the state laws and the \emph{local} state laws.
 If so, one could take a program written for a local state monad, replace all occurrences of |put| by |putR|, and run the program with a global state.
 Unfortunately this is not the case: |putR| does satisfy {\bf put-put}~\eqref{eq:put-put} and {\bf put-get}~\eqref{eq:put-get}, but {\bf get-put}~\eqref{eq:get-put} fails ---
@@ -220,7 +220,7 @@ Meanwhile, |return () >> put t = put t|, which does not behave in the same way a
 In a global-state setting, the left-distributivity law \eqref{eq:bind-mplus-dist} makes it tricky to reason about combinations of |mplus| and |(>>=)| operators.
 Suppose we have a program |(m `mplus` n)|, and we construct an extended program by binding a continuation |f| to it such that we get |(m `mplus` n) >>= f| (where |f| might modify the state).
 Under global-state semantics, the evaluation of the right branch is influenced by the state modifications performed by evaluating the left branch.
-So by \eqref{eq:bind-mplus-dist}, this means that when we get to evaluating the |n| subprogram in the extended program, it will do so with a different initial state (the one obtained after running |m >>= f|) compaired against the initial state in the original program (the one obtained by running |m|).
+So by \eqref{eq:bind-mplus-dist}, this means that when we get to evaluating the |n| subprogram in the extended program, it will do so with a different initial state (the one obtained after running |m >>= f|) compared to the initial state in the original program (the one obtained by running |m|).
 In other words, placing our program in a different context changed the meaning of one of its subprograms.
 So it is difficult to reason about programs compositionally in this setting --- some properties hold only when we take the entire program into consideration.
 

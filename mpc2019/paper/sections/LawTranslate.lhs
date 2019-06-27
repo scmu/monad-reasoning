@@ -22,7 +22,7 @@ m1 >> m2 = m1 >>= const m2
 \section{Laws and Translation for Global State Monad}
 \label{sec:ctxt-trans}
 
-In this section we give a more formal treatment of non-deterministic global state monad.
+In this section we give a more formal treatment of the non-deterministic global state monad.
 Not every implementation of the global state law allows us to accurately
 simulate local state semantics though, so we propose additional laws that the
 implementation must respect.
@@ -194,7 +194,7 @@ order of |putD| operations as long as the exact same results are computed with
 the exact same state at the time of their computation.
 These properties are enforced by law~\eqref{eq:put-or-comm-g-d}.
 Implementations that present the results as an ordered list violate this law,
-as are implementations that record the order of proper state changes.
+as do implementations that record the order of proper state changes.
 
 In global-state semantics, |putD| operations cannot, in general,
 distribute over |<||||>|.
@@ -224,7 +224,7 @@ To gain some intuition about why law~\eqref{eq:put-ret-or-g-d} prohibits a bind
 operator, consider that the presence or absence of a bind operator influences
 what equality of programs means.
 Our first intuition might be that we consider two programs equal if they produce
-the same outputs given the same inputs. But this is too narrow of a view: for
+the same outputs given the same inputs. But this is too narrow a view: for
 two programs to be considered equal, they must also behave the same under
 \emph{composition}; that is, we must be able to replace one for the other within
 a larger whole, without changing the meaning of the whole.
@@ -722,7 +722,7 @@ definition given above, while the second replaces it by
 It is clear that |trans_2 p| is the exact same program as |trans p'|, where |p'|
 is |p| but with each |ModifyR next prev p| replaced by |Get (\s -> Put (next s) p)|.
 
-We then prove that these two transformations lead to semanticly identical
+We then prove that these two transformations lead to semantically identical
 instances of |Prog a|.
 \begin{lemma}
   |run (trans_1 p) = run (trans_2 p)|. \checkmark

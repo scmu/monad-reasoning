@@ -19,7 +19,7 @@ For a more extensive treatment we refer to the work of Gibbons and Hinze
 
 \subsection{Monads, Nondeterminism and State}
 \paragraph{Monads}
-A monad consists of a type constructor |M :: * -> *| and two operators |return :: a -> M s a| and ``bind'' |(>>=) :: M s a -> (a -> M b) -> M b| that satisfy the following {\em monad laws}:
+A monad consists of a type constructor |M :: * -> *| and two operators |return :: a -> M a| and ``bind'' |(>>=) :: M a -> (a -> M b) -> M b| that satisfy the following {\em monad laws}:
 \begin{align}
   |return x >>= f| &= |f x|\mbox{~~,} \label{eq:monad-bind-ret}\\
   |m >>= return| &= |m| \mbox{~~,} \label{eq:monad-ret-bind}\\

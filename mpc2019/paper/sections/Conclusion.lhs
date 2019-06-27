@@ -22,8 +22,8 @@ theses addresses, and the process of restoring those cells is called
 
 \paragraph{The 4-Port Box Model}
 While trailing happens under the hood, there is a folklore Prolog programming
-pattern for observing and intervening at different points in the control flow 
-of a producere call,
+pattern for observing and intervening at different points in the control flow
+of a procedure call,
 known as the {\em 4-port box model}.
 In this model, upon the first entrance of a Prolog procedure it is {\em
 called}; it may yield a result and {\em exits}; when the subsequent procedure
@@ -36,7 +36,7 @@ when each of the four ports are used:
   p >>= \x ->
   (putStr "exit" `mplus` side (putStr "redo")) >> return x {-"~~."-}
 \end{spec}
-This technique was applied the monadic setting by Hinze~\cite{DBLP:journals/ijfcs/Hinze01},
+This technique was applied in the monadic setting by Hinze~\cite{DBLP:journals/ijfcs/Hinze01},
 and it has been our inspiration for expressing the state restoration with global state.
 
 %-------------------------------------------------------------------------------
@@ -68,10 +68,10 @@ While Lawvere theories were originally Plotkin's inspiration for studying
 algebraic effects, the effect handlers community has for a long time paid
 little attention to them. Yet, recently Luk\v{s}i\v{c} and
 Pretnar~\cite{Pretnar:19} have investigated a framework for encoding axioms (or
-``effect theories'') the type system: the type of an effectful function
+``effect theories'') in the type system: the type of an effectful function
 declares the operators used in the function, as well as the equalities that
 handlers for these operators should comply with.  The type of a handler
-indicates which operators it handles and which equations it complies with. 
+indicates which operators it handles and which equations it complies with.
 This type system would allow us to express at the type-level that our
 handler interprets local state in terms of global state.
 
@@ -112,14 +112,14 @@ We also verified the correctness of this transformation in Coq.
 % construct backtracking algorithms solving problems that can be specified in the form |unfoldM f p >=> assert (all ok . scanlp oplus st)|, for two scenarios.
 % In the first scenario, we assume that right-distributivity and right-zero laws hold, which imply that each non-deterministic branch has its own state.
 % The derivation of the backtracking algorithm works by fusing the two phases into a monadic hylomorphism.
-% 
+%
 % In the second scenario we consider the case when the state is global.
 % We find that we may use |mplus| to simulate sequencing, and that the idea can be elegantly packaged into commands like |putR| and |modifyR|.
 % The interaction between global state and non-determinism turns out to be rather tricky.
 % For a more rigorous treatment, we enforce a more precise separation between syntax and semantics and, as a side contribution of this paper, propose a collection of \emph{global state laws} which the semantics should satisfy,
 % and verified in Coq that there is an implementation satisfying these laws.
 % With the setting up, we show that a program written for local state works for the global state scenario if we replace all occurrences of |put| by |putR|.
-% 
+%
 % It turns out that in derivations of programs using non-determinism and state, commutativity plays an important role. When the state is local, we have nicer properties at hand, and commutativity holds more generally.
 % With a shared global state, commutativity holds in limited cases.
 % In particular, |putR| still commutes with non-determinism.

@@ -97,7 +97,7 @@ filt p x = guard (p x) >> return x {-"~~,"-}
 guard :: MNondet m => Bool -> m ()
 guard b = if b then return () else mzero {-"~~."-}
 \end{code}
-The function |perm| can be written both as a fold or an unfold.
+The function |perm| can be written either as a fold or an unfold.
 For this problem we choose the latter, using a function |select|, which non-deterministically splits a list into a pair containing one chosen element and the rest. For example, |select [1,2,3]| yields one of |(1,[2,3])|, |(2,[1,3])| and |(3,[1,2])|.
 \begin{code}
 select :: MNondet m => [a] -> m (a,[a])
@@ -176,7 +176,7 @@ protect m = get >>= \ini -> m >>= \x -> put ini >> return x
 
 For Theorem~\ref{thm:filt-scanlp-foldr} to hold, however, we need state and non-determinism to commute. It is so in the local state semantics, which can be proved using the non-determinism laws, \eqref{eq:mzero-bind-zero}, and \eqref{eq:mplus-bind-dist}.
 
-Now that the safety check can be performed in a |foldr|, recalling that |perm| is an unfold, it is natural trying to fuse them into one.
+Now that the safety check can be performed in a |foldr|, recalling that |perm| is an unfold, it is natural to try to fuse them into one.
 Indeed, it can be proved that, with |oplus|, |ok|, and |odot| defined above, we have |perm xs >>= foldr odot (return []) = qBody xs|, where
 \begin{code}
 qBody :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
