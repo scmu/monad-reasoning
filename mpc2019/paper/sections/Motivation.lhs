@@ -108,7 +108,9 @@ perm :: MNondet m => [a] -> m [a]
 perm []  = return []
 perm xs  = select xs >>= \(x,ys) -> (x:) <$> perm ys {-"~~,"-}
 \end{code}
-where |(f *** g) (x,y) = (f x, g y)|.
+where |f <$> m = m >> (return . f)|
+which applies a pure function to a monadic value,
+and |(f *** g) (x,y) = (f x, g y)|.
 
 This specification of |queens| generates all the permutations, before checking them one by one, in two separate phases. We wish to fuse the two phases and produce a faster implementation.
 
@@ -133,7 +135,7 @@ safe :: [Int] -> Bool
 safe xs = safeAcc (0,[],[]) xs
 \end{code}
 %endif
-Operationally, |(i,us,ds)| is a ``state'' kept by |safeAcc|, where |i| is the current column we are looking at, while |us| and |ds| are respectively the up and down diagonals encountered so far.
+Operationally, |(i,us,ds)| is a ``state'' kept by |safeAcc|, where |i| is the current column, while |us| and |ds| are respectively the up and down diagonals encountered so far.
 Function |safeAcc| behaves like a fold-left. Indeed, it can be defined using |scanl| and |all| (where |all p = foldr (&&) True . map p|):
 %if False
 \begin{code}
@@ -206,12 +208,12 @@ consisting of linked data structures, for example the state
 in the |n|-queens problem. In some applications, however, the state
 might be represented by data structures, e.g. arrays, that are costly to
 duplicate.
-Especially when each new state is only slightly different from the previous
+When each new state is only slightly different from the previous
 (say, the array is updated in one place each time), we have a wasteful
 duplication of information.
 
 Global state semantics, on the other hand, has a more ``low-level'' feel to it.
-Because only a single state is threaded through the entire computation without
+Because a single state is threaded through the entire computation without
 making any implicit copies, it is easier to reason about resource usage in this
 setting. So we might write our programs directly in the global state style.
 However, if we do this to a program that would be more naturally expressed in

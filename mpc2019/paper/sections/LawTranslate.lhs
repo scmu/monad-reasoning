@@ -139,7 +139,7 @@ nondeterministic, stateful computation for our programs.
 Naturally, we need laws analogous to the state laws and nondeterminism laws to
 hold for our semantic domain.
 As it is not required that a bind operator
-(|(>>=) :: Dom a -> (a -> Dom b) -> Dom b|) can be defined for the semantic
+(|(>>=) :: Dom a -> (a -> Dom b) -> Dom b|) be defined for the semantic
 domain (and we will later argue that it \emph{cannot} be defined for the domain,
 given the laws we impose on it), the state laws
 (\eqref{eq:put-put} through \eqref{eq:get-get})
@@ -682,7 +682,7 @@ Following a style similar to |putR|, this can be modelled by:
   modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
   modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
 \end{spec}
-Unlike |putR|, |modifyR| does not keep any copies of the old state alive, 
+Unlike |putR|, |modifyR| does not keep any copies of the old state alive,
 as it does not introduce a branching point where the right branch refers to a
 variable introduced outside the branching point.
 Is it safe to use an alternative translation, where the pattern

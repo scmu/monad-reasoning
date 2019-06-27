@@ -45,8 +45,7 @@ branch of a nondeterministic choice, an operation which does not preserve
 meaning under local state semantics:
 suppose for example that |m = mzero|, then by
 \eqref{eq:mzero-bind-zero} and~\eqref{eq:mzero-mplus}, the left-hand side of
-the equation is equal to |n|, whereas by
-~\eqref{eq:mzero-mplus},
+the equation is equal to |n|, whereas by~\eqref{eq:mzero-mplus},
 the right-hand side of the equation is equal to |put s >> n|.
 
 By itself, this law leaves us free to choose from a large space of
@@ -84,7 +83,7 @@ Section~\ref{sec:model-global-state-sem}.
 In backtracking algorithms that keep a global state, it is a common pattern to
 1. update the current state to its next step,
 2. recursively search for solutions, and
-3. roll back the state to the previous step.
+3. roll back the state to the previous step (regardless of whether a solution is found).
 To implement such pattern as a monadic program, one might come up with something like the code below:
 \begin{spec}
 modify next >> search >>= modReturn prev {-"~~,"-}
@@ -179,7 +178,7 @@ Furthermore, the |(>> comp)| after |side (put s0)| is discarded by
 \eqref{eq:bind-mzero-zero}.
 In words, |putR s >> comp| saves the current state, computes |comp| using state |s|, and restores the saved state!
 The subscript |R| stands for ``restore.''
-Note also that |(putR s >> m1) >> m2) = putR s >> (m1 >> m2)| --- the state restoration happens in the end.
+Note also that |(putR s >> m1) >> m2 = putR s >> (m1 >> m2)| --- the state restoration happens in the end.
 
 The behaviour of |putR| is rather tricky. It is instructive comparing
 \begin{enumerate}[label=(\alph*)]
@@ -198,7 +197,7 @@ the state laws and the \emph{local} state laws.
 If so, one could take a program written for a local state monad, replace all occurrences of |put| by |putR|, and run the program with a global state.
 Unfortunately this is not the case: |putR| does satisfy {\bf put-put}~\eqref{eq:put-put} and {\bf put-get}~\eqref{eq:put-get}, but {\bf get-put}~\eqref{eq:get-put} fails ---
 |get >>= putR| and |return ()| can be
-told apart by some contexts, for example |(>> put t)|.
+differentiated by some contexts, for example |(>> put t)|.
 To see that, we calculate:
 %if False
 \begin{code}

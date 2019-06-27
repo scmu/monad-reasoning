@@ -26,9 +26,6 @@ A monad consists of a type constructor |M :: * -> *| and two operators |return :
   |(m >>= f) >>= g| &= |m >>= (\x -> f x >>= g)| \mbox{~~.}
     \label{eq:monad-assoc}
 \end{align}
-We also define |m1 >> m2 = m1 >>= \ _ -> m2|,
-which has type |(>>) :: m a -> m b -> m b|, and |f <$> m = m >> (return . f)|
-which applies a pure function to a monadic value.
 %if False
 \begin{code}
 (>>) :: Monad m => m a -> m b -> m b
@@ -39,9 +36,9 @@ m1 >> m2 = m1 >>= const m2
 \paragraph{Nondeterminism}
 The first effect we introduce is nondeterminism.
 Following the trail of Hutton and Fulger \cite{HuttonFulger:08:Reasoning} and
-Gibbons and Hinze, we introduce effects
-based on an axiomatic characterisation (a set of laws that govern how the effect
-operators behave with respect to one another) rather than a specific implementation.
+Gibbons and Hinze, we introduce effects based on an axiomatic characterisation
+%(a set of laws that govern how the effect operators behave with respect to one another)
+rather than a specific implementation.
 We define a type class to capture this interface as follows:
 \begin{code}
 class Monad m => MNondet m where
@@ -98,7 +95,7 @@ class Monad m => MState s m | m -> s where
     put  :: s -> m () {-"~~."-}
 \end{code}
 The |get| operator retrieves the state, while |put| overwrites the state by the given value.
-They are supposed to satisfy the \emph{state laws}:
+They satisfy the \emph{state laws}:
 \begin{alignat}{2}
 &\mbox{\bf put-put}:\quad &
 |put st >> put st'| &= |put st'|~~\mbox{,} \label{eq:put-put}\\
@@ -108,8 +105,10 @@ They are supposed to satisfy the \emph{state laws}:
 |get >>= put| &= |return ()| ~~\mbox{,} \label{eq:put-get}\\
 &\mbox{\bf get-get}:\quad &
 |get >>= (\st -> get >>= k st)| &= |get >>= (\st -> k st st)|
-~~\mbox{.} \label{eq:get-get}
+~~\mbox{,} \label{eq:get-get}
 \end{alignat}
+where |m1 >> m2 = m1 >>= \ _ -> m2|, which has type |(>>) :: m a -> m b -> m b|.
+
 
 \subsection{Combining Effects}
 \label{sec:combining-effects}
@@ -182,7 +181,25 @@ It is then easy to show that this term must be equal to both
 % effects of |m|) corresponds to our intuition for backtrackable state, but not for
 % non-backtrackable state or other irriversible effects.
 
-These requirements imply that each nondeterministic branch has its own copy of
+In fact, having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} gives us very strong and useful commutative properties.
+To be clear what we mean, we give a formal definition:
+\begin{definition}
+Let |m| and |n| be two monadic programs such that |x| does not occur free in |m|, and |y| does not occur free in |n|. We say |m| and |n| commute if
+\begin{equation} \label{eq:commute}
+\begin{split}
+  |m >>= \x -> n >>= \y -> f x y {-"~"-}=|\\
+   |n >>= \y -> m >>= \x -> f x y {-"~~."-}|
+\end{split}
+\end{equation}
+We say that effects |eps| and |delta| commute if any |m| and |n| commute as long as their only effects are respectively |eps| and |delta|.
+\end{definition}
+One important result is that, in local state semantics, non-determinism commutes with any effect :
+\begin{theorem} \label{thm:nondet-commute}
+If right-distributivity \eqref{eq:mplus-bind-dist} and right-zero \eqref{eq:mzero-bind-zero} hold
+in addition to the other, non-determinism commutes with any effect.
+\end{theorem}
+
+Laws \eqref{eq:mplus-bind-dist} and right-zero \eqref{eq:mzero-bind-zero} imply that each nondeterministic branch has its own copy of
 the state.
 One implementation satisfying the laws is |M s a = s -> Bag (a,s)|, where
 |Bag a| is an implementation of a multiset or ``bag'' data structure.
@@ -205,7 +222,7 @@ intuition for this kind of semantics, because (to the best of our knowledge)
 this constitutes a novel contribution.
 
 Even just figuring out an implementation of a global state monad that matches
-our intuition is already a bit tricky.
+our intuition is already tricky.
 One might believe that |M s a = s -> ([a],s)| is a natural implementation of such a monad.
 The usual, naive implementation of |(>>=)| using this representation, however, does not satisfy left-distributivity \eqref{eq:bind-mplus-dist}, violates monad laws, and is therefore not even a monad.
 %See Section \ref{sec:conclusion} for previous work on construction of a correct monad.
@@ -232,8 +249,8 @@ state. |mplus| first exhausts the left branch (always collecting any state
 modifications it performs), before switching to the right branch.
 \begin{spec}
   mzero        = \s -> (Nothing, s) {-"~~,"-}
-  p `mplus` q  = \s -> case p s of  (Nothing      , t) -> q t
-                                    (Just (x, r)  , t) -> (Just (x, r `mplus` q), t) {-"~~."-}
+  p `mplus` q  = \s -> case p s of  (Nothing, t)      -> q t
+                                    (Just (x, r), t)  -> (Just (x, r `mplus` q), t) {-"~~."-}
 \end{spec}
 The state operators are implemented in a straightforward manner.
 \begin{spec}
@@ -244,8 +261,8 @@ And this implementation is also a monad. The implementation of |p >>= k| extends
 every branch within |p| with |k|, threading the state through this entire process.
 \begin{spec}
   return x  = \s -> (Just (x, mzero), s) {-"~~,"-}
-  p >>= k   = \s -> case p s of  (Nothing      , t)  ->  (Nothing, t)
-                                 (Just (x, q)  , t)  ->  (k x `mplus` (q >>= k)) t {-"~~."-}
+  p >>= k   = \s -> case p s of  (Nothing, t)      ->  (Nothing, t)
+                                 (Just (x, q), t)  ->  (k x `mplus` (q >>= k)) t {-"~~."-}
 \end{spec}
 
 %if False

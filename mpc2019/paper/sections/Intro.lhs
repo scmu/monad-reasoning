@@ -20,20 +20,20 @@ lot less attention has been paid to reasoning about monadic programs in that
 style. Gibbons and Hinze~\cite{GibbonsHinze:11:Just} argue that equational
 reasoning about monadic programs becomes particularly convenient and elegant
 when one respects the abstraction boundaries of the monad. This is possible
-by reasoning in terms of axioms or laws that characterise the monad's 
+by reasoning in terms of axioms or laws that characterise the monad's
 behavior without fixing its implementation.
 
 This paper carries out a case study of such axiomatic reasoning about monads.
-What is peculiar about or case study is that it involves two monads rather than
+What is peculiar about our case study is that it involves two monads rather than
 one: Following the approach of algebraic effects and handlers~\cite{Plotkin:09:Handlers}, we
 consider how one monad can be implemented in terms of another. Both monads we
 consider combine two effects: non-determinism and state. In the monad we want
 to implement, each non-deterministic branch has its own `local' copy of the
 state. This is a convenient effect interaction which is provided by many
-systems that solve search problems, including Prolog. 
+systems that solve search problems, including Prolog.
 
 We realise this local state semantics in terms of a more primitive monad where
-a single state is sequentially threaded through the the non-deterministic
+a single state is sequentially threaded through the non-deterministic
 branches. Because this state is shared among the branches, we call this the
 `global state' semantics. The appearance of local state is obtained by
 following a discipline of undoing changes to the state when backtracking to the
@@ -58,18 +58,18 @@ Our specific contributions of this paper are:
 
 \item We prove that---with a careful discipline---our characterisation of
       persistent state can correctly simulate Gibbons and Hinze's
-      monadic characterisation of backtrackable state~\cite{GibbonsHinze:11:Just}. 
+      monadic characterisation of backtrackable state~\cite{GibbonsHinze:11:Just}.
 
 \item Our proof approach is a convenient hybrid between equational reasoning
       based on axioms and inductive reasoning about the syntactic structure
-      of programs: 
+      of programs:
       \begin{itemize}
-      \item To capture the simulation we apply the 
+      \item To capture the simulation we apply the
             algebraic effects technique of \emph{handling} a free monad representation.
             The latter provides a syntax tree on which to perform induction.
 
-      \item To capture the careful discipline of the simulation 
-            we use contextual equivalence and perform inductive reasoning about program 
+      \item To capture the careful discipline of the simulation
+            we use contextual equivalence and perform inductive reasoning about program
             contexts.
       \end{itemize}
 
@@ -78,17 +78,17 @@ Our specific contributions of this paper are:
 
 The rest of the paper is structured as follows.
 First, Section~\ref{sec:background} gives an overview of the main concepts
-  used in the paper and defines our terminology. Then, 
+  used in the paper and defines our terminology. Then,
 Section~\ref{sec:motivation} informally explores the differences
-  between local and global state semantics. Next, 
-Section~\ref{sec:nd-state-global}  explains how to handle local state 
-in terms of global state. 
+  between local and global state semantics. Next,
+Section~\ref{sec:nd-state-global}  explains how to handle local state
+in terms of global state.
 Section~\ref{sec:ctxt-trans} formalizes this approach and proves it correct.
 Finally, Sections~\ref{sec:related-work} and~\ref{sec:conclusion} respectively
 discuss related work and conclude.
 
 % \subsection{Old}
-% 
+%
 % It is misleading if one says that functional programming does not allow side
 % effects. In fact, even a purely functional language may allow a variety of side
 % effects --- in a rigorous, mathematically manageable manner. Since the
@@ -99,9 +99,9 @@ discuss related work and conclude.
 % exception, continuation, environment passing, to specific purposes such as
 % parsing. Numerous research were also devoted to producing practical monadic
 % programs.
-% 
+%
 % % Monad transformers~\cite{Liang:95:Monad} were introduced to allow modular construction of monads. Shortcomings of this approach were noticed, and it was proposed to see execution of monadic programs as interaction between programs and handlers~\cite{Plotkin:09:Handlers, Kiselyov:13:Extensible, KiselyovIshii:15:Freer}.
-% 
+%
 % Hutton and Fulger~\cite{HuttonFulger:08:Reasoning} noted that relatively less
 % attention has been paid to reasoning about monadic programs.  We believe that
 % the observation is still true today, perhaps due to the impression that impure
@@ -110,7 +110,7 @@ discuss related work and conclude.
 % properties about monadic programs.  The validity of these properties, proved
 % using only these laws, is independent from the particular implementation of the
 % monad.
-% 
+%
 % This paper follows the trail of Hutton and
 % Fulger~\cite{HuttonFulger:08:Reasoning} and~Gibbons and
 % Hinze~\cite{GibbonsHinze:11:Just}, aiming to develop theorems and patterns that
@@ -121,7 +121,7 @@ discuss related work and conclude.
 % properties to work with.  When all the non-deterministic branches share one
 % global state, the properties of the monad is much less intuitive, as we shall
 % see in this paper.
-% 
+%
 % In this paper we consider problem specifications that use a monadic unfold to
 % generate possible solutions, which are filtered using a |scanl|-like predicate.
 % We construct backtracking algorithms for such problems in two scenarios, in

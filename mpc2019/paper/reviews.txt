@@ -55,66 +55,73 @@ There are some aspects of the paper that could be improved.
 [?] 2. In Sect 2.1, one would also expect non-determinism to be commutative and idempotent. Please explain why it isn't here.
 > K: I added a paragraph but it needs to be checked.
 
-[ ] 3. I found the discussion around the justification of Theorem 1 regarding commutativity between the "state" and "non-determinism" confusing. I think it would help to give the exact equation that is desired.
+[X] 3. I found the discussion around the justification of Theorem 1 regarding commutativity between the "state" and "non-determinism" confusing. I think it would help to give the exact equation that is desired.
+> SCM: I added a definition of commutativity and a theorem in Section 2.2 (Combining Effects). Not sure it is the best location.
 
-[ ] 4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
-
+[?] 4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
+> SCM: I don't think the actual speed of the global state program will be much faster, especially not for the n-Queens problem. We can ignore this comment, I think?
 
 Detailed comments
 Abstract:
 [X] - L6: I think you means "abstractions" instead of "abstract"?
 
 Pg2:
-[ ] - Par 2, L2: "or case" --> "our case"
-[ ] - Par 2: It seems that the last sentence should start the next paragraph?
-[ ] - Par 3, L2: "the the" --> "the"
+[X] - Par 2, L2: "or case" --> "our case"
+[?] - Par 2: It seems that the last sentence should start the next paragraph?
+> SCM: Is that the sentence "This is a convenient.."? If so I am not sure it is better moving the sentence...
+[X] - Par 3, L2: "the the" --> "the"
 [ ] - Par 3: Last sentence is a bit of a jump. It think this paragraph could use some cleaning up as it is unclear upon a first read.
 [ ] - Bullet 3.2: "the simulation" of what? This is unclear at this stage.
 
 Pg 3
 - Below eqn (3):
    [X] - You should explain const and \cdot notations for completeness
-   [ ] - <$> isn't used until (Pg 7). This definition could be deferred until then.
-[ ] - Par "Nondeterminism": I don't think you need the "(a set of laws... )"
-
+   [X] - <$> isn't used until (Pg 7). This definition could be deferred until then.
+> SCM: moved both (>>) and (<$>) to where there are first used.
+[?] - Par "Nondeterminism": I don't think you need the "(a set of laws... )"
+> SCM: I commented that out but I prefer having it there. What do you think?
 
 Pg 4
-[ ] - Above eqn (8): Remove "are supposed to"
+[X] - Above eqn (8): Remove "are supposed to"
 
 Pg 5
-[ ] - 2nd Par of "Global State Semantics": Remove "a bit"
+[X] - 2nd Par of "Global State Semantics": Remove "a bit"
 
 Pg 6
-[ ] - Please remove the space after "Nothing" I found it confusing, especially in the first branch of "p >>= k"
+[X] - Please remove the space after "Nothing" I found it confusing, especially in the first branch of "p >>= k"
 
 Pg 8
-[ ] - Par above safeAcc: Remove "we are looking at"
+[X] - Par above safeAcc: Remove "we are looking at"
 
 Pg 9, Sect 3.2
-[ ] - Par 1: "Especially when ..." is not a sentence. Perhaps remove "Especially"?
-[ ] - Par 2: Remove "only"
+[X] - Par 1: "Especially when ..." is not a sentence. Perhaps remove "Especially"?
+[X] - Par 2: Remove "only"
 
 Pg 10
 [ ] - Sentence after eqn (14) is very long; please rewrite.
-[ ] - Remove space before (5)
-[ ] - Sect 4.2, par 1. "Roll back to the previous state" - clarify whether this only happens when a solution is not found, or if it rolls back regardless of whether a solution is found.
+[X] - Remove space before (5)
+[?] - Sect 4.2, par 1. "Roll back to the previous state" - clarify whether this only happens when a solution is not found, or if it rolls back regardless of whether a solution is found.
+> SCM: Added "regardless of whether a solution is found" --- correct?
 
 Pg 12
-[ ] - Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
-[ ] - Par 2, last sentence: Extra ")" in the equation
+[?] - Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
+> SCM: I think it refers to the paragraph "To help build understanding...". Koen, can you take a look?
+[X] - Par 2, last sentence: Extra ")" in the equation
 
 Pg 13
-[ ] - L2: "told apart by" --> "differentiated by"
+[X] - L2: "told apart by" --> "differentiated by"
 
 Pg 14
 [ ] - Fig 3: I'm confused by the notation. ([]) vs \overline{[]}. The second of these does not have parentheses - why? Are parentheses needed for the first?
 
 Pg 15
-[ ] - Sect 5.2, par 1, L3: Remove "can"
+[X] - Sect 5.2, par 1, L3: Remove "can"
 [ ] - Sentence after Eqn (18) needs a rewrite
-[ ] - Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
+[?] - Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
 
 (\bar{put} s p) \bar{[]} q  = \bar{put} s (p \bar{[]} q)
+
+> SCM: I think it might help if we add more space around \bar{[]}.
 
 Pg 16
 [ ] - Overfull text middle of page
