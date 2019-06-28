@@ -52,8 +52,9 @@ There are some aspects of the paper that could be improved.
 
 [ ] 1. The intro seems rushed and doesn't seem to give a good overview of what's actually in the paper. I suggest that this be revisited and revised.
 
-[?] 2. In Sect 2.1, one would also expect non-determinism to be commutative and idempotent. Please explain why it isn't here.
+[X] 2. In Sect 2.1, one would also expect non-determinism to be commutative and idempotent. Please explain why it isn't here.
 > K: I added a paragraph but it needs to be checked.
+> SCM: I think that paragraph is good!
 
 [X] 3. I found the discussion around the justification of Theorem 1 regarding commutativity between the "state" and "non-determinism" confusing. I think it would help to give the exact equation that is desired.
 > SCM: I added a definition of commutativity and a theorem in Section 2.2 (Combining Effects). Not sure it is the best location.
@@ -67,10 +68,16 @@ Abstract:
 
 Pg2:
 [X] - Par 2, L2: "or case" --> "our case"
+> SCM: Corrected.
+
 [?] - Par 2: It seems that the last sentence should start the next paragraph?
 > SCM: Is that the sentence "This is a convenient.."? If so I am not sure it is better moving the sentence...
+
 [X] - Par 3, L2: "the the" --> "the"
+> SCM: Corrected.
+
 [ ] - Par 3: Last sentence is a bit of a jump. It think this paragraph could use some cleaning up as it is unclear upon a first read.
+
 [ ] - Bullet 3.2: "the simulation" of what? This is unclear at this stage.
 
 Pg 3
@@ -78,8 +85,9 @@ Pg 3
    [X] - You should explain const and \cdot notations for completeness
    [X] - <$> isn't used until (Pg 7). This definition could be deferred until then.
 > SCM: moved both (>>) and (<$>) to where there are first used.
-[?] - Par "Nondeterminism": I don't think you need the "(a set of laws... )"
-> SCM: I commented that out but I prefer having it there. What do you think?
+
+[X] - Par "Nondeterminism": I don't think you need the "(a set of laws... )"
+> SCM: I commented that out, although I prefer having it there.
 
 Pg 4
 [X] - Above eqn (8): Remove "are supposed to"
@@ -106,6 +114,7 @@ Pg 10
 Pg 12
 [?] - Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
 > SCM: I think it refers to the paragraph "To help build understanding...". Koen, can you take a look?
+
 [X] - Par 2, last sentence: Extra ")" in the equation
 
 Pg 13
@@ -115,8 +124,11 @@ Pg 14
 [ ] - Fig 3: I'm confused by the notation. ([]) vs \overline{[]}. The second of these does not have parentheses - why? Are parentheses needed for the first?
 
 Pg 15
+
 [X] - Sect 5.2, par 1, L3: Remove "can"
+
 [ ] - Sentence after Eqn (18) needs a rewrite
+
 [?] - Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
 
 (\bar{put} s p) \bar{[]} q  = \bar{put} s (p \bar{[]} q)
@@ -186,10 +198,13 @@ Detailed comments:
  (especially given that the [] operator is not commutative)?
 
 Minor comments:
+
 [ ] - abstract: "[..] a mechanism of layered abstract by which effects can
  be implemented in terms of other effects." This does not make sense.
-[ ] - page 5: "These requirements imply that each nondeterministic branch
+
+[X] - page 5: "These requirements imply that each nondeterministic branch
  has its own copy of the state." Why?
+> SCM: added some explanations.
 
 [X] - page 5, footnote: "a → [(a, s)]" -> "s → [(a, s)]"
 > SCM: Corrected.
@@ -204,6 +219,7 @@ Minor comments:
 
 [X] - page 12: In the last step of the calculation, you also need one of
  the monad laws.
+> SCM: not sure what that is, but added "monad laws" in the comment anyway...
 
 [?] - page 12: "When" -> "when"
 > SCM: I can't find this one..
@@ -258,8 +274,9 @@ section 3.1
 [X] both as a fold or an unfold          both -> either
 > SCM: revised.
 
-[ ] We wish to fuse the two phases to produce a faster implementation?
+[?] We wish to fuse the two phases to produce a faster implementation?
 Explain why the fused version is expected to be faster? Also, is it actually faster?
+> SCM: added "which allows branches generates a non-safe placement to be pruned earlier."
 
 [X] it is natural trying to fuse them -> it is natural to try to fuse them
 > SCM: revised.

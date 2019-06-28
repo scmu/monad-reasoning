@@ -151,7 +151,7 @@ We characterise local state semantics with the following laws:
 \end{alignat}
 With some implementations of the monad, it is likely that in the lefthand side of \eqref{eq:mplus-bind-dist}, the effect of |m| happens once, while in the righthand side it happens twice. In \eqref{eq:mzero-bind-zero}, the |m| on the lefthand side may incur some effects that do not happen in the righthand side.
 
-Having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} leads to profound consequences on the semantics and implementation of monadic programs.
+Having \eqref{eq:mzero-bind-zero} and \eqref{eq:mplus-bind-dist} leads to profound consequences on the semantics and implementation of monadic programs.
 To begin with, \eqref{eq:mplus-bind-dist} implies that for |mplus| we have some
 limited notion of commutativity.
 For instance, both the left and right distributivity rules can be applied to
@@ -181,7 +181,7 @@ It is then easy to show that this term must be equal to both
 % effects of |m|) corresponds to our intuition for backtrackable state, but not for
 % non-backtrackable state or other irriversible effects.
 
-In fact, having \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero} gives us very strong and useful commutative properties.
+In fact, having \eqref{eq:mzero-bind-zero} and \eqref{eq:mplus-bind-dist} gives us very strong and useful commutative properties.
 To be clear what we mean, we give a formal definition:
 \begin{definition}
 Let |m| and |n| be two monadic programs such that |x| does not occur free in |m|, and |y| does not occur free in |n|. We say |m| and |n| commute if
@@ -195,12 +195,12 @@ We say that effects |eps| and |delta| commute if any |m| and |n| commute as long
 \end{definition}
 One important result is that, in local state semantics, non-determinism commutes with any effect :
 \begin{theorem} \label{thm:nondet-commute}
-If right-distributivity \eqref{eq:mplus-bind-dist} and right-zero \eqref{eq:mzero-bind-zero} hold
-in addition to the other, non-determinism commutes with any effect.
+If right-zero \eqref{eq:mzero-bind-zero} and right-distributivity \eqref{eq:mplus-bind-dist} hold
+in addition to the other laws, non-determinism commutes with any effect.
 \end{theorem}
 
-Laws \eqref{eq:mplus-bind-dist} and right-zero \eqref{eq:mzero-bind-zero} imply that each nondeterministic branch has its own copy of
-the state.
+Implementation-wise, \eqref{eq:mzero-bind-zero} and \eqref{eq:mplus-bind-dist} imply that each nondeterministic branch has its own copy of the state.
+To see that, let |m = put 1|, |f1 () = put 2|, and |f2 () = get| in \eqref{eq:mplus-bind-dist} --- the state we |get| in the second branch does not change, despite the |put 2| in the first branch.
 One implementation satisfying the laws is |M s a = s -> Bag (a,s)|, where
 |Bag a| is an implementation of a multiset or ``bag'' data structure.
 If we ignore the unordered nature of the |Bag| type, this implementation is

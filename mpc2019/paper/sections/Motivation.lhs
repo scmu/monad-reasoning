@@ -112,7 +112,7 @@ where |f <$> m = m >> (return . f)|
 which applies a pure function to a monadic value,
 and |(f *** g) (x,y) = (f x, g y)|.
 
-This specification of |queens| generates all the permutations, before checking them one by one, in two separate phases. We wish to fuse the two phases and produce a faster implementation.
+This specification of |queens| generates all the permutations, before checking them one by one, in two separate phases. We wish to fuse the two phases, which allows branches generates a non-safe placement to be pruned earlier, and thus produce a faster implementation.
 
 \paragraph{A Backtracking Algorithm}
 In our representation, queens cannot be put on the same row or column.
