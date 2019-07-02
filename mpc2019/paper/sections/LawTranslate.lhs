@@ -45,9 +45,9 @@ Finally we define the function that performs the translation just described, and
 \subsection{Programs and Contexts}
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
-%format <||> = "\overline{[\!]}" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
+%format <||> = "~\overline{[\!]}~" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
-%format <>>=> = "\overline{\hstretch{0.7}{>\!\!>\!\!=}}"
+%format <>>=> = "~\overline{\hstretch{0.7}{>\!\!>\!\!=}}~"
 %format getD = "\overline{\Varid{get}}"
 %format putD =  "\overline{\Varid{put}}"
 %format retD = "\overline{\Varid{ret}}"
@@ -74,12 +74,12 @@ data Prog a where
 \subfloat[]{
   \begin{minipage}{0.5\textwidth}
     \begin{spec}
-      run    :: Prog a -> Dom a
-      retD   :: a -> Dom a
-      failD  :: Dom a
-      <||>   :: Dom a -> Dom a -> Dom a
-      getD   :: (S -> Dom a) -> Dom a
-      putD   :: S -> Dom a -> Dom a
+      run     :: Prog a -> Dom a
+      retD    :: a -> Dom a
+      failD   :: Dom a
+      (<||>)  :: Dom a -> Dom a -> Dom a
+      getD    :: (S -> Dom a) -> Dom a
+      putD    :: S -> Dom a -> Dom a
     \end{spec}
   \end{minipage}
 }
@@ -151,12 +151,21 @@ operators.
   |getD (\s -> putD s m)| &= |m| \mbox{~~,} \label{eq:get-put-g-d} \\
   |getD (\s -> getD (\t -> k s t))| &= |getD (\s -> k s s)| \mbox{~~.} \label{eq:get-get-g-d}
 \end{align}
-As for the nondeterminism laws
-(\eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus}, \eqref{eq:bind-mplus-dist},
-\eqref{eq:bind-mzero-zero}),
-we can simply omit the ones that mention at the semantic level |(>>=)|
-as these are proven at the syntactic level: their proof follows immediately
-from |Prog|'s definition of |(>>=)|.
+Two of the nondeterminism
+laws---\eqref{eq:bind-mplus-dist} and
+\eqref{eq:bind-mzero-zero}---also mention the bind operator.
+As we have seen earlier, they are trivially implied by the definition of |(>>=)|
+for |Prog|. Therefore, we need not impose equivalent laws for the semantic
+domain (and in fact, we cannot formulate them given the representation we
+have chosen).
+Only the two remaining nondeterminism
+laws---\eqref{eq:mplus-assoc} and \eqref{eq:mzero-mplus}---need to be stated:
+%As for the nondeterminism laws
+%(\eqref{eq:mplus-assoc}, \eqref{eq:mzero-mplus}, \eqref{eq:bind-mplus-dist},
+%\eqref{eq:bind-mzero-zero}),
+%we can simply omit the ones that mention at the semantic level |(>>=)|
+%as these are proven at the syntactic level: their proof follows immediately
+%from |Prog|'s definition of |(>>=)|.
 \begin{align}
   &|(m <||||> n) <||||> p| = |m <||||> (n <||||> p)| \mbox{~~,} \\
   &|failD <||||> m| = |m <||||> failD| = |m| \mbox{~~.}

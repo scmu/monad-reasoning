@@ -42,8 +42,8 @@ We call this the \emph{global state law}.
 \end{alignat}
 This law allows the lifting of a |put| operation from the left
 branch of a nondeterministic choice, an operation which does not preserve
-meaning under local state semantics:
-suppose for example that |m = mzero|, then by
+meaning under local state semantics.
+Suppose for example that |m = mzero|, then by
 \eqref{eq:mzero-bind-zero} and~\eqref{eq:mzero-mplus}, the left-hand side of
 the equation is equal to |n|, whereas by~\eqref{eq:mzero-mplus},
 the right-hand side of the equation is equal to |put s >> n|.

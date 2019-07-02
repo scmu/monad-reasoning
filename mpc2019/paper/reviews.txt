@@ -61,6 +61,7 @@ There are some aspects of the paper that could be improved.
 
 [?] 4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
 > SCM: I don't think the actual speed of the global state program will be much faster, especially not for the n-Queens problem. We can ignore this comment, I think?
+> K: I agree that our transformation will not improve the speed of the program much. Perhaps we can address the comment by de-emphasizing the speed argument? The negative review also took issue with the lack of benchmark; I believe this is to do with a misunderstanding of what the focus of the paper is (it's the proof technique more than the transformation itself). Since two reviewers made comments based on the same misunderstanding, we may need to communicate our focus more clearly.
 
 Detailed comments
 Abstract:
@@ -106,10 +107,11 @@ Pg 9, Sect 3.2
 [X] - Par 2: Remove "only"
 
 Pg 10
-[ ] - Sentence after eqn (14) is very long; please rewrite.
+[X] - Sentence after eqn (14) is very long; please rewrite.
 [X] - Remove space before (5)
-[?] - Sect 4.2, par 1. "Roll back to the previous state" - clarify whether this only happens when a solution is not found, or if it rolls back regardless of whether a solution is found.
+[X] - Sect 4.2, par 1. "Roll back to the previous state" - clarify whether this only happens when a solution is not found, or if it rolls back regardless of whether a solution is found.
 > SCM: Added "regardless of whether a solution is found" --- correct?
+> K: Yes :) (technically it depends on how you use it: for a given implementation of nondeterminisim you might have a function that just extracts the first result, for instance, but we never use it like that in the paper).
 
 Pg 12
 [?] - Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
@@ -121,19 +123,21 @@ Pg 13
 [X] - L2: "told apart by" --> "differentiated by"
 
 Pg 14
-[ ] - Fig 3: I'm confused by the notation. ([]) vs \overline{[]}. The second of these does not have parentheses - why? Are parentheses needed for the first?
+[X] - Fig 3: I'm confused by the notation. ([]) vs \overline{[]}. The second of these does not have parentheses - why? Are parentheses needed for the first?
+> K: I indeed forgot the parens around the second
 
 Pg 15
 
 [X] - Sect 5.2, par 1, L3: Remove "can"
 
-[ ] - Sentence after Eqn (18) needs a rewrite
+[X] - Sentence after Eqn (18) needs a rewrite
 
 [?] - Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
 
 (\bar{put} s p) \bar{[]} q  = \bar{put} s (p \bar{[]} q)
 
 > SCM: I think it might help if we add more space around \bar{[]}.
+> K: Yes, I added some space and I think it looks a lot better.
 
 Pg 16
 [ ] - Overfull text middle of page
@@ -179,8 +183,9 @@ the very end of section 5 anyway.
 
 Detailed comments:
 
-[ ] - End of section 4.1. So what makes axiom (14) so special that it gets
+[?] - End of section 4.1. So what makes axiom (14) so special that it gets
  mentioned here but not the others
+> K: I'm not sure yet how to clarify this more...
 
 [ ] - When giving the definition of put_R you should mention that this
  does not give the improved performance characteristics that you
@@ -199,7 +204,7 @@ Detailed comments:
 
 Minor comments:
 
-[ ] - abstract: "[..] a mechanism of layered abstract by which effects can
+[X] - abstract: "[..] a mechanism of layered abstract by which effects can
  be implemented in terms of other effects." This does not make sense.
 
 [X] - page 5: "These requirements imply that each nondeterministic branch
@@ -221,8 +226,9 @@ Minor comments:
  the monad laws.
 > SCM: not sure what that is, but added "monad laws" in the comment anyway...
 
-[?] - page 12: "When" -> "when"
+[X] - page 12: "When" -> "when"
 > SCM: I can't find this one..
+> K: I believe the reviewer means "When run in an initial state s_0..." (now on page 13). In that case they are mistaken, the capital letter is correct as the previous sentence ends with the period after expression (c) (though it is easy to miss).
 
 [X] - page 16: "repect" -> "respect"
 > SCM: corrected.
