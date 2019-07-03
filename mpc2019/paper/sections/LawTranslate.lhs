@@ -46,6 +46,7 @@ Finally we define the function that performs the translation just described, and
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "~\overline{[\!]}~" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
+%format mplusD = "(\overline{[\!]})" 
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
 %format <>>=> = "~\overline{\hstretch{0.7}{>\!\!>\!\!=}}~"
 %format getD = "\overline{\Varid{get}}"
@@ -195,15 +196,27 @@ possible to define reasonable implementations of global state semantics that
 violate these laws, and because they are not exclusive to global state
 semantics.
 
-The |<||||>| operator is not, in general, commutative in a global state setting.
+The |mplusD| operator is not, in general, commutative in a global state setting.
 However, we will require that the order in which results are computed does not
 matter.
-Furthermore we require that the implementation is agnostic with respect to the
-order of |putD| operations as long as the exact same results are computed with
-the exact same state at the time of their computation.
-These properties are enforced by law~\eqref{eq:put-or-comm-g-d}.
-Implementations that present the results as an ordered list violate this law,
-as do implementations that record the order of proper state changes.
+This might seem contradictory at first glance.
+To be more precise, we do not require the property
+|p <||||> q = q <||||> p| because the subprograms |p| and |q| might perform
+non-commuting edits to the global state.
+But we do expect that programs without side-effects commute freely;
+for instance, we expect |return x <||||> return y = return y <||||> return x|.
+In other words, collecting all the results of a nondeterministic computation is
+done with a set-based semantics in mind rather than a list-based semantics,
+but this does not imply that the order of state effects does not matter.
+
+In fact, the notion of commutativity we wish to impose is still somewhat
+stronger than just the fact that results commute: we want the |mplusD| operator
+to commute with respect to any pair of subprograms whose modifications of the
+state are ignored---that is, immediately overwritten---by the
+surrounding program.
+This property is expressed by law~\eqref{eq:put-or-comm-g-d}.
+The law also implies that the implementation must not record a
+history of state changes.
 
 In global-state semantics, |putD| operations cannot, in general,
 distribute over |<||||>|.
@@ -677,6 +690,7 @@ idempotent, to prove the case |m = Put s m'|.
 \noindent
 
 \subsection{Backtracking with a Global State Monad}
+\label{sec:backtrack-gs}
 Although we can now interpret a local state program through translation to a
 global state program, we have not quite yet delivered on our promise to address
 the space usage issue of local state semantics.

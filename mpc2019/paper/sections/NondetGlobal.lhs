@@ -152,9 +152,13 @@ Figure~\ref{fig:putR} shows the flow of execution for the expression
 |(putR t >> ret x) `mplus` ret y|. Initially, the state is |s|; it gets
 modified to |t| at the |put t| node after which the value |x| is output
 with the working state |t|.
-Then, we backtrack (since we're using global-state semantics, the state
-modification caused by |put t| is not reversed), arriving at |put s|, which
-resets the state to |s|, immediately fails, and backtracks to the right
+Then, because we found a result, we backtrack (since we're using global-state
+semantics, the state
+modification caused by |put t| is not reversed), arriving in
+the |side| operation branch.
+The |put s| operation is executed, which
+resets the state to |s|, and then the branch immediately fails, so we backtrack
+to the right
 branch of the topmost |mplus|. There the value |y| is output with working
 state |s|.
 
@@ -217,12 +221,28 @@ getPutExplain t =
 \end{code}
 Meanwhile, |return () >> put t = put t|, which does not behave in the same way as |get >>= \s -> put t `mplus` side (put s)| when $s \neq t$.
 
-In a global-state setting, the left-distributivity law \eqref{eq:bind-mplus-dist} makes it tricky to reason about combinations of |mplus| and |(>>=)| operators.
-Suppose we have a program |(m `mplus` n)|, and we construct an extended program by binding a continuation |f| to it such that we get |(m `mplus` n) >>= f| (where |f| might modify the state).
-Under global-state semantics, the evaluation of the right branch is influenced by the state modifications performed by evaluating the left branch.
-So by \eqref{eq:bind-mplus-dist}, this means that when we get to evaluating the |n| subprogram in the extended program, it will do so with a different initial state (the one obtained after running |m >>= f|) compared to the initial state in the original program (the one obtained by running |m|).
-In other words, placing our program in a different context changed the meaning of one of its subprograms.
-So it is difficult to reason about programs compositionally in this setting --- some properties hold only when we take the entire program into consideration.
+In a global-state setting, the left-distributivity law
+\eqref{eq:bind-mplus-dist} makes it tricky to reason about combinations of
+|mplus| and |(>>=)| operators. Suppose we have a program |(m `mplus` n)|, and we
+construct an extended program by binding a continuation |f| to it such that we
+get |(m `mplus` n) >>= f| (where |f| might modify the state). Under global-state
+semantics, the evaluation of the right branch is influenced by the state
+modifications performed by evaluating the left branch. So by
+\eqref{eq:bind-mplus-dist}, this means that when we get to evaluating the |n|
+subprogram in the extended program, it will do so with a different initial state
+(the one obtained after running |m >>= f|) compared to the initial state in the
+original program (the one obtained by running |m|). In other words, placing our
+program in a different context changed the meaning of one of its subprograms. So
+it is difficult to reason about programs compositionally in this
+setting---some properties hold only when we take the entire program into
+consideration.
 
-It turns out that all properties we need do hold, provided that {\em all} occurrences of |put| are replaced by |putR| --- problematic contexts such as |put t| above are thus ruled out.
-However, that ``all |put| are replaced by |putR|'' is a global property, and to properly talk about it we have to formally define contexts, which is what we will do in Section~\ref{sec:ctxt-trans}.
+It turns out that all properties we need do hold, provided that {\em all}
+occurrences of |put| are replaced by |putR|---problematic contexts such as
+|put t| above are thus ruled out. However, that ``all |put| are replaced by
+|putR|'' is a global property, and to properly talk about it we have to formally
+define contexts, which is what we will do in Section~\ref{sec:ctxt-trans}.
+Notice though, that simulation of local state semantics by judicious use of
+|putR| does not avoid the unnecessary copying mentioned in
+Section~\ref{sec:space-usage}, it merely makes it explicit in the program.
+We will address this shortcoming in Section~\ref{sec:backtrack-gs}.

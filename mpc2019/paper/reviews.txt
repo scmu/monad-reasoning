@@ -138,6 +138,7 @@ Pg 15
 
 > SCM: I think it might help if we add more space around \bar{[]}.
 > K: Yes, I added some space and I think it looks a lot better.
+[ ] > K: TODO now the parenthethised operator looks a bit weird though, should try to fix that.
 
 Pg 16
 [ ] - Overfull text middle of page

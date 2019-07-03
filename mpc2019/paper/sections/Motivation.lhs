@@ -201,6 +201,7 @@ This is a backtracking algorithm that attempts to place queens column-by-column,
 The derivation from the specification to this program relies on a number of properties that hold in the local state semantics.
 
 \subsection{Space Usage of Local State Implementations}
+\label{sec:space-usage}
 For a monad with both non-determinism and state, the local state laws imply that
 each non-deterministic branch has its own state. This is not costly for states
 consisting of linked data structures, for example the state
