@@ -78,7 +78,7 @@ data Prog a where
       run     :: Prog a -> Dom a
       retD    :: a -> Dom a
       failD   :: Dom a
-      (<||>)  :: Dom a -> Dom a -> Dom a
+      mplusD  :: Dom a -> Dom a -> Dom a
       getD    :: (S -> Dom a) -> Dom a
       putD    :: S -> Dom a -> Dom a
     \end{spec}
@@ -114,7 +114,7 @@ its definition has laws \eqref{eq:bind-mplus-dist} and
 
 The meaning of such a monadic program is determined by a semantic domain of our
 choosing, which we denote with |Dom|, and its corresponding
-domain operators |retD|, |failD|, |getD|, |putD| and |(<||||>)|
+domain operators |retD|, |failD|, |getD|, |putD| and |mplusD|
 (see figure~\ref{fig:prog-and-dom}(b)).
 The |run :: Prog a -> Dom a| function ``runs'' a program |Prog a| into a value
 in the semantic domain |Dom a|:
@@ -215,11 +215,11 @@ to commute with respect to any pair of subprograms whose modifications of the
 state are ignored---that is, immediately overwritten---by the
 surrounding program.
 This property is expressed by law~\eqref{eq:put-or-comm-g-d}.
-The law also implies that the implementation must not record a
-history of state changes.
+An example of an implementation which does not respect this law is one that
+records the history of state changes.
 
 In global-state semantics, |putD| operations cannot, in general,
-distribute over |<||||>|.
+distribute over |mplusD|.
 However, an implementation may permit distributivity if certain conditions are
 met.
 Law~\eqref{eq:put-ret-or-g-d} states that a |putD| operation distributes over a
@@ -433,7 +433,7 @@ The |<||||>| operator runs the left computation with the initial state, then
 runs the right computation with the final state of the left computation,
 and obtains the final result by merging the two bags of results.
 \begin{code}
-(<||>) :: M s a -> M s a -> M s a
+mplusD :: M s a -> M s a -> M s a
 (xs <||> ys) s =  let  (ansx, s')   = xs s
                        (ansy, s'')  = ys s'
                   in (sum ansx ansy, s'')

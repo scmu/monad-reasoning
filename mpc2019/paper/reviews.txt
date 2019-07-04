@@ -2,7 +2,7 @@ KOEN: Legend
   [ ] - todo
   [X] - done
   [?] - to check/discuss
-
+  [0] - ignored
 
 Dear authors,
 
@@ -15,7 +15,8 @@ I am delighted to inform you that your submission
 as been accepted to appear in the conference.  Reviews are
 appended below, and are also available from EasyChair.
 
-The final 'camera ready' version of your paper is due to be
+Th
+e final 'camera ready' version of your paper is due to be
 submitted on *** 12th July 2019 ***, i.e. in four weeks time.
 Please pay particular attention to any issues or concerns
 that were raised in the reviews when preparing your final
@@ -51,6 +52,7 @@ I rather liked this paper and think it should be accepted. The motivation and ex
 There are some aspects of the paper that could be improved.
 
 [ ] 1. The intro seems rushed and doesn't seem to give a good overview of what's actually in the paper. I suggest that this be revisited and revised.
+> K: I'll take a look at this soon.
 
 [X] 2. In Sect 2.1, one would also expect non-determinism to be commutative and idempotent. Please explain why it isn't here.
 > K: I added a paragraph but it needs to be checked.
@@ -78,8 +80,8 @@ Pg2:
 > SCM: Corrected.
 
 [ ] - Par 3: Last sentence is a bit of a jump. It think this paragraph could use some cleaning up as it is unclear upon a first read.
-
 [ ] - Bullet 3.2: "the simulation" of what? This is unclear at this stage.
+> K: These points are connected to a broader review of the intro.
 
 Pg 3
 - Below eqn (3):
@@ -114,8 +116,9 @@ Pg 10
 > K: Yes :) (technically it depends on how you use it: for a given implementation of nondeterminisim you might have a function that just extracts the first result, for instance, but we never use it like that in the paper).
 
 Pg 12
-[?] - Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
+[X] - Par 1. In the second sentence, re-emphasise that the effects of backtrack is caused by $side$ in $put_R$
 > SCM: I think it refers to the paragraph "To help build understanding...". Koen, can you take a look?
+> K: I went into a bit more detail about what causes the backtracks, I hope this addresses the remark.
 
 [X] - Par 2, last sentence: Extra ")" in the equation
 
@@ -132,13 +135,14 @@ Pg 15
 
 [X] - Sentence after Eqn (18) needs a rewrite
 
-[?] - Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
+[X] - Eqn (21), (22), (23): Please add parentheses to help with parsing e.g., (21) should be:
 
 (\bar{put} s p) \bar{[]} q  = \bar{put} s (p \bar{[]} q)
 
 > SCM: I think it might help if we add more space around \bar{[]}.
 > K: Yes, I added some space and I think it looks a lot better.
-[ ] > K: TODO now the parenthethised operator looks a bit weird though, should try to fix that.
+[X] > K: TODO now the parenthethised operator looks a bit weird though, should try to fix that.
+    > K: It's a bit ugly, but I have introduced a separate mplusD operator which is the parenthethised version.
 
 Pg 16
 [ ] - Overfull text middle of page
@@ -174,13 +178,14 @@ self-contained and written in an easy to understand style.
 That being said the presentation could use some improvements: First of
 all the writing could use some polish (more comments on that below).
 Secondly, the paper, feels too long. The meat of the paper (section 5)
-only starts at the bottom of page 13! This problem can be aleviated by
-removing some of the remarks that are tangential to the contribution
-of the paper. Perhaps it could be possible to move section 3
-(motivation) towards the end of the paper as an extended example or
-case study. I don't think the n-Queens example is referred to until
-the very end of section 5 anyway.
+only starts at the bottom of page 13!
 
+[ ] - This problem can be aleviated by removing some of the remarks that are
+tangential to the contribution of the paper. Perhaps it could be possible to
+move section 3 (motivation) towards the end of the paper as an extended example
+or case study. I don't think the n-Queens example is referred to until the very
+end of section 5 anyway.
+> K: This is a big change and I'm not convinced it would flow better...
 
 Detailed comments:
 
@@ -188,10 +193,11 @@ Detailed comments:
  mentioned here but not the others
 > K: I'm not sure yet how to clarify this more...
 
-[ ] - When giving the definition of put_R you should mention that this
+[X] - When giving the definition of put_R you should mention that this
  does not give the improved performance characteristics that you
  promised earlier in section 3.2. You can make a forward reference to
  section 5.6 to say that this will be partially addressed later.
+> K: I added a comment about it at the end of the section.
 
 [X] - On page 12, you write: "We wish that put_R, when run with a global
  state, satisﬁes laws (8) through (12)". This is confusing. Why do
@@ -199,9 +205,10 @@ Detailed comments:
  satisfy (12)?
 > SCM: Should be (8) - (13).
 
-[ ] - On page 16 you write: "However, we will require that the order in
+[X] - On page 16 you write: "However, we will require that the order in
  which results are computed does not matter." What does that mean
  (especially given that the [] operator is not commutative)?
+> K: Added an extra explanation starting from "This may seem contradictory at first glance."
 
 Minor comments:
 
@@ -239,7 +246,7 @@ Minor comments:
  transformation performed where you insert an additional 'get' after
  the 'guard'.
 > SCM: not sure what was meant by "original" implementation --- I don't think we need to repeat queens and qBody in Section 3.1. I don't understand what was meant by the "additional get after the guard", but I think it might be some minor transformation that we need not mention...
-
+> K: I'm also unclear on what the reviewer meant here.
 
 ----------------------- REVIEW 3 ---------------------
 SUBMISSION: 11

@@ -147,20 +147,15 @@ putR s = get >>= \s0 -> put s `mplus` side (put s0) {-"~~."-}
   \label{fig:putR}
 \end{figure}
 
-To help build understanding for |putR|,
-Figure~\ref{fig:putR} shows the flow of execution for the expression
-|(putR t >> ret x) `mplus` ret y|. Initially, the state is |s|; it gets
-modified to |t| at the |put t| node after which the value |x| is output
-with the working state |t|.
-Then, because we found a result, we backtrack (since we're using global-state
-semantics, the state
-modification caused by |put t| is not reversed), arriving in
-the |side| operation branch.
-The |put s| operation is executed, which
-resets the state to |s|, and then the branch immediately fails, so we backtrack
-to the right
-branch of the topmost |mplus|. There the value |y| is output with working
-state |s|.
+To help build understanding for |putR|, Figure~\ref{fig:putR} shows the flow of
+execution for the expression |(putR t >> ret x) `mplus` ret y|. Initially, the
+state is |s|; it gets modified to |t| at the |put t| node after which the value
+|x| is output with the working state |t|. Then, because we found a result, we
+backtrack (since we're using global-state semantics, the state modification
+caused by |put t| is not reversed), arriving in the |side| operation branch. The
+|put s| operation is executed, which resets the state to |s|, and then the
+branch immediately fails, so we backtrack to the right branch of the topmost
+|mplus|. There the value |y| is output with working state |s|.
 
 For some further intuition about |putR|, consider |putR s >> comp| where |comp| is some arbitrary computation:
 %if False
