@@ -64,6 +64,7 @@ There are some aspects of the paper that could be improved.
 [?] 4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
 > SCM: I don't think the actual speed of the global state program will be much faster, especially not for the n-Queens problem. We can ignore this comment, I think?
 > K: I agree that our transformation will not improve the speed of the program much. Perhaps we can address the comment by de-emphasizing the speed argument? The negative review also took issue with the lack of benchmark; I believe this is to do with a misunderstanding of what the focus of the paper is (it's the proof technique more than the transformation itself). Since two reviewers made comments based on the same misunderstanding, we may need to communicate our focus more clearly.
+> SCM: Agree. It would be nice if we rephrase some paragraph so readers do not miss the point.
 
 Detailed comments
 Abstract:
@@ -73,8 +74,9 @@ Pg2:
 [X] - Par 2, L2: "or case" --> "our case"
 > SCM: Corrected.
 
-[?] - Par 2: It seems that the last sentence should start the next paragraph?
+[0] - Par 2: It seems that the last sentence should start the next paragraph?
 > SCM: Is that the sentence "This is a convenient.."? If so I am not sure it is better moving the sentence...
+> SCM: Let's ignore this?
 
 [X] - Par 3, L2: "the the" --> "the"
 > SCM: Corrected.
@@ -180,18 +182,20 @@ all the writing could use some polish (more comments on that below).
 Secondly, the paper, feels too long. The meat of the paper (section 5)
 only starts at the bottom of page 13!
 
-[ ] - This problem can be aleviated by removing some of the remarks that are
+[0] - This problem can be aleviated by removing some of the remarks that are
 tangential to the contribution of the paper. Perhaps it could be possible to
 move section 3 (motivation) towards the end of the paper as an extended example
 or case study. I don't think the n-Queens example is referred to until the very
 end of section 5 anyway.
 > K: This is a big change and I'm not convinced it would flow better...
+> SCM: Let's ignore this, then?
 
 Detailed comments:
 
-[?] - End of section 4.1. So what makes axiom (14) so special that it gets
+[0] - End of section 4.1. So what makes axiom (14) so special that it gets
  mentioned here but not the others
 > K: I'm not sure yet how to clarify this more...
+> SCM: I think we have said enough..
 
 [X] - When giving the definition of put_R you should mention that this
  does not give the improved performance characteristics that you
@@ -241,12 +245,13 @@ Minor comments:
 [X] - page 16: "repect" -> "respect"
 > SCM: corrected.
 
-[?] - page 23, bottom: It would be nice to see the original implementation
+[0] - page 23, bottom: It would be nice to see the original implementation
  of n-Queens here as well. Also: there is an additional
  transformation performed where you insert an additional 'get' after
  the 'guard'.
 > SCM: not sure what was meant by "original" implementation --- I don't think we need to repeat queens and qBody in Section 3.1. I don't understand what was meant by the "additional get after the guard", but I think it might be some minor transformation that we need not mention...
 > K: I'm also unclear on what the reviewer meant here.
+> SCM: Marked as "ignore".
 
 ----------------------- REVIEW 3 ---------------------
 SUBMISSION: 11
@@ -288,7 +293,7 @@ section 3.1
 [X] both as a fold or an unfold          both -> either
 > SCM: revised.
 
-[?] We wish to fuse the two phases to produce a faster implementation?
+[X] We wish to fuse the two phases to produce a faster implementation?
 Explain why the fused version is expected to be faster? Also, is it actually faster?
 > SCM: added "which allows branches generates a non-safe placement to be pruned earlier."
 
