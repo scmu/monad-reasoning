@@ -20,7 +20,7 @@ interpretations.
 Using the classic $n$-queens puzzle as an example, we show that sometimes we
 end up in a situation where we want to write our program according to local
 state semantics (which is generally speaking easier to reason about), but desire
-the performance characteristics of global state semantics.
+the space usage characteristics of global state semantics.
 
 \subsection{Example: The $n$-Queens Problem}
 
@@ -200,7 +200,7 @@ queens n = protect (put (0,[],[]) >> qBody [0..n-1]) {-"~~."-}
 This is a backtracking algorithm that attempts to place queens column-by-column, proceeds to the next column if |ok| holds, and backtracks otherwise.
 The derivation from the specification to this program relies on a number of properties that hold in the local state semantics.
 
-\subsection{Space Usage of Local State Implementations}
+\subsection{Transforming between Local State and Global State}
 \label{sec:space-usage}
 For a monad with both non-determinism and state, the local state laws imply that
 each non-deterministic branch has its own state. This is not costly for states
@@ -208,10 +208,13 @@ consisting of linked data structures, for example the state
 |(Int, [Int], [Int])|
 in the |n|-queens problem. In some applications, however, the state
 might be represented by data structures, e.g. arrays, that are costly to
-duplicate.
+duplicate: 
 When each new state is only slightly different from the previous
 (say, the array is updated in one place each time), we have a wasteful
 duplication of information.
+Although this is not expected to be an issue for realistic sizes of the
+|n|-queens problem due to the relatively small state, one can imagine that for
+some problems where the state is very large, this can be a problem.
 
 Global state semantics, on the other hand, has a more ``low-level'' feel to it.
 Because a single state is threaded through the entire computation without

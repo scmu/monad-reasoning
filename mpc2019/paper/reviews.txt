@@ -51,8 +51,9 @@ I rather liked this paper and think it should be accepted. The motivation and ex
 
 There are some aspects of the paper that could be improved.
 
-[ ] 1. The intro seems rushed and doesn't seem to give a good overview of what's actually in the paper. I suggest that this be revisited and revised.
+[?] 1. The intro seems rushed and doesn't seem to give a good overview of what's actually in the paper. I suggest that this be revisited and revised.
 > K: I'll take a look at this soon.
+> K: I restructured and partly rewrote the introduction, feedback welcome :). My primary aim was to clarify more what we do and emphasize the proof technique more as the core contribution of our paper.
 
 [X] 2. In Sect 2.1, one would also expect non-determinism to be commutative and idempotent. Please explain why it isn't here.
 > K: I added a paragraph but it needs to be checked.
@@ -61,10 +62,11 @@ There are some aspects of the paper that could be improved.
 [X] 3. I found the discussion around the justification of Theorem 1 regarding commutativity between the "state" and "non-determinism" confusing. I think it would help to give the exact equation that is desired.
 > SCM: I added a definition of commutativity and a theorem in Section 2.2 (Combining Effects). Not sure it is the best location.
 
-[?] 4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
+[X] 4. It would have been interesting to see an empirical comparison of the difference in running time between the local and global state versions on the already implemented n-queens example, especially as n tended towards large values.
 > SCM: I don't think the actual speed of the global state program will be much faster, especially not for the n-Queens problem. We can ignore this comment, I think?
 > K: I agree that our transformation will not improve the speed of the program much. Perhaps we can address the comment by de-emphasizing the speed argument? The negative review also took issue with the lack of benchmark; I believe this is to do with a misunderstanding of what the focus of the paper is (it's the proof technique more than the transformation itself). Since two reviewers made comments based on the same misunderstanding, we may need to communicate our focus more clearly.
 > SCM: Agree. It would be nice if we rephrase some paragraph so readers do not miss the point.
+> K: I did my best to de-emphasize any performance claims, although on re-reading I did not really find any strong claims about performance.
 
 Detailed comments
 Abstract:
@@ -77,12 +79,13 @@ Pg2:
 [0] - Par 2: It seems that the last sentence should start the next paragraph?
 > SCM: Is that the sentence "This is a convenient.."? If so I am not sure it is better moving the sentence...
 > SCM: Let's ignore this?
+> K: Agreed
 
 [X] - Par 3, L2: "the the" --> "the"
 > SCM: Corrected.
 
-[ ] - Par 3: Last sentence is a bit of a jump. It think this paragraph could use some cleaning up as it is unclear upon a first read.
-[ ] - Bullet 3.2: "the simulation" of what? This is unclear at this stage.
+[X] - Par 3: Last sentence is a bit of a jump. It think this paragraph could use some cleaning up as it is unclear upon a first read.
+[X] - Bullet 3.2: "the simulation" of what? This is unclear at this stage.
 > K: These points are connected to a broader review of the intro.
 
 Pg 3
@@ -189,6 +192,7 @@ or case study. I don't think the n-Queens example is referred to until the very
 end of section 5 anyway.
 > K: This is a big change and I'm not convinced it would flow better...
 > SCM: Let's ignore this, then?
+> K: agreed
 
 Detailed comments:
 
@@ -268,7 +272,8 @@ In an engaging way, the paper exposes unexpected subtlety in how nondeterminism 
 Next, the n-queens example is used to motivate the need to transform a program written in local state style into one written using global state. While believing intuitively that this is indeed a useful, general transformation, I felt that the paper does not provide enough hard evidence for this. It is claimed that one might desire "the performance characteristics of global state semantics", but these are not described, either directly or via suitable citations. Section 3.2, on space usage of local state implementations, is annoyingly vague. It claims that it is easier to reason about resource usage in the global state semantics, but this claim is not justified in the paper. Earlier, in the Introduction, sequential search systems are mentioned and it is argued, very briefly, that using backtracking with undoing of state changes can be more efficient than recomputing the state from scratch. Perhaps further information and citations from this domain could provide better motivat!
 ion than the paper currently does?
 
-[ ] It is all very well to implement and prove that a transformation from local to global state preserves the functional semantics, but what about the non-functional semantics, in the form of memory use and number of computations or computation time? Surely the user needs some way to reason about these too? It seems unlikely that the n-queens example studied in the paper would actually display improved resource use after the local state to global state transformation is applied, and the paper even says this. For this reason, I think that it is a poor example to choose. It would be much better to choose an example where the transformation makes a significant change to the resource use of the program, and to demonstrate the reasoning needed to show this. Failing this, or, better still, in addition, a demonstration that the transformation can be applied to a more substantial example, leading to measured improvement in resource use in practice, would greatly strengthen the paper.
+[X] It is all very well to implement and prove that a transformation from local to global state preserves the functional semantics, but what about the non-functional semantics, in the form of memory use and number of computations or computation time? Surely the user needs some way to reason about these too? It seems unlikely that the n-queens example studied in the paper would actually display improved resource use after the local state to global state transformation is applied, and the paper even says this. For this reason, I think that it is a poor example to choose. It would be much better to choose an example where the transformation makes a significant change to the resource use of the program, and to demonstrate the reasoning needed to show this. Failing this, or, better still, in addition, a demonstration that the transformation can be applied to a more substantial example, leading to measured improvement in resource use in practice, would greatly strengthen the paper.
+> K: I tried addressing this by somewhat de-emphasizing performance from our argument.
 
 Ignoring these qualms, the paper's study of global state semantics and the laws they should satisfy, of an implementation satisfying the laws, and of how to transform from local to global state, is indeed interesting. That the implementation preserves the laws, and that the transformation preserves functional semantics are proved in Coq. The proof technique combining induction over syntax with contextual equivalence seems to be a novel contribution of the paper.
 
