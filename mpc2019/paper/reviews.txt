@@ -15,8 +15,7 @@ I am delighted to inform you that your submission
 as been accepted to appear in the conference.  Reviews are
 appended below, and are also available from EasyChair.
 
-Th
-e final 'camera ready' version of your paper is due to be
+The final 'camera ready' version of your paper is due to be
 submitted on *** 12th July 2019 ***, i.e. in four weeks time.
 Please pay particular attention to any issues or concerns
 that were raised in the reviews when preparing your final
@@ -150,8 +149,8 @@ Pg 15
     > K: It's a bit ugly, but I have introduced a separate mplusD operator which is the parenthethised version.
 
 Pg 16
-[ ] - Overfull text middle of page
-
+[X] - Overfull text middle of page
+> SCM: added some more text before the inline math ("Figure 4 proves that" -> "it is proved in Figure 4 that").
 
 
 ----------------------- REVIEW 2 ---------------------

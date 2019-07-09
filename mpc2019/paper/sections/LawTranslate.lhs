@@ -46,7 +46,7 @@ Finally we define the function that performs the translation just described, and
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"
 %format <||> = "~\overline{[\!]}~" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
-%format mplusD = "(\overline{[\!]})" 
+%format mplusD = "(\overline{[\!]})"
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
 %format <>>=> = "~\overline{\hstretch{0.7}{>\!\!>\!\!=}}~"
 %format getD = "\overline{\Varid{get}}"
@@ -236,7 +236,7 @@ If \eqref{eq:put-ret-or-g-d} holds, this program should be equal to
 \begin{code}
   (putD x (retD w) <||> putD x (getD retD)) <>>=> \z -> putD y (retD z) {-"~~."-}
 \end{code}
-However, Figure~\ref{fig:put-ret-or-vs-bind} proves that the first program can
+However, it is proved in Figure~\ref{fig:put-ret-or-vs-bind} that the first program can
 be reduced to |putD y (retD w <||||> retD y)|,
 whereas the second program is equal to
 |putD y (retD w <||||> retD x)|,
