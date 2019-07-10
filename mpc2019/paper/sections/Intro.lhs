@@ -30,13 +30,13 @@ in by another using a careful discipline. Our core contribution is a novel
 approach for proving the correctness of such a simulation. The proof approach is
 a convenient hybrid between equational reasoning based on axioms and inductive
 reasoning on the structure of programs. To capture the simulation we apply the
-algebraic effects technique of \emph{handling} a free monad representation.
-\koen{citation needed} The latter provides a syntax tree on which to perform
+algebraic effects technique of \emph{handling} a free monad
+representation~\cite{Wu:14:Effect}.
+The latter provides a syntax tree on which to perform
 induction. To capture the careful discipline of the simulation we use contextual
 equivalence and perform inductive reasoning about program contexts. This allows
 us to deal with a heterogeneous axiom set where different axioms may make use of
-different notions of equality for programs. \koen{TODO I think this is a useful
-  intuition, but is it {\em correct}?}
+different notions of equality for programs.
 
 We apply this proof technique to a situation where
 each ``monad'' (both the simulating monad and the simulated monad)
