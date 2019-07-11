@@ -129,4 +129,7 @@ We also verified the correctness of this transformation in Coq.
 % The type |ListT (State s)| generated using the now standard Monad Transformer Library~\cite{MTL:14} expands to essentially the same implementation, and is flawed in the same way. More careful implementations of |ListT|, which does satisfy \eqref{eq:bind-mplus-dist} and the monad laws, have been proposed~\cite{Gale:07:ListT,Volkov:14:list-t}.
 % Effect handlers, such as that of Wu~\cite{Wu:14:Effect} and Kiselyov and Ishii~\cite{KiselyovIshii:15:Freer}, do produce correct implementations by running the handler for non-determinism before that of state.
 
-%\paragraph{Acknowledgements} to be added.
+\paragraph{Acknowledgements}
+We would like to thank Matija Pretnar, the members of IFIP WG 2.1, the
+participants of Shonan meeting 146 and the MPC reviewers for their insightful
+comments. We would also like to thank the Flemish Fund for Scientific Research (FWO) for their financial support.
