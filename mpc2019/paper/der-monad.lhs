@@ -90,6 +90,7 @@ non-monadic.
 %include sections/Motivation.lhs
 %include sections/NondetGlobal.lhs
 %include sections/LawTranslate.lhs
+%include sections/Fold.lhs
 %include sections/Conclusion.lhs
 
 
