@@ -25,6 +25,7 @@
 \usepackage{multicol}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{mathtools}
 
 \usepackage{doubleequals}
 
@@ -89,8 +90,8 @@ non-monadic.
 %include sections/Background.lhs
 %include sections/Motivation.lhs
 %include sections/NondetGlobal.lhs
-%include sections/LawTranslate.lhs
 %include sections/Fold.lhs
+%include sections/LawTranslate.lhs
 %include sections/Conclusion.lhs
 
 
