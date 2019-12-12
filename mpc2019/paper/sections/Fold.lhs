@@ -101,8 +101,9 @@ This is a bit reminiscent of a ``linked list'' of effects. Like a linked list, a
 
 For instance, we can compose a handler for local state semantics out of the
 ``atomic'' handlers for state and nondeterminism.
+TODO check type!
 \begin{code}
-hLocal :: Free (StateF + (NondetF + Nil)) a
+hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> [(a,S)])
 hLocal = fmap (hNil . hNondet) . hState  
 \end{code}
 In other words, local state semantics is the semantics where we
@@ -120,7 +121,7 @@ handlers: rather than nondeterministically choosing between stateful
 computations as local state does, in global state semantics we'll run a
 single state through a nondeterministic computation.
 \begin{code}
-hGlobal :: Free (NondetF + (StateF + Nil)) a
+hGlobal :: Free (NondetF + (StateF + Nil)) a -> (S -> ([a],S))
 hGlobal = fmap hNil . hState . hNondet
 \end{code}
 %From this point onwards, we will omit some technical details where confusion is
@@ -134,6 +135,7 @@ hGlobal = fmap hNil . hState . hNondet
 %|Free (NondetF + StateF) a|, and of |Free| 
 
 \subsection{Folds and Fold Fusion}
+\label{sec:fold-fusion}
 Rather than defining our handlers directly by writing a general recursive
 function, we will write them as folds, a type of structural recursion.
 \begin{code}
@@ -212,12 +214,11 @@ We will use the fold fusion law to help us find fused implementations for local
 and global state effects, which will be correct by construction.
 
 \paragraph{A Note on Notation}
-Before moving on, we will attempt to simplify our notation a bit,
-as it is already becoming apparent that it's becoming a bit cumbersome, and this
-will only get worse as we start reasoning with it.
-For example, to write a ``get'' operator in a program typed with
-|Free (NondetF + (StateF + NilF)) a| requires us to write
-|Inr (Inl (Op (Get k)))|. Even worse,
+Before moving on, we will attempt to simplify our notation a bit, as it is
+already becoming apparent that it's getting cumbersome, and this will
+only get worse as we start reasoning with it.  For example, to write a ``get''
+operator in a program typed with |Free (NondetF + (StateF + NilF)) a| requires
+us to write |Inr (Inl (Op (Get k)))|. Even worse,
 although we see the types 
 |Free (NondetF + (StateF + NilF)) a| and |Free (StateF + (NondetF + NilF)) a| as
 morally the same, to convert a value of one of them into the other requires some
@@ -225,7 +226,7 @@ tedious type gymnastics.
 For instance, if we want |hGlobal| to operate on the same
 type of programs as |hLocal|, we need to perform some intermediate transformations:
 \begin{code}
-hGlobal' :: Free (StateF + (NondetF + Nil)) a
+hGlobal' :: Free (StateF + (NondetF + Nil)) a -> (S -> ([a],S))
 hGlobal' = fmap hNil . hState . comm . hNondet . assocr . comm
 \end{code}
 
@@ -246,15 +247,21 @@ or a term of a more complicated type like
 the type of the term will disambiguate our meaning.
 (TODO mention the connection with algebraic effects.)
 
+Finally, since we are primarily interested in stateful, nondeterministic
+programs, we introduce a type alias for this type of program.
+\begin{code}
+type Prog a = Free (StateF + NondetF) a
+\end{code}
+
 \subsection{Fused Handlers for Local and Global State}
 Recall the composed handler for local state:
 \begin{code}
-hLocal :: Free (StateF + (NondetF + Nil)) a
+hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> [(a,S)])
 hLocal = fmap (hNil . hNondet) . hState  
 \end{code}
 We apply the simplifications described earlier to rewrite as:
 \begin{code}
-hLocal :: Free (StateF + NondetF) a
+hLocal :: Prog a -> (S -> [(a,S)])
 hLocal = fmap hNondet . hState  
 \end{code}
 |hState| is a fold, which allows us to rewrite this implementation as
@@ -317,10 +324,10 @@ hNondet . (\ _ -> k t) = algLocal (Put t (hNondet . k))
 === {- generalize |hNondet . k| as |k'| -}
 \ _ -> k' t = algLocal (Put t k')
 \end{code}
-Initially the argument to |algLocal|, |Put t (hNondet . k)|, is too specific to cover all
-cases, so we massage the other side of the equation until |hNondet . k| occurs
-there too, so we can generalize both sides.
-The cases |m = Get k| and |m = p `mplus` q| proceed quite similarly.
+Initially the argument to |algLocal|, |Put t (hNondet . k)|, is too specific to
+cover all cases, so we massage the other side of the equation until |hNondet .
+k| occurs there too, so we can generalize both sides.  The cases |m = Get k|
+and |m = p `mplus` q| proceed quite similarly.
 \begin{code}
 fmap hNondet (algState (Get k)) = algLocal (fmap (fmap hNondet) (Get k))
 === {- unfolding definitions and reordering... -}
@@ -370,42 +377,51 @@ algGlobal (p `mplus` q) = \ s ->  let  (x,t) = p s
                                   in (x++y,u)
 \end{code}
 
-\subsection{|trans| as a Fold}
-Recall the |trans| function from Section~\ref{sec:ctxt-trans}. Can we prove it
-correct with respect to these specific implementations? The concrete proof
-statement would be
+\subsection{Using Fold Fusion to Prove the  $\mathit{put}_{\text{R}}$ Transformation Correct}
+Our goal is to prove the |putR| transformation, as introduced in
+Section~\ref{sec:chaining} correct. But so far we have not even gotten around
+to properly defining it!  Our representation of programs in the free monad
+style allows us to express this idea directly as a fold on the type |Prog a|:
+\begin{code}
+trans :: Prog a -> Prog a
+trans = fold Val algTrans
+  where 
+    algTrans (Put t k)  = Get (\s -> Put t k `mplus` Put s mzero)
+    algTrans p          = p
+\end{code}
+What would it mean for |trans| to be ``correct''? Our informal problem
+statement was that it should ``transform between local state and global
+state semantics''. In other words, running a program |p| under local state
+semantics should always produce the exact same result as running the program
+|trans p| under global state semantics:
+
+% hGlobal :: Prog a -> (S -> ([a],S))
+% hLocal  :: Prog a -> (S -> [(a,S)])
+% fmap (map fst) :: 
 \begin{code}
 hGlobal . trans = hLocal
-=== {- unfold |hLocal| -}
-hGlobal . trans = fold genLocal algLocal
 \end{code}
-If only |trans| were a fold, then proving this equation would be easy! In that
-case, we need only prove the two preconditions of the fold fusion law.
-Fortunately, it is indeed the case that |trans| can be rewritten as a fold.
+If we can prove that this equation holds, then we have proven |trans| correct,
+at least with respect to the specific implementations of local and global
+state given in this section.
+The first step towards proving this equation correct is noting that both
+|trans| and |hLocal| are implemented in terms of folds.
 \begin{code}
-trans :: Free (StateF + NondetF) a
-trans = fold Val algTrans
-  where
-    algTrans (Put t k)  = Get (\s -> Put t k `mplus` Put s mzero)
-    algTrans op         = Op op
+hGlobal . fold Val algTrans = fold genLocal algLocal
 \end{code}
-It is then sufficient to prove the following two statements to prove
-|hGlobal . trans = hLocal|.
+The core idea of our proof now reveals itself: we can prove |trans|
+correct simply by proving the fold fusion conditions.
 \begin{align*}
+  |hGlobal . fold Val algTrans| & = |fold genLocal algLocal| \\
+                                & \Uparrow \\
   |hGlobal . Val|               & = |genLocal| \\
   |hGlobal . algTrans|          & = |algLocal . fmap hGlobal|
 \end{align*}
-TODO proof: there are no unknowns so the proof is merely ``verifying'', not sure
-how interesting that will be.
 
+TODO
+\begin{code}
+hGlobal (Val x) = genLocal x
 
-% \begin{code}
-%   
-%   
-%       putR s >> comp
-%  ===  (get >>= \s0 -> put s `mplus` side (put s0)) >> comp
-%  ===    {- monad law, left-distributivity \eqref{eq:bind-mplus-dist} -}
-%       get >>= \s0 -> (put s >> comp) `mplus` (side (put s0) >> comp)
-%  ===    {- by \eqref{eq:bind-mzero-zero} |mzero >> comp = mzero|, monad laws -}
-%       get >>= \s0 -> (put s >> comp) `mplus` side (put s0) {-"~~."-}
-% \end{code}
+\s -> ([x],s) = \s -> Val [(x,s)]
+
+\end{code}

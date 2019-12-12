@@ -21,26 +21,22 @@ m1 >> m2 = m1 >>= const m2
 
 \section{Laws and Translation for Global State Monad}
 \label{sec:ctxt-trans}
+In the preceding section we proved that the |putR| transformation allows us to
+accurately simulate local state semantics using a global state implementation.
+However, this proof has an important limitation: it only proves |trans| correct
+with respect to {\em specific implementations} of local and global state.
+In this section, we take it one step further: we work with a axiomatic
+characterisations of both local and global state, rather than specific
+implementations, to prove that |trans| works for any implementation of local
+and global state that obeys these axioms.
 
-In this section we give a more formal treatment of the non-deterministic global state monad.
-Not every implementation of the global state law allows us to accurately
-simulate local state semantics though, so we propose additional laws that the
-implementation must respect.
-These laws turn out to be rather intricate.
-To make sure that there exists a model, an implementation is proposed, and it is verified in Coq that the laws and some additional theorems are satisfied.
-
-The ultimate goal, however, is to show the following property:
-given a program written for a local-state monad,
-if we replace all occurrences of |put| by |putR|, the resulting
-program yields the same result when run with a global-state monad.
-This allows us to painlessly port our previous algorithm to work
-with a global state.
-To show this we first introduce a syntax for nondeterministic and stateful
-monadic programs and contexts.
-Then we imbue these programs with global-state semantics.
-Finally we define the function that performs the translation just described, and prove that this translation is correct.
-
-
+To begin, we will need to give a precise axiomatic characterization of global
+state semantics. It turns out that not every implementation of global state
+can accurately simulate local state semantics, so we will introduce some
+additional axioms that the implementation must respect. These laws turn out to
+be rather intricate.
+(TODO: in the appendix? We show that the (fused) |hGlobal| handler implements
+these laws.)
 
 \subsection{Programs and Contexts}
 %format hole = "\square"
@@ -56,77 +52,31 @@ Finally we define the function that performs the translation just described, and
 %format langle = "\scaleobj{0.8}{\langle}"
 %format rangle = "\scaleobj{0.8}{\rangle}"
 %format emptyListLit = "`[]"
-\begin{figure}
-\begin{mdframed}
-\centering
-\scriptsize
-\subfloat[]{
-\begin{minipage}{0.5\textwidth}
-\begin{spec}
-data Prog a where
-  Return  :: a -> Prog a
-  mzero   :: Prog a
-  mplus   :: Prog a -> Prog a -> Prog a
-  Get     :: (S -> Prog a) -> Prog a
-  Put     :: S -> Prog a -> Prog a
-\end{spec}
-\end{minipage}
-}
-\subfloat[]{
-  \begin{minipage}{0.5\textwidth}
-    \begin{spec}
-      run     :: Prog a -> Dom a
-      retD    :: a -> Dom a
-      failD   :: Dom a
-      mplusD  :: Dom a -> Dom a -> Dom a
-      getD    :: (S -> Dom a) -> Dom a
-      putD    :: S -> Dom a -> Dom a
-    \end{spec}
-  \end{minipage}
-}
-\quad
-\end{mdframed}
-\caption{(a) Syntax for programs. (b) Semantic domain.}
-\label{fig:prog-and-dom}
-\end{figure}
-
-In the previous sections we have been mixing syntax and semantics,
-which we avoid in this section by defining the program syntax as a free monad.
-This way we avoid the need for a type-level distinction between programs
-with local-state semantics and programs with global-state semantics.
-Figure~\ref{fig:prog-and-dom}(a) defines a syntax for
-nondeterministic, stateful, closed programs |Prog|, where
-the |Get| and |Put| constructors take continuations as arguments, and
-the |(>>=)| operator is defined as follows:
-\begin{samepage}
-\begin{spec}
-  (>>=) :: Prog a -> (a -> Prog b) -> Prog b
-  Return x       >>= f = f x
-  mzero          >>= f = mzero
-  (m `mplus` n)  >>= f = (m >>= f) `mplus` (n >>= f)
-  Get k          >>= f = Get (\s -> k s >>= f)
-  Put s m        >>= f = Put s (m >>= k) {-"~~."-}
-\end{spec}
-\end{samepage}%
-One can see that |(>>=)| is defined as a purely syntactical manipulation, and
-its definition has laws \eqref{eq:bind-mplus-dist} and
-\eqref{eq:bind-mzero-zero} built-in.
-
-The meaning of such a monadic program is determined by a semantic domain of our
-choosing, which we denote with |Dom|, and its corresponding
-domain operators |retD|, |failD|, |getD|, |putD| and |mplusD|
-(see figure~\ref{fig:prog-and-dom}(b)).
-The |run :: Prog a -> Dom a| function ``runs'' a program |Prog a| into a value
-in the semantic domain |Dom a|:
-\begin{samepage}
-\begin{spec}
-run (Return x)       = retD x
-run mzero            = failD
-run (m1 `mplus` m2)  = run m1 <||> run m2
-run (Get k)          = getD (\s -> run (k s))
-run (Put s m)        = putD s (run m) {-"~~."-}
-\end{spec}
-\end{samepage}%
+Just like in the previous section, we will treat program's syntax and
+semantics separately, and the syntax of programs is described by the |Prog|
+type introduced in Section~\ref{sec:fold-fusion}. However, this time we imbue
+|Prog| with an interpretation by mapping it onto a {\em semantic domain}
+which we represent with the type |Dom|.
+\begin{code}
+retD    :: a -> Dom a
+failD   :: Dom a
+mplusD  :: Dom a -> Dom a -> Dom a
+getD    :: (S -> Dom a) -> Dom a
+putD    :: S -> Dom a -> Dom a
+\end{code}
+This semantic domain is only an interface. We will narrow down its meaning
+by introducing laws which its operators must obey.
+A straightforward fold maps a |Prog| onto its interpretation in the semantic
+domain.
+\begin{code}
+run :: Prog a -> Dom a
+run = fold retD alg
+  where
+    alg mzero          = failD
+    alg (p `mplus` q)  = p <||> q
+    alg (Get k)        = getD k
+    alg (Put t k)      = putD t k
+\end{code}
 Note that no |<>>=>| operator is required to define |run|;
 in other words, |Dom| need not be a monad.
 In fact, as we will see later, we will choose our implementation in such a way
