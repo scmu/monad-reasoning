@@ -29,7 +29,7 @@
 
 %% Paper-specific keywords
 
-%format mzero = "\emptyset"
+%format mzero = "\Varid{\varnothing}"
 %%format mplus = "([\!])"
 %%format `mplus` = "\mathbin{[\!]}"
 \newcommand{\smallBox}{\raisebox{-1pt}{\vstretch{1.1}{\hstretch{0.3}{\square}}}}
@@ -44,6 +44,26 @@
 %format ^<< = "\mathbin{{\,}^{\wedge}\!\!\!\ll}"
 %format <=< = "\mathrel{\hstretch{0.7}{<\!\!\!=\!\!<}}"
 %format >=> = "\mathrel{\hstretch{0.7}{>\!\!=\!\!\!>}}"
+
+%format PutOp = "\Conid{Put}_\Conid{Op}"
+%format GetOp = "\Conid{Get}_\Conid{Op}"
+%format mzeroOp = mzero"_\Conid{Op}"
+%format mplusOp = "(\talloblong_\Conid{Op})"
+%format `mplusOp` = `mplus`"_\Conid{Op}"
+
+%format hole = "\square"
+%format apply z (e) = z "\lbrack" e "\rbrack"
+%format <||> = "~\overline{[\!]}~" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
+%format mplusD = "(\overline{[\!]})"
+%format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
+%format <>>=> = "~\overline{\hstretch{0.7}{>\!\!>\!\!=}}~"
+%format getD = "\overline{\Varid{get}}"
+%format putD =  "\overline{\Varid{put}}"
+%format retD = "\overline{\Varid{ret}}"
+%format failD = "\overline{\Varid{\varnothing}}"
+%format langle = "\scaleobj{0.8}{\langle}"
+%format rangle = "\scaleobj{0.8}{\rangle}"
+%format emptyListLit = "`[]"
 
 %format oplus = "(\oplus)"
 %format `oplus` = "\mathbin{\oplus}"

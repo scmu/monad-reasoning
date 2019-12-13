@@ -25,7 +25,7 @@ In the preceding section we proved that the |putR| transformation allows us to
 accurately simulate local state semantics using a global state implementation.
 However, this proof has an important limitation: it only proves |trans| correct
 with respect to {\em specific implementations} of local and global state.
-In this section, we take it one step further: we work with a axiomatic
+In this section, we take it one step further: we work with axiomatic
 characterisations of both local and global state, rather than specific
 implementations, to prove that |trans| works for any implementation of local
 and global state that obeys these axioms.
@@ -33,25 +33,12 @@ and global state that obeys these axioms.
 To begin, we will need to give a precise axiomatic characterization of global
 state semantics. It turns out that not every implementation of global state
 can accurately simulate local state semantics, so we will introduce some
-additional axioms that the implementation must respect. These laws turn out to
-be rather intricate.
+additional axioms that the implementation must respect specifically for this
+proof to work. These laws turn out to be rather intricate.
 (TODO: in the appendix? We show that the (fused) |hGlobal| handler implements
 these laws.)
 
 \subsection{Programs and Contexts}
-%format hole = "\square"
-%format apply z (e) = z "\lbrack" e "\rbrack"
-%format <||> = "~\overline{[\!]}~" -- "\mathbin{\scaleobj{0.8}{[\!]\rangle}}"
-%format mplusD = "(\overline{[\!]})"
-%format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
-%format <>>=> = "~\overline{\hstretch{0.7}{>\!\!>\!\!=}}~"
-%format getD = "\overline{\Varid{get}}"
-%format putD =  "\overline{\Varid{put}}"
-%format retD = "\overline{\Varid{ret}}"
-%format failD = "\overline{\Varid{\varnothing}}"
-%format langle = "\scaleobj{0.8}{\langle}"
-%format rangle = "\scaleobj{0.8}{\rangle}"
-%format emptyListLit = "`[]"
 Just like in the previous section, we will treat program's syntax and
 semantics separately, and the syntax of programs is described by the |Prog|
 type introduced in Section~\ref{sec:fold-fusion}. However, this time we imbue
@@ -443,8 +430,8 @@ It is certainly not sufficient to merely copy the laws as formulated for the
 semantic domain, substituting |Prog| data constructors for semantic domain
 operators as needed; we must keep in mind that a term in |Prog a| describes a
 syntactical structure without ascribing meaning to it.
-For example, one cannot simply assert that |Put x (Put y p)| is \emph{equal} to
-|Put y p|,
+For example, one cannot simply assert that |PutOp x (PutOp y p)| is \emph{equal} to
+|PutOp y p|,
 because although these two programs have the same semantics, they
 are not structurally identical.
 It is clear that we must define a notion of ``semantic equivalence'' between
@@ -453,9 +440,9 @@ We can map the syntactical structures in |Prog a| onto the semantic domain
 |Dom a| using |run| to achieve that.
 Yet wrapping both sides of an equation in |run| applications
 is not enough as such statements only apply at the top-level of a program.
-For instance, while |run (Put x (Put y p)) = run (Put y p)| is a correct statement,
+For instance, while |run (PutOp x (PutOp y p)) = run (PutOp y p)| is a correct statement,
 we cannot prove
-|run (Return w `mplus` Put x (Put y p)) = run (Return w `mplus` Put y p)|
+|run (Ret w `mplusOp` PutOp x (PutOp y p)) = run (Ret w `mplusOp` PutOp y p)|
 from such a law.
 
 So the concept of semantic equivalence in itself is not sufficient; we require
@@ -497,7 +484,7 @@ We can then straightforwardly formulate variants of the state laws, the
 nondeterminism laws and the |put|-|or| law for this global state monad as
 lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
-  |Put s (Put t p)| &\CEq |Put t p| \mbox{~~.}
+  |PutOp s (PutOp t p)| &\CEq |PutOp t p| \mbox{~~.}
 \end{align*}
 Proofs for the state laws, the nondeterminism laws and the |put|-|or| law then
 easily follow from the analogous semantic domain laws.
@@ -524,8 +511,8 @@ to introduce laws which only hold in programs of a certain form (non-contextual
 laws), while other laws are much more general (contextual laws). A direct
 adaptation of law~\eqref{eq:put-ret-or-g-d} would look something like this:
 \begin{align*}
-  \forall |C|.~ |C| \text{ is bind-free} \Rightarrow &|orun (apply C (Put s (Return x `mplus` p)))| \\
-  = &|orun (apply C (Put s (Return x) `mplus` Put s p))| \mbox{~~.}
+  \forall |C|.~ |C| \text{ is bind-free} \Rightarrow &|orun (apply C (PutOp s (Ret x `mplusOp` p)))| \\
+  = &|orun (apply C (PutOp s (Ret x) `mplusOp` PutOp s p))| \mbox{~~.}
 \end{align*}
 In other words, the two sides of the equation can be substituted for one
 another, but only in contexts which do not contain any binds.
@@ -533,7 +520,7 @@ However, in our mechanization, we only prove a more restricted version where
 the context must be empty (in other words, what we called semantic equivalence),
 which turns out to be enough for our purposes.
 \begin{align}
-  |run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)| \mbox{~~.} \label{eq:put-ret-or-g} \checkmark
+  |run (PutOp s (Ret x `mplusOp` p))| = |run (PutOp s (Ret x) `mplusOp` PutOp s p)| \mbox{~~.} \label{eq:put-ret-or-g} \checkmark
 \end{align}
 
 % The formulation of a
@@ -541,22 +528,22 @@ which turns out to be enough for our purposes.
 % more care: because there exists a bind operator for |Prog|, we must stipulate
 % that it does not hold in arbitrary contexts:
 % \begin{align}
-% |run (Put s (Return x `mplus` p))| = |run (Put s (Return x) `mplus` Put s p)|
+% |run (PutOp s (Ret x `mplusOp` p))| = |run (PutOp s (Ret x) `mplusOp` PutOp s p)|
 % \end{align}
 
 \subsection{Simulating Local-State Semantics}
 
-We simulate local-state semantics by replacing each occurrence of |Put| by a
+We simulate local-state semantics by replacing each occurrence of |PutOp| by a
 variant that restores the state, as described in Section~\ref{subsec:state-restoring-ops}. This transformation is implemented by the
 function |trans| for closed programs, and |otrans| for open programs:
 \begin{samepage}
 \begin{spec}
   trans   :: Prog a -> Prog a
-  trans (Return x)     = Return x
-  trans (p `mplus` q)  = trans p `mplus` trans q
-  trans mzero          = mzero
-  trans (Get p)        = Get (\s -> trans (p s))
-  trans (Put s p)      = Get (\s' -> Put s (trans p) `mplus` Put s' mzero) {-"~~,"-}
+  trans (Ret x)     = Ret x
+  trans (p `mplusOp` q)  = trans p `mplusOp` trans q
+  trans mzero          = mzeroOp
+  trans (Get p)        = GetOp (\s -> trans (p s))
+  trans (Put s p)      = GetOp (\s' -> PutOp s (trans p) `mplusOp` PutOp s' mzeroOp) {-"~~,"-}
 
   otrans  :: OProg e a -> OProg e a
   otrans p             = \env -> trans (p env) {-"~~."-}
@@ -580,19 +567,19 @@ semantics'':
 For example, we formulate the statement that the |put|-|put|
 law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
 \begin{align*}
-  |Put s (Put t p)| &\CEqLS |Put t p| \mbox{~~.} \checkmark
+  |PutOp s (PutOp t p)| &\CEqLS |PutOp t p| \mbox{~~.} \checkmark
 \end{align*}
 Proofs for the nondeterminism laws follow trivially from the nondeterminism laws
 for global state.
 The state laws are proven by promoting |trans| inside, then applying
 global-state laws.
 For the proof of the |get|-|put| law, we require the property that in
-global-state semantics, |Put| distributes over |(`mplus`)| if the left branch
+global-state semantics, |PutOp| distributes over |mplusOp| if the left branch
 has been transformed (in which case the left branch leaves the state unmodified).
 This property only holds at the top-level.
 \begin{align}
   % put_or_trans
-|run (Put x (trans m1 `mplus` m2))| = |run (Put x (trans m1) `mplus` Put x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.} \checkmark
+|run (PutOp x (trans m1 `mplusOp` m2))| = |run (PutOp x (trans m1) `mplusOp` PutOp x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 Proof of this lemma depends on law~\eqref{eq:put-ret-or-g-d}.
 
@@ -602,36 +589,36 @@ implementation produces backtracking semantics.
 To this end we prove laws analogous to the local state laws
 \eqref{eq:mplus-bind-dist} and \eqref{eq:mzero-bind-zero}
 \begin{align}
-  |m >> mzero|                      &\CEqLS |mzero| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\
-  |m >>= (\x -> f1 x `mplus` f2 x)| &\CEqLS |(m >>= f1) `mplus` (m >>= f2)| \mbox{~~.} \checkmark \label{eq:mplus-bind-dist-l}
+  |m >> mzeroOp|                      &\CEqLS |mzeroOp| \mbox{~~,} \label{eq:mplus-bind-zero-l} \checkmark \\
+  |m >>= (\x -> f1 x `mplusOp` f2 x)| &\CEqLS |(m >>= f1) `mplusOp` (m >>= f2)| \mbox{~~.} \checkmark \label{eq:mplus-bind-dist-l}
 \end{align}
 We provide machine-verified proofs for these theorems.
 The proof for~\eqref{eq:mplus-bind-zero-l} follows by straightforward induction.
 The inductive proof (with induction on |m|) of law~\eqref{eq:mplus-bind-dist-l}
 requires some additional lemmas.
 
-For the case |m = m1 `mplus` m2|, we require the property that, at the top-level
-of a global-state program, |mplus| is commutative if both its operands are
+For the case |m = m1 `mplusOp` m2|, we require the property that, at the top-level
+of a global-state program, |mplusOp| is commutative if both its operands are
 state-restoring.
 Formally:
 \begin{align}
-  |run (trans p `mplus` trans q)| = |run (trans q `mplus` trans p)|\mbox{~~.} \checkmark
+  |run (trans p `mplusOp` trans q)| = |run (trans q `mplusOp` trans p)|\mbox{~~.} \checkmark
 \end{align}
 The proof of this property motivated the introduction of
 law~\eqref{eq:put-or-comm-g-d}.
 
-The proof for both the |m = Get k| and |m = Put s m'| cases requires that |Get|
+The proof for both the |m = GetOp k| and |m = PutOp s m'| cases requires that |GetOp|
 distributes
-over |mplus| at the top-level of a global-state program if the left branch is
+over |mplusOp| at the top-level of a global-state program if the left branch is
 state restoring.
 \begin{align}
   % get_or_trans
-|run (Get (\s -> trans (m1 s) `mplus` (m2 s)))| = \\
-|run (Get (\s -> trans (m1 s)) `mplus` Get m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
+|run (GetOp (\s -> trans (m1 s) `mplusOp` (m2 s)))| = \\
+|run (GetOp (\s -> trans (m1 s)) `mplusOp` GetOp m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 
 And finally, we require that the |trans| function is, semantically speaking,
-idempotent, to prove the case |m = Put s m'|.
+idempotent, to prove the case |m = PutOp s m'|.
 \begin{align}
   % get_or_trans
 |run (trans (trans p)) = run (trans p)| \label{eq:run-trans-trans} \mbox{~~.} \checkmark
@@ -653,7 +640,7 @@ This is especially true when the state is implemented using an array or other da
 Following a style similar to |putR|, this can be modelled by:
 \begin{spec}
   modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
-  modifyR next prev = modify next `mplus` side (modify prev) {-"~~."-}
+  modifyR next prev = modify next `mplusOp` side (modify prev) {-"~~."-}
 \end{spec}
 Unlike |putR|, |modifyR| does not keep any copies of the old state alive,
 as it does not introduce a branching point where the right branch refers to a
@@ -673,27 +660,27 @@ data ProgM a where
 We assume that |prev . next = id| for every |ModifyR next prev p| in a |ProgM a| program.
 
 We then define two translation functions from |ProgM a| to |Prog a|,
-which both replace |Put|s with |putR|s along the way, like the regular
+which both replace |PutOp|s with |putR|s along the way, like the regular
 |trans| function.
 The first replaces each |ModifyR| in the program by a direct analogue of the
 definition given above, while the second replaces it by
-|Get (\s -> Put (next s) (trans_2 p))|:
+|GetOp (\s -> PutOp (next s) (trans_2 p))|:
 
 \begin{spec}
    trans_1 :: ProgM a -> Prog a
    ...
-   trans_1 (ModifyR next prev p)  =        Get (\s -> Put (next s) (trans_1 p)
-                                   `mplus`  Get (\t -> Put (prev t) mzero))
+   trans_1 (ModifyR next prev p)  =        GetOp (\s -> PutOp (next s) (trans_1 p)
+                                   `mplusOp`  GetOp (\t -> PutOp (prev t) mzeroOp))
 
 
    trans_2 :: ProgM a -> Prog a
    ...
-   trans_2 (ModifyR next prev p)  = Get (\s -> putR (next s) (trans_2 p))
-     where putR s p = Get (\t -> Put s p `mplus` Put t mzero)
+   trans_2 (ModifyR next prev p)  = GetOp (\s -> putR (next s) (trans_2 p))
+     where putR s p = GetOp (\t -> PutOp s p `mplusOp` PutOp t mzeroOp)
 \end{spec}
 
 It is clear that |trans_2 p| is the exact same program as |trans p'|, where |p'|
-is |p| but with each |ModifyR next prev p| replaced by |Get (\s -> Put (next s) p)|.
+is |p| but with each |ModifyR next prev p| replaced by |GetOp (\s -> PutOp (next s) p)|.
 
 We then prove that these two transformations lead to semantically identical
 instances of |Prog a|.
@@ -701,11 +688,11 @@ instances of |Prog a|.
   |run (trans_1 p) = run (trans_2 p)|. \checkmark
 \end{lemma}
 This means that, if we make some effort to rewrite parts of our program to use
-the |ModifyR| construct rather than |Put|, we can use the more efficient
+the |ModifyR| construct rather than |PutOp|, we can use the more efficient
 translation scheme |trans_1| to avoid introducing unnecessary copies.
 
 %\begin{align*}
-%  |eval (apply C (Get (\s -> Put (next s) m)))|
+%  |eval (apply C (Get (\s -> PutOp (next s) m)))|
 %  =
 %  |run (apply (transC C) (modifyR next prev (trans m)))| \mbox{~~.}
 %\end{align*}
@@ -734,7 +721,7 @@ translation scheme |trans_1| to avoid introducing unnecessary copies.
 %Certainly, |putR s| is state-restoring. In fact, the following properties allow state-restoring programs to be built compositionally:
 %\begin{lemma} We have that
 %\begin{enumerate}
-%\item |mzero| is state-restoring,
+%\item |mzeroOp| is state-restoring,
 %\item |putR s| is state-restoring,
 %\item |guard p >> m| is state-restoring if |m| is,
 %\item |get >>= f| is state-restoring if |f x| is state-storing for all |x|, and
@@ -767,7 +754,7 @@ translation scheme |trans_1| to avoid introducing unnecessary copies.
 % Recall that, in Section~\ref{sec:solve-n-queens},
 % we showed that a problem formulated by |unfoldM p f z >>= assert (all ok . scanlp oplus st)| can be solved by a hylomorphism |solve p f ok oplus st z|,
 % run in a non-deterministic local-state monad.
-% Putting all the information in this section together,
+% PutOp all the information in this section together,
 % we conclude that solutions of the same problem can be computed,
 % in a non-deterministic global-state monad,
 % by |run (solveR p f ok oplus ominus st z)|, where |(`ominus` x) . (`oplus` x) = id| for all |x|, and |solveR| is defined by:
