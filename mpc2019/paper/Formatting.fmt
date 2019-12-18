@@ -21,11 +21,17 @@
 \newcommand\Hide{\mathbin{\downarrow}}
 \newcommand\Reveal{\mathbin{\uparrow}}
 
+%format Nat = "\mathbb{N}"
+
 %format == = "\doubleequals"
 %format . = "\mathbin{\cdot}"
 %format `app` = "\mathbin{\$}"
 %format app = "(\mathbin{\$})"
 %format ++ = "\mathbin{+\!\!\!+}"
+
+% Adapted from https://github.com/ivanperez-keera/lhs2tex-haskell-operators
+% %format <*> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{$\ast$}}}\hspace{1.6pt}\rangle}"
+% %format <$> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{\$}}}\hspace{1.6pt}\rangle}"
 
 %% Paper-specific keywords
 
@@ -39,7 +45,9 @@
 %format << = "\mathbin{\hstretch{0.7}{<\!\!<}}"
 %format >> = "\mathbin{\hstretch{0.7}{>\!\!>}}"
 %format >>= = "\mathrel{\hstretch{0.7}{>\!\!>\!\!=}}"
+%format <> = "\mathbin{\Diamond}"
 %format <$> = "\mathrel{\raisebox{0.5\depth}{\scaleobj{0.5}{\langle}} \scaleobj{0.8}{\$} \raisebox{0.5\depth}{\scaleobj{0.5}{\rangle}}}"
+%format <*> = "\mathrel{\raisebox{0.5\depth}{\scaleobj{0.5}{\langle}} \scaleobj{0.8}{\ast} \raisebox{0.5\depth}{\scaleobj{0.5}{\rangle}}}"
 %format <.> = "\mathrel{\raisebox{0.5\depth}{\scaleobj{0.5}{\langle \bullet \rangle}}}"
 %format ^<< = "\mathbin{{\,}^{\wedge}\!\!\!\ll}"
 %format <=< = "\mathrel{\hstretch{0.7}{<\!\!\!=\!\!<}}"
@@ -50,6 +58,7 @@
 %format mzeroOp = mzero"_\Conid{Op}"
 %format mplusOp = "(\talloblong_\Conid{Op})"
 %format `mplusOp` = `mplus`"_\Conid{Op}"
+%format ModifyROp = "\Conid{Modify}_\Conid{Op}"
 
 %format hole = "\square"
 %format apply z (e) = z "\lbrack" e "\rbrack"

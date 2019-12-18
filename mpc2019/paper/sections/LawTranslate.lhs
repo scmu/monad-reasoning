@@ -305,83 +305,85 @@ When we do, we mark the proven statement with a check mark ($\checkmark$).
 
 \subsection{An Implementation of the Semantic Domain}
 \label{sec:GSMonad}
-We present an implementation of |Dom| that satisfies the
-laws of section \ref{sec:model-global-state-sem}, and we provide
-machine-verified proofs to that effect.
-In the following implementation, we let |Dom| be the union of |M s a|
-for all |a| and for a given |s|.
+TODO replace this subsection with small note that |hGlobal| is a correct
+implementation and that we prove this in the mechanization.
+%We present an implementation of |Dom| that satisfies the
+%laws of section \ref{sec:model-global-state-sem}, and we provide
+%machine-verified proofs to that effect.
+%In the following implementation, we let |Dom| be the union of |M s a|
+%for all |a| and for a given |s|.
+%
+%\begin{samepage}
+%The implementation is based on a multiset or |Bag| data structure. In the
+%mechanization, we implement |Bag a| as a function |a -> Nat|.
+%\begin{code}
+%type Bag a
+%
+%singleton  :: a -> Bag a
+%emptyBag   :: Bag a
+%sum        :: Bag a -> Bag a -> Bag a
+%\end{code}
+%\end{samepage}
+%\begin{samepage}
+%We model a stateful, nondeterministic computation with global state semantics as
+%a function that maps an initial state onto a bag of results, and a final state.
+%Each result is a pair of the value returned, as well as the state at that point
+%in the computation.
+%The use of an unordered data structure to return the results of the computation
+%is needed to comply with law~\eqref{eq:put-or-comm-g-d}.
+%
+%In Section~\ref{sec:model-global-state-sem} we mentioned that, as a consequence
+%of law~\eqref{eq:put-ret-or-g-d} we must design the implementation of our
+%semantic domain in such a way that it is impossible to define a bind operator
+%|<>>=> :: Dom a -> (a -> Dom b) -> Dom b| for it.
+%This is the case for our implementation: we only retain the final result of the
+%branch without any information on how to continue the branch, which makes it
+%impossible to define the bind operator.
+%
+%\begin{code}
+%type M s a = s -> (Bag (a,s),s)
+%\end{code}
+%\end{samepage}
+%\begin{samepage}
+%|failD| does not modify the state and produces no results.
+%|retD| does not modify the state and produces a single result.
+%\begin{code}
+%failD :: M s a
+%failD = \s -> (emptyBag,s)
+%
+%retD :: a -> M s a
+%retD x = \s -> (singleton (x,s),s)
+%\end{code}
+%\end{samepage}
+%\begin{samepage}
+%  |getD| simply passes along the initial state to its continuation.
+%  |putD| ignores the initial state and calls its continuation with the given
+%  parameter instead.
+%\begin{code}
+%getD :: (s -> M s a) -> M s a
+%getD k = \s -> k s s
+%
+%putD :: s -> M s a -> M s a
+%putD s k = \ _ -> k s
+%\end{code}
+%\end{samepage}
+%\begin{samepage}
+%The |<||||>| operator runs the left computation with the initial state, then
+%runs the right computation with the final state of the left computation,
+%and obtains the final result by merging the two bags of results.
+%\begin{code}
+%mplusD :: M s a -> M s a -> M s a
+%(xs <||> ys) s =  let  (ansx, s')   = xs s
+%                       (ansy, s'')  = ys s'
+%                  in (sum ansx ansy, s'')
+%\end{code}
+%\end{samepage}
+%\begin{lemma}
+%  This implementation conforms to every law introduced in
+%  Section~\ref{sec:model-global-state-sem}.~$\checkmark$
+%\end{lemma}
 
-\begin{samepage}
-The implementation is based on a multiset or |Bag| data structure. In the
-mechanization, we implement |Bag a| as a function |a -> Nat|.
-\begin{code}
-type Bag a
-
-singleton  :: a -> Bag a
-emptyBag   :: Bag a
-sum        :: Bag a -> Bag a -> Bag a
-\end{code}
-\end{samepage}
-\begin{samepage}
-We model a stateful, nondeterministic computation with global state semantics as
-a function that maps an initial state onto a bag of results, and a final state.
-Each result is a pair of the value returned, as well as the state at that point
-in the computation.
-The use of an unordered data structure to return the results of the computation
-is needed to comply with law~\eqref{eq:put-or-comm-g-d}.
-
-In Section~\ref{sec:model-global-state-sem} we mentioned that, as a consequence
-of law~\eqref{eq:put-ret-or-g-d} we must design the implementation of our
-semantic domain in such a way that it is impossible to define a bind operator
-|<>>=> :: Dom a -> (a -> Dom b) -> Dom b| for it.
-This is the case for our implementation: we only retain the final result of the
-branch without any information on how to continue the branch, which makes it
-impossible to define the bind operator.
-
-\begin{code}
-type M s a = s -> (Bag (a,s),s)
-\end{code}
-\end{samepage}
-\begin{samepage}
-|failD| does not modify the state and produces no results.
-|retD| does not modify the state and produces a single result.
-\begin{code}
-failD :: M s a
-failD = \s -> (emptyBag,s)
-
-retD :: a -> M s a
-retD x = \s -> (singleton (x,s),s)
-\end{code}
-\end{samepage}
-\begin{samepage}
-  |getD| simply passes along the initial state to its continuation.
-  |putD| ignores the initial state and calls its continuation with the given
-  parameter instead.
-\begin{code}
-getD :: (s -> M s a) -> M s a
-getD k = \s -> k s s
-
-putD :: s -> M s a -> M s a
-putD s k = \ _ -> k s
-\end{code}
-\end{samepage}
-\begin{samepage}
-The |<||||>| operator runs the left computation with the initial state, then
-runs the right computation with the final state of the left computation,
-and obtains the final result by merging the two bags of results.
-\begin{code}
-mplusD :: M s a -> M s a -> M s a
-(xs <||> ys) s =  let  (ansx, s')   = xs s
-                       (ansy, s'')  = ys s'
-                  in (sum ansx ansy, s'')
-\end{code}
-\end{samepage}
-\begin{lemma}
-  This implementation conforms to every law introduced in
-  Section~\ref{sec:model-global-state-sem}.~$\checkmark$
-\end{lemma}
 \subsection{Contextual Equivalence}
-
 \begin{figure}
 \begin{mdframed}
   \centering
@@ -471,7 +473,6 @@ We also define a function for mapping open programs onto the semantic domain.
   orun :: OProg e a -> Env e -> Dom a
   orun p env = run (p env) {-"~~."-}
 \end{spec}
-
 We can then assert that two programs are contextually equivalent if, for
 \emph{any} context, running both programs wrapped in that context will
 yield the same result:
@@ -479,8 +480,7 @@ yield the same result:
 \begin{align*}
   |m1| \CEq |m2| \triangleq \forall |C|. |orun (apply C m1)| = |orun (apply C m2)| \mbox{~~.}
 \end{align*}
-
-We can then straightforwardly formulate variants of the state laws, the
+This lets us straightforwardly formulate variants of the state laws, the
 nondeterminism laws and the |put|-|or| law for this global state monad as
 lemmas. For example, we reformulate law~\eqref{eq:put-put-g-d} as
 \begin{align*}
@@ -532,37 +532,32 @@ which turns out to be enough for our purposes.
 % \end{align}
 
 \subsection{Simulating Local-State Semantics}
-
-We simulate local-state semantics by replacing each occurrence of |PutOp| by a
-variant that restores the state, as described in Section~\ref{subsec:state-restoring-ops}. This transformation is implemented by the
-function |trans| for closed programs, and |otrans| for open programs:
-\begin{samepage}
-\begin{spec}
-  trans   :: Prog a -> Prog a
-  trans (Ret x)     = Ret x
-  trans (p `mplusOp` q)  = trans p `mplusOp` trans q
-  trans mzero          = mzeroOp
-  trans (Get p)        = GetOp (\s -> trans (p s))
-  trans (Put s p)      = GetOp (\s' -> PutOp s (trans p) `mplusOp` PutOp s' mzeroOp) {-"~~,"-}
-
-  otrans  :: OProg e a -> OProg e a
-  otrans p             = \env -> trans (p env) {-"~~."-}
-\end{spec}
-\end{samepage}%
-We then define the function |eval|, which runs a transformed program (in other
-words, it runs a program with local-state semantics).
-\begin{spec}
+We re-use the |trans| function from Section~\ref{sec:trans-fold} to transform
+programs, and it is once again our intention to prove the implementation of
+this function correct, this time in a more general, axiomatic context.
+This time, we cannot give the correctness property of |trans| as a single,
+simple equation.  Instead, we need to use the |trans| function to define a
+handler for ``simulated local state semantics''. Then we need to prove that
+this handler behaves like a local state handler, that is, it obeys all the
+local state laws. We call this handler |eval|:
+\begin{code}
 eval :: Prog a -> Dom a
-eval = run . trans {-"~~."-}
-\end{spec}
-We show that the transformation works by proving that our free monad equipped
-with |eval| is a correct
-implementation for a nondeterministic, stateful monad with local-state semantics.
-We introduce notation for ``contextual equivalence under simulated backtracking
-semantics'':
+eval = run . trans
+\end{code}
+Since several of the laws we wish to prove will hold contextually, we will
+need extended versions of our functions which also support open programs.
+\begin{code}
+otrans :: OProg e a -> OProg e a
+otrans p = \env -> trans (p env)
+
+oevl :: OProg e a -> Env e -> Dom a
+oevl p = \env -> eval (p env)
+\end{code}
+This lets us introduce the concept of ``contextual equivalence under simulated
+local state semantics'':
 \newcommand{\CEqLS}{=_\mathtt{LS}}
 \begin{align*}
-  |m1| \CEqLS |m2| \triangleq \forall |C|. |eval (apply C m1)| = |eval (apply C m2)| \mbox{~~.}
+  |m1| \CEqLS |m2| \triangleq \forall |C|. |oevl (apply C m1)| = |oevl (apply C m2)| \mbox{~~.}
 \end{align*}
 For example, we formulate the statement that the |put|-|put|
 law~\eqref{eq:put-put-g-d} holds for our monad as interpreted by |eval| as
@@ -582,7 +577,6 @@ This property only holds at the top-level.
 |run (PutOp x (trans m1 `mplusOp` m2))| = |run (PutOp x (trans m1) `mplusOp` PutOp x m2)| \label{eq:put-ret-mplus-g}\mbox{~~.} \checkmark
 \end{align}
 Proof of this lemma depends on law~\eqref{eq:put-ret-or-g-d}.
-
 Finally, we arrive at the core of our proof:
 to show that the interaction of state and nondeterminism in this
 implementation produces backtracking semantics.
@@ -596,7 +590,6 @@ We provide machine-verified proofs for these theorems.
 The proof for~\eqref{eq:mplus-bind-zero-l} follows by straightforward induction.
 The inductive proof (with induction on |m|) of law~\eqref{eq:mplus-bind-dist-l}
 requires some additional lemmas.
-
 For the case |m = m1 `mplusOp` m2|, we require the property that, at the top-level
 of a global-state program, |mplusOp| is commutative if both its operands are
 state-restoring.
@@ -606,25 +599,22 @@ Formally:
 \end{align}
 The proof of this property motivated the introduction of
 law~\eqref{eq:put-or-comm-g-d}.
-
 The proof for both the |m = GetOp k| and |m = PutOp s m'| cases requires that |GetOp|
 distributes
 over |mplusOp| at the top-level of a global-state program if the left branch is
 state restoring.
 \begin{align}
-  % get_or_trans
+\begin{split}
 |run (GetOp (\s -> trans (m1 s) `mplusOp` (m2 s)))| = \\
 |run (GetOp (\s -> trans (m1 s)) `mplusOp` GetOp m2)| \label{eq:get-ret-mplus-g}\mbox{~~.} \checkmark
+\end{split}
 \end{align}
-
 And finally, we require that the |trans| function is, semantically speaking,
 idempotent, to prove the case |m = PutOp s m'|.
 \begin{align}
   % get_or_trans
 |run (trans (trans p)) = run (trans p)| \label{eq:run-trans-trans} \mbox{~~.} \checkmark
 \end{align}
-
-\noindent
 
 \subsection{Backtracking with a Global State Monad}
 \label{sec:backtrack-gs}
@@ -650,22 +640,23 @@ Is it safe to use an alternative translation, where the pattern
 |get >>= (\s -> putR (next s) >> trans m)|, but rather into
 |modifyR next prev >> trans m|?
 We explore this question by extending our |Prog| syntax with an additional
-|ModifyR| construct, thus obtaining a new |ProgM| syntax:
+|ModifyR| effect, thus obtaining a new |ProgM| syntax:
 \begin{spec}
-data ProgM a where
-...
-  ModifyR  :: (S -> S) -> (S -> S) -> ProgM a -> ProgM a
+data ModStateF a where
+  Get      :: (S -> a)                             -> ModStateF a
+  Put      :: S -> a                               -> ModStateF a
+  ModifyR  :: (S -> S) -> (S -> S) -> ModStateF a  -> ModStateF a
+  deriving Functor
+  
+type ProgM a = Free (NondetF + MondStateF) a
 \end{spec}
-
 We assume that |prev . next = id| for every |ModifyR next prev p| in a |ProgM a| program.
-
 We then define two translation functions from |ProgM a| to |Prog a|,
-which both replace |PutOp|s with |putR|s along the way, like the regular
+which both replace |Put|s with |putR|s along the way, like the regular
 |trans| function.
 The first replaces each |ModifyR| in the program by a direct analogue of the
 definition given above, while the second replaces it by
 |GetOp (\s -> PutOp (next s) (trans_2 p))|:
-
 \begin{spec}
    trans_1 :: ProgM a -> Prog a
    ...
@@ -678,17 +669,15 @@ definition given above, while the second replaces it by
    trans_2 (ModifyR next prev p)  = GetOp (\s -> putR (next s) (trans_2 p))
      where putR s p = GetOp (\t -> PutOp s p `mplusOp` PutOp t mzeroOp)
 \end{spec}
-
 It is clear that |trans_2 p| is the exact same program as |trans p'|, where |p'|
 is |p| but with each |ModifyR next prev p| replaced by |GetOp (\s -> PutOp (next s) p)|.
-
 We then prove that these two transformations lead to semantically identical
 instances of |Prog a|.
 \begin{lemma}
   |run (trans_1 p) = run (trans_2 p)|. \checkmark
 \end{lemma}
 This means that, if we make some effort to rewrite parts of our program to use
-the |ModifyR| construct rather than |PutOp|, we can use the more efficient
+the |ModifyR| construct rather than |Put|, we can use the more efficient
 translation scheme |trans_1| to avoid introducing unnecessary copies.
 
 %\begin{align*}

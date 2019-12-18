@@ -93,6 +93,8 @@ non-monadic.
 %include sections/Fold.lhs
 %include sections/LawTranslate.lhs
 %include sections/Conclusion.lhs
+\appendix
+%include sections/Ap-LocalState.lhs
 
 
 %% Bibliography

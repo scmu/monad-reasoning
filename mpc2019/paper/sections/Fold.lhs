@@ -110,26 +110,37 @@ For state and nondeterminism, we respectively write the following types for
 their ``compositional'' handlers:
 \begin{code}
 hState   :: Functor f => Free (StateF   + f) a -> (S -> Free f (a,S))
-hNondet  :: Functor f => Free (NondetF  + f) a -> Free f [a]
+hNondet  :: Functor f => Free (NondetF  + f) a -> Free f (Bag a)
 \end{code}
-The type of these handlers indicate that they handle one effect of the
-effect set of the program, yielding a new effectful program where the effect set
-contains all the remaining effects.
-This is a bit reminiscent of a ``linked list'' of effects. Like a linked list, a
-``nil'' element is needed to terminate the list; this is provided to us by the
-|Nil| type.
+Here the |Bag| type represents a multiset data structure. We give a simple
+example implementation:
+\begin{code}
+newtype Bag a = a -> Nat deriving Functor
+
+instance Semigroup (Bag a)  where Bag l <> Bag r  = Bag (\x -> l x + r x)
+
+instance Monoid (Bag a)     where mempty          = \ _ -> 0
+
+singleton :: Eq a => a -> Bag a
+singleton x = Bag (\y -> if x==y then 1 else 0)
+\end{code}
+The type of the |hState| and |hNondet| handlers indicate that they handle one
+effect of the effect set of the program, yielding a new effectful program where
+the effect set contains all the remaining effects.  This is a bit reminiscent
+of a ``linked list'' of effects. Like a linked list, a ``nil'' element is
+needed to terminate the list; this is provided to us by the |Nil| type.
 
 For instance, we can compose a handler |hLocal| for local state semantics out of
 the ``atomic'' handlers for state and nondeterminism.
 We will only be interested in the results of the computation, not the final
 states, so the final step of our local state handler is to throw away the state
-information (with |map fst|).
+information (with |fmap fst|).
 \begin{code}
-hLocal' :: Free (StateF + (NondetF + Nil)) a -> (S -> [(a,S)])
+hLocal' :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag (a,S))
 hLocal' = fmap (hNil . hNondet) . hState  
   
-hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> [a])
-hLocal = fmap (map fst) . hLocal'
+hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag a)
+hLocal = fmap (fmap fst) . hLocal'
 \end{code}
 In other words, local state semantics is the semantics where we
 nondeterministically choose between different stateful computations. This
@@ -150,10 +161,10 @@ Just like with the local state handler, we are not interested in the final state
 of the computation, only in the results, so the final step of our handler is a
 |fmap fst|.
 \begin{code}
-hGlobal' :: Free (NondetF + (StateF + Nil)) a -> (S -> ([a],S))
+hGlobal' :: Free (NondetF + (StateF + Nil)) a -> (S -> (Bag a,S))
 hGlobal' = fmap hNil . hState . hNondet
 
-hGlobal :: Free (NondetF + (StateF + Nil)) a -> (S -> [a])
+hGlobal :: Free (NondetF + (StateF + Nil)) a -> (S -> Bag a)
 hGlobal = fmap fst . hGlobal'
 \end{code}
 %From this point onwards, we will omit some technical details where confusion is
@@ -216,10 +227,6 @@ assocr = fold Ret alg
          alg (Inr h)        = Op (Inr (Inr h))
 \end{code}
 Our state and nondeterminism handlers can also be defined as |fold|s:
-% Adapted from https://github.com/ivanperez-keera/lhs2tex-haskell-operators
-%format <*> = "\mathbin{<\hspace{-1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{$\ast$}}}\hspace{-1.6pt}>}"
-%format <$> = "\mathbin{<\hspace{-1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{.8}{\$}}}\hspace{-1.6pt}>}"
-%format ++  = "+\hspace{-4pt}+"
 \begin{code}
 hState :: Functor f => Free (StateF + f) a -> (S -> Free f (a,S))
 hState = fold genState algState
@@ -229,12 +236,12 @@ hState = fold genState algState
     algState (Inl (Put t k))   = \ _ -> k t
     algState (Inr p)           = \ s -> Op (fmap ($s) p)
   
-hNondet :: Functor f => Free (NondetF + f) a -> Free f [a]
+hNondet :: Functor f => Free (NondetF + f) a -> Free f (Bag a)
 hNondet = fold genNondet algNondet
   where
-    genNondet x                     = Ret [x]
-    algNondet (Inl mzero)           = Ret []
-    algNondet (Inl (p `mplus` q))   = (++) <$> p <*> q
+    genNondet x                     = Ret (singleton x)
+    algNondet (Inl mzero)           = Ret mempty
+    algNondet (Inl (p `mplus` q))   = (<>) <$> p <*> q
     algNondet (Inr op)              = Op op
 \end{code}
 With our atomic handlers defined, we have also gained complete definitions for
@@ -254,7 +261,7 @@ tedious type gymnastics.
 For instance, if we want |hGlobal| to operate on the same
 type of programs as |hLocal|, we need to perform some intermediate transformations:
 \begin{code}
-hGlobal' :: Free (StateF + (NondetF + Nil)) a -> (S -> ([a],S))
+hGlobal' :: Free (StateF + (NondetF + Nil)) a -> (S -> (Bag a,S))
 hGlobal' = fmap hNil . hState . comm . hNondet . assocr . comm
 \end{code}
 To avoid getting bogged down in this level of technical detail, we introduce some
@@ -290,6 +297,7 @@ type Prog a = Free (StateF + NondetF) a
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{The $\mathit{put}_{\text{R}}$ Transformation as a Fold}
+\label{sec:trans-fold}
 Our goal is to prove the |putR| transformation, as introduced in
 Section~\ref{sec:chaining} correct. But so far we have not even gotten around
 to properly defining it!  Our representation of programs in the free monad
@@ -332,19 +340,19 @@ Our first step then is to find implementations for |genLocal| and |algLocal|,
 which we do by using fold fusion on |hLocal|.
 Recall the (unfolded) definition of |hLocal|:
 \begin{code}
-hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> [a])
-hLocal = fmap (map fst) . fmap (hNil . hNondet) . hState  
+hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag a)
+hLocal = fmap (fmap fst) . fmap (hNil . hNondet) . hState  
 \end{code}
 We apply the simplifications described earlier (and the functor law
 |fmap f . fmap g = fmap (f . g)|) to rewrite as:
 \begin{code}
-hLocal  :: Prog a -> (S -> [a])
-hLocal  = fmap (map fst) . fmap hNondet . hState  
-        = fmap (map fst . hNondet) . fold genState algState  
+hLocal  :: Prog a -> (S -> Bag a)
+hLocal  = fmap (fmap fst) . fmap hNondet . hState  
+        = fmap (fmap fst . hNondet) . fold genState algState  
 \end{code}
 We also abbreviate the postprocessing step:
 \begin{code}
-post = map fst . hNondet
+post = fmap fst . hNondet
 \end{code}
 Then our fold fusion problem statement becomes
 \begin{align*}
@@ -358,16 +366,16 @@ Finding the definition of |genLocal| is merely a matter of unfolding definitions
 \begin{code}
 genLocal = fmap post . genState
 === {- unfold |post| -}
-genLocal = fmap (map fst . hNondet) . genState
+genLocal = fmap (fmap fst . hNondet) . genState
 === {- unfold |hNondet|, |genState| -}
-genLocal = fmap (map fst . fold genNondet algNondet) . (\x s -> Ret (x,s))  
+genLocal = fmap (fmap fst . fold genNondet algNondet) . (\x s -> Ret (x,s))  
 === {- unfold |(.)|, |fmap|, |fold| -}
-genLocal = \x s -> map fst (genNondet (Ret (x,s)))  
-=== {- unfold |genNondet|, |map fst| -}
-genLocal = \x s -> [x]
+genLocal = \x s -> fmap fst (genNondet (Ret (x,s)))  
+=== {- unfold |genNondet|, |fmap fst| -}
+genLocal = \x _ -> singleton x
 \end{code}
 Finding |algLocal| is a bit more work. We would like to transform the equation
-|fmap (map fst . hNondet) . algState = algLocal . fmap (fmap (map fst .
+|fmap (fmap fst . hNondet) . algState = algLocal . fmap (fmap (fmap fst .
 hNondet))| into an equation of the form |algLocal m = ?|. We'll do this by
 ``pattern matching'' on |m|, that is, we will look for a matching right hand
 side for each of the following equations.
@@ -424,26 +432,26 @@ fmap post (algState (p `mplus` q)) = algLocal (fmap (fmap post) (p `mplus` q))
 === {- definition |algState|, |fmap| -}
 fmap post (\s -> Op (p s `mplus` q s)) = algLocal (fmap post p `mplus` fmap post q)
 === {- definition of |fmap|, |post| -}
-\s -> map fst (hNondet (Op (p s `mplus` q s))) = algLocal (post . p `mplus` post . q)
+\s -> fmap fst (hNondet (Op (p s `mplus` q s))) = algLocal (post . p `mplus` post . q)
 === {- definition of |hNondet| -}
-\s -> map fst ((hNondet . p) s ++ (hNondet . q) s) = algLocal (post . p `mplus` post . q)
-=== {- |map| distributes over |(++)|, definition of |post| -}
-\s -> (post . p) s ++ (post . q) s = algLocal (post . p `mplus` post . q)
+\s -> fmap fst ((hNondet . p) s <> (hNondet . q) s) = algLocal (post . p `mplus` post . q)
+=== {- |map| distributes over |(<>)| (proof left as exercise), definition of |post| -}
+\s -> (post . p) s <> (post . q) s = algLocal (post . p `mplus` post . q)
 === {- generalize |post . p| as |p'| and |post . q| as |q'| -}
-\s -> p' s ++ q' s = algLocal (p' `mplus` q')
+\s -> p' s <> q' s = algLocal (p' `mplus` q')
 \end{code}
-%\s -> algNondet ((map fst . hNondet . p) s `mplus` (map fst . hNondet . q) s) = algLocal (map fst . hNondet . p `mplus` map fst . hNondet . q)
-%=== {- generalize |map fst . hNondet . p| as |p'| and |map fst . hNondet . q| as |q'| -}
+%\s -> algNondet ((fmap fst . hNondet . p) s `mplus` (fmap fst . hNondet . q) s) = algLocal (fmap fst . hNondet . p `mplus` fmap fst . hNondet . q)
+%=== {- generalize |fmap fst . hNondet . p| as |p'| and |fmap fst . hNondet . q| as |q'| -}
 %\s -> algNondet (p' s `mplus` q' s) = algLocal (p' `mplus` q')
 %=== {-  -}
-%\s -> p' s ++ q' s = algLocal (p' `mplus` q')
+%\s -> p' s <> q' s = algLocal (p' `mplus` q')
 Finally, the case for |m = Fail| is trivial. We find |algLocal Fail = \ _ ->
-[]|. In summary, we deduced the following implementation for |algLocal|:
+mempty|. In summary, we deduced the following implementation for |algLocal|:
 \begin{code}
 algLocal (Put t k)      = \ _ -> k t
 algLocal (Get k)        = \ s -> k s s
-algLocal mzero          = \ _ -> []
-algLocal (p `mplus` q)  = \ s -> p s ++ q s
+algLocal mzero          = \ _ -> mempty
+algLocal (p `mplus` q)  = \ s -> p s <> q s
 \end{code}
 
 Finding our fused local state handler was the last challenge in proving |trans|
