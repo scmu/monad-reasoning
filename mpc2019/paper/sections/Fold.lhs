@@ -76,32 +76,6 @@ hNil (Ret x) = x
 This zero element is an empty ``effect set'': a program of type |Free Nil a|
 represents a program that computes an |a| without relying on any effects (this
 type is commutative with just the type |a|).
-%\begin{code}
-%comm :: (Functor f, Functor g) => Free (f :+: g) a -> Free (g :+: f) a
-%comm = fold Ret alg
-%  where alg (Inl f) = Op (Inr f)
-%        alg (Inr g) = Op (Inl g)
-%
-%assocl :: (Functor f, Functor g, Functor h)
-%       => Free (f + (g + h)) a -> Free ((f + g) + h) a
-%assocl = fold Ret alg
-%  where  alg (Inl f)        = Op (Inl (Inl f))
-%         alg (Inr (Inl g))  = Op (Inl (Inr g))
-%         alg (Inr (Inr h))  = Op (Inr h)
-%
-%assocr :: (Functor f, Functor g, Functor h)
-%       => Free ((f + g) + h) a -> Free (f + (g + h)) a
-%assocr = fold Ret alg
-%  where  alg (Inl (Inl f))  = Op (Inl f)
-%         alg (Inl (Inr g))  = Op (Inr (Inl g))
-%         alg (Inr h)        = Op (Inr (Inr h))
-%
-%data Nil a deriving Functor
-%
-%hNil :: Free Nil a -> a
-%hNil (Ret x) = x
-%-- other cases cannot occur
-%\end{code}
 
 With the |Free|-based encoding we can not only write programs
 with effect sets composed from smaller effect sets, we can also write the {\em
@@ -115,14 +89,22 @@ hNondet  :: Functor f => Free (NondetF  + f) a -> Free f (Bag a)
 Here the |Bag| type represents a multiset data structure. We give a simple
 example implementation:
 \begin{code}
-newtype Bag a = a -> Nat deriving Functor
+  newtype Bag a = Bag [a] deriving Functor
 
-instance Semigroup (Bag a)  where Bag l <> Bag r  = Bag (\x -> l x + r x)
+  instance Semigroup (Bag a)  where Bag l <> Bag r  = Bag (l ++ r)
 
-instance Monoid (Bag a)     where mempty          = \ _ -> 0
+  instance Monoid (Bag a)     where mempty          = Bag []
 
-singleton :: Eq a => a -> Bag a
-singleton x = Bag (\y -> if x==y then 1 else 0)
+  instance Eq (Bag a)         where Bag l == Bag r  = sort l == sort r
+
+  singleton :: a -> Bag a
+  singleton x = Bag [x]
+
+  elem :: Eq a => a -> Bag a -> Int
+  elem x (Bag xs) = length (filter (==x) xs)
+
+  bagFlatten :: Bag (Bag a) -> Bag a
+  bagFlatten (Bag bags) = Bag (concat bags)
 \end{code}
 The type of the |hState| and |hNondet| handlers indicate that they handle one
 effect of the effect set of the program, yielding a new effectful program where
@@ -136,11 +118,11 @@ We will only be interested in the results of the computation, not the final
 states, so the final step of our local state handler is to throw away the state
 information (with |fmap fst|).
 \begin{code}
-hLocal' :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag (a,S))
-hLocal' = fmap (hNil . hNondet) . hState  
+hLocal'  :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag (a,S))
+hLocal'  = fmap (hNil . hNondet) . hState  
   
-hLocal :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag a)
-hLocal = fmap (fmap fst) . hLocal'
+hLocal   :: Free (StateF + (NondetF + Nil)) a -> (S -> Bag a)
+hLocal   = fmap (fmap fst) . hLocal'
 \end{code}
 In other words, local state semantics is the semantics where we
 nondeterministically choose between different stateful computations. This
@@ -150,8 +132,7 @@ interpretation of the tree where each result of the (nondeterministic, stateful)
 computation corresponds to a path from root to leaf in the tree. One can compute
 each of these paths entirely independently from the other paths. 
 Later on, we shall prove that this composition forms a valid
-implementation of local state semantics. TODO (will also need some minor
-rewriting to use an unordered data structure)
+implementation of local state semantics.
 
 Global state semantics can be implemented by simply inverting the order of the
 handlers: rather than nondeterministically choosing between stateful
@@ -161,12 +142,15 @@ Just like with the local state handler, we are not interested in the final state
 of the computation, only in the results, so the final step of our handler is a
 |fmap fst|.
 \begin{code}
-hGlobal' :: Free (NondetF + (StateF + Nil)) a -> (S -> (Bag a,S))
-hGlobal' = fmap hNil . hState . hNondet
+hGlobal'  :: Free (NondetF + (StateF + Nil)) a -> (S -> (Bag a,S))
+hGlobal'  = fmap hNil . hState . hNondet
 
-hGlobal :: Free (NondetF + (StateF + Nil)) a -> (S -> Bag a)
-hGlobal = fmap fst . hGlobal'
+hGlobal   :: Free (NondetF + (StateF + Nil)) a -> (S -> Bag a)
+hGlobal   = fmap fst . hGlobal'
 \end{code}
+We argue the correctness of |hLocal| and |hGlobal| (with respect to laws of
+respectively local and global state semantics) in~\ref{sec:correctness-handlers}.
+
 %From this point onwards, we will omit some technical details where confusion is
 %unlikely to arise. In particular, we will omit the |Op|, |Inl| and |Inr|
 %constructors from our programs. For example, when we should write
@@ -203,30 +187,7 @@ helpful in proving two known programs equivalent, but in fact it can often help
 in finding a fused program given a composition of two programs. This discovered
 program will then be correct by construction.
 
-We have declared the existence of certain functions and handlers in the previous
-subsection; we now define these with |fold|. The commutativity and associativity
-functions for the |(+)| operator can be defined as:
-\begin{code}
-comm :: (Functor f, Functor g) => Free (f + g) a -> Free (g + f) a
-comm = fold Ret alg
-  where  alg (Inl f)  = Op (Inr f)
-         alg (Inr g)  = Op (Inl g)
-
-assocl :: (Functor f, Functor g, Functor h)
-       => Free (f + (g + h)) a -> Free ((f + g) + h) a
-assocl = fold Ret alg
-  where  alg (Inl f)        = Op (Inl (Inl f))
-         alg (Inr (Inl g))  = Op (Inl (Inr g))
-         alg (Inr (Inr h))  = Op (Inr h)
-
-assocr :: (Functor f, Functor g, Functor h)
-       => Free ((f + g) + h) a -> Free (f + (g + h)) a
-assocr = fold Ret alg
-  where  alg (Inl (Inl f))  = Op (Inl f)
-         alg (Inl (Inr g))  = Op (Inr (Inl g))
-         alg (Inr h)        = Op (Inr (Inr h))
-\end{code}
-Our state and nondeterminism handlers can also be defined as |fold|s:
+We can define the state and nondeterminism handlers as folds.
 \begin{code}
 hState :: Functor f => Free (StateF + f) a -> (S -> Free f (a,S))
 hState = fold genState algState
@@ -291,11 +252,7 @@ programs, we introduce a type alias for this type of program.
 \begin{code}
 type Prog a = Free (StateF + NondetF) a
 \end{code}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \subsection{The $\mathit{put}_{\text{R}}$ Transformation as a Fold}
 \label{sec:trans-fold}
 Our goal is to prove the |putR| transformation, as introduced in
@@ -462,4 +419,79 @@ hGlobal . algTrans           = algLocal . fmap hGlobal
 \end{code}
 But this proof is entirely trivial. Since there are no unknowns, it is merely a
 matter of fully evaluating (after pattern matching) both sides of the equation
-and verifying that they produce the same value. TODO double check this
+and verifying that they produce the same value.
+
+\subsection{Correctness of |hLocal| and |hGlobal|}
+\label{sec:correctness-handlers}
+The preceding proof rests on the assumption that |hLocal| correctly implements
+local state semantics. By that we mean that |hLocal| respects the state,
+nondeterminism and local state laws. To give an example, it must be the case
+that, for all program contexts |C|,
+|hLocal C[put s >> put t] = hLocal C[put t]|. A program context can be seen as a
+``program with a hole'', writing |C[p]| means filling in the program |p| into
+the context |C|. We elaborate on this concept in~\ref{sec:contextual-equivalence}.
+To understand why the handler is, indeed, correct, consider that |hLocal'| is a
+homomorphism (a transformation between algebraic structures that preserves
+structure) in the algebra defined by the interface of |MStateNondet|. That is,
+the algebra is a type constructor |m :: * -> *| along with implementations for
+|return|, |(>>=)|, |get|, |put|, |mzero|, |mplus|.
+One instance of this algebra is the |Prog| type:
+\begin{code}
+  instance MState S Prog where
+    put t  = PutOp t (Ret ())
+    get    = GetOp Ret
+
+  instance MNondet Prog where
+    mzero        = mzeroOp
+    p `mplus` q  = p `mplusOp` q
+
+  instance MStateNondet S Prog
+\end{code}
+The semantic domain of the local state handler |hNondet'| is also an instance of
+this algebra.
+\begin{code}
+  newtype DomLocal a = DomLocal { unDomLocal :: S -> Bag (a,S) }
+
+  instance Monad DomLocal where
+    return x  = DomLocal (\ s -> singleton (x,s))
+    m >>= k   = DomLocal (\ s ->
+      bagFlatten $ fmap (\ (x,s) -> unDomLocal (k x) s) (unDomLocal m s))
+  
+  instance MState S DomLocal where
+    put t  = DomLocal (\ _ -> singleton (()  , t))
+    get    = DomLocal (\ s -> singleton (s   , s))
+
+  instance MNondet DomLocal where
+    mzero        = DomLocal (\ _ -> mempty)
+    p `mplus` q  = DomLocal (\ s -> p s <> q s)
+
+  instance MStateNondet S DomLocal
+\end{code} % $
+It is easy to verify that |hLocal'| not only maps values in |Prog| onto values
+in |DomLocal|; it also maps each of the algebra operators in |Prog| onto the
+corresponding operator in |DomLocal| (for example,
+|DomLocal (hLocal (put s :: Prog a)) = (put s :: DomLocal a)|).
+Furthermore, within the |DomLocal| implementation we can easily check that the
+state laws, the nondeterminism laws, and the local state laws hold.
+So because the algebra operators in |DomLocal| respect the laws, and because
+|hLocal'| is a structure-preserving mapping into |DomLocal|, it follows that
+|hLocal'| makes |Prog| respect these laws. And since the only difference between
+|hLocal| and |hLocal'| is a post-processing step which only unifies more values,
+we conclude that |hLocal| is correct.
+
+The argument for the correctness of |hGlobal| is similar, but we need to tackle
+one complication: the codomain of |hGlobal'| (the type |S -> (Bag a, S)|) is not
+a monad!
+This means that we cannot map the bind operator as it occurs in |Prog|
+onto such an operator in the global state semantic domain, as no such operator
+exists. This is not an issue for those laws that can be readily rephrased in a
+continuation-passing style. For instance, we do not prove the law |put s >>
+put t = put t| in our codomain (indeed it even does not make sense to
+state it), but instead we prove |putD s (putD t k) = putD t k|, where
+|putD t k = \ _ -> k t|.
+We then argue
+that, by homomorphism, the same law holds in |Prog|, and from that we can
+easily show that the original formulation with |(>>=)| holds in |Prog|.
+The only law that cannot be rewritten in this fashion is the
+left-distributivity law~\eqref{eq:bind-mplus-dist}, but this law follows ``for
+free'' from the definition of |(>>=)| for |Prog|.

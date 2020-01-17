@@ -66,6 +66,15 @@
 %format mplusD = "(\overline{[\!]})"
 %format <&> = "\mathbin{\scaleobj{0.8}{\langle\&\rangle}}"
 %format <>>=> = "~\overline{\hstretch{0.7}{>\!\!>\!\!=}}~"
+
+
+%format getP = "\Varid{get}_\Conid{P}"
+%format putP =  "\Varid{put}_\Conid{P}"
+%format retP = "\Varid{ret}_\Conid{P}"
+%format failP = "\Varid{\varnothing}_\Conid{P}"
+%format DomLocal = "\Conid{Dom}_\Conid{L}"
+%format unDomLocal = "\Varid{unDom}_\Conid{L}"
+
 %format getD = "\overline{\Varid{get}}"
 %format putD =  "\overline{\Varid{put}}"
 %format retD = "\overline{\Varid{ret}}"

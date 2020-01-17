@@ -35,8 +35,6 @@ state semantics. It turns out that not every implementation of global state
 can accurately simulate local state semantics, so we will introduce some
 additional axioms that the implementation must respect specifically for this
 proof to work. These laws turn out to be rather intricate.
-(TODO: in the appendix? We show that the (fused) |hGlobal| handler implements
-these laws.)
 
 \subsection{Programs and Contexts}
 Just like in the previous section, we will treat program's syntax and
@@ -303,10 +301,11 @@ law~\eqref{eq:put-ret-or-g-d}.
 From this point forward, we provide proofs mechanized in Coq for many theorems.
 When we do, we mark the proven statement with a check mark ($\checkmark$).
 
-\subsection{An Implementation of the Semantic Domain}
-\label{sec:GSMonad}
-TODO replace this subsection with small note that |hGlobal| is a correct
-implementation and that we prove this in the mechanization.
+It is easily verified that the codomain of the |hGlobal'| handler (the
+type |S -> (Bag a, S)|) conforms to all the laws for |Dom|, and that |hGlobal'|
+implements the |run| function. In fact we do so in our mechanization
+($\checkmark$).
+
 %We present an implementation of |Dom| that satisfies the
 %laws of section \ref{sec:model-global-state-sem}, and we provide
 %machine-verified proofs to that effect.
@@ -384,6 +383,7 @@ implementation and that we prove this in the mechanization.
 %\end{lemma}
 
 \subsection{Contextual Equivalence}
+\label{sec:contextual-equivalence}
 \begin{figure}
 \begin{mdframed}
   \centering
