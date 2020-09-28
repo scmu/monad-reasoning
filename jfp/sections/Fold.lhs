@@ -36,7 +36,7 @@ functors equipped with a constructor for each operation they support.
 
   data NondetF a where
     mzero  :: NondetF a
-    mplus  :: NondetF a -> NondetF a -> NondetF a
+    mplus  :: a -> a -> NondetF a
     deriving Functor
 \end{code}
 In this encoding, the type |Free StateF a| represents stateful computations, and
