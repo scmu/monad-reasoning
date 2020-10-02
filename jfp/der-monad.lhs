@@ -10,7 +10,7 @@
 %include polycode.fmt
 %include Formatting.fmt
 
-%\usepackage{amsmath}
+\usepackage{amsmath}
 \usepackage{mathpartir}
 \usepackage{amsfonts}
 \usepackage{stmaryrd}
@@ -23,7 +23,7 @@
 \usepackage{url}
 \usepackage{subfig}
 \usepackage{enumitem}
-% \usepackage{mdframed}
+%\usepackage{mdframed}
 \usepackage{multicol}
 \usepackage{graphicx}
 \usepackage{xcolor}
