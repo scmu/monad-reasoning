@@ -75,7 +75,7 @@ hNil (Ret x) = x
 \end{code}
 This zero element is an empty ``effect set'': a program of type |Free Nil a|
 represents a program that computes an |a| without relying on any effects (this
-type is commutative with just the type |a|).
+type is isomorphic with just the type |a|).
 
 With the |Free|-based encoding we can not only write programs
 with effect sets composed from smaller effect sets, we can also write the {\em
@@ -91,11 +91,11 @@ example implementation:
 \begin{code}
   newtype Bag a = Bag [a] deriving Functor
 
-  instance Semigroup (Bag a)  where Bag l <> Bag r  = Bag (l ++ r)
+  instance Semigroup (Bag a)    where Bag l <> Bag r  = Bag (l ++ r)
 
-  instance Monoid (Bag a)     where mempty          = Bag []
+  instance Monoid (Bag a)       where mempty          = Bag []
 
-  instance Eq (Bag a)         where Bag l == Bag r  = sort l == sort r
+  instance Ord a => Eq (Bag a)  where Bag l == Bag r  = sort l == sort r
 
   singleton :: a -> Bag a
   singleton x = Bag [x]
@@ -172,7 +172,7 @@ function, we will write them as folds, a type of structural recursion.
   fold gen alg (Op op)  = alg (fmap (fold gen alg) op)
 \end{code}
 This more principled approach gives us more leverage when reasoning about our
-programs, as certain laws hold for programs defined through fusion.
+programs, as certain laws hold for programs defined through fold.
 In particular, we are interested in the {\em fold fusion} law:
 \begin{align*}
   |h . fold gen alg| & = |fold gen' alg'| \\

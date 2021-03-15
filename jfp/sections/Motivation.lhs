@@ -149,20 +149,17 @@ safeAcc1 (i,us,ds) = all ok . tail . scanl oplus (i,us,ds) {-"~~,"-}
 \end{code}
 
 One might wonder whether the ``state'' can be implemented using an actual state monad. Indeed, the following is among the theorems we have proved:
+(TODO introduce do notation)
 \begin{theorem}\label{thm:filt-scanlp-foldr}
 If state and non-determinism commute, we have that for all |xs|, |st|, |oplus|, and |ok|,
-%if False
-\begin{code}
-filtScanlpFoldr :: (MStateNondet s m) =>
-  (s -> Bool) -> (s -> a -> s) -> s -> [a] -> m [a]
-filtScanlpFoldr ok oplus st xs =
-\end{code}
-%endif
 \begin{code}
  filt (all ok . tail . scanl oplus st) xs ===
      protect (put st >> foldr odot (return []) xs) {-"~~,"-}
-   where x `odot` m =  get >>= \st -> guard (ok (st `oplus` x)) >>
-                       put (st `oplus` x) >> ((x:) <$> m) {-"~~."-}
+   where x `odot` m = do
+      st <- get 
+      guard (ok (st `oplus` x))
+      put (st `oplus` x) 
+      ((x:) <$> m) {-"~~."-}
 \end{code}
 \end{theorem}
 The function |protect m = get >>= \ini -> m >>= \x -> put ini >> return x|
@@ -181,10 +178,17 @@ Indeed, it can be proved that, with |oplus|, |ok|, and |odot| defined above, we 
 \begin{code}
 qBody :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
 qBody []  =  return []
-qBody xs  =  select xs >>= \(x,ys) ->
-             get >>= \st -> guard (ok (st `oplus` x)) >>
-             put (st `oplus` x) >> ((x:) <$> qBody ys){-"~~."-}
+qBody xs  =  do 
+  (x,ys)  <- select
+  st      <- get 
+  guard (ok (st `oplus` x))
+  put (st `oplus` x)
+  (x:) <$> qBody ys {-"~~."-}
 \end{code}
+%  select xs >>= \(x,ys) ->
+%             get >>= \st -> guard (ok (st `oplus` x)) >>
+%             put (st `oplus` x) >> ((x:) <$> qBody ys){-"~~."-}
+
 %if False
 \begin{code}
    where (i,us,ds) `oplus` x = (i+1, (i+x : us), (i-x : ds))

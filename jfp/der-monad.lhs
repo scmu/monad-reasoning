@@ -1,4 +1,6 @@
-\documentclass{jfp}
+%\NeedsTeXFormat{LaTeX2e}
+
+\documentclass{article}
 
 % build using
 %    lhs2TeX der-monad.lhs | pdflatex --jobname=der-monad
@@ -8,7 +10,7 @@
 %include polycode.fmt
 %include Formatting.fmt
 
-%\usepackage{amsmath}
+\usepackage{amsmath}
 \usepackage{mathpartir}
 \usepackage{amsfonts}
 \usepackage{stmaryrd}
@@ -21,7 +23,7 @@
 \usepackage{url}
 \usepackage{subfig}
 \usepackage{enumitem}
-\usepackage{mdframed}
+%\usepackage{mdframed}
 \usepackage{multicol}
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -31,16 +33,33 @@
 
 %\input{Preamble}
 
-\setlength{\mathindent}{15pt}
+%\setlength{\mathindent}{15pt}
 
 \newcommand{\todo}[1]{{\bf [To do: #1]}}
 \newcommand{\delete}[1]{}
 
-\allowdisplaybreaks
+%\allowdisplaybreaks
 
 \newcommand{\scm}[1]{\textcolor{teal}{#1}}
 \newcommand{\koen}[1]{\textcolor{blue}{#1}}
 \newcommand{\tom}[1]{\textcolor{red}{#1}}
+
+%% Title information
+\title{Handling Local State with Global State}
+% \title[Handling Local State with Global State]
+%       {Handling Local State with Global State}
+%
+% \author[K. Pauwels, T.Schrijvers and S. Mu]
+%        {KOEN PAUWELS, TOM SCHRIJVERS \\
+%           Department of Computer Science,\\
+%           KU Leuven, Belgium
+%         \and SHIN-CHENG MU \\
+%           Academia Sinica, Taiwan}
+% 
+% \pubyear{2020}
+% \pagerange{\pageref{firstpage}--\pageref{lastpage}}
+% \doi{asdf}
+
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{definition}{Definition}
@@ -48,32 +67,7 @@
 
 \begin{document}
 
-\journaltitle{JFP}
-\cpr{Cambridge University Press}
-\doival{TODO}
-
-%% Title information
-\title{Handling Local State with Global State}
-\jnlDoiYr{2020}
-\titlerunning{Handling Local State with Global State}
-
-\begin{authgrp}
-  \author{Koen Pauwels}
-  \affiliation{
-    Department of Computer Science,\\
-    KU Leuven, Belgium \\
-    \email{koen.pauwels.cs@@kuleuven.be}}
-  \author{Tom Schrijvers}
-  \affiliation{
-    Department of Computer Science,\\
-    KU Leuven, Belgium \\
-    \email{tom.schrijvers@@kuleuven.be}}
-  \author{Shin-Cheng Mu}
-  \affiliation{
-    Institute of Information Science,\\
-    Academia Sinica, Taiwan \\
-    \email{scm@@iis.sinica.edu.tw}}
-\end{authgrp}
+\maketitle
 
 \begin{abstract}
 Equational reasoning is one of the most important tools of functional
@@ -100,9 +94,6 @@ non-monadic.
 \end{abstract}
 
 % \keywords{monads \and effect handlers \and equational reasoning \and nondeterminism \and state \and contextual equivalence}
-
-\maketitle
-
 
 %include sections/Intro.lhs
 %include sections/Background.lhs

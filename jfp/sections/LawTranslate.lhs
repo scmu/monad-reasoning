@@ -385,7 +385,6 @@ implements the |run| function. In fact we do so in our mechanization
 \subsection{Contextual Equivalence}
 \label{sec:contextual-equivalence}
 \begin{figure}
-\begin{mdframed}
   \centering
   \scriptsize
   \subfloat[]{
@@ -419,7 +418,6 @@ implements the |run| function. In fact we do so in our mechanization
       \end{spec}
     \end{minipage}
   }
-\end{mdframed}
 \caption{(a) Environments and open programs. (b) Syntax for contexts.}
 \label{fig:env-and-context}
 \end{figure}
