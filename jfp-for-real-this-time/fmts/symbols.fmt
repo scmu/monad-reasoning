@@ -1,2 +1,16 @@
+%format mzero = "\Varid{\varnothing}"
+%format mplus = "(\talloblong)"
+%format `mplus` = "\mathbin{\talloblong}"
+%format =<< = "\mathbin{\hstretch{0.7}{=\!\!<\!\!<}}"
 
+%format m1
+%format m2
 
+%format :+: = "\mathrel{{:}{+}{:}}"
+%format <*> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{$\ast$}}}\hspace{1.6pt}\rangle}"
+%format <$> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{\$}}}\hspace{1.6pt}\rangle}"
+
+%format etam = "\Varid{\eta}_{m}"
+%format mum = "\Varid{\mu}_{m}"
+%format etal = "\Varid{\eta}_{[]}"
+%format mul = "\Varid{\mu}_{[]}"
