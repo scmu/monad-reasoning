@@ -66,7 +66,7 @@ Furthermore, it supports a `join' operator |(>>) :: m a -> m b -> m b| so that
 |m1 >> m2 = m1 >>= \ _ -> m2|.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph{Free Monads} 
+\paragraph{Free Monads and Their Folds} 
 
 Free monads are gaining popularity for their use in algebraic effect handlers
 \cite{PlotkinPower}, which elegantly seperate syntax and semantics of effectful
@@ -164,6 +164,14 @@ As argued by \cite{Kiselyov}, these laws differ depending on where the
 monad is used and their interactions with other effects.
 We choose to present a minimal setting for nondeterminism here.
 
+Haskell's implementation for nondeterminism is the |List| monad.
+
+\begin{code}
+instance MNondet [] where
+  mzero  =  []
+  mplus  =  (++)
+\end{code}
+
 %-------------------------------------------------------------------------------
 \subsection{State}
 
@@ -187,14 +195,39 @@ These operations are related by the four so-called state laws:
     |get >>= put| &= |return ()| ~~\mbox{,} \label{eq:put-get}\\
     &\mbox{\bf get-get}:\quad &
     |get >>= (\st -> get >>= k st)| &= |get >>= (\st -> k st st)|
-    ~~\mbox{,} \label{eq:get-get}
+    ~~\mbox{.} \label{eq:get-get}
 \end{alignat}
 
 Again, these state laws may be supplemented with other laws that deal with state
 and its interaction with other effects.
 
+Haskell's implementation for state is the |State s| monad.
+
+\begin{code}
+newtype State s a = State { runState :: s -> (s, a) }
+
+instance MState s (State s) where
+  get = State (\s -> (s, s))
+  put s = State (\_ -> (s, ()))
+\end{code}
+%if False
+\begin{code}
+instance Functor (State s) where
+  fmap f x = State (fmap (fmap f) (runState x))
+
+instance Applicative (State s) where
+  pure  = return
+  (<*>) = ap
+
+instance Monad (State s) where
+  return x = State (\s -> (s, x))
+  m >>= f  = State (\s -> let (s', x) = runState m s in runState (f x) s')
+\end{code}
+%endif
+
 %-------------------------------------------------------------------------------
 \subsection{Combining Effects}
+\label{sec:combining-effects}
  
 Because of the axiomatic definitions of our effects, it is straightforward to 
 reason about their combinations and interactions.
@@ -219,8 +252,12 @@ For that, we define the |StateF| and |NondetF| functors:
 data StateF s a  = Get (s -> a) | Put s a
 data NondetF a   = Fail | Or a a
 \end{code}
-Using this encoding, |Free (StateF s) a| represent stateful computations and
-similarly, |Free NondetF a| represent nondeterministic computations.
+Using this encoding, stateful and nondeterministic computations 
+are represented by the types |StateC| and |NondetC| respectively.
+\begin{code}
+type StateC s a  =  Free (StateF s) a
+type NondetC a   =  Free NondetF a
+\end{code}
 %if False
 \begin{code}
 infixr :+:
@@ -240,20 +277,18 @@ data (f :+: g) a = Inl (f a) | Inr (g a)
 \end{code}
 For instance, we can encode programs with both state and nondeterminism as 
 effects using the data type 
-|Free (NondetF :+: StateF :+: NilF) a| where |NilF| is the neutral
-element of the coproduct, representing the empty effect set.
-\begin{code}
-data NilF a
-\end{code}
-Similarly, we can compose the state effects with any other effect using 
-|Free (StateF s :+: f) a| where |f| is a functor representing arbitrary other 
-effects.
+|Free (StateF :+: NondetF) a|. 
+The coproduct also has a neutral elemetn |NilF|, representing the empty effect set.
+< data NilF a
+Consequently, we can compose the state effects with any other 
+effect functor |f| using |Free (StateF s :+: f) a|.
 
 To give semantics to the free monad constructs of these effects, we can use
 their folds, also called handlers. 
-\todo{write |hState| as a fold, if possible?}
 %if False
 \begin{code}
+data NilF a deriving (Functor)
+
 instance (Functor f, Functor g) => Functor (f :+: g) where
     fmap f (Inl x)  =  Inl (fmap f x)
     fmap f (Inr y)  =  Inr (fmap f y)
@@ -266,23 +301,39 @@ instance MState s (Free (StateF s)) where
 instance (Functor f, MState s (Free (StateF s))) => MState s (Free (StateF s :+: f)) where
     get    = Op (Inl (Get return))
     put x  = Op (Inl (Put x (return ())))
-\end{code}
-%endif
-For state and nondeterminism, the handlers are defined as follows:
-\begin{code}
-hState :: (Functor f, MState s m) => Free (StateF s :+: f) a -> Free f (m a)
-hState (Var x)               = Var (return x)
-hState (Op (Inl (Get k)))    = hState (get >>= k)
-hState (Op (Inl (Put s x)))  = hState (put s >> x)
-hState (Op (Inr y))          = Op (fmap hState y)
 
-hNondet :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
-hNondet = fold gen alg 
+hState' :: (Functor f, MState s m) => Free (StateF s :+: f) a -> Free f (m a)
+hState' (Var x)               = Var (return x)
+hState' (Op (Inl (Get k)))    = hState' (get >>= k)
+hState' (Op (Inl (Put s x)))  = hState' (put s >> x)
+hState' (Op (Inr y))          = Op (fmap hState' y)
+
+hNondet' :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
+hNondet' = fold gen alg 
   where 
     gen = Var . return 
     alg (Inl Fail)      = Var mzero
     alg (Inl (Or p q))  = mplus <$> p <*> q
     alg (Inr y)         = Op y
+\end{code}
+%endif
+For state and nondeterminism, with their typical Haskell implementations as 
+|State s| and |List|, respectively, the handlers are defined as follows:
+\begin{code}
+hState :: (Functor f) => Free (StateF s :+: f) a -> (s -> Free f (s, a))
+hState  =  fold genS algS 
+  where 
+    genS x                s  = return (s, x)
+    algS (Inl (Get k))    s  = k s s
+    algS (Inl (Put s k))  _  = k s
+    algS (Inr y)          s  = Op (fmap ($s) y)
+hNondet :: (Functor f) => Free (NondetF :+: f) a -> Free f [a]
+hNondet  =  fold genND algND
+  where
+    genND                 = Var . return
+    algND (Inl Fail)      = Var mzero
+    algND (Inl (Or p q))  = mplus <$> p <*> q
+    algND (Inr y)         = Op y
 \end{code}
 
 %-------------------------------------------------------------------------------

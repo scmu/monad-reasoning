@@ -6,6 +6,12 @@
 %format m1
 %format m2
 
+%format p1
+%format p2
+
+%format f1
+%format f2
+
 %format :+: = "\mathrel{{:}{+}{:}}"
 %format <*> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{$\ast$}}}\hspace{1.6pt}\rangle}"
 %format <$> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{\$}}}\hspace{1.6pt}\rangle}"
@@ -14,3 +20,30 @@
 %format mum = "\Varid{\mu}_{m}"
 %format etal = "\Varid{\eta}_{[]}"
 %format mul = "\Varid{\mu}_{[]}"
+
+%format eps = "\Varid{\epsilon}"
+%format delta = "\Varid{\delta}"
+
+%format genND = "\Varid{gen_{ND}}"
+%format algND = "\Varid{alg_{ND}}"
+%format genS = "\Varid{gen_{S}}"
+%format algS = "\Varid{alg_{S}}"
+
+%format NondetC = "\Varid{Nondet_{C}}"
+%format StateC = "\Varid{State_{C}}"
+
+%format NondetF = "\Varid{Nondet_{F}}"
+%format StateF = "\Varid{State_{F}}"
+%format NilF = "\Varid{Nil_{F}}"
+
+%format runState = "\Varid{run_{State}}"
+%format runST = "\Varid{run_{ST}}"
+%format runNondet = "\Varid{run_{Nondet}}"
+
+%format hState = "\Varid{h_{State}}"
+%format hNondet = "\Varid{h_{Nondet}}"
+
+
+
+
+
