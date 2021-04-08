@@ -5,12 +5,15 @@
 
 %format m1
 %format m2
+%format m3
 
 %format p1
 %format p2
 
 %format f1
 %format f2
+
+%format s0
 
 %format :+: = "\mathrel{{:}{+}{:}}"
 %format <*> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{$\ast$}}}\hspace{1.6pt}\rangle}"
@@ -23,9 +26,12 @@
 
 %format eps = "\Varid{\epsilon}"
 %format delta = "\Varid{\delta}"
+%format sig = "\Varid{\sigma}"
 
 %format genND = "\Varid{gen_{ND}}"
 %format algND = "\Varid{alg_{ND}}"
+%format genND' = "\Varid{gen_{ND}'}"
+%format algND' = "\Varid{alg_{ND}'}"
 %format genS = "\Varid{gen_{S}}"
 %format algS = "\Varid{alg_{S}}"
 
@@ -39,11 +45,21 @@
 %format runState = "\Varid{run_{State}}"
 %format runST = "\Varid{run_{ST}}"
 %format runNondet = "\Varid{run_{Nondet}}"
+%format runNondet' = "\Varid{run_{Nondet}'}"
 
 %format hState = "\Varid{h_{State}}"
 %format hNondet = "\Varid{h_{Nondet}}"
+%format hNondet' = "\Varid{h'_{Nondet}}"
+%format hLocal = "\Varid{h_{Local}}"
+%format hGlobal = "\Varid{h_{Global}}"
 
+%format putR = "\Varid{put_{R}}"
 
+%format getOp = "\Varid{get}_{Op}"
+%format putOp = "\Varid{put}_{Op}"
+%format orOp = "\Varid{or}_{Op}"
+%format failOp = "\Varid{fail}_{Op}"
+%format putROp = "\Varid{put}_{R,Op}"
 
 
 

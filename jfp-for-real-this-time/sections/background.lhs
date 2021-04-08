@@ -13,7 +13,7 @@
 
 module Background where
 
-import Control.Monad (ap)
+import Control.Monad (ap, liftM)
 
 \end{code}
 %endif
@@ -99,8 +99,7 @@ this fold.
 %if False
 \begin{code}
 instance Functor f => Functor (Free f) where
-    fmap f (Var x) = Var (f x)
-    fmap f (Op op) = Op (fmap (fmap f) op)
+    fmap = liftM
 
 instance Functor f => Applicative (Free f) where 
   pure = return
@@ -194,7 +193,7 @@ These operations are related by the four so-called state laws:
     &\mbox{\bf get-put}:~ &
     |get >>= put| &= |return ()| ~~\mbox{,} \label{eq:put-get}\\
     &\mbox{\bf get-get}:\quad &
-    |get >>= (\st -> get >>= k st)| &= |get >>= (\st -> k st st)|
+    |get >>= (\s -> get >>= k s)| &= |get >>= (\s -> k s s)|
     ~~\mbox{.} \label{eq:get-get}
 \end{alignat}
 
@@ -204,24 +203,24 @@ and its interaction with other effects.
 Haskell's implementation for state is the |State s| monad.
 
 \begin{code}
-newtype State s a = State { runState :: s -> (s, a) }
+newtype State s a = State { runState :: s -> (a, s) }
 
 instance MState s (State s) where
   get = State (\s -> (s, s))
-  put s = State (\_ -> (s, ()))
+  put s = State (\_ -> ((), s))
 \end{code}
 %if False
 \begin{code}
 instance Functor (State s) where
-  fmap f x = State (fmap (fmap f) (runState x))
+  fmap = liftM
 
 instance Applicative (State s) where
   pure  = return
   (<*>) = ap
 
 instance Monad (State s) where
-  return x = State (\s -> (s, x))
-  m >>= f  = State (\s -> let (s', x) = runState m s in runState (f x) s')
+  return x = State (\s -> (x, s))
+  m >>= f  = State (\s -> let (x, s') = runState m s in runState (f x) s')
 \end{code}
 %endif
 
@@ -240,8 +239,7 @@ class (MState s m, MNondet m) => MStateNondet s m | m -> s
 Implementations of this class should satisfy all laws of its superclasses.
 Furthermore, this monad comes with additional interaction laws that
 differentiate between local and global state semantics.
-
-\todo{local state and global state here? or refer to section 4}
+Section \ref{sec:local-global} discusses these interaction laws in detail.
 
 Using free monads, as discussed in \cref{sec:free-monads}, 
 we can separate syntax from semantics.
@@ -289,9 +287,35 @@ their folds, also called handlers.
 \begin{code}
 data NilF a deriving (Functor)
 
+hNil :: Free NilF a -> a 
+hNil (Var x) = x
+
 instance (Functor f, Functor g) => Functor (f :+: g) where
     fmap f (Inl x)  =  Inl (fmap f x)
     fmap f (Inr y)  =  Inr (fmap f y)
+
+comm    :: (Functor f, Functor g) 
+        => Free (f :+: g) a 
+        -> Free (g :+: f) a
+comm (Var x)      = Var x
+comm (Op (Inl k)) = Op (Inr (fmap comm k))
+comm (Op (Inr k)) = Op (Inl (fmap comm k))
+
+assocl  :: (Functor f, Functor g, Functor h)
+        => Free (f :+: (g :+: h)) a 
+        -> Free ((f :+: g) :+: h) a
+assocl (Var x)            = Var x
+assocl (Op (Inl k))       = Op (Inl (Inl (fmap assocl k)))
+assocl (Op (Inr (Inl k))) = Op (Inl (Inr (fmap assocl k)))
+assocl (Op (Inr (Inr k))) = Op (Inr (fmap assocl k))
+
+assocr  :: (Functor f, Functor g, Functor h)
+        => Free ((f :+: g) :+: h) a 
+        -> Free (f :+: (g :+: h)) a
+assocr (Var x)            = Var x
+assocr (Op (Inl (Inl k))) = Op (Inl (fmap assocr k))
+assocr (Op (Inl (Inr k))) = Op (Inr (Inl (fmap assocr k)))
+assocr (Op (Inr k))       = Op (Inr (Inr (fmap assocr k)))
 
 instance MState s (Free (StateF s)) where
     get    = Op (Get return)
@@ -312,6 +336,7 @@ hNondet' :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
 hNondet' = fold gen alg 
   where 
     gen = Var . return 
+    alg :: (Functor f, MNondet m) => (NondetF :+: f) (Free f (m a)) -> Free f (m a)
     alg (Inl Fail)      = Var mzero
     alg (Inl (Or p q))  = mplus <$> p <*> q
     alg (Inr y)         = Op y
@@ -331,8 +356,8 @@ hNondet :: (Functor f) => Free (NondetF :+: f) a -> Free f [a]
 hNondet  =  fold genND algND
   where
     genND                 = Var . return
-    algND (Inl Fail)      = Var mzero
-    algND (Inl (Or p q))  = mplus <$> p <*> q
+    algND (Inl Fail)      = Var []
+    algND (Inl (Or p q))  = (++) <$> p <*> q
     algND (Inr y)         = Op y
 \end{code}
 
