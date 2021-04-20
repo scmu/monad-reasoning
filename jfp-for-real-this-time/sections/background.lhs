@@ -30,11 +30,18 @@ Refer to "Just Do It".
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Functors}
+In Haskell, a functor |F :: * -> *| instantiates the functor type class, which hass a single
+functor mapping operation.
+< class Functor f where
+<   fmap :: (a -> b) -> f a -> f b
 
-\begin{itemize}
-    \item functor laws (identity, fusion)
-    \item coproduct
-\end{itemize}
+Furthermore, a functor should satisfy the two functor laws:
+\begin{alignat}{2}
+    &\mbox{\bf identity}:\quad &
+    |fmap id| &= |id|\mbox{~~,} \label{eq:functor-identity}\\
+    &\mbox{\bf composition}:~ &
+    |fmap (f . g)| &= |fmap f . fmap g| \mbox{~~.} \label{eq:functor-composition}
+\end{alignat}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Monads}
@@ -269,7 +276,7 @@ instance Functor NondetF where
 \end{code}
 %endif
 Computations with multiple effects can be defined independently and combined 
-with a coproduct operator |(:+:)|.
+with a coproduct operator |(:+:)| for functors.
 \begin{code}
 data (f :+: g) a = Inl (f a) | Inr (g a)
 \end{code}
@@ -363,7 +370,9 @@ hNondet  =  fold genND algND
 
 %-------------------------------------------------------------------------------
 \subsection{Motivation and Challenges}
-Show the n-queens example, explain the challenges
+Show the n-queens example, explain the challenges.
+
+State + ND -> State + State -> State
 
 
 

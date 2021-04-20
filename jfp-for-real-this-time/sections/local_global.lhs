@@ -62,14 +62,15 @@ with state and nondeterminism:
     &\mbox{\bf left-distributivity}:~ &
     |m >>= (\x -> f1 x `mplus` f2 x)| &= |(m >>= f1) `mplus` (m >>= f2)| ~~\mbox{.} \label{eq:left-dist}
 \end{alignat}
-The monad |m| on the lefthand side in the right-identity law 
+Note that the monad |m| on the lefthand side in the right-identity law 
 (\ref{eq:right-identity})
 may contain some effects that do not happen in the righthand side.
 Similarly, in the left-distributivity law (\ref{eq:left-dist}), 
 for some implementations of |m|, 
 the effect of the monad may happen once on the lefthand side and twice on the 
 righthand side.
-\birthe{so what?}
+This is a typical property of local state. Effects can be lifted over branches,
+or can be undone for different branches.  
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Commutativity}
@@ -119,10 +120,10 @@ To see that, let |m = put 1|, |f1 () = put 2| and |f2 () = get| in
 (\ref{eq:left-dist}). The state we |get| in the second branch does not change, 
 despite the |put 2| in the first branch.
 One implementation satisfying the laws is 
-< Local s a = s -> Bag (a, s)
-where |Bag a| is an implementation of a multiset or ``bag'' datastructure.
-If we ignore the unordered nature of the |Bag| type, this implementation is 
-similar to |StateT s (ListT Identity)| in the Monad Transformer Library \cite{}.
+< Local s a = s -> m (a, s)
+where |m| is a nondeterministic monad, the simplest structure of which is a list.
+This implementation is exactly that of |StateT s m a| 
+in the Monad Transformer Library \cite{}.
 With effect handling \cite{}, the monad behaves similarly
 (except for the limited commutativity implied by law (\ref{eq:left-dist}))
 if we run the handler for state before that for list.

@@ -27,6 +27,7 @@
 %format eps = "\Varid{\epsilon}"
 %format delta = "\Varid{\delta}"
 %format sig = "\Varid{\sigma}"
+%format mu  = "\Varid{\mu}"
 
 %format genND = "\Varid{gen_{ND}}"
 %format algND = "\Varid{alg_{ND}}"
