@@ -49,8 +49,8 @@ We can interpret these nondeterministic programs encoded in lists
 by means of the |choose| function, which can be implemented as a fold.
 %if False
 \begin{code}
-etam :: MNondet m => a -> m a
-etam = return
+etand :: MNondet m => a -> m a
+etand = return
 
 mul :: [[a]] -> [a]
 mul = foldr (++) []
@@ -58,7 +58,7 @@ mul = foldr (++) []
 %endif
 \begin{code}
 choose :: MNondet m => [a] -> m a
-choose = foldr (mplus . etam) mzero
+choose = foldr (mplus . etand) mzero
 \end{code}
 
 In fact, the |List| monad is not just an instance for nondeterminism; 
@@ -66,12 +66,12 @@ it is the initial lawful instance.
 This means that, for every other lawful instance of nondeterminism, there is a
 unique monad morphism from |List| to that instance.
 The above definition of |choose| is exactly that monad morphism.
-Indeed, for every nondeterminism monad |m| (instance of|MNondet m|), 
+Indeed, for every nondeterminism monad |m| (instance of |MNondet m|), 
 the following equalities hold.
 \begin{align*}
-  |choose . etal| &= |etam|\\
-  |choose . mul| &= |mum . choose . fmap choose|\\
-                 &= |mum . fmap choose . choose|
+  |choose . etal| &= |etand|\\
+  |choose . mul| &= |mund . choose . fmap choose|\\
+                 &= |mund . fmap choose . choose|
 \end{align*}
 
 To prove that the morphism is unique, we use the universality of fold, 
@@ -90,8 +90,6 @@ can be found in Appendix \ref{app:initiality-nondeterminism}.
 \label{sec:sim-nondet-state}
 
 This section shows how to use a state-based implementation to simulate nondeterminism.
-
-\todo{is |\s -> (s, a)| the initial state instance?}
 
 For this, we use a wrapper |ST| around |State| that uses as state a tuple with 
 (1) the current solution(s) |m a| wrapped in a monad and 
@@ -214,8 +212,8 @@ Again, we define a type that encapsulates a form of state.
 newtype ST' sig m a = ST' { unST :: S.StateT (m a, [ST' sig m a]) sig () }
 \end{code}
 %endif
-This time we use the state transformer |StateT|, as defined in the State library
-\ref{}.
+This time we use the state transformer |StateT|, as defined in the 
+Monad Transformer Library \ref{}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
 Thus, the state is |ST'| is again represented by a pair of 
 a value a encapsulated in a nondeterminism monad |m a| and

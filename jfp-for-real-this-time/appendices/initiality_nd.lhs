@@ -10,40 +10,76 @@ To show this morphism exists, we have to make the following two
 drawings commute:
 
 \[\begin{tikzcd}
-    {[a]} && {m\,a} && {[[a]]} &&&& {m\,(m\, a)} \\
+    {|[a]|} && {|m a|} && {|[[a]]|} &&&& {|m (m a)|} \\
     \\
-    & a & && {[a]} &&&& {m\,a}
-    \arrow["{\mu_{[]}}", from=1-5, to=3-5]
+    & {|a|} & && {|[a]|} &&&& {|m a|}
+    \arrow["{|mul|}", from=1-5, to=3-5]
     \arrow["{|choose . fmap choose|}", from=1-5, to=1-9]
     \arrow["{|fmap choose . choose|}"', draw=none, from=1-5, to=1-9]
-    \arrow["{\mu_m}", from=1-9, to=3-9]
+    \arrow["{|mund|}", from=1-9, to=3-9]
     \arrow["{|choose|}"', from=3-5, to=3-9]
     \arrow["{|choose|}", from=1-1, to=1-3]
-    \arrow["{\eta_m}"', from=3-2, to=1-3]
-    \arrow["{\eta_{[]}}", from=3-2, to=1-1]
+    \arrow["{|etand|}"', from=3-2, to=1-3]
+    \arrow["{|etal|}", from=3-2, to=1-1]
 \end{tikzcd}\]
 
-The former equality is easy to prove using equational reasoning:
+The first equality is easy to prove using equational reasoning:
 
-\fbox{|choose . etal = etam|}
+\fbox{|choose . etal = etand|}
 
 <    choose (etal x)
 < = {-~  definition of |etal|  -}
 <    choose [x]
 < = {-~  definition of |choose|  -}
-<    foldr (mplus . etam) mzero [x]
+<    foldr (mplus . etand) mzero [x]
 < = {-~  evaluation of |foldr|  -}
-<    (mplus . etam) x mzero
+<    (mplus . etand) x mzero
 < = {-~  reformulation  -}
-<    etam x `mplus` mzero
+<    etand x `mplus` mzero
 < = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    etam x
+<    etand x
 
-For the second proof, we do a case analysis.
+For the second proof, we require the distributivity of |choose|.
+
+\fbox{|choose (xs ++ ys) = choose xs `mplus` choose ys|}
+
+\noindent
+\mbox{\underline{case xs = []}}
+
+<    choose ([] ++ ys)
+< = {-~  definition of |(++)|  -}
+<    choose ys
+< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
+<    mzero `mplus` choose ys
+< = {-~  definition of |choose|  -}
+<    choose [] `mplus` choose ys
+
+\noindent
+\mbox{\underline{case xs = (x:xs)}}
+
+<    choose ((x:xs) ++ ys)
+< = {-~  definition of |(++)|  -}
+<    choose (x : (xs ++ ys))
+< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+<    (mplus . etand) x (choose (xs ++ ys))
+<    etand x `mplus` choose (xs ++ ys)
+< = {-~  definition of |etand = choose . etal|  -}
+<    choose (etal x) `mplus` choose (xs ++ ys)
+< = {-~  definition of |etal|  -}
+<    choose [x] `mplus` choose (xs ++ ys)
+< = {-~  induction hypothesis  -}
+<    choose [x] `mplus` choose xs `mplus` choose ys
+< = {-~  induction hypothesis  -}
+<    choose ([x] ++ xs) `mplus` choose ys
+< = {-~  definition of |(++)|  -}
+<    choose (x:xs) `mplus` choose ys
+
+Now everything is in place to prove the second property.
+We do a case analysis on the list argument.
 We use the laws of Section \ref{sec:background}, utilizing the fact that 
 |mu f = f >>= id|.
 
-\fbox{|choose . mul = mum . choose . fmap choose|}
+\fbox{|choose . mul = mund . choose . fmap choose|}
 
 \noindent
 \mbox{\underline{case []}}
@@ -51,14 +87,14 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 <    choose (mul [])
 < = {-~  definition of |mul = foldr (++) []|  -}
 <    choose []
-< = {-~  definition of |choose = foldr (mplus . etam) mzero|  -}
+< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
 <    mzero
 < = {-~  left-identity (\ref{eq:mzero-zero}) with |f = id|  -}
-<    mum mzero
+<    mund mzero
 < = {-~  definition of |choose|, base case  -}
-<    mum (choose [])
+<    mund (choose [])
 < = {-~  definition of |fmap|  -}
-<    mum (choose (fmap choose []))
+<    mund (choose (fmap choose []))
 
 \noindent
 \mbox{\underline{case (x:xs)}}
@@ -66,28 +102,20 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 <    choose (mul (x:xs))
 < = {-~  definition of |mul = foldr (++) []|  -}
 <    choose (x ++ mul xs)
-< = {-~  definition of |choose|  -}
-<    foldr (mplus . etam) mzero (x ++ mul xs)
-< = {-~  evaluation of |foldr|  -}
-<    (mplus . etam) x (choose (mul xs))
-< =  etam x `mplus` choose mul xs
+< = {-~  distributivity of |choose|  -}
+<    choose x `mplus` choose (mul xs)
 < = {-~  induction hypothesis  -}
-<    etam x `mplus` mum (choose (fmap choose xs))
+<    choose x `mplus` mund (choose (fmap choose xs))
 < = {-~  monad law return-bind (\ref{eq:monad-ret-bind})  -}
-<    mum (etam (etam x)) `mplus` mum (choose (fmap choose xs))
-< = {-~  distributivity of |mum| and |mplus| (\ref{eq:mplus-dist})  -}
-<    mum (etam (etam x) `mplus` choose (fmap choose xs))
-< =  mum (mplus . etam) (etam x) (choose (fmap choose xs)))
-< = {-~  definition of |choose = foldr (mplus . etam) mzero|  -}
-<    mum (choose (etam x : fmap choose xs))
-< = {-~  definition of |etam = choose . etal|  -}
-<    mum (choose (choose (etal x) : fmap choose xs))
+<    mund (etand (choose x)) `mplus` mund (choose (fmap choose xs))
+< = {-~  distributivity of |mund| and |mplus| (\ref{eq:mplus-dist})  -}
+<    mund (etand (choose x) `mplus` choose (fmap choose xs))
+< =  mund (mplus . etand) (choose x) (choose (fmap choose xs)))
+< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+<    mund (choose (choose x : fmap choose xs))
 < = {-~  definition of |fmap|  -}
-<    mum (choose (fmap choose (etal x : xs)))
-< = {-~  definition of |etal|  -}
-<    mum (choose (fmap choose ([x] : xs)))
+<    mund (choose (fmap choose (x:xs)))
 
-\todo{extra brackets :(}
 
 To prove that this morphism is unique, we use the universality of fold.
 

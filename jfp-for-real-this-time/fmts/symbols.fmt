@@ -21,8 +21,14 @@
 
 %format etam = "\Varid{\eta}_{m}"
 %format mum = "\Varid{\mu}_{m}"
+%format etand = "\Varid{\eta}_{ND}"
+%format mund = "\Varid{\mu}_{ND}"
 %format etal = "\Varid{\eta}_{[]}"
 %format mul = "\Varid{\mu}_{[]}"
+%format etals = "\Varid{\eta}_{LS}"
+%format muls = "\Varid{\mu}_{LS}"
+%format etast = "\Varid{\eta}_{S+ND}"
+%format must = "\Varid{\mu}_{S+ND}"
 
 %format eps = "\Varid{\epsilon}"
 %format delta = "\Varid{\delta}"

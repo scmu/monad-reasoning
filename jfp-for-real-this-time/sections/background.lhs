@@ -352,14 +352,14 @@ hNondet' = fold gen alg
 For state and nondeterminism, with their typical Haskell implementations as 
 |State s| and |List|, respectively, the handlers are defined as follows:
 \begin{code}
-hState :: (Functor f) => Free (StateF s :+: f) a -> (s -> Free f (s, a))
+hState :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (s, a))
 hState  =  fold genS algS 
   where 
     genS x                s  = return (s, x)
     algS (Inl (Get k))    s  = k s s
     algS (Inl (Put s k))  _  = k s
     algS (Inr y)          s  = Op (fmap ($s) y)
-hNondet :: (Functor f) => Free (NondetF :+: f) a -> Free f [a]
+hNondet :: Functor f => Free (NondetF :+: f) a -> Free f [a]
 hNondet  =  fold genND algND
   where
     genND                 = Var . return

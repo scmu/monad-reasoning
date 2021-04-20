@@ -15,7 +15,24 @@
 module LocalGlobal where
 
 import Background
-import Control.Monad (ap, liftM)
+import Control.Monad (ap, liftM) 
+import qualified Control.Monad.Trans.State.Lazy as S
+
+local :: MStateNondet s m => S.StateT s m a -> s -> m a
+local x = fmap (fmap fst) (S.runStateT x) -- fmap (fmap fst) . S.runStateT
+
+etals :: MStateNondet s m => a -> S.StateT s m a
+etals x = S.StateT $ \s -> return (x, s)
+
+etast :: MStateNondet s m => a -> s -> m a
+etast x = \s -> return x
+
+must :: MStateNondet s m => (s -> m (s -> m a)) -> s -> m a
+must mx = \s -> mx s >>= \f -> f s
+    -- mx >>= \x s -> x >>= \f -> f s 
+
+muls :: MStateNondet s m => S.StateT s m (S.StateT s m a) -> S.StateT s m a
+muls mx = S.StateT $ \s -> S.runStateT mx s >>= \(x, s') -> S.runStateT x s'
 
 \end{code}
 %endif
@@ -24,7 +41,7 @@ import Control.Monad (ap, liftM)
 
 This section formally distinguishes local state from global state.
 
-In a program with local state, each nondeterministic branch has its own `local'
+In a program with local state, each nondeterministic branch has its own local
 copy of the state.
 This is a convenient effect interaction which is provided by many systems that
 solve search problems, e.g. Prolog.
@@ -123,7 +140,8 @@ One implementation satisfying the laws is
 < Local s a = s -> m (a, s)
 where |m| is a nondeterministic monad, the simplest structure of which is a list.
 This implementation is exactly that of |StateT s m a| 
-in the Monad Transformer Library \cite{}.
+in the Monad Transformer Library \cite{}, or as we introduced in 
+Section \ref{sec:combining-the-simulation-with-other-effects}.
 With effect handling \cite{}, the monad behaves similarly
 (except for the limited commutativity implied by law (\ref{eq:left-dist}))
 if we run the handler for state before that for list.
@@ -421,10 +439,10 @@ orOp p q  = (Op . Inr . Inl) (Or p q)
 failOp    :: Prog s f a
 failOp    = (Op . Inr . Inl) Fail 
 
-hLocal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+hLocal :: (Functor f) => Prog s f a -> s -> Free f [a]
 hLocal = fmap (fmap (fmap snd) . hNondet) . hState
 
-hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+hGlobal :: (Functor f) => Prog s f a -> s -> Free f [a]
 hGlobal = fmap (fmap snd) . hState . comm . hNondet . assocr . comm
 \end{code}
 %endif
@@ -437,7 +455,7 @@ Note the similarity with the |putR| definition of the previous paragraph.
 The corresponding translation function |trans| transforms every |Put| into
 a |putROp| and leaves the rest of the program untouched.
 \begin{code}
-trans :: (Functor f) => Prog s f a -> Prog s f a
+trans :: Functor f => Prog s f a -> Prog s f a
 trans = fold Var alg
   where 
     alg (Inl (Put t k)) = putROp t k
@@ -450,11 +468,11 @@ semantics.
 We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
-< hLocal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+< hLocal :: Functor f => Prog s f a -> s -> Free f [a]
 < hLocal = fmap (fmap (fmap snd) . hNondet) . hState
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
-< hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+< hGlobal :: Functor f => Prog s f a -> s -> Free f [a]
 < hGlobal = fmap (fmap snd) . hState . hNondet
 Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.

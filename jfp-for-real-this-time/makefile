@@ -1,5 +1,5 @@
 SRC := .
-SCT := $(SRC)/sections
+SCT := $(SRC)/sections $(SRC)/appendices
 
 LATEXMK = latexmk -r $(SRC)/latexmkrc
 
