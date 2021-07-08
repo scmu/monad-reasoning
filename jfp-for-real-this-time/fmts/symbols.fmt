@@ -37,8 +37,8 @@
 
 %format genND = "\Varid{gen_{ND}}"
 %format algND = "\Varid{alg_{ND}}"
-%format genND' = "\Varid{gen_{ND}'}"
-%format algND' = "\Varid{alg_{ND}'}"
+%format genNDf = "\Varid{gen_{ND+f}}"
+%format algNDf = "\Varid{alg_{ND+f}}"
 %format genS = "\Varid{gen_{S}}"
 %format algS = "\Varid{alg_{S}}"
 
@@ -50,13 +50,16 @@
 %format NilF = "\Varid{Nil_{F}}"
 
 %format runState = "\Varid{run_{State}}"
-%format runST = "\Varid{run_{ST}}"
-%format runNondet = "\Varid{run_{Nondet}}"
-%format runNondet' = "\Varid{run_{Nondet}'}"
+%format runSTND = "\Varid{run_{ST_{ND}}}"
+%format runSTNDf = "\Varid{run_{ST_{ND+f}}}"
+%format runND = "\Varid{run_{ND}}"
+%format runNDf = "\Varid{run_{ND+f}}"
+
+%format extractNDf = "\Varid{extract^{\prime}}"
 
 %format hState = "\Varid{h_{State}}"
-%format hNondet = "\Varid{h_{Nondet}}"
-%format hNondet' = "\Varid{h'_{Nondet}}"
+%format hND = "\Varid{h_{ND}}"
+%format hNDf = "\Varid{h_{ND+f}}"
 %format hLocal = "\Varid{h_{Local}}"
 %format hGlobal = "\Varid{h_{Global}}"
 
@@ -67,6 +70,18 @@
 %format orOp = "\Varid{or}_{Op}"
 %format failOp = "\Varid{fail}_{Op}"
 %format putROp = "\Varid{put}_{R,Op}"
+
+%format STND = "\Varid{ST_{ND}}"
+%format STNDf = "\Varid{ST_{ND+f}}"
+%format unSTND = "\Varid{unST_{ND}}"
+%format unSTNDf = "\Varid{unST_{ND+f}}"
+
+%format popND = "\Varid{pop_{ND}}"
+%format pushND = "\Varid{push_{ND}}"
+%format appendND = "\Varid{append_{ND}}"
+%format popNDf = "\Varid{pop_{ND+f}}"
+%format pushNDf = "\Varid{push_{ND+f}}"
+%format appendNDf = "\Varid{append_{ND+f}}"
 
 
 
