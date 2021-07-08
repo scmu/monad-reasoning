@@ -1,14 +1,100 @@
 \section{Initiality of |StateT| for State and Nondeterminism}
 \label{app:local-global}
 
-
+%if False
 \begin{code}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
+import Control.Monad.Trans.State.Lazy hiding (get, put)
+
+class Monad m => MState s m | m -> s where
+    get :: m s
+    put :: s -> m ()
+
+class MState s m => N s m where
+    alph :: n a -> m a
+
+local :: (N s n) => StateT s m a -> n a
+local x = do
+    s <- get
+    (x', s') <- alph (runStateT x s)
+    put s'
+    etan x'
+
+etals :: (Monad m) => a -> StateT s m a
+etals x = StateT $ \s -> return (x, s)
+
+etan :: (N s n) => a -> n a
+etan x = return x
 
 \end{code}
+%endif
 
-% This section shows, with a proof using equational reasoning techniques,
-% that the |StateT| monad is the inital lawful instance of state. 
+This section shows, with a proof using equational reasoning techniques,
+that the |StateT| monad is the inital lawful instance of state. 
+
+Therefore, |StateT| must be initial in the category 
+$\langle N, \eta_N, \mu_N, get, put, \alpha$ 
+where |eta_N| and |mu_N| are the monadic return and join operations, 
+|get| and |put| are the two state operations, and
+|alpha :: M -> N| is a monad morphism.
+
+Objects in this category must satisfy the monad laws \ref{}, 
+the state laws \ref{} 
+and an additional interaction law:
+
+\begin{alignat}{2}
+    &\mbox{\bf interaction}:\quad &
+    |put s >> alpha m| &= |alpha m >>= \x -> put s >> eta x|\mbox{~~.} \label{eq:interaction}
+\end{alignat}
+
+\todo{Check if |StateT| satisfies all these laws}
+
+For |StateT| to be initial, there must be a unique morphism from |StateT| to any other monad |N| in the above category.
+
+\todo{need two extra laws?}
+
+\begin{alignat}{2}
+    &\mbox{\bf alpha-return}:\quad &
+    |alph . eta| &= |eta|\mbox{~~,} \label{eq:alpha-ret}\\
+    &\mbox{\bf alpha-bind}:~ &
+    |alph (m >>= f)| &= |alph m >>= (alph . f)| \mbox{~~.}
+    \label{eq:alpha-bind}
+\end{alignat}
+
+\fbox{|local . etals = etan|}
+
+<    local (etals x)
+< = {-~  definition of |etals|  -}
+<    local (StateT $ \s -> return (x, s))
+< = {-~  definition of |local|  -}
+<    do s <- get
+<       (x', s') <- alph (runStateT (StateT $ \s -> return (x, s)) s)
+<       put s'
+<       etan x'
+< = {-~  |runStateT . StateT = id|  -}
+<    do s <- get
+<       (x', s') <- alph ((\s -> return (x, s)) s)
+<       put s'
+<       etan x'
+< = {-~  application  -}
+<    do s <- get
+<       (x', s') <- alph (return (x, s))
+<       put s'
+<       etan x'
+< = {-~  |alph . return = return| \ref{}  -}
+<    do s <- get
+<       (x', s') <- return (x, s)
+<       put s'
+<       etan x'
+< = {-~  |(x' = x), (s' = s)|  -}
+<    do s <- get
+<       put s
+<       etan x
+< = {-~  get-put law \ref{}  -}
+<    etan x
+
 
 % Therefore, there must be a unique morphism from the |List| monad
 % to every other lawful instance of nondeterminism. 
