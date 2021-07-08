@@ -1,4 +1,4 @@
-\section{Initiality of |List| for Nondeterminism}
+\section{Initiality of Lists for Nondeterminism}
 \label{app:universality-nondeterminism}
 
 This section shows, with a proof using equational reasoning techniques,
