@@ -21,8 +21,18 @@ import Control.Monad (ap, liftM)
 \section{Background and Motivation}
 \label{sec:background}
 
-Intro.
-Refer to "Just Do It".
+This section summarizes the main concepts for equational reasoning with 
+effects. 
+For a more extensive treatment we refer to the work of Gibbons and
+Hinze \ref{}.
+We discuss the two paramount effects of this paper: state and nondeterminism.
+Furthermore, this section explains how to arbitrarily combine effects using 
+free monads and the coproduct operator.
+Finally, we motivate the problem statement with an example and discuss the 
+main challenges.
+Throughout the paper, we will use Haskell as a means to illustrate
+our findings with code.
+
 
 %-------------------------------------------------------------------------------
 \subsection{Free Monads}
@@ -118,6 +128,8 @@ instance Functor f => Monad (Free f) where
     return   = Var
     m >>= f  = fold f Op m
 \end{code}
+%fmap f (Op op) = Op (fmap (fmap f) op)
+%(Op op) >>= f = Op (fmap (>>= f) op)
 
 When a fold is composed with other functions, it adheres to so-called fusion laws \cite{fusionForFree}.
 Precomposing or postcomposing a function with a fold works as follows:
@@ -359,8 +371,9 @@ hState  =  fold genS algS
     algS (Inl (Get k))    s  = k s s
     algS (Inl (Put s k))  _  = k s
     algS (Inr y)          s  = Op (fmap ($s) y)
-hNondet :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-hNondet  =  fold genND algND
+    
+hND :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+hND  =  fold genND algND
   where
     genND                 = Var . return
     algND (Inl Fail)      = Var []

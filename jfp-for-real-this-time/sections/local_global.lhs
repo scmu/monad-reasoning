@@ -18,21 +18,33 @@ import Background
 import Control.Monad (ap, liftM) 
 import qualified Control.Monad.Trans.State.Lazy as S
 
-local :: MStateNondet s m => S.StateT s m a -> s -> m a
-local x = fmap (fmap fst) (S.runStateT x) -- fmap (fmap fst) . S.runStateT
+class MStateNondet s m => MSt s m where
+    alph :: n a -> m a
+
+local :: MSt s n => S.StateT s m a -> n a
+local x = do 
+    s <- get
+    (a, s') <- alph (S.runStateT x s)
+    put s'
+    etan a
+
+etan :: Monad n => a -> n a
+etan = return
 
 etals :: MStateNondet s m => a -> S.StateT s m a
 etals x = S.StateT $ \s -> return (x, s)
 
-etast :: MStateNondet s m => a -> s -> m a
-etast x = \s -> return x
-
-must :: MStateNondet s m => (s -> m (s -> m a)) -> s -> m a
-must mx = \s -> mx s >>= \f -> f s
-    -- mx >>= \x s -> x >>= \f -> f s 
-
 muls :: MStateNondet s m => S.StateT s m (S.StateT s m a) -> S.StateT s m a
 muls mx = S.StateT $ \s -> S.runStateT mx s >>= \(x, s') -> S.runStateT x s'
+
+mun :: MSt s n => n (n a) -> n a
+mun nx = alph nx >>= id -- do
+    -- x <- alph nx
+    -- x
+
+instance (Monad m) => MState s (S.StateT s m) where
+    get = S.StateT (\s -> return (s, s))
+    put s = S.StateT (\_ -> return ((), s))
 
 \end{code}
 %endif
@@ -193,14 +205,16 @@ or other examples.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Implementation}
 Figuring out a correct implementation for the global-state monad is tricky. 
-One might believe that |Global s a = s -> ([a], s)|
+One might believe that |Global s m a = s -> (m a, s)|
 is a natural implementation of such a monad. 
 However, the usual, naive implementation of |(>>=)| does not satisfy
 right-distributivity (\ref{eq:mplus-dist}), 
 violates monad laws and is therefore not even a monad. 
 The type |ListT (State s)| from the Monad Transformer Library \cite{}
-expands to essentially the same implementation, with the same flaws.
-More careful implementations of |ListT|, that do satisfy right-distributivity
+expands to essentially the same implementation with 
+monad |m| instantiated by the list monad. 
+This implementation has the same flaws.
+More careful implementations of |ListT|\footnote{Often referred to as |ListT| done right.}, that do satisfy right-distributivity
 (\ref{eq:mplus-dist}) and the monad laws have been proposed by \todo{} \cite{}.
 Effect handlers \cite{} produce implementations that match our intuition of 
 non-backtrackable computations if we run the handler for nondeterminism before
@@ -440,10 +454,10 @@ failOp    :: Prog s f a
 failOp    = (Op . Inr . Inl) Fail 
 
 hLocal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap snd) . hNondet) . hState
+hLocal = fmap (fmap (fmap snd) . hND) . hState
 
 hGlobal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hGlobal = fmap (fmap snd) . hState . comm . hNondet . assocr . comm
+hGlobal = fmap (fmap snd) . hState . comm . hND . assocr . comm
 \end{code}
 %endif
 We can then define |putROp| in terms of these helper functions.
@@ -469,11 +483,11 @@ We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
 < hLocal :: Functor f => Prog s f a -> s -> Free f [a]
-< hLocal = fmap (fmap (fmap snd) . hNondet) . hState
+< hLocal = fmap (fmap (fmap snd) . hND) . hState
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Prog s f a -> s -> Free f [a]
-< hGlobal = fmap (fmap snd) . hState . hNondet
+< hGlobal = fmap (fmap snd) . hState . hND
 Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
@@ -485,16 +499,16 @@ fold.
 Third, the universality of fold tells us that this equality holds.
 \todo{refer to appendices for proof}
 
-%-------------------------------------------------------------------------------
-\subsection{Laws and Translation for the Global State Monad}
-\label{sec:translation}
+% %-------------------------------------------------------------------------------
+% \subsection{Laws and Translation for the Global State Monad}
+% \label{sec:translation}
 
-\begin{itemize}
-    \item syntax
-    \item semantics with example
-    \item laws
-    \item contextual equivalence
-    \item simulating local state semantics
-    \item backtracking with global state
-\end{itemize}
+% \begin{itemize}
+%     \item syntax
+%     \item semantics with example
+%     \item laws
+%     \item contextual equivalence
+%     \item simulating local state semantics
+%     \item backtracking with global state
+% \end{itemize}
 
