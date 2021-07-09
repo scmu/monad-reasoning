@@ -45,6 +45,7 @@
 %format mu  = "\Varid{\mu}"
 %format eta  = "\Varid{\eta}"
 %format alph  = "\Varid{\alpha}"
+%format return = "\Varid{\eta}"
 
 %format genND = "\Varid{gen_{ND}}"
 %format algND = "\Varid{alg_{ND}}"

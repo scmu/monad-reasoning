@@ -198,7 +198,7 @@ above.
 \begin{theorem}
 |runND = hND|
 \end{theorem}
-The proof of this theorem is added in the appendices. 
+The proof of this theorem is added in Appendix \ref{app:runnd-hnd}. 
 
 %-------------------------------------------------------------------------------
 \subsection{Combining the Simulation with Other Effects}
@@ -215,8 +215,8 @@ newtype STNDf sig m a = STNDf { unSTNDf :: S.StateT (m a, [STNDf sig m a]) sig (
 This time we use the state transformer |StateT|, as defined in the 
 Monad Transformer Library \ref{}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
-Thus, the state is |STNDf| is again represented by a pair of 
-a value a encapsulated in a nondeterminism monad |m a| and
+Thus, the state type |STNDf| is again represented by a pair of 
+a value encapsulated in a nondeterminism monad, |m a|, and
 a stack of |STNDf sig m a| computations or branches to be evaluated.
 
 We can redefine the |simulate| function as follows:

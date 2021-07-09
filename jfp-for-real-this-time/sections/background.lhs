@@ -40,7 +40,7 @@ our findings with code.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Functors}
-In Haskell, a functor |F :: * -> *| instantiates the functor type class, which hass a single
+In Haskell, a functor |f :: * -> *| instantiates the functor type class, which has a single
 functor mapping operation.
 < class Functor f where
 <   fmap :: (a -> b) -> f a -> f b
@@ -59,11 +59,11 @@ Furthermore, a functor should satisfy the two functor laws:
 Side effects are those effects that are affected by previous computations. 
 In Haskell, a pure functional language, we typically encapsulate side effects
 in a monad \cite{Moggi1991}. 
-A monad |M :: * -> *| instantiates the monad type class, which has two 
-operations: return and bind.
+A monad |m :: * -> *| instantiates the monad type class, which has two 
+operations: return (|eta|) and bind (|>>=|).
 
 < class Monad m where
-<   return  :: a -> m a
+<   eta     :: a -> m a
 <   (>>=)   :: m a -> (a -> m b) -> m b
 
 Furthermore, a monad should satisfy the three monad laws:
@@ -79,7 +79,7 @@ Furthermore, a monad should satisfy the three monad laws:
 
 Haskell supports |do| blocks as syntactic sugar for monadic computations.
 For example, |do x <- m; f x| is translated to |m >>= f|.  
-Furthermore, it supports a `join' operator |(>>) :: m a -> m b -> m b| so that
+Furthermore, it supports a join operator |(>>) :: m a -> m b -> m b| so that
 |m1 >> m2 = m1 >>= \ _ -> m2|.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 

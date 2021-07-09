@@ -1,6 +1,7 @@
 \section{Simulating Nondeterminism with State: The Proofs}
 %-------------------------------------------------------------------------------
 \subsection{Only State and Nondeterminism}
+\label{app:runnd-hnd}
 
 This section shows that the |runND| function is equivalent
 to the following nondeterminism handler.
