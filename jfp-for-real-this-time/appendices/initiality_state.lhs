@@ -6,55 +6,62 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-import Control.Monad.Trans.State.Lazy hiding (get, put)
+import Control.Monad.Trans.State.Lazy -- hiding (get, put)
 
-class Monad m => MState s m | m -> s where
-    get :: m s
-    put :: s -> m ()
-
-class MState s m => N s m where
-    alph :: n a -> m a
+class Monad m => N s m | m -> s where
+    getn :: m s
+    putn :: s -> m ()
+    alphn :: n a -> m a
 
 local :: (N s n) => StateT s m a -> n a
 local x = do
-    s <- get
-    (x', s') <- alph (runStateT x s)
-    put s'
+    s <- getn
+    (x', s') <- alphn (runStateT x s)
+    putn s'
     etan x'
 
 etals :: (Monad m) => a -> StateT s m a
-etals x = StateT $ \s -> return (x, s)
+etals x = StateT $ \s -> eta (x, s)
 
 etan :: (N s n) => a -> n a
-etan x = return x
+etan = return
+
+eta :: (Monad m) => a -> m a
+eta = return 
+
+getls :: (Monad m) => StateT s m s 
+getls = StateT (\s -> eta (s, s))
+
+putls :: (Monad m) => s -> StateT s m ()
+putls s = StateT (\_ -> eta ((), s))
+
+liftls :: (Monad m) => m a -> StateT s m a
+liftls mx = StateT (\s -> mx >>= \x -> eta (x, s))
+
+muls :: (Monad m) => StateT s m (StateT s m a) -> StateT s m a
+muls mmx = StateT (\s -> runStateT mmx s >>= \(mx, s1) -> runStateT mx s1)
 
 \end{code}
 %endif
 
 This section shows, with a proof using equational reasoning techniques,
-that the |StateT| monad is the inital lawful instance of state. 
+that the |StateT| monad is the initial lawful instance for state. 
 
 Therefore, |StateT| must be initial in the category 
-$\langle N, \eta_N, \mu_N, get, put, \alpha$ 
-where |eta_N| and |mu_N| are the monadic return and join operations, 
+$\langle N, \eta_N, \mu_N, get, put, \alpha \rangle$ 
+where |etan| and |mun| are the monadic return and join operations, 
 |get| and |put| are the two state operations, and
-|alpha :: M -> N| is a monad morphism.
+|alph :: M -> N| is a monad morphism.
+In Haskell:
 
-Objects in this category must satisfy the monad laws \ref{}, 
-the state laws \ref{} 
-and an additional interaction law:
+< class Monad m => N s m | m -> s where
+<     getn :: m s
+<     putn :: s -> m ()
+<     alphn :: n a -> m a
 
-\begin{alignat}{2}
-    &\mbox{\bf interaction}:\quad &
-    |put s >> alpha m| &= |alpha m >>= \x -> put s >> eta x|\mbox{~~.} \label{eq:interaction}
-\end{alignat}
-
-\todo{Check if |StateT| satisfies all these laws}
-
-For |StateT| to be initial, there must be a unique morphism from |StateT| to any other monad |N| in the above category.
-
-\todo{need two extra laws?}
-
+Objects in this category must satisfy the monad laws, 
+the state laws
+and the monad transformation laws \todo{ref monad transformer library}:
 \begin{alignat}{2}
     &\mbox{\bf alpha-return}:\quad &
     |alph . eta| &= |eta|\mbox{~~,} \label{eq:alpha-ret}\\
@@ -63,154 +70,288 @@ For |StateT| to be initial, there must be a unique morphism from |StateT| to any
     \label{eq:alpha-bind}
 \end{alignat}
 
+Additionally, it should satisfy the following interaction law:
+\begin{alignat}{2}
+    &\mbox{\bf put-alpha}:\quad &
+    |put s >> alph m| &= |alph m >>= \x -> put s >> eta x|\mbox{~~.} \label{eq:put-alpha}
+\end{alignat}
+
+For |StateT| to be initial, there must be a unique morphism from |StateT| to any other monad |N| in the above category.
+This morphism is the |local| function, defined as follows:
+
+< local :: (N s n) => StateT s m a -> n a
+< local x = do
+<     s         <- getn
+<     (x', s')  <- alphn (runStateT x s)
+<     putn s'
+<     etan x'
+
+First, we prove that there is a morphism from |StateT| to |N|, by showing 
+that |local| maps |eta|, |mu|, |get|, |put| and |alph| of |StateT| to the same
+functions of |N|.
+
+
 \fbox{|local . etals = etan|}
+
+% https://q.uiver.app/?q=WzAsMyxbMSwxLCJ8YXwiXSxbMCwwLCJ8U3RhdGVUIHMgbSBhfCJdLFsyLDAsInxOIGF8Il0sWzAsMiwifGV0YW58IiwyXSxbMCwxLCJ8ZXRhbHN8Il0sWzEsMiwibG9jYWwiXV0=
+\[\begin{tikzcd}
+	{|StateT s m a|} && {|n a|} \\
+	& {|a|}
+	\arrow["{|etan|}"', from=2-2, to=1-3]
+	\arrow["{|etals|}", from=2-2, to=1-1]
+	\arrow["{|local|}", from=1-1, to=1-3]
+\end{tikzcd}\]
 
 <    local (etals x)
 < = {-~  definition of |etals|  -}
-<    local (StateT $ \s -> return (x, s))
+<    local (StateT $ \s -> eta (x, s))
 < = {-~  definition of |local|  -}
-<    do s <- get
-<       (x', s') <- alph (runStateT (StateT $ \s -> return (x, s)) s)
-<       put s'
-<       etan x'
+<    do  s <- getn
+<        (x', s') <- alphn (runStateT (StateT $ \s -> eta (x, s)) s)
+<        putn s'
+<        etan x'
 < = {-~  |runStateT . StateT = id|  -}
-<    do s <- get
-<       (x', s') <- alph ((\s -> return (x, s)) s)
-<       put s'
-<       etan x'
-< = {-~  application  -}
-<    do s <- get
-<       (x', s') <- alph (return (x, s))
-<       put s'
-<       etan x'
-< = {-~  |alph . return = return| \ref{}  -}
-<    do s <- get
-<       (x', s') <- return (x, s)
-<       put s'
-<       etan x'
-< = {-~  |(x' = x), (s' = s)|  -}
-<    do s <- get
-<       put s
-<       etan x
-< = {-~  get-put law \ref{}  -}
+<    do  s <- getn
+<        (x', s') <- alphn ((\s -> eta (x, s)) s)
+<        putn s'
+<        etan x'
+< = {-~  function application  -}
+<    do  s <- getn
+<        (x', s') <- alphn (eta (x, s))
+<        putn s'
+<        etan x'
+< = {-~  alpha-return law \ref{eq:alpha-ret}  -}
+<    do  s <- getn
+<        (x', s') <- eta (x, s)
+<        putn s'
+<        etan x'
+< = {-~  return-bind law \ref{eq:monad-ret-bind} with |(x' = x), (s' = s)|  -}
+<    do  s <- getn
+<        putn s
+<        etan x
+< = {-~  get-put law \ref{eq:get-put}  -}
 <    etan x
 
 
-% Therefore, there must be a unique morphism from the |List| monad
-% to every other lawful instance of nondeterminism. 
-% To show this morphism exists, we have to make the following two
-% drawings commute:
+\fbox{|local . muls = mun . fmap local . local|}
 
-% We can interpret programs with state and nondeterminism encoded in the 
-% state transformer monad by means of the following |local| function.
-% It computes a function that, given an initial state, returns the final value.
+% https://q.uiver.app/?q=WzAsNCxbMCwwLCJ8U3RhdGVUIHMgbSAoU3RhdGVUIHMgbSBhKXwiXSxbMCwyLCJ8U3RhdGVUIHMgbSBhfCJdLFszLDIsInxOIGF8Il0sWzMsMCwifE4gKE4gYSl8Il0sWzAsMSwifG11bHN8IiwyXSxbMywyLCJ8bXVufCJdLFswLDMsInxsb2NhbCAuIGZtYXAgbG9jYWx8Il0sWzAsMywifGZtYXAgbG9jYWwgLiBsb2NhbHwiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMSwyLCJ8bG9jYWx8IiwyXV0=
+\[\begin{tikzcd}
+	{|StateT s m (StateT s m a)|} &&& {|n (n a)|} \\
+	\\
+	{|StateT s m a|} &&& {|n a|}
+	\arrow["{|muls|}"', from=1-1, to=3-1]
+	\arrow["{|mun|}", from=1-4, to=3-4]
+	\arrow["{|local . fmap local|}", from=1-1, to=1-4]
+	\arrow["{|fmap local . local|}"', draw=none, from=1-1, to=1-4]
+	\arrow["{|local|}"', from=3-1, to=3-4]
+\end{tikzcd}\]
 
-% < local :: MStateNondet s m => StateT s m a -> (s -> m a)
-% < local x = \s -> fmap fst (runStateT x s)
+<    local (muls mmx)
+< = {-~  definition of |muls|  -}
+<    local (StateT (\s -> runStateT mmx s >>= \(mx, s') -> runStateT mx s'))
+< = {-~  definition of |local|  -}
+<    do  s <- getn
+<        (x', s') <- alphn (runStateT (StateT (\s -> runStateT mmx s >>= \(mx, s1) -> runStateT mx s1)) s)
+<        putn s'
+<        etan x'
+< = {-~  |runStateT . StateT = id|  -}
+<    do  s <- getn
+<        (x', s') <- alphn ((\s -> runStateT mmx s >>= \(mx, s1) -> runStateT mx s1) s)
+<        putn s'
+<        etan x'
+< = {-~  function application  -}
+<    do  s <- getn
+<        (x', s') <- alphn (runStateT mmx s >>= \(mx, s1) -> runStateT mx s1))
+<        putn s'
+<        etan x'
+< = {-~  alpha-bind law \ref{eq:alpha-bind}  -}
+<    do  s <- getn
+<        (mx, s1) <- alphn (runStateT mmx s)
+<        (x', s') <- alphn (runStateT mx s1)
+<        putn s'
+<        etan x'
+< = {-~  put-put law \ref{eq:put-put}  -}
+<    do  s <- getn
+<        (mx, s1) <- alphn (runStateT mmx s)
+<        (x', s') <- alphn (runStateT mx s1)
+<        putn s1 
+<        putn s'
+<        etan x'
+< = {-~  put-alpha law \ref{eq:put-alpha}  -}
+<    do  s <- getn
+<        (mx, s1) <- alphn (runStateT mmx s)
+<        putn s1
+<        (x', s') <- alphn (runStateT mx s1)
+<        putn s'
+<        etan x'
+< = {-~  put-get law \ref{eq:put-get}  -}
+<    do  s <- getn
+<        (mx, s1) <- alphn (runStateT mmx s)
+<        putn s1
+<        s1 <- getn
+<        (x', s') <- alphn (runStateT mx s1)
+<        putn s'
+<        etan x'
+< = {-~  rewrite  -}
+<    mun (do  s <- getn
+<              (mx, s1) <- alphn (runStateT mmx s)
+<               putn s1
+<               etan (do  s1 <- getn
+<                         (x', s') <- alphn (runStateT mx s1)
+<                         putn s'
+<                         etan x'
+<                    ))
+< = {-~  |fmap local mx = mx >> eta . local|  -}
+<    mun (fmap local (do  s <- getn
+<                         (x', s') <- alphn (runStateT x s)
+<                         putn s'
+<                         etan x'))
+< = {-~  definition of |local|  -}
+<    mun (fmap local (local mmx))
 
-% We want to prove that our implementation of local state with the |StateT| monad
-% is the initial instance of state and nondeterminism.
+\fbox{|local getls = getn|}
 
+% https://q.uiver.app/?q=WzAsNCxbMCwwLCJ8U3RhdGVUIHMgbSBhfCJdLFsyLDAsInxOIGF8Il0sWzAsMV0sWzIsMV0sWzAsMSwifGxvY2FsfCJdLFsyLDAsInxnZXRsc3wiXSxbMywxLCJ8Z2V0bnwiLDJdXQ==
+\[\begin{tikzcd}
+	{|StateT s m a|} && {|n a|} \\
+	{} && {}
+	\arrow["{|local|}", from=1-1, to=1-3]
+	\arrow["{|getls|}", from=2-1, to=1-1]
+	\arrow["{|getn|}"', from=2-3, to=1-3]
+\end{tikzcd}\]
 
-% < etals :: MStateNondet s m => a -> StateT s m a
-% < etals x = StateT $ \s -> return (x, s)
+<    local getls
+< = {-~  definition of |getls|  -}
+<    local (StateT (\s -> eta (s, s)))
+< = {-~  definition of |local|  -}
+<    do  s <- getn
+<        (x', s') <- alphn (runStateT (StateT (\s -> eta (s, s))) s)
+<        putn s'
+<        etan x'
+< = {-~  |runStateT . StateT = id|  -}
+<    do  s <- getn
+<        (x', s') <- alphn ((\s -> eta (s, s)) s)
+<        putn s'
+<        etan x'
+< = {-~  function application  -}
+<    do  s <- getn
+<        (x', s') <- alphn (eta (s, s))
+<        putn s'
+<        etan x'
+< = {-~  alpha-return law \ref{eq:alpha-ret}  -}
+<    do  s <- getn
+<        (x', s') <- eta (s, s)
+<        putn s'
+<        etan x'
+< = {-~  return-bind law \ref{eq:monad-ret-bind} with |(x' = s), (s' = s)|  -}
+<    do  s <- getn
+<        putn s
+<        etan s
+< = {-~  get-put law \ref{eq:get-put}  -}
+<    do  s <- getn
+<        etan s
+< = {-~  bind-return law \ref{eq:monad-bind-ret}  -}
+<    getn
 
-% < muls :: MStateNondet s m => StateT s m (StateT s m a) -> StateT s m a
-% < muls mx = StateT $ \s -> runStateT mx s >>= \(x, s') -> runStateT x s' 
+\fbox{|local . putls = putn|}
 
-% \todo{not sure about |s'|}
+% https://q.uiver.app/?q=WzAsNSxbMCwwLCJ8U3RhdGVUIHMgbSBhfCJdLFswLDEsInxzfCJdLFsyLDAsInxuIGF8Il0sWzIsMSwifHN8Il0sWzEsMF0sWzEsMCwifHB1dGxzfCJdLFszLDIsInxwdXRufCIsMl0sWzAsMiwifGxvY2FsfCJdXQ==
+\[\begin{tikzcd}
+	{|StateT s m a|} & {} & {|n a|} \\
+	{|s|} && {|s|}
+	\arrow["{|putls|}", from=2-1, to=1-1]
+	\arrow["{|putn|}"', from=2-3, to=1-3]
+	\arrow["{|local|}", from=1-1, to=1-3]
+\end{tikzcd}\]
 
-% < etast :: MStateNondet s m => a -> (s -> m a)
-% < etast x = \s -> return x
+<    local (putls s0)
+< = {-~  definition of |putls|  -}
+<    local (StateT (\_ -> eta ((), s0)))
+< = {-~  definition of |local|  -}
+<    do  s <- getn
+<        (x', s') <- alphn (runStateT (StateT (\_ -> eta ((), s0))) s)
+<        putn s'
+<        etan x'
+< = {-~  |runStateT . StateT = id|  -}
+<    do  s <- getn
+<        (x', s') <- alphn ((\_ -> eta ((), s0)) s)
+<        putn s'
+<        etan x'
+< = {-~  function application  -}
+<    do  s <- getn
+<        (x', s') <- alphn (eta ((), s0))
+<        putn s'
+<        etan x'
+< = {-~  alpha-return law \ref{eq:alpha-ret}  -}
+<    do  s <- getn
+<        (x', s') <- eta ((), s0)
+<        putn s'
+<        etan x'
+< = {-~  return-bind law \ref{eq:monad-ret-bind} with |(x' = ()), (s' = s0)|  -}
+<    do  s <- getn
+<        putn s0
+<        etan ()
+< = {-~  \todo{what law?}  -}
+<    do  putn s0
+<        etan ()
+< = {-~  \todo{what law?}  -}
+<    putn s0
 
-% < must :: MStateNondet s m => (s -> m (s -> m a)) -> (s -> m a)
-% < must mx = \s -> mx s >>= \f -> f s
+\fbox{|local . alphls = alphn|}
 
-% The first property to prove is preservation of the monadic return.
+% https://q.uiver.app/?q=WzAsMyxbMCwwLCJ8U3RhdGVUIG0gYXwiXSxbMiwwLCJ8biBhfCJdLFsxLDEsInxtIGF8Il0sWzIsMSwifGFscGhufCIsMl0sWzIsMCwifGFscGhsc3wiXSxbMCwxLCJ8bG9jYWx8Il1d
+\[\begin{tikzcd}
+	{|StateT m a|} && {|n a|} \\
+	& {|m a|}
+	\arrow["{|alphn|}"', from=2-2, to=1-3]
+	\arrow["{|alphls|}", from=2-2, to=1-1]
+	\arrow["{|local|}", from=1-1, to=1-3]
+\end{tikzcd}\]
 
-% \[\begin{tikzcd}
-% 	{|StateT s m a|} && {|s -> m a|} \\
-% 	\\
-% 	& |a|
-% 	\arrow["{|etals|}", from=3-2, to=1-1]
-% 	\arrow["{|etast|}"', from=3-2, to=1-3]
-% 	\arrow["{|local|}", from=1-1, to=1-3]
-% \end{tikzcd}\]
+<    local (alphls mx)
+< = {-~  definition of |alphls|  -}
+<    local (StateT (\s -> mx >>= \x -> eta (x, s)))
+< = {-~  definition of |local|  -}
+<    do  s <- getn
+<        (x', s') <- alphn (runStateT (StateT (\s -> mx >>= \x -> eta (x, s))) s)
+<        putn s'
+<        etan x'
+< = {-~  |runStateT . StateT = id|  -}
+<    do  s <- getn
+<        (x', s') <- alphn ((\s -> mx >>= \x -> eta (x, s)) s)
+<        putn s'
+<        etan x'
+< = {-~  function application  -}
+<    do  s <- getn
+<        (x', s') <- alphn (mx >>= \x -> eta (x, s))
+<        putn s'
+<        etan x'
+< = {-~  alpha-bind law \ref{eq:alpha-bind}  -}
+<    do  s <- getn
+<        x <- alphn mx
+<        (x', s') <- alphn (eta (x, s))
+<        putn s'
+<        etan x'
+< = {-~  alpha-return law \ref{eq:alpha-ret}  -}
+<    do  s <- getn
+<        x <- alphn mx
+<        (x', s') <- eta (x, s)
+<        putn s'
+<        etan x'
+< = {-~  return-bind law \ref{eq:monad-ret-bind} with |(x' = x), (s' = s)|  -}
+<    do  s <- getn
+<        x <- alphn mx
+<        putn s
+<        etan x
+< = {-~  put-alpha law \ref{eq:put-alpha}  -}
+<    do  s <- getn
+<        putn s
+<        alphn mx
+< = {-~  get-put law \ref{eq:get-put}  -}
+<    alphn mx
 
-% \fbox{|local . etals = etast|}
-
-% <    local (etals x)
-% < = {-~  definition of |etals|  -}
-% <    local (StateT $ \ s -> etam (x, s))
-% < = {-~  definition of |local|  -}
-% <    fmap (fmap fst) (runStateT (StateT $ \ s -> etam (x, s)))
-% < = {-~  |runStateT . StateT = id|  -}
-% <    fmap (fmap fst) (\ s -> etam (x, s))
-% < = {-~  definition of |fmap|  -}
-% <    \ s -> fmap fst (etam (x, s))
-% < = {-~  definition of |fmap|  -}
-% <    \ s -> etam x
-% < = {-~  definition of |must|  -}
-% <    etast x
-
-% Secondly, we want to prove that the monadic join operation is also preserved.
-
-% \[\begin{tikzcd}
-% 	{|StateT s m (StateT s m a)|} &&& {|s -> m (s -> m a)|} \\
-% 	\\
-% 	{|StateT s m a|} &&& {|s -> m a|}
-% 	\arrow["{|local . fmap local|}", from=1-1, to=1-4]
-% 	\arrow["{|fmap local . local|}"', draw=none, from=1-1, to=1-4]
-% 	\arrow["{|must|}", from=1-4, to=3-4]
-% 	\arrow["{|muls|}", from=1-1, to=3-1]
-% 	\arrow["{|local|}", from=3-1, to=3-4]
-% \end{tikzcd}\]
-
-% \fbox{|local . muls = must . fmap local . local|}
-
-% <    local (muls mx)
-% < = {-~  definition of |muls|  -}
-% <    local (StateT $ \s -> runStateT mx s >>= \(x, s') -> runStateT x s')
-% < = {-~  definition of |local|  -}
-% <    \s0 -> fmap fst (runStateT (StateT $ \s -> runStateT mx s >>= \(x, s') -> runStateT x s') s0)
-% < = {-~  |runStateT . StateT = id|  -}
-% <    \s0 -> fmap fst (\s -> runStateT mx s >>= \(x, s') -> runStateT x s') s0)
-% < = {-~  definition of |fmap|  -}
-% <    \s0 -> (\s -> fst (runStateT mx s >>= \(x, s') -> runStateT x s')) s0)
-% < = {-~  $\beta$-reduction  -}
-% <    \s0 -> fst (runStateT mx s0 >>= \(x, s') -> runStateT x s')
-% < = {-~  property: |f (m >>= g) = m >>= f . g| \todo{did I invent this?}  -}
-% <    \s0 -> runStateT mx s0 >>= \(x, s') -> fst (runStateT x s')
-% < = {-~  call |(x, s') = tup|  -}
-% <    \s0 -> runStateT mx s0 >>= \tup -> fst (runStateT (fst tup) (snd tup))
-% < = {-~  \todo{not sure + sth wrong with s0 }  -}
-% <    \s0 -> runStateT mx s0 >>= \(StateT tup) -> (fmap fst (fst tup)) s0
-% < = {-~  property: |fmap f x >>= g = x >>= g . f| \todo{did I invent this?}  -}
-% <    \s0 -> fmap fst (runStateT mx s0) >>= \(StateT tup) -> (fmap fst tup) s0
-% < = {-~  \todo{not sure}  -}
-% <    \s0 -> runStateT (fmap fst (runStateT mx s0)) >>= \tup -> (fmap fst tup) s0
-% < =  \s0 -> runStateT (fmap fst (runStateT mx s0)) >>= (\tup -> tup s0) . fmap fst
-% < = {-~  property: |fmap f x >>= g = x >>= g . f| \todo{did I invent this?}  -}
-% <    \s0 -> fmap (fmap fst) (runStateT (fmap fst (runStateT mx s0))) >>= \tup -> tup s0
-% < = {-~  simplification  -}
-% <    \s0 -> (\s' -> fmap fst (runStateT (fmap fst (runStateT mx s0)) s')) >>= \tup -> tup s0
-% < = {-~  $\beta$-expansion  -}
-% <    \s0 -> (\s -> (\s' -> fmap fst (runStateT (fmap fst (runStateT mx s)) s'))) s0 >>= \tup -> tup s0
-% < = {-~  definition of |must|  -}
-% <    must (\s -> (\s' -> fmap fst (runStateT (fmap fst (runStateT mx s)) s')))
-% < = {-~  definition of |local|  -}
-% <    must (\s -> local (fmap fst (runStateT mx s)))
-% < = {-~  definition of |fmap|  -}
-% <    must (fmap local (\s -> fmap fst (runStateT mx s)))
-% < = {-~  definition of |local|  -}
-% <    must (fmap local (local mx))
-
-
-
-
-
-
-
+\todo{prove that this morphism is unique}
 
 
 
