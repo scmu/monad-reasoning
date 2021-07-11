@@ -32,7 +32,7 @@
 %%   Colon         \:     Semicolon     \;     Less than     \<
 %%   Equals        \=     Greater than  \>     Question mark \?
 %%   Commercial at \@     Left bracket  \[     Backslash     \\
-%%   Right bracket \]     Circumflex    \^     Underscore    \_
+%%   Right bracket \]     Circumflex    \^     Underscore    \ _
 %%   Grave accent  \`     Left brace    \{     Vertical bar  \|
 %%   Right brace   \}     Tilde         \~}
 \NeedsTeXFormat{LaTeX2e}

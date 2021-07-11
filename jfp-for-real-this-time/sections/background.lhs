@@ -226,7 +226,7 @@ newtype State s a = State { runState :: s -> (a, s) }
 
 instance MState s (State s) where
   get = State (\s -> (s, s))
-  put s = State (\_ -> ((), s))
+  put s = State (\ _ -> ((), s))
 \end{code}
 %if False
 \begin{code}

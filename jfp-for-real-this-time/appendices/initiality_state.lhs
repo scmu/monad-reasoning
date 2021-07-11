@@ -33,7 +33,7 @@ getls :: (Monad m) => StateT s m s
 getls = StateT (\s -> eta (s, s))
 
 putls :: (Monad m) => s -> StateT s m ()
-putls s = StateT (\_ -> eta ((), s))
+putls s = StateT (\ _ -> eta ((), s))
 
 liftls :: (Monad m) => m a -> StateT s m a
 liftls mx = StateT (\s -> mx >>= \x -> eta (x, s))
@@ -267,15 +267,15 @@ functions of |N|.
 
 <    local (putls s0)
 < = {-~  definition of |putls|  -}
-<    local (StateT (\_ -> eta ((), s0)))
+<    local (StateT (\ _ -> eta ((), s0)))
 < = {-~  definition of |local|  -}
 <    do  s <- getn
-<        (x', s') <- alphn (runStateT (StateT (\_ -> eta ((), s0))) s)
+<        (x', s') <- alphn (runStateT (StateT (\ _ -> eta ((), s0))) s)
 <        putn s'
 <        etan x'
 < = {-~  |runStateT . StateT = id|  -}
 <    do  s <- getn
-<        (x', s') <- alphn ((\_ -> eta ((), s0)) s)
+<        (x', s') <- alphn ((\ _ -> eta ((), s0)) s)
 <        putn s'
 <        etan x'
 < = {-~  function application  -}

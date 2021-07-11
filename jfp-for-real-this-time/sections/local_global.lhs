@@ -44,7 +44,7 @@ mun nx = alph nx >>= id -- do
 
 instance (Monad m) => MState s (S.StateT s m) where
     get = S.StateT (\s -> return (s, s))
-    put s = S.StateT (\_ -> return ((), s))
+    put s = S.StateT (\ _ -> return ((), s))
 
 \end{code}
 %endif
@@ -255,7 +255,7 @@ instance MNondet (Global s) where
 
 instance MState s (Global s) where
     get    =  Gl  (\s  ->  (Just (s,   mzero),   s))
-    put s  =  Gl  (\_  ->  (Just ((),  mzero),   s))
+    put s  =  Gl  (\ _  ->  (Just ((),  mzero),   s))
 \end{code}
 
 Failure, of course, returns an empty continuation and an unmodified state.
