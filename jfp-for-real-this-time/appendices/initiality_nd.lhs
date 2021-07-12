@@ -25,8 +25,13 @@ drawings commute:
 
 The first equality is easy to prove using equational reasoning:
 
-\fbox{|choose . etal = etand|}
+% \fbox{|choose . etal = etand|}
 
+\begin{theorem}
+|choose . etal = etand|
+\end{theorem}
+
+\begin{proof}~
 <    choose (etal x)
 < = {-~  definition of |etal|  -}
 <    choose [x]
@@ -38,13 +43,22 @@ The first equality is easy to prove using equational reasoning:
 <    etand x `mplus` mzero
 < = {-~  identity of |mzero| (\ref{eq:mzero})  -}
 <    etand x
+\vspace{-6mm}
+\end{proof}
 
 For the second proof, we require the distributivity of |choose|.
 
-\fbox{|choose (xs ++ ys) = choose xs `mplus` choose ys|}
+% \fbox{|choose (xs ++ ys) = choose xs `mplus` choose ys|}
+
+\begin{lemma}
+|choose (xs ++ ys) = choose xs `mplus` choose ys|
+\end{lemma}
+
+\begin{proof}
+The proof proceeds by substructrual induction on the list |xs|.
 
 \noindent
-\mbox{\underline{case xs = []}}
+\mbox{\underline{case |xs = []|}}
 
 <    choose ([] ++ ys)
 < = {-~  definition of |(++)|  -}
@@ -55,13 +69,30 @@ For the second proof, we require the distributivity of |choose|.
 <    choose [] `mplus` choose ys
 
 \noindent
-\mbox{\underline{case xs = (x:xs)}}
+\mbox{\underline{case |xs = [x]|}}
+\wenhao{I think we need to include this case because it is used in the case |xs = (x:xs)|.}
+
+<    choose ([x] ++ ys)
+< = {-~  definition of |(++)|  -}
+<    choose (x : ys)
+< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+<    (mplus . etand) x (choose ys)
+< = {-~  reformulation  -}
+<    etand x `mplus` choose ys
+< = {-~  definition of |etand = choose . etal|  -}
+<    choose (etal x) `mplus` choose ys
+< = {-~  definition of |etal|  -}
+<    choose [x] `mplus` choose ys
+
+\noindent
+\mbox{\underline{case |xs = (x:xs)|}}
 
 <    choose ((x:xs) ++ ys)
 < = {-~  definition of |(++)|  -}
 <    choose (x : (xs ++ ys))
 < = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
 <    (mplus . etand) x (choose (xs ++ ys))
+< = {-~  reformulation  -}
 <    etand x `mplus` choose (xs ++ ys)
 < = {-~  definition of |etand = choose . etal|  -}
 <    choose (etal x) `mplus` choose (xs ++ ys)
@@ -74,15 +105,26 @@ For the second proof, we require the distributivity of |choose|.
 < = {-~  definition of |(++)|  -}
 <    choose (x:xs) `mplus` choose ys
 
+\vspace{-6mm}
+\end{proof}
+
 Now everything is in place to prove the second property.
 We do a case analysis on the list argument.
 We use the laws of Section \ref{sec:background}, utilizing the fact that 
 |mu f = f >>= id|.
 
-\fbox{|choose . mul = mund . choose . fmap choose|}
+% \fbox{|choose . mul = mund . choose . fmap choose|}
+\begin{theorem}
+|choose . mul = mund . choose . fmap choose|
+\wenhao{Do we need to prove |choose . mul = mund . fmap choose . choose| ?}
+\end{theorem}
+
+\begin{proof}
+We prove that the equation |(choose . mul) xs = (mund . choose . fmap choose) xs| holds for every list |xs|.
+The proof proceeds by substructrual induction on the list |xs|.
 
 \noindent
-\mbox{\underline{case []}}
+\mbox{\underline{case |xs = []|}}
 
 <    choose (mul [])
 < = {-~  definition of |mul = foldr (++) []|  -}
@@ -90,6 +132,8 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 < = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
 <    mzero
 < = {-~  left-identity (\ref{eq:mzero-zero}) with |f = id|  -}
+<    mzero >>= id
+< = {-~  equation |mu f = f >>= id|  -}
 <    mund mzero
 < = {-~  definition of |choose|, base case  -}
 <    mund (choose [])
@@ -97,7 +141,7 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 <    mund (choose (fmap choose []))
 
 \noindent
-\mbox{\underline{case (x:xs)}}
+\mbox{\underline{case |xs = (x:xs)|}}
 
 <    choose (mul (x:xs))
 < = {-~  definition of |mul = foldr (++) []|  -}
@@ -106,16 +150,19 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 <    choose x `mplus` choose (mul xs)
 < = {-~  induction hypothesis  -}
 <    choose x `mplus` mund (choose (fmap choose xs))
-< = {-~  monad law return-bind (\ref{eq:monad-ret-bind})  -}
+< = {-~  monad law return-bind (\ref{eq:monad-ret-bind}) with |(>>=)| represented by |mu|  -}
 <    mund (etand (choose x)) `mplus` mund (choose (fmap choose xs))
-< = {-~  distributivity of |mund| and |mplus| (\ref{eq:mplus-dist})  -}
+< = {-~  distributivity of |mund| and |mplus| (\ref{eq:mplus-dist}) with |f = id|  -}
 <    mund (etand (choose x) `mplus` choose (fmap choose xs))
-< =  mund (mplus . etand) (choose x) (choose (fmap choose xs)))
+< = {-~  reformulation  -}
+<    mund (mplus . etand) (choose x) (choose (fmap choose xs)))
 < = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
 <    mund (choose (choose x : fmap choose xs))
 < = {-~  definition of |fmap|  -}
 <    mund (choose (fmap choose (x:xs)))
 
+\vspace{-6mm}
+\end{proof}
 
 To prove that this morphism is unique, we use the universality of fold.
 
