@@ -248,8 +248,8 @@ instance Monad (Global s) where
 
 \begin{code}
 instance MNondet (Global s) where
-    mzero        = Gl   (\s ->  (Nothing, s))
-    p `mplus` q  = Gl   (\s ->  case runGl p s of
+    mzero        = Gl (\s ->  (Nothing, s))
+    p `mplus` q  = Gl (\s ->  case runGl p s of
         (Nothing,      t)   ->   runGl q t
         (Just (x, r),  t)   ->   (Just (x, r `mplus` q), t))
 
@@ -361,6 +361,7 @@ putR s = get >>= \t -> put s `mplus` side (put t)
 
 \todo{include figure + reference}
 \birthe{figure about the example below is better?}
+\wenhao{I think so}
 For example, assume an arbitrary computation |comp| is placed after 
 a state-restoring put. Now we reason as follows.
 <    putR s >> comp
@@ -398,7 +399,7 @@ However, to satisfy all of these laws,
 care should be taken to replace \emph{all} occurrences, also those
 |put| operations that occur in the context. 
 Particularly, placing a program in a different context can change the meaning
-of it subprograms. 
+of its subprograms. 
 An example of such a problematic context is |(>> put t)|, where the get-put law
 (\ref{eq:get-put}) breaks and programs |get >> putR| and |return ()| can be
 differentiated:

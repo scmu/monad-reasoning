@@ -7,7 +7,10 @@
 \end{code}
 %endif
 
+\wenhao{It seems that this section hasn't been modified yet.}
+
 \todo{Just do it, state will do, Zhixuan}
+
 
 Hutton and Fulger
 
@@ -25,7 +28,7 @@ state to the user, but is itself implemented in terms of a single, global state.
 The folklore idea of undoing modifications upon backtracking is a key feature
 of many Prolog implementations, in particular those based on the Warren 
 Abstract Machine (WAM) \ref{}.
-The WAM's global state is the program heap and Prolog programs modigy this heap
+The WAM's global state is the program heap and Prolog programs modify this heap
 during unification only in a very specific manner: following the union-find
 algorithm, they overwrite cells that contain self-references with pointers to
 other cells. 

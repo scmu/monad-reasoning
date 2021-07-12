@@ -87,7 +87,7 @@ Furthermore, it supports a join operator |(>>) :: m a -> m b -> m b| so that
 
 Free monads are gaining popularity for their use in algebraic effect handlers
 \cite{PlotkinPower}, which elegantly seperate syntax and semantics of effectful
-operations
+operations.
 A free monad, the syntax of an effectful program,
 can be captured generically in Haskell.
 \begin{code}
@@ -158,7 +158,7 @@ class Monad m => MNondet m where
   mplus  :: m a -> m a -> m a
 \end{code}
 Here, |mzero| denotes failure and |mplus| denotes nondeterministic choice.
-Typically, the |MNondet| interface should satifsfy the following four laws:
+Typically, the |MNondet| interface should satisfy the following four laws:
 \begin{alignat}{2}
     &\mbox{\bf identity}:\quad &
       |mzero `mplus` m| ~=~ & |m| ~=~ |m `mplus` mzero|\mbox{~~,} 
@@ -250,6 +250,7 @@ instance Monad (State s) where
 Because of the axiomatic definitions of our effects, it is straightforward to 
 reason about their combinations and interactions.
 This paper is about the interaction between nondeterminism and---local or global---state.
+\wenhao{The dash looks a little bit strange in the pdf.}
 We define a class |MStateNondet| that inherits the operations of its 
 superclasses |MState| and |MNondet| without adding new operations.
 \begin{code}
@@ -295,7 +296,7 @@ data (f :+: g) a = Inl (f a) | Inr (g a)
 For instance, we can encode programs with both state and nondeterminism as 
 effects using the data type 
 |Free (StateF :+: NondetF) a|. 
-The coproduct also has a neutral elemetn |NilF|, representing the empty effect set.
+The coproduct also has a neutral element |NilF|, representing the empty effect set.
 < data NilF a
 Consequently, we can compose the state effects with any other 
 effect functor |f| using |Free (StateF s :+: f) a|.
