@@ -71,6 +71,7 @@
 
 %format hState = "\Varid{h_{State}}"
 %format hND = "\Varid{h_{ND}}"
+%format hNDl = "\Varid{h_{NDlist}}"
 %format hNDf = "\Varid{h_{ND+f}}"
 %format hLocal = "\Varid{h_{Local}}"
 %format hGlobal = "\Varid{h_{Global}}"

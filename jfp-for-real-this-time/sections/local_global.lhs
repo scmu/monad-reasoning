@@ -455,10 +455,10 @@ failOp    :: Prog s f a
 failOp    = (Op . Inr . Inl) Fail 
 
 hLocal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap snd) . hND) . hState
+hLocal = fmap (fmap (fmap snd) . hNDl) . hState
 
 hGlobal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hGlobal = fmap (fmap snd) . hState . comm . hND . assocr . comm
+hGlobal = fmap (fmap snd) . hState . comm . hNDl . assocr . comm
 \end{code}
 %endif
 We can then define |putROp| in terms of these helper functions.
@@ -484,11 +484,11 @@ We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
 < hLocal :: Functor f => Prog s f a -> s -> Free f [a]
-< hLocal = fmap (fmap (fmap snd) . hND) . hState
+< hLocal = fmap (fmap (fmap snd) . hNDl) . hState
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Prog s f a -> s -> Free f [a]
-< hGlobal = fmap (fmap snd) . hState . hND
+< hGlobal = fmap (fmap snd) . hState . hNDl
 Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.

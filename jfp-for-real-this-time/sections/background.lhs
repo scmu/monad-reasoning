@@ -373,8 +373,8 @@ hState  =  fold genS algS
     algS (Inl (Put s k))  _  = k s
     algS (Inr y)          s  = Op (fmap ($s) y)
     
-hND :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-hND  =  fold genND algND
+hNDl :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+hNDl  =  fold genND algND
   where
     genND                 = Var . return
     algND (Inl Fail)      = Var []
