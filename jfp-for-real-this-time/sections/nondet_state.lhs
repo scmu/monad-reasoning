@@ -206,10 +206,10 @@ The proof of this theorem is added in Appendix \ref{app:runnd-hnd}.
 We can generalize this simulation to work with arbitrary other effects.
 These effects are represented by the |sig| monad.
 Again, we define a type that encapsulates a form of state. 
-< newtype STNDf sig m a = STNDf { unSTNDf :: StateT (m a, [STNDf sig m a]) sig () }
+< newtype STNDf sig m a = STNDf { runSTNDf :: StateT (m a, [STNDf sig m a]) sig () }
 %if False
 \begin{code}
-newtype STNDf sig m a = STNDf { unSTNDf :: S.StateT (m a, [STNDf sig m a]) sig () }
+newtype STNDf sig m a = STNDf { runSTNDf :: S.StateT (m a, [STNDf sig m a]) sig () }
 \end{code}
 %endif
 This time we use the state transformer |StateT|, as defined in the 
@@ -228,7 +228,7 @@ simulate' = fold gen' alg'
     gen'  x              = appendNDf x popNDf
     alg' (Inl Fail)      = popNDf
     alg' (Inl (Or p q))  = pushNDf p q
-    alg' (Inr y)         = STNDf $ join $ lift $ Op (return . unSTNDf <$> y)
+    alg' (Inr y)         = STNDf $ join $ lift $ Op (return . runSTNDf <$> y)
 \end{code}
 
 %if False
@@ -281,7 +281,7 @@ previous definitions, but adapted to the new state-wrapper type.
 < pushNDf q p = STNDf $ do
 <     (xs, stack) <- get
 <     put (xs, q:stack)
-<     unSTNDf p
+<     runSTNDf p
 \caption{Pushing to the stack.}
 \label{fig:push-2}
 \end{subfigure}%
@@ -293,7 +293,7 @@ previous definitions, but adapted to the new state-wrapper type.
 < appendNDf x p = STNDf $ do
 <     (xs, stack) <- get
 <     put (xs `mplus` return x, stack)
-<     unSTNDf p
+<     runSTNDf p
 \caption{Appending a solution.}
 \label{fig:append-2}
 \end{subfigure}%
@@ -304,7 +304,7 @@ previous definitions, but adapted to the new state-wrapper type.
 To extract the final result from the |STNDf| wrapper, we define an |extractNDf| 
 function.
 < extractNDf :: (Functor f, MNondet m) => STNDf (Free f) m a -> Free f (m a)
-< extractNDf x = fst . snd <$> runStateT (unSTNDf x) (mzero,[])
+< extractNDf x = fst . snd <$> runStateT (runSTNDf x) (mzero,[])
 %if False
 \begin{code}
 popNDf :: Monad sig => STNDf sig m a 
@@ -318,16 +318,16 @@ pushNDf :: Monad sig => STNDf sig m a -> STNDf sig m a -> STNDf sig m a
 pushNDf q p = STNDf $ do
     (xs, stack) <- S.get
     S.put (xs, q:stack)
-    unSTNDf p
+    runSTNDf p
 
 appendNDf :: (Monad sig, MNondet m) => a -> STNDf sig m a -> STNDf sig m a
 appendNDf x p = STNDf $ do
     (xs, stack) <- S.get
     S.put (xs `mplus` return x, stack)
-    unSTNDf p
+    runSTNDf p
 
 extractNDf :: (Functor f, MNondet m) => STNDf (Free f) m a -> Free f (m a)
-extractNDf x = fmap (fst . snd) (S.runStateT (unSTNDf x) (mzero,[]))
+extractNDf x = fmap (fst . snd) (S.runStateT (runSTNDf x) (mzero,[]))
 \end{code}
 %endif
 

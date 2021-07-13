@@ -62,6 +62,7 @@
 %format NilF = "\Varid{Nil_{F}}"
 
 %format runState = "\Varid{run_{State}}"
+%format runStateT = "\Varid{run_{StateT}}"
 %format runSTND = "\Varid{run_{ST_{ND}}}"
 %format runSTNDf = "\Varid{run_{ST_{ND+f}}}"
 %format runND = "\Varid{run_{ND}}"
