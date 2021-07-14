@@ -16,6 +16,7 @@ module LocalGlobal where
 
 import Background
 import Control.Monad (ap, liftM) 
+import Control.Applicative (liftA2)
 import qualified Control.Monad.Trans.State.Lazy as S
 
 class MStateNondet s m => MSt s m where
@@ -455,10 +456,63 @@ failOp    :: Prog s f a
 failOp    = (Op . Inr . Inl) Fail 
 
 hLocal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap snd) . hNDl) . hState
+hLocal = fmap (fmap (fmap fst) . hNDl) . hState
 
 hGlobal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hGlobal = fmap (fmap snd) . hState . comm . hNDl . assocr . comm
+hGlobal = fmap (fmap fst) . hState . comm . hNDl . assocr . comm
+
+-- The code below is used to assist proof.
+hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
+hL = fmap hL'
+  where
+    hL' :: Functor f => Free (NondetF :+: f) (a, s) -> Free f [a]
+    -- hL' = (fmap (fmap fst) . hNDl)
+    hL' = fold (fmap (fmap fst) . genND) algL'
+    genND = Var . return
+    algL' :: Functor f => (NondetF :+: f) (Free f [a]) -> Free f [a]
+    algL' (Inl Fail) = Var []
+    algL' (Inl (Or p q)) = liftA2 (++) p q
+    algL' (Inr y) = Op y
+
+algS :: Functor f
+     => (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))
+     -> s -> Free (NondetF :+: f) (a, s)
+algS (Inl (Get k))    = \ s -> k s s
+algS (Inl (Put s k))  = \ _ -> k s
+algS (Inr y)          = \ s -> Op (fmap ($s) y)
+
+t :: Functor f
+  => (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))
+  -> s -> Free f [a]
+t = hL . algS
+
+t' :: Functor f
+   => (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))
+   -> s -> Free f [a]
+t' = alg' . fmap hL
+
+alg' :: Functor f => (StateF s :+: (NondetF :+: f)) (s -> Free f [a]) -> s -> Free f [a]
+-- alg' = undefined
+alg' (Inl (Get k))         = \ s -> k s s
+alg' (Inl (Put s k))       = \ _ -> k s
+alg' (Inr (Inl Fail))      = \ s -> Var []
+-- alg' (Inr (Inl (Or p q)))  = \ s -> (++) <$> p s <*> q s
+alg' (Inr (Inl (Or p q)))  = \ s -> liftA2 (++) (p s) (q s)
+alg' (Inr (Inr y))         = \ s -> Op (fmap ($s) y)
+
+alg :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a) -> Prog s f a
+alg = undefined
+
+t2 :: Functor f
+   => (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a)
+   -> s -> Free f [a]
+t2 = hGlobal . alg
+
+t2' :: Functor f
+    => (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a)
+    -> s -> Free f [a]
+t2' = alg' . fmap hGlobal
+  -- where alg' = undefined
 \end{code}
 %endif
 We can then define |putROp| in terms of these helper functions.
@@ -484,11 +538,11 @@ We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
 < hLocal :: Functor f => Prog s f a -> s -> Free f [a]
-< hLocal = fmap (fmap (fmap snd) . hNDl) . hState
+< hLocal = fmap (fmap (fmap fst) . hNDl) . hState
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Prog s f a -> s -> Free f [a]
-< hGlobal = fmap (fmap snd) . hState . hNDl
+< hGlobal = fmap (fmap fst) . hState . hNDl
 Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
@@ -501,15 +555,3 @@ Third, the universality of fold tells us that this equality holds.
 \todo{refer to appendices for proof}
 
 % %-------------------------------------------------------------------------------
-% \subsection{Laws and Translation for the Global State Monad}
-% \label{sec:translation}
-
-% \begin{itemize}
-%     \item syntax
-%     \item semantics with example
-%     \item laws
-%     \item contextual equivalence
-%     \item simulating local state semantics
-%     \item backtracking with global state
-% \end{itemize}
-

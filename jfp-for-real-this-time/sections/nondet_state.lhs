@@ -230,6 +230,7 @@ simulate' = fold gen' alg'
     alg' (Inl (Or p q))  = pushNDf p q
     alg' (Inr y)         = STNDf $ join $ lift $ Op (return . runSTNDf <$> y)
 \end{code}
+    % alg' (Inr y)         = STNDf $ S.StateT $ \s -> Op $ fmap ((\k -> k s) . S.runStateT . runSTNDf) y
 
 %if False
 \begin{code}

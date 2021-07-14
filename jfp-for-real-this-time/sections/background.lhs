@@ -135,9 +135,9 @@ When a fold is composed with other functions, it adheres to so-called fusion law
 Precomposing or postcomposing a function with a fold works as follows:
 \begin{alignat}{2}
     &\mbox{\bf fusion-pre}:\quad &
-    |fold alg gen . fmap h| &= |fold alg (gen . h)|\mbox{~~,} \label{eq:fusion-pre}\\
+    |fold gen alg . fmap h| &= |fold (gen . h) alg|\mbox{~~,} \label{eq:fusion-pre}\\
     &\mbox{\bf fusion-post}:~ &
-    |h . fold alg gen| &= |fold alg' (h . gen)| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~.}
+    |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~.}
 \end{alignat}
 
 We use these laws in due course to prove correctness of laws for state, 
@@ -365,10 +365,10 @@ hNondet' = fold gen alg
 For state and nondeterminism, with their typical Haskell implementations as 
 |State s| and |List|, respectively, the handlers are defined as follows:
 \begin{code}
-hState :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (s, a))
-hState  =  fold genS algS 
+hState :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (a, s))
+hState  =  fold genS algS
   where 
-    genS x                s  = return (s, x)
+    genS x                s  = return (x, s)
     algS (Inl (Get k))    s  = k s s
     algS (Inl (Put s k))  _  = k s
     algS (Inr y)          s  = Op (fmap ($s) y)

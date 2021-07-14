@@ -53,6 +53,8 @@
 %format algNDf = "\Varid{alg_{ND+f}}"
 %format genS = "\Varid{gen_{S}}"
 %format algS = "\Varid{alg_{S}}"
+%format algS' = "\Varid{alg_{S}^\prime}"
+%format algL' = "\Varid{alg_{L}^\prime}"
 
 %format NondetC = "\Varid{Nondet_{C}}"
 %format StateC = "\Varid{State_{C}}"
@@ -72,10 +74,12 @@
 
 %format hState = "\Varid{h_{State}}"
 %format hND = "\Varid{h_{ND}}"
-%format hNDl = "\Varid{h_{NDlist}}"
+%format hNDl = "\Varid{h_{ND_{[]}}}"
 %format hNDf = "\Varid{h_{ND+f}}"
 %format hLocal = "\Varid{h_{Local}}"
 %format hGlobal = "\Varid{h_{Global}}"
+%format hL = "\Varid{h_{L}}"
+%format hL' = "\Varid{h_{L}^\prime}"
 
 %format putR = "\Varid{put_{R}}"
 
