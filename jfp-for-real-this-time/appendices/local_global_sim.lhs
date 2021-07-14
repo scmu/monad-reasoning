@@ -257,11 +257,16 @@ For the right-hand side, we have:
 <    \ s -> Op ((fmap (\ k -> k s) . fmap (fmap hL')) y)
 < = {-~  |fmap|-fusion law  -}
 <    \ s -> Op (fmap ((\ k -> k s) . (fmap hL')) y)
-< = {-~  equation |(\ k -> k s) . fmap f = f . (\ k -> k s)| with |f = hL'| -}
+< = {-~  Lemma \ref{eq:dollar-fmap-comm} with |f = hL'| -}
 <    \ s -> Op (fmap (hL' . (\ k -> k s)) y)
 
-We have used an equation |(\ k -> k s) . fmap f = f . (\ k -> k s)| for any function |f :: a -> b| and input |t :: s -> a| in the above proof.
-It is easy to prove it using equational reasoning:
+\end{proof}
+
+\begin{lemma}\label{eq:dollar-fmap-comm}~
+< (\ k -> k s) . fmap f = f . (\ k -> k s)
+% holds for any function |f :: a -> b| and input |t :: s -> a| in the above proof.
+\end{lemma}
+\begin{proof} ~
 <    ((\ k -> k s) . fmap f) t
 < = {-~  definition of |fmap|  -}
 <    (\ k -> k s) (f . t)
@@ -271,7 +276,24 @@ It is easy to prove it using equational reasoning:
 <    f (t s)
 < = {-~  reformulation  -}
 <    (f . (\ k -> k s)) t
+\end{proof}
 
+\begin{lemma} \label{eq:liftA2-fst-comm}~
+< fmap (fmap fst) (liftA2 (++) p q) = liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
+\end{lemma}
+\begin{proof}
+
+\wenhao{Is this proof ok?}
+
+<    fmap (fmap fst) (liftA2 (++) p q)
+< = {-~  property of |liftA2| -}
+<    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
+< = {-~  property of |monad| -}
+<    do {x <- p; y <- q; return (fmap fst (x ++ y))}
+< = {-~  property of |monad| -}
+<    do {x <- fmap (fmap fst) p; y <- fmap (fmap fst) q; return (x ++ y)}
+< = {-~  property of |liftA2| -}
+<    liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 \end{proof}
 
 \begin{lemma}[Fusion of |hL'|]\label{eq:hl-fusion}~
@@ -311,8 +333,7 @@ We do this by a case analysis on |t|.
 <    (fmap (fmap fst) . algND) (Inl (Or p q))
 < = {-~  definition of |algND|  -}
 <    fmap (fmap fst) (liftA2 (++) p q)
-< = {-~  property of |liftA2| -}
-<    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
+< = {-~  Lemma \ref{eq:liftA2-fst-comm}  -}
 <    liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 < = {-~  definition of |algL'|  -}
 <    algL' (Inl (Or (fmap (fmap fst) p) (fmap (fmap fst) q)))
@@ -334,20 +355,137 @@ We do this by a case analysis on |t|.
 
 \begin{lemma}[Fusion Condition 2] \label{eq:fusion-cond-2}
 |hGlobal . alg = alg' . fmap hGlobal|
+\footnote{Note that the |alg| here refers to the |alg| in the definition of |trans|.}
 \end{lemma}
 \begin{proof}
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
 We need to prove it holds for all inputs |t :: (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))|.
+In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
+All transformations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
 \noindent \mbox{\underline{case |t = Inl (Get k)|}}
 
+For the left-hand side, we have:
+<    (hGlobal . alg) (Inl (Get k))
+< = {-~  definition of |alg|  -}
+<    hGlobal (Op (Inl (Get k)))
+< = {-~  definition of |hGlobal|  -}
+<    (fmap (fmap fst) . hState . hNDl) (Op (Inl (Get k)))
+< = {-~  evaluation of |hNDl|  -}
+<    (fmap (fmap fst) . hState) (Op (Inl (Get (hNDl . k))))
+< = {-~  evaluation of |hState|  -}
+<    fmap (fmap fst) (algS (Inl (Get (hState . hNDl . k))))
+< = {-~  evaluation of |algS|  -}
+<    fmap (fmap fst) (\ s -> (hState . hNDl . k) s s)
+< = {-~  function application  -}
+<    fmap (fmap fst) (\ s -> (hState . hNDl) (k s) s)
+< = {-~  definition of |fmap|  -}
+<    \ s -> fmap fst ((hState . hNDl) (k s) s)
+< = {-~  reformulation  -}
+<    \ s -> (fmap fst . (hState . hNDl) (k s)) s
+< = {-~  definition of |fmap|  -}
+<    \ s -> (fmap (fmap fst) ((hState . hNDl) (k s))) s
+< = {-~  reformulation  -}
+<    \ s -> (fmap (fmap fst) . hState . hNDl) (k s) s
+< = {-~  definition of |hGlobal|  -}
+<    \ s -> hGlobal (k s) s
+
+For the right-hand side, we have:
+<    (alg' . fmap hGlobal) (Inl (Get k))
+< = {-~  definition of |fmap|  -}
+<    alg' (Inl (Get (hGlobal . k)))
+< = {-~  definition of |alg'|  -}
+<    \ s -> hGlobal (k s) s
+
 \noindent \mbox{\underline{case |t = Inl (Put s k)|}}
+
+For the left-hand side, we have:
+<    (hGlobal . alg) (Inl (Put s k))
+< = {-~  definition of |alg|  -}
+<    hGlobal (putROp s k)
+< = {-~  definition of |putROp|  -}
+<    hGlobal (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
+
+For the right-hand side, we have:
+<    (alg' . fmap hGlobal) (Inl (Put s k))
+< = {-~  definition of |fmap|  -}
+<    alg' (Inl (Put s (hGlobal k)))
+< = {-~  definition of |alg'|  -}
+<    \ _ -> hGlobal k s
 
 \noindent \mbox{\underline{case |t = Inr (Inl Fail)|}}
 
+For the left-hand side, we have:
+<    (hGlobal . alg) (Inr (Inl Fail))
+< = {-~  definition of |alg|  -}
+<    hGlobal (Op (Inr (Inl Fail)))
+< = {-~  definition of |hGlobal|  -}
+<    (fmap (fmap fst) . hState . hNDl) (Op (Inr (Inl Fail)))
+< = {-~  evaluation of |hNDl|  -}
+<    (fmap (fmap fst) . hState) (Var [])
+< = {-~  evaluation of |hState|  -}
+<    fmap (fmap fst) (\ s -> Var ([], s))
+< = {-~  evaluation of |fmap (fmap fst)|  -}
+<    \ s -> Var []
+
+For the right-hand side, we have:
+<    (alg' . fmap hGlobal) (Inr (Inl Fail))
+< = {-~  definition of |fmap|  -}
+<    alg' (Inr (Inl Fail))
+< = {-~  definition of |alg'|  -}
+<    \ s -> Var []
+
 \noindent \mbox{\underline{case |t = Inr (Inl (Or p q))|}}
+
+For the left-hand side, we have:
+<    (hGlobal . alg) (Inr (Inl (Or p q)))
+< = {-~  definition of |alg|  -}
+<    hGlobal (Op (Inr (Inl (Or p q))))
+< = {-~  definition of |hGlobal|  -}
+<    (fmap (fmap fst) . hState . hNDl) (Op (Inr (Inl (Or p q))))
+< = {-~  evaluation of |hNDl|  -}
+<    (fmap (fmap fst) . hState) (algND (Inl (Or (hNDl p) (hNDl q))))
+< = {-~  evaluation of |algND|  -}
+<    (fmap (fmap fst) . hState) (liftA2 (++) (hNDl p) (hNDl q))
+< = {-~  evaluation of |hState|  -}
+\todo{TODO: finish it}
+\wenhao{Maybe we need to prove a lemma here.}
+
+For the right-hand side, we have:
+<    (alg' . fmap hGlobal) (Inr (Inl (Or p q)))
+< = {-~  definition of |fmap|  -}
+<    alg' (Inr (Inl Or (hGlobal p) (hGlobal q)))
+< = {-~  definition of |alg'|  -}
+<    \ s -> liftA2 (++) (hGlobal p s) (hGlobal q s)
 
 \noindent \mbox{\underline{case |t = Inr (Inr y)|}}
 
+For the left-hand side, we have:
+<    (hGlobal . alg) (Inr (Inr y))
+< = {-~  definition of |alg|  -}
+<    hGlobal (Op (Inr (Inr y)))
+< = {-~  definition of |hGlobal|  -}
+<    (fmap (fmap fst) . hState . hNDl) (Op (Inr (Inr y)))
+< = {-~  evaluation of |hNDl|  -}
+<    (fmap (fmap fst) . hState) (Op (Inr (fmap hNDl y)))
+< = {-~  evaluation of |hState|  -}
+<    fmap (fmap fst) (\ s -> Op (fmap ((\ k -> k s) . hState . hNDl) y))
+< = {-~  evaluation of |fmap (fmap fst)|  -}
+<    \ s -> fmap fst (Op (fmap ((\ k -> k s) . hState . hNDl) y))
+< = {-~  evaluation of |fmap fst|  -}
+<    \ s -> Op (fmap (fmap fst . (\ k -> k s) . hState . hNDl) y)
+< = {-~  Lemma \ref{eq:dollar-fmap-comm} with |f = fst|  -}
+<    \ s -> Op (fmap ((\ k -> k s) . fmap (fmap fst) . hState . hNDl) y)
+< = {-~  definition of |hGlobal|  -}
+<    \ s -> Op (fmap ((\ k -> k s) . hGlobal) y)
+
+For the right-hand side, we have:
+<    (alg' . fmap hGlobal) (Inr (Inr y))
+< = {-~  definition of |fmap|  -}
+<    alg' (Inr (Inr (fmap hGlobal y)))
+< = {-~  definition of |alg'|  -}
+<    \ s -> Op (fmap (\ k -> k s) (fmap hGlobal y))
+< = {-~  reformulation  -}
+<    \ s -> Op (fmap ((\ k -> k s) . hGlobal) y)
 
 \end{proof}
