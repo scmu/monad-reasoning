@@ -136,7 +136,7 @@ as long as their only effects are |eps| and |delta|.
 One important result is that, in local-state semantics, nondeterminism commutes
 with any effect. 
 
-\begin{theorem}
+\begin{theorem} \label{thm:nondet-comm}
 If right-identity (\ref{eq:right-identity}) 
 and left-distributivity (\ref{eq:left-dist}) hold in addition to the other laws,
 nondeterminism commutes with any effect.

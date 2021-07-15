@@ -480,6 +480,15 @@ For the left-hand side, we have:
 <    (fmap (fmap fst) . hState) (liftA2 (++) (hNDl p) (hNDl q))
 < = {-~  property of |liftA2|  -}
 <    (fmap (fmap fst) . hState) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
+< = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
+<    hState' (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
+< = {-~  property of handlers \wenhao{add more?} -}
+% TODO:
+<    \ s -> do {x <- hState' (hNDl p) s; y <- hState' (hNDl q) s; return (x ++ y)})
+< = {-~  definition of |hState'|  -}
+<    \ s -> do  x <- (fmap (fmap fst) . hState) (hNDl p) s;
+<               y <- (fmap (fmap fst) . hState) (hNDl q) s;
+<               return (x ++ y)}
 
 For the right-hand side, we have:
 <    (alg' . fmap hGlobal) (Inr (Inl (Or p q)))
@@ -497,19 +506,22 @@ For the right-hand side, we have:
 <    \ s -> do  x <- fmap fst (hState (hNDl p) s);
 <               y <- fmap fst (hState (hNDl p) s);
 <               return (x ++ y)
-< = {-~  property of |monad|  -}
-<    \ s -> do  x <- hState (hNDl p) s;
-<               y <- hState (hNDl q) s;
-<               return (fst x ++ fst y)
-< = {-~  property of |liftA2|  -}
-<    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState (hNDl p) s) (hState (hNDl q) s)
+% < = {-~  property of |monad|  -}
+% <    \ s -> do  x <- hState (hNDl p) s;
+% <               y <- hState (hNDl q) s;
+% <               return (fst x ++ fst y)
+% < = {-~  property of |liftA2|  -}
+% <    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState (hNDl p) s) (hState (hNDl q) s)
 
-Thus, we need to prove the following equation:
-
-<    (fmap (fmap fst) . hState) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
-< =  \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState (hNDl p) s) (hState (hNDl q) s)
-
-\todo{TODO: finish it}
+In the above proof, we fuse |fmap (fmap fst) . hState| into a single handler |hState'| by dropping the second component of the result (the state).
+\begin{code}
+hState' :: Functor f => Free (StateF s :+: f) a -> (s -> Free f a)
+hState'  =  fold (\ x s -> return x) algS
+  where
+    algS (Inl (Get k))    s  = k s s
+    algS (Inl (Put s k))  _  = k s
+    algS (Inr y)          s  = Op (fmap ($s) y)
+\end{code}
 
 \noindent \mbox{\underline{case |t = Inr (Inr y)|}}
 
