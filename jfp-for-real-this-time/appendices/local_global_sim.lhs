@@ -399,12 +399,43 @@ For the right-hand side, we have:
 
 \noindent \mbox{\underline{case |t = Inl (Put s k)|}}
 
+For simplicity, we assume the smart constructors |getOp, putOp, orOp, failOp| will automatically insert correct |Op, Inl, Inr| constructors based on the context to make the term well-typed in the following proof.
+In this way, we can avoid the tedious details of dealing with these constructors manually.
+
 For the left-hand side, we have:
 <    (hGlobal . alg) (Inl (Put s k))
 < = {-~  definition of |alg|  -}
 <    hGlobal (putROp s k)
 < = {-~  definition of |putROp|  -}
 <    hGlobal (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
+< = {-~  definition of |hGlobal|  -}
+<    (fmap (fmap fst) . hState . hNDl) (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
+< = {-~  evaluation of |hNDl|  -}
+<    (fmap (fmap fst) . hState) (getOp (\ s' -> liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))))
+< = {-~  evaluation of |hState|  -}
+<    fmap (fmap fst) (\ s' -> (hState . (\ s' -> liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var [])))) s' s')
+< = {-~  function application  -}
+<    fmap (fmap fst) (\ s' -> hState (liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))) s')
+< = {-~  definition of |fmap|  -}
+<    \ s' -> fmap fst (hState (liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))) s')
+< = {-~  property of |liftA2|  -}
+<    \ s' -> fmap fst (hState (do {x <- putOp s (hNDl k); y <- putOp s' (Var []); return (x++y)}) s')
+< = {-~  |y = []| (property of free monad)  -}
+<    \ s' -> fmap fst (hState (do {x <- putOp s (hNDl k); putOp s' (Var []); return x}) s')
+< = {-~  property of do-notation  -}
+<    \ s' -> fmap fst (hState (putOp s (hNDl k) >>= \ x -> putOp s' (Var []) >> return x) s')
+< = {-~  definition of |(>>=)|, let |f = (>>= \ x -> putOp s' (Var []) >> return x)|  -}
+<    \ s' -> fmap fst (hState (putOp s (f (hNDl k))) s')
+< = {-~  evaluation of |hState|  -}
+<    \ s' -> fmap fst ((\ _ -> hState (f (hNDl k)) s) s')
+< = {-~  function application  -}
+<    \ s' -> fmap fst (hState (f (hNDl k)) s)
+< = {-~  reformulation, definition of |fmap|  -}
+<    \ s' -> (fmap (fmap fst) . hState . f . hNDl) k s
+< = {-~  \wenhao{because we drop the state in the end, |f| won't make any changes}  -}
+<    \ s' -> (fmap (fmap fst) . hState . hNDl) k s
+< = {-~  definition of |hGlobal|, replace |s'| with |_|  -}
+<    \ _ -> hGlobal k s
 
 For the right-hand side, we have:
 <    (alg' . fmap hGlobal) (Inl (Put s k))
@@ -447,9 +478,8 @@ For the left-hand side, we have:
 <    (fmap (fmap fst) . hState) (algND (Inl (Or (hNDl p) (hNDl q))))
 < = {-~  evaluation of |algND|  -}
 <    (fmap (fmap fst) . hState) (liftA2 (++) (hNDl p) (hNDl q))
-< = {-~  evaluation of |hState|  -}
-\todo{TODO: finish it}
-\wenhao{Maybe we need to prove a lemma here.}
+< = {-~  property of |liftA2|  -}
+<    (fmap (fmap fst) . hState) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
 
 For the right-hand side, we have:
 <    (alg' . fmap hGlobal) (Inr (Inl (Or p q)))
@@ -457,6 +487,29 @@ For the right-hand side, we have:
 <    alg' (Inr (Inl Or (hGlobal p) (hGlobal q)))
 < = {-~  definition of |alg'|  -}
 <    \ s -> liftA2 (++) (hGlobal p s) (hGlobal q s)
+< = {-~  definition of |hGlobal|  -}
+<    \ s -> liftA2 (++) ((fmap (fmap fst) . hState . hNDl) p s) ((fmap (fmap fst) . hState . hNDl) q s)
+< = {-~  property of |liftA2|  -}
+<    \ s -> do  x <- (fmap (fmap fst) . hState . hNDl) p s;
+<               y <- (fmap (fmap fst) . hState . hNDl) q s;
+<               return (x ++ y)
+< = {-~  reformulation  -}
+<    \ s -> do  x <- fmap fst (hState (hNDl p) s);
+<               y <- fmap fst (hState (hNDl p) s);
+<               return (x ++ y)
+< = {-~  property of |monad|  -}
+<    \ s -> do  x <- hState (hNDl p) s;
+<               y <- hState (hNDl q) s;
+<               return (fst x ++ fst y)
+< = {-~  property of |liftA2|  -}
+<    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState (hNDl p) s) (hState (hNDl q) s)
+
+Thus, we need to prove the following equation:
+
+<    (fmap (fmap fst) . hState) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
+< =  \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState (hNDl p) s) (hState (hNDl q) s)
+
+\todo{TODO: finish it}
 
 \noindent \mbox{\underline{case |t = Inr (Inr y)|}}
 
