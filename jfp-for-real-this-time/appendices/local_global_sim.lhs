@@ -287,12 +287,12 @@ with function |f :: a -> b| and input |t :: s -> a|.
 \begin{lemma} \label{eq:liftA2-fst-comm}~
 < fmap (fmap fst) (liftA2 (++) p q) = liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 \end{lemma}
-\begin{proof}
+\begin{proof}~
 
 <    fmap (fmap fst) (liftA2 (++) p q)
-< = {-~  property of |liftA2| -}
+< = {-~  definition of |liftA2| -}
 <    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
-< = {-~  property of |monad|: |fmap f (m >>= k) = m >>= fmap f k| -}
+< = {-~  property of |monad|: |fmap f (m >>= k) = m >>= fmap f . k| -}
 <    do {x <- p; y <- q; fmap (fmap fst) (return (x ++ y))}
 < = {-~  definition of |fmap| -}
 <    do {x <- p; y <- q; return ((fmap fst x) ++ (fmap fst y))}
@@ -360,7 +360,7 @@ We do this by a case analysis on |t|.
 \end{proof}
 
 \begin{lemma}[Fusion Condition 2] \label{eq:fusion-cond-2}
-|hGlobal . trans = alg' . fmap hGlobal|
+|hGlobal . alg = alg' . fmap hGlobal|
 \footnote{Note that the |alg| here refers to the |alg| in the definition of |trans|.}
 \end{lemma}
 \begin{proof}
@@ -438,7 +438,7 @@ For the left-hand side, we have:
 <    \ s' -> fmap fst (hState (f (hNDl k)) s)
 < = {-~  reformulation, definition of |fmap|  -}
 <    \ s' -> (fmap (fmap fst) . hState . f . hNDl) k s
-< = {-~  \wenhao{because we drop the state in the end, |f| won't make any changes} \birthe{I think it is okay to say it like this}  -}
+< = {-~  because we drop the state in the end using |fmap (fmap fst)|, |f| won't make any changes  -}
 <    \ s' -> (fmap (fmap fst) . hState . hNDl) k s
 < = {-~  definition of |hGlobal|, replace |s'| with |_|  -}
 <    \ _ -> hGlobal k s
@@ -484,12 +484,12 @@ For the left-hand side, we have:
 <    (fmap (fmap fst) . hState) (algND (Inl (Or (hNDl p) (hNDl q))))
 < = {-~  evaluation of |algND|  -}
 <    (fmap (fmap fst) . hState) (liftA2 (++) (hNDl p) (hNDl q))
-< = {-~  property of |liftA2|  -}
+< = {-~  definition of |liftA2|  -}
 <    (fmap (fmap fst) . hState) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
 < = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
 <    hState' (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
-< = {-~  property of handlers \wenhao{add more?}\birthe{Say something like: propagate fold to the subtrees?} -}
-% TODO:
+% < = {-~  property of handlers \wenhao{add more?}\birthe{Say something like: propagate fold to the subtrees?} -}
+< = {-~  property of fold: propagate fold to subtrees of free monad -}
 <    \ s -> do {x <- hState' (hNDl p) s; y <- hState' (hNDl q) s; return (x ++ y)})
 < = {-~  definition of |hState'|  -}
 <    \ s -> do  x <- (fmap (fmap fst) . hState) (hNDl p) s;
@@ -504,7 +504,7 @@ For the right-hand side, we have:
 <    \ s -> liftA2 (++) (hGlobal p s) (hGlobal q s)
 < = {-~  definition of |hGlobal|  -}
 <    \ s -> liftA2 (++) ((fmap (fmap fst) . hState . hNDl) p s) ((fmap (fmap fst) . hState . hNDl) q s)
-< = {-~  property of |liftA2|  -}
+< = {-~  definition of |liftA2|  -}
 <    \ s -> do  x <- (fmap (fmap fst) . hState . hNDl) p s;
 <               y <- (fmap (fmap fst) . hState . hNDl) q s;
 <               return (x ++ y)
@@ -516,7 +516,7 @@ For the right-hand side, we have:
 % <    \ s -> do  x <- hState (hNDl p) s;
 % <               y <- hState (hNDl q) s;
 % <               return (fst x ++ fst y)
-% < = {-~  property of |liftA2|  -}
+% < = {-~  definition of |liftA2|  -}
 % <    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState (hNDl p) s) (hState (hNDl q) s)
 
 In the above proof, we fuse |fmap (fmap fst) . hState| into a single handler |hState'| by dropping the second component of the result (the state).
