@@ -290,6 +290,8 @@ For the right-hand side, we have:
 <    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
 < = {-~  property of |monad| -}
 <    do {x <- p; y <- q; return (fmap fst (x ++ y))}
+< = {-~  definition of |fmap| -}
+<    do {x <- p; y <- q; return (fmap fst x ++ fmap fst y))}
 < = {-~  property of |monad| -}
 <    do {x <- fmap (fmap fst) p; y <- fmap (fmap fst) q; return (x ++ y)}
 < = {-~  property of |liftA2| -}
@@ -354,7 +356,7 @@ We do this by a case analysis on |t|.
 \end{proof}
 
 \begin{lemma}[Fusion Condition 2] \label{eq:fusion-cond-2}
-|hGlobal . alg = alg' . fmap hGlobal|
+|hGlobal . trans = alg' . fmap hGlobal|
 \footnote{Note that the |alg| here refers to the |alg| in the definition of |trans|.}
 \end{lemma}
 \begin{proof}
