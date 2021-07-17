@@ -39,8 +39,8 @@ This section shows that the function |hGlobal . trans| is equivalent to |hLocal|
 |hGlobal . trans = hLocal|
 \end{theorem}
 \begin{proof}
-We start with applying fold fusion to both two sides.
-We rewrite |hLocal| as |hL . hState|, where |hL| is defined as following:
+We start with applying fold fusion to both sides of the equation.
+We rewrite |hLocal| as |hL . hState|, where |hL| is defined as follows:
 \begin{code}
 hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
 hL = fmap hL'
@@ -75,7 +75,7 @@ For the left-hand side, we have:
 <    hL (\ s -> Var (x, s))
 < = {-~  definition of |hL|  -}
 <    fmap (fmap (fmap fst) . hND) (\ s -> Var (x, s))
-< = {-~  |fmap|-fusion law  -}
+< = {-~  functor law: composition of |fmap| \ref{eq:functor-composition}  -}
 <    (fmap (fmap (fmap fst)) . fmap hND) (\ s -> Var (x, s))
 < = {-~  application of |fmap hND|  -}
 <    fmap (fmap (fmap fst)) (\ s -> hND (Var (x, s)))
@@ -99,7 +99,13 @@ And for the right-hand side, we have:
 
 So we have |hL . genS = hGlobal . Var|.
 
-For the second item, instead of constructing |alg'| and |algS'| individually, we only construct one |alg'| and then verify that the two equations |hL . algS = alg' . fmap hL| and |hGlobal . alg = alg' . fmap hGlobal| hold.
+For the second item, instead of constructing |alg'| and |algS'| individually, we only construct one |alg'| and then verify that the following two equations hold: 
+
+\begin{enumerate}
+    \item |hL . algS = alg' . fmap hL|
+    \item |hGlobal . alg = alg' . fmap hGlobal|
+\end{enumerate}
+
 The |alg'| is defined as follows:
 \begin{code}
 alg' :: Functor f => (StateF s :+: (NondetF :+: f)) (s -> Free f [a]) -> s -> Free f [a]
@@ -109,7 +115,7 @@ alg' (Inr (Inl Fail))      = \ s -> Var []
 alg' (Inr (Inl (Or p q)))  = \ s -> (++) <$> p s <*> q s
 alg' (Inr (Inr y))         = \ s -> Op (fmap ($s) y)
 \end{code}
-And the two equations are proved in Lemma \ref{eq:fusion-cond-1} and Lemma \ref{eq:fusion-cond-2} respectively.
+The two equations are proved in Lemma \ref{eq:fusion-cond-1} and Lemma \ref{eq:fusion-cond-2} respectively.
 Thus, we have our original equation |hLocal = fold (hL . genS) alg' = fold (hGlobal . Var) alg' = hGlobal . trans| holds.
 \end{proof}
 
@@ -128,7 +134,7 @@ We do a case analysis on |t|.
 <    alg' (Inl (Get (hL . k)))
 < = {-~  definition of |alg'|  -}
 <    \ s -> hL (k s) s
-< = {-~  reformulation  -}
+< = {-~  |eta|-expansion  -}
 <    \ s -> hL (\ s' -> k s s') s
 < = {-~  definition of |hL|  -}
 <    \ s -> (fmap hL') (\ s' -> k s s') s
@@ -151,7 +157,7 @@ We do a case analysis on |t|.
 <    alg' (Inl (Put s (hL k)))
 < = {-~  definition of |alg'|  -}
 <    \ _ -> hL k s
-< = {-~  reformulation  -}
+< = {-~  |eta|-expansion  -}
 <    \ _ -> hL (\ s' -> k s') s
 < = {-~  definition of |hL|  -}
 <    \ _ -> (fmap hL') (\ s' -> k s') s
@@ -169,7 +175,7 @@ We do a case analysis on |t|.
 \noindent \mbox{\underline{case |t = Inr (Inl Fail)|}}
 
 <    (alg' . fmap hL) (Inr (Inl Fail))
-< = {-~  definition of |fmap|  -}
+< = {-~  definition of |fmap| \birthe{dropped the |hL|?}  -}
 <    alg' (Inr (Inl Fail))
 < = {-~  definition of |alg'|  -}
 <    \ s -> Var []
@@ -226,6 +232,7 @@ For the right-hand side, we have:
 
 \noindent \mbox{\underline{case |t = Inr (Inr y)|}}
 % y :: f (s -> Free (NondetF :+: f) (a, s))
+
 For the left-hand side, we have:
 <    (hL . algS) (Inr (Inr y))
 < = {-~  definition of |algS|  -}
@@ -251,11 +258,9 @@ For the right-hand side, we have:
 <    alg' (Inr (Inr (fmap hL y)))
 < = {-~  definition of |alg'|  -}
 <    \ s -> Op (fmap (\ k -> k s) (fmap hL y))
-< = {-~  reformulation  -}
-<    \ s -> Op ((fmap (\ k -> k s) . (fmap hL)) y)
+< = {-~  functor law: composition of |fmap| \ref{eq:functor-composition}  -}
+<    \ s -> Op (fmap ((\ k -> k s) . hL) y)
 < = {-~  definition of |hL|  -}
-<    \ s -> Op ((fmap (\ k -> k s) . fmap (fmap hL')) y)
-< = {-~  |fmap|-fusion law  -}
 <    \ s -> Op (fmap ((\ k -> k s) . (fmap hL')) y)
 < = {-~  Lemma \ref{eq:dollar-fmap-comm} with |f = hL'| -}
 <    \ s -> Op (fmap (hL' . (\ k -> k s)) y)
@@ -264,6 +269,7 @@ For the right-hand side, we have:
 
 \begin{lemma}\label{eq:dollar-fmap-comm}~
 < (\ k -> k s) . fmap f = f . (\ k -> k s)
+with function |f :: a -> b| and input |t :: s -> a|.
 % holds for any function |f :: a -> b| and input |t :: s -> a| in the above proof.
 \end{lemma}
 \begin{proof} ~
@@ -283,18 +289,16 @@ For the right-hand side, we have:
 \end{lemma}
 \begin{proof}
 
-\wenhao{Is this proof ok?}
-
 <    fmap (fmap fst) (liftA2 (++) p q)
 < = {-~  property of |liftA2| -}
 <    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
-< = {-~  property of |monad| -}
-<    do {x <- p; y <- q; return (fmap fst (x ++ y))}
+< = {-~  property of |monad|: |fmap f (m >>= k) = m >>= fmap f k| -}
+<    do {x <- p; y <- q; fmap (fmap fst) (return (x ++ y))}
 < = {-~  definition of |fmap| -}
-<    do {x <- p; y <- q; return (fmap fst x ++ fmap fst y))}
-< = {-~  property of |monad| -}
+<    do {x <- p; y <- q; return ((fmap fst x) ++ (fmap fst y))}
+< = {-~  reformulation -}
 <    do {x <- fmap (fmap fst) p; y <- fmap (fmap fst) q; return (x ++ y)}
-< = {-~  property of |liftA2| -}
+< = {-~  definition of |liftA2| -}
 <    liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 \end{proof}
 
@@ -420,7 +424,7 @@ For the left-hand side, we have:
 <    fmap (fmap fst) (\ s' -> hState (liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))) s')
 < = {-~  definition of |fmap|  -}
 <    \ s' -> fmap fst (hState (liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))) s')
-< = {-~  property of |liftA2|  -}
+< = {-~  definition of |liftA2|  -}
 <    \ s' -> fmap fst (hState (do {x <- putOp s (hNDl k); y <- putOp s' (Var []); return (x++y)}) s')
 < = {-~  |y = []| (property of free monad)  -}
 <    \ s' -> fmap fst (hState (do {x <- putOp s (hNDl k); putOp s' (Var []); return x}) s')
@@ -434,7 +438,7 @@ For the left-hand side, we have:
 <    \ s' -> fmap fst (hState (f (hNDl k)) s)
 < = {-~  reformulation, definition of |fmap|  -}
 <    \ s' -> (fmap (fmap fst) . hState . f . hNDl) k s
-< = {-~  \wenhao{because we drop the state in the end, |f| won't make any changes}  -}
+< = {-~  \wenhao{because we drop the state in the end, |f| won't make any changes} \birthe{I think it is okay to say it like this}  -}
 <    \ s' -> (fmap (fmap fst) . hState . hNDl) k s
 < = {-~  definition of |hGlobal|, replace |s'| with |_|  -}
 <    \ _ -> hGlobal k s
@@ -484,7 +488,7 @@ For the left-hand side, we have:
 <    (fmap (fmap fst) . hState) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
 < = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
 <    hState' (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
-< = {-~  property of handlers \wenhao{add more?} -}
+< = {-~  property of handlers \wenhao{add more?}\birthe{Say something like: propagate fold to the subtrees?} -}
 % TODO:
 <    \ s -> do {x <- hState' (hNDl p) s; y <- hState' (hNDl q) s; return (x ++ y)})
 < = {-~  definition of |hState'|  -}
