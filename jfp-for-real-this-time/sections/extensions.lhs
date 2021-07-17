@@ -190,6 +190,7 @@ backtracking syntax and semantics
 
 \todo{}
 
+% NOTE: cut semantics
 \subsection{Cut Semantics}
 \label{sec:cuts}
 
@@ -268,10 +269,10 @@ append :: CutList a -> CutList a -> CutList a
 append (Ret xs) ys = fmap ((++) xs) ys
 append (Flag xs) _ = Flag xs
 
-close :: CutList a -> CutList a 
+close :: CutList a -> CutList a
 close = Flag . unIdem
 
-reopen :: CutList a -> CutList a 
+reopen :: CutList a -> CutList a
 reopen = Ret . unIdem
 \end{code}
 
@@ -289,6 +290,10 @@ instance Functor CutF where
 \end{code}
 
 \todo{fix code}
+
+\wenhao{I think only |Scope| is a scoped operation. |Cut| is an algebraic operation.}
+
+\wenhao{If you want to have a handler of type |FreeS (NondetF :+: f) (CutF :+: g) a -> FreeS f g (CutList a)|, you need to deal with the problem of forwarding unknown scoped operations in |g|. However, this problem is not mentioned and solved in current work. I'll try to write some code to implement |hCut|.}
 \begin{code}
 hCut :: (Functor f, Functor g) 
      => FreeS (NondetF :+: f) (CutF :+: g) a 
