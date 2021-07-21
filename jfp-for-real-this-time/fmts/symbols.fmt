@@ -15,6 +15,10 @@
 
 %format s0
 
+%format * = "\mathbin{^\star}"
+%format -* = "\mathbin{-^\star}"
+%format dot = "\mathbin{\cdot}"
+
 %format :+: = "\mathrel{{:}{+}{:}}"
 %format <*> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{$\ast$}}}\hspace{1.6pt}\rangle}"
 %format <$> = "\mathbin{\langle\hspace{1.6pt}\mathclap{\raisebox{0.1pt}{\scalebox{1}{\$}}}\hspace{1.6pt}\rangle}"
@@ -100,6 +104,16 @@
 %format popNDf = "\Varid{pop_{ND+f}}"
 %format pushNDf = "\Varid{push_{ND+f}}"
 %format appendNDf = "\Varid{append_{ND+f}}"
+
+%format FreeS = "\Varid{Free_{S}}"
+%format foldS = "\Varid{fold_{S}}"
+%format algSC = "\Varid{alg_{SC}}"
+%format fwdSC = "\Varid{fwd_{SC}}"
+%format algNDCut = "\Varid{alg_{ND+Cut}}"
+%format sig1 = "\Varid{\sigma_1}"
+%format sig2 = "\Varid{\sigma_2}"
+%format alg1
+%format alg2
 
 
 
