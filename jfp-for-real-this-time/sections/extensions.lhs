@@ -142,18 +142,15 @@ hStack :: (Functor f)
        => Free (StackF e :+: f) a 
        -> Stack s e 
        -> T.STT s (Free f) a
-hStack = fold gen alg
+hStack = fold gen (alg # fwd)
   where 
-    gen :: (Functor f) => a -> Stack s e -> T.STT s (Free f) a
-    gen = const . return
-    alg :: forall s e a f . (Functor f) 
-        => (StackF e :+: f) (Stack s e -> T.STT s (Free f) a)
-        -> Stack s e -> T.STT s (Free f) a
-    alg (Inl (Push x k))  stack = liftST (pushStack x stack)  >> k stack
-    alg (Inl (Pop k))     stack = liftST (popStack stack)     >>= \x -> k x stack
+    gen                   = const . return
+    alg (Push x k)  stack = liftST (pushStack x stack)  >> k stack
+    alg (Pop k)     stack = liftST (popStack stack)     >>= \x -> k x stack
+    fwd y           stack = _ 
 \end{code}
 
-% alg (Inr y)           stack = lift $ Op ((T.runSTT . ($ stack)) <$> y)
+% fwd y stack = lift $ Op ((T.runSTT . ($ stack)) <$> y)
 
 
 %if False
@@ -186,140 +183,156 @@ test = runST $ do
 \subsection{Undo Semantics}
 \label{sec:undo-semantics}
 
-backtracking syntax and semantics
+backtracking in local state
 
-\todo{}
+\begin{code}
 
-% NOTE: cut semantics
+\end{code}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \subsection{Cut Semantics}
 \label{sec:cuts}
 
-Algebra scoped effects
+%include extensions_cut.lhs
 
-\begin{code}
-data FreeS f g a = Return a 
-                 | Call (f (FreeS f g a)) 
-                 | Enter (g (FreeS f g (FreeS f g a)))
 
-instance (Functor f, Functor g) => Functor (FreeS f g) where
-  fmap = liftM
 
-instance (Functor f, Functor g) => Applicative (FreeS f g) where
-  pure  = return
-  (<*>) = ap
 
-instance (Functor f, Functor g) => Monad (FreeS f g) where
-  return = Return
-  (>>=) (Return x)  f = f x 
-  (>>=) (Call op)   f = Call (fmap (>>= f) op) 
-  (>>=) (Enter op)  f = Enter (fmap (fmap (>>= f)) op)
 
-data Alg f g a = Alg { call   :: f a -> a
-                     , enter  :: g (FreeS f g a) -> a }
 
-foldS :: (Functor f, Functor g) => (a -> b) -> Alg f g b -> FreeS f g a -> b
-foldS gen alg (Return  x)   = gen x
-foldS gen alg (Call    op)  = (call alg  . fmap (foldS gen alg)) op
-foldS gen alg (Enter   op)  = (enter alg . fmap (fmap (foldS gen alg))) op
-\end{code}
 
-Prolog interpreters implement more complex control flow constructs 
-such as cuts.
 
-\todo{Sth on left zero where cut operator is global, equivalence with idempotent operation + dist law (Backtracking with cut
-via a distributive law and left-zero monoids)}
+% Algebra scoped effects
 
-\begin{code}
-type CutList a  = Idem [a]
-data Idem    a  = Ret a | Flag a 
+% \begin{code}
+% data FreeS f g a = Return a 
+%                  | Call (f (FreeS f g a)) 
+%                  | Enter (g (FreeS f g (FreeS f g a)))
 
-instance Functor Idem where
-    fmap = liftM
+% instance (Functor f, Functor g) => Functor (FreeS f g) where
+%   fmap = liftM
 
-instance Applicative Idem where
-    pure = return
-    (<*>) = ap
+% instance (Functor f, Functor g) => Applicative (FreeS f g) where
+%   pure  = return
+%   (<*>) = ap
 
-instance Monad Idem where
-    return a = Ret a
-    Ret a >>= f = f a
-    Flag a >>= f = Flag (unIdem (f a))
+% instance (Functor f, Functor g) => Monad (FreeS f g) where
+%   return = Return
+%   (>>=) (Return x)  f = f x 
+%   (>>=) (Call op)   f = Call (fmap (>>= f) op) 
+%   (>>=) (Enter op)  f = Enter (fmap (fmap (>>= f)) op)
 
-unIdem :: Idem a -> a
-unIdem (Ret  x)   =  x
-unIdem (Flag x)   =  x
+% data Alg f g a = Alg { call   :: f a -> a
+%                      , enter  :: g (FreeS f g a) -> a }
 
-dist :: [Idem a] -> Idem [a]
-dist [] = Ret []
-dist (Ret x : xs) = fmap ((:) x) (dist xs)
-dist (Flag x : xs) = Flag [x]
+% foldS :: (Functor f, Functor g) => (a -> b) -> Alg f g b -> FreeS f g a -> b
+% foldS gen alg (Return  x)   = gen x
+% foldS gen alg (Call    op)  = (call alg  . fmap (foldS gen alg)) op
+% foldS gen alg (Enter   op)  = (enter alg . fmap (fmap (foldS gen alg))) op
+% \end{code}
 
-cut :: CutList ()
-cut = Flag (return ())
-\end{code}
 
-\begin{code}
-fromList :: [a] -> CutList a
-fromList xs = Ret xs
+% \begin{code}
+% type CutList a  = Idem [a]
+% data Idem    a  = Ret a | Flag a 
 
-toList :: CutList a -> [a]
-toList = unIdem
+% instance Functor Idem where
+%     fmap = liftM
 
-append :: CutList a -> CutList a -> CutList a
-append (Ret xs) ys = fmap ((++) xs) ys
-append (Flag xs) _ = Flag xs
+% instance Applicative Idem where
+%     pure = return
+%     (<*>) = ap
 
-close :: CutList a -> CutList a
-close = Flag . unIdem
+% instance Monad Idem where
+%     return a = Ret a
+%     Ret a >>= f = f a
+%     Flag a >>= f = Flag (unIdem (f a))
 
-reopen :: CutList a -> CutList a
-reopen = Ret . unIdem
-\end{code}
+% unIdem :: Idem a -> a
+% unIdem (Ret  x)   =  x
+% unIdem (Flag x)   =  x
 
-\todo{Cut k is like cut with a continuation k}
+% dist :: [Idem a] -> Idem [a]
+% dist [] = Ret []
+% dist (Ret x : xs) = fmap ((:) x) (dist xs)
+% dist (Flag x : xs) = Flag [x]
 
-\todo{argue that scope is not an algebraic operation}
+% cut :: CutList ()
+% cut = Flag (return ())
+% \end{code}
 
-\begin{code}
-data CutF a = Cut a | Scope a
+% \begin{code}
+% fromList :: [a] -> CutList a
+% fromList xs = Ret xs
 
-instance Functor CutF where
-    fmap f (Cut x)   = Cut (f x)
-    fmap f (Scope x) = Scope (f x)
+% toList :: CutList a -> [a]
+% toList = unIdem
 
-\end{code}
+% append :: CutList a -> CutList a -> CutList a
+% append (Ret xs) ys = fmap ((++) xs) ys
+% append (Flag xs) _ = Flag xs
 
-\todo{fix code}
+% close :: CutList a -> CutList a
+% close = Flag . unIdem
 
-\wenhao{I think only |Scope| is a scoped operation. |Cut| is an algebraic operation.}
+% reopen :: CutList a -> CutList a
+% reopen = Ret . unIdem
+% \end{code}
 
-\wenhao{If you want to have a handler of type |FreeS (NondetF :+: f) (CutF :+: g) a -> FreeS f g (CutList a)|, you need to deal with the problem of forwarding unknown scoped operations in |g|. However, this problem is not mentioned and solved in current work. I'll try to write some code to implement |hCut|.}
-\begin{code}
-hCut :: (Functor f, Functor g) 
-     => FreeS (NondetF :+: f) (CutF :+: g) a 
-     -> FreeS f g (CutList a)
-hCut = foldS gen alg
-  where
-    gen :: a -> FreeS f g (CutList a) 
-    gen = Return . return . return 
-    alg :: (Functor f, Functor g)
-        => Alg (NondetF :+: f) (CutF :+: g) (FreeS f g (CutList a))
-    alg = Alg call enter
-    call :: (Functor f, Functor g) 
-         => (NondetF :+: f) (FreeS f g (CutList a)) 
-         -> FreeS f g (CutList a)
-    call (Inl Fail)     = Return (return [])
-    call (Inl (Or p q)) = append <$> p <*> q
-    call (Inr y)        = Call y
-    enter :: (Functor f, Functor g)
-          => (CutF :+: g) (FreeS (NondetF :+: f) (CutF :+: g) (FreeS f g (CutList a)))
-          -> FreeS f g (CutList a)
-    enter = undefined
-\end{code}
+% \todo{Cut k is like cut with a continuation k}
 
-    % -- enter (Inl (Cut op))   = fmap _ (hCut op)
-    % -- enter (Inl (Scope op)) = _ op
-    % -- enter (Inr y)          = Enter (fmap (fmap _ . hCut) y) 
+% \todo{argue that scope is not an algebraic operation}
+
+% \begin{code}
+% data CutF a = Cut a | Scope a
+
+% instance Functor CutF where
+%     fmap f (Cut x)   = Cut (f x)
+%     fmap f (Scope x) = Scope (f x)
+
+% \end{code}
+
+% \begin{code}
+% hCut :: (Functor f, Functor g) 
+%      => FreeS (NondetF :+: f) (CutF :+: g) a 
+%      -> FreeS f g (CutList a)
+% hCut = foldS gen alg
+%   where
+%     gen :: a -> FreeS f g (CutList a) 
+%     gen = Return . return . return 
+%     alg :: (Functor f, Functor g)
+%         => Alg (NondetF :+: f) (CutF :+: g) (FreeS f g (CutList a))
+%     alg = Alg call enter
+%     call :: (Functor f, Functor g) 
+%          => (NondetF :+: f) (FreeS f g (CutList a)) 
+%          -> FreeS f g (CutList a)
+%     call (Inl Fail)     = Return (return [])
+%     call (Inl (Or p q)) = append <$> p <*> q
+%     call (Inr y)        = Call y
+%     enter :: (Functor f, Functor g)
+%           => (CutF :+: g) (FreeS (NondetF :+: f) (CutF :+: g) (FreeS f g (CutList a)))
+%           -> FreeS f g (CutList a)
+%     enter = undefined
+% \end{code}
+
+%     % -- enter (Inl (Cut op))   = fmap _ (hCut op)
+%     % -- enter (Inl (Scope op)) = _ op
+%     % -- enter (Inr y)          = Enter (fmap (fmap _ . hCut) y) 
 
 
 

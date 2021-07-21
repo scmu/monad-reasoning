@@ -223,12 +223,12 @@ We can redefine the |simulate| function as follows:
 
 \begin{code}
 simulate' :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> STNDf (Free f) m a
-simulate' = fold gen' alg'
+simulate' = fold gen' (alg' # fwd')
   where
-    gen'  x              = appendNDf x popNDf
-    alg' (Inl Fail)      = popNDf
-    alg' (Inl (Or p q))  = pushNDf p q
-    alg' (Inr y)         = STNDf $ join $ lift $ Op (return . runSTNDf <$> y)
+    gen'  x        = appendNDf x popNDf
+    alg' Fail      = popNDf
+    alg' (Or p q)  = pushNDf p q
+    fwd' y         = STNDf $ join $ lift $ Op (return . runSTNDf <$> y)
 \end{code}
     % alg' (Inr y)         = STNDf $ S.StateT $ \s -> Op $ fmap ((\k -> k s) . S.runStateT . runSTNDf) y
 
@@ -347,12 +347,11 @@ For that, we compare with a version of the handler defined in Section
 \ref{sec:combining-effects}, with the |List| monad replaced by any other
 nondeterminism monad |m|.
 < hNDf :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
-< hNDf = fold genNDf algNDf
+< hNDf = fold genNDf (algNDf # Op)
 <   where 
 <     genNDf = Var . return 
-<     algNDf (Inl Fail)      = Var mzero
-<     algNDf (Inl (Or p q))  = mplus <$> p <*> q
-<     algNDf (Inr y)         = Op y
+<     algNDf Fail      = Var mzero
+<     algNDf (Or p q)  = mplus <$> p <*> q
 We prove that this handler |hNDf| and the |runNDf| function are equal.
 \begin{theorem}
 |runNDf = hNDf|

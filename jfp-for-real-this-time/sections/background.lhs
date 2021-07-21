@@ -293,6 +293,9 @@ with a coproduct operator |(:+:)| for functors.
 \begin{code}
 data (f :+: g) a = Inl (f a) | Inr (g a)
 \end{code}
+This coproduct functor (with |Void| as a neutral element) allows a 
+modular definition of the signature of effects.
+
 For instance, we can encode programs with both state and nondeterminism as 
 effects using the data type 
 |Free (StateF :+: NondetF) a|. 
@@ -303,6 +306,16 @@ effect functor |f| using |Free (StateF s :+: f) a|.
 
 To give semantics to the free monad constructs of these effects, we can use
 their folds, also called handlers. 
+These handlers can be modularly composed: they only need to know about
+the part of the syntax their effect is handling, and forward the rest
+of the syntax to other handlers.
+
+A mediator can be used to seperate the algebras for the components of the coproduct \cite{Schrijvers2019}.
+\begin{code}
+(#) :: (sig1 a -> p) -> (sig2 a -> p) -> (sig1 :+: sig2) a -> p
+(alg1 # alg2) (Inl op) = alg1 op
+(alg1 # alg2) (Inr op) = alg2 op
+\end{code} 
 %if False
 \begin{code}
 data NilF a deriving (Functor)
@@ -366,21 +379,21 @@ For state and nondeterminism, with their typical Haskell implementations as
 |State s| and |List|, respectively, the handlers are defined as follows:
 \begin{code}
 hState :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (a, s))
-hState  =  fold genS algS
+hState  =  fold genS (algS # fwdS)
   where 
-    genS x                s  = return (x, s)
-    algS (Inl (Get k))    s  = k s s
-    algS (Inl (Put s k))  _  = k s
-    algS (Inr y)          s  = Op (fmap ($s) y)
+    genS x          s  = return (x, s)
+    algS (Get k)    s  = k s s
+    algS (Put s k)  _  = k s
+    fwdS y          s  = Op (fmap ($s) y)
     
 hNDl :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-hNDl  =  fold genND algND
+hNDl  =  fold genND (algND # Op)
   where
-    genND                 = Var . return
-    algND (Inl Fail)      = Var []
-    algND (Inl (Or p q))  = (++) <$> p <*> q
-    algND (Inr y)         = Op y
+    genND           = Var . return
+    algND Fail      = Var []
+    algND (Or p q)  = (++) <$> p <*> q
 \end{code}
+
 
 %-------------------------------------------------------------------------------
 \subsection{Motivation and Challenges}
