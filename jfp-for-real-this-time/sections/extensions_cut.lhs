@@ -13,6 +13,7 @@ import Background
 
 import Control.Monad (ap, join, liftM, when)
 import Control.Monad.Trans (lift)
+import Data.Either (isLeft)
 import Prelude hiding (fail)
 \end{code}
 %endif
@@ -295,5 +296,85 @@ hCut = foldS gen (Alg (algNDCut # Call) (algSC # fwdSC))
 % \end{code}
 
 \subsubsection{Simulating the Cut Effect with State}
+
+This section shows how to use a state-based implementation to simulate the cut effect.
+We use a wrapper |STCut| around State \todo{}.
+
+\begin{code}
+data Delimiter = Delimiter
+newtype STCut m a = STCut {runSTCut :: State (m a, [Either (STCut m a) Delimiter]) ()}
+
+simulate :: MNondet m => FreeS NondetF' ScopeF a -> STCut m a
+simulate = foldS genCut (Alg algNDCut algSCCut) where
+  genCut :: MNondet m => a -> STCut m a
+  genCut x                 = appendCut x popCut
+  algNDCut :: MNondet m => NondetF' (STCut m a) -> STCut m a
+  algNDCut (Inl Fail)      = popCut
+  algNDCut (Inl (Or p q))  = pushCut p q
+  algNDCut (Inr Cut)       = undoCut
+  algSCCut :: MNondet m => ScopeF (FreeS NondetF' ScopeF (STCut m a)) -> STCut m a
+  algSCCut (Scope k)       = scopeCut (_ k)
+
+extractCut :: MNondet m => STCut m a -> m a
+extractCut x = fst $ snd $ runState (runSTCut x) (mzero, [])
+
+popCut :: MNondet m => STCut m a
+popCut = STCut $ do
+  (xs, stack) <- get
+  case stack of
+    [] -> return ()
+    (Left (STCut p) : ps) -> do put (xs, ps); p
+    (Right d : ps) -> return ()
+
+appendCut :: MNondet m => a -> STCut m a -> STCut m a
+appendCut x p = STCut $ do
+  (xs, stack) <- get
+  put (xs `mplus` return x, stack)
+  runSTCut p
+
+pushCut :: MNondet m => STCut m a -> STCut m a -> STCut m a
+pushCut q p = STCut $ do
+  (xs, stack) <- get
+  put (xs, Left q : stack)
+  runSTCut p
+
+undoCut :: MNondet m => STCut m a
+undoCut = STCut $ do
+  (xs, stack) <- get
+  let stack' = dropWhile isLeft stack
+  put (xs, stack')
+
+scopeCut :: MNondet m => STCut m a -> STCut m a
+scopeCut p = STCut $ do
+  (xs, stack) <- get
+  put (xs, Right Delimiter : stack)
+  runSTCut p 
+\end{code}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
