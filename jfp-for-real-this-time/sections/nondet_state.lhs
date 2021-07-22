@@ -157,6 +157,7 @@ simulate :: MNondet m => NondetC a -> STND m a
 simulate = fold gen alg
   where
     gen x         = appendND x popND
+    alg :: MNondet m => NondetF (STND m a) -> STND m a
     alg Fail      = popND
     alg (Or p q)  = pushND q p
 \end{code}
@@ -227,7 +228,7 @@ simulate' = fold gen' (alg' # fwd')
   where
     gen'  x        = appendNDf x popNDf
     alg' Fail      = popNDf
-    alg' (Or p q)  = pushNDf p q
+    alg' (Or p q)  = pushNDf q p
     fwd' y         = STNDf $ join $ lift $ Op (return . runSTNDf <$> y)
 \end{code}
     % alg' (Inr y)         = STNDf $ S.StateT $ \s -> Op $ fmap ((\k -> k s) . S.runStateT . runSTNDf) y
