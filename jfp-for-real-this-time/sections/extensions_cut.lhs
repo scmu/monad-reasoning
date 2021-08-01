@@ -265,7 +265,6 @@ hCut = foldS gen (Alg (algNDCut # Call) (algSC # fwdSC))
 \todo{example}
 Examples:
 \begin{code}
-data Void a deriving Functor
 
 run :: FreeS Void Void a -> a
 run (Return x) = x
@@ -369,7 +368,6 @@ undoCut :: STCut a
 undoCut = STCut $ do
   (xs, stack) <- get
   put (append xs (cut >> fail), stack)
-
 \end{code}
 
 % Examples:

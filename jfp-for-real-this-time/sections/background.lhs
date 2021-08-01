@@ -127,6 +127,12 @@ instance Functor f => Applicative (Free f) where
 instance Functor f => Monad (Free f) where
     return   = Var
     m >>= f  = fold f Op m
+
+data Void a deriving Functor -- Empty Signature
+
+runVoid :: Free Void a -> a
+runVoid (Var x) = x
+
 \end{code}
 %fmap f (Op op) = Op (fmap (fmap f) op)
 %(Op op) >>= f = Op (fmap (>>= f) op)
