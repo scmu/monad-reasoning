@@ -10,6 +10,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 import Background
+import LocalGlobal (trans, hLocal)
+import NondetState (runNDf)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 \end{code}
@@ -21,6 +23,23 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 \subsection{Modeling Multiple States with State}
 \label{sec:state}
 
+\begin{code}
+states2state :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF (s1, s2) :+: f) a
+states2state = fold gen (alg # fwd)
+  where
+    gen = return
+    alg :: Functor f => StateF s1 (Free (StateF (s1, s2) :+: f) a) -> Free (StateF (s1, s2) :+: f) a
+    alg (Get k) = Op $ Inl $ Get (\ (s1, s2) -> k s1)
+    alg (Put s1' k) = do
+      (s1, s2) <- Op $ Inl $ Get return
+      Op $ Inl $ Put (s1', s2) k
+    fwd :: Functor f => (StateF s2 :+: f) (Free (StateF (s1, s2) :+: f) a) -> Free (StateF (s1, s2) :+: f) a
+    fwd (Inl (Get k)) = Op $ Inl $ Get (\ (s1, s2) -> k s2)
+    fwd (Inl (Put s2' k)) = do
+      (s1, s2) <- Op $ Inl $ Get return
+      Op $ Inl $ Put (s1, s2') k
+    fwd (Inr op) = Op (Inr op)
+\end{code}
 
 %----------------------------------------------------------------
 \subsection{New Simulation of Nondeterminism}
@@ -33,7 +52,6 @@ It uses the syntax (free monad) of state to do the simulation instead of using t
 In this way, we can easily combine the result of two simulations.
 
 \begin{code}
--- StateT s ~> Free (State s)
 newtype SS m a f = SS { unSS :: (m a, [Free (StateF (SS m a f) :+: f) ()]) }
 
 get' :: Functor f => Free (StateF s :+: f) s
@@ -108,4 +126,77 @@ prog1 = or' (or' (return 1) (return 2)) (or' fail' (return 3))
 t :: [Int]
 t = runVoid $ runndf prog1
 -- [1,2,3]
+t' :: [Int]
+t' = runVoid $ runNDf prog1
+-- [1,2,3]
+\end{code}
+
+\subsection{Combine S3 and S4}
+
+By now we have three simulations: |nd2state, local2global, states2state|.
+We want to combine these three simulations to simulate the local state semantics only with the state monad.
+
+\begin{code}
+comm2 :: (Functor f1, Functor f2)
+     => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 (Var x) = Var x
+comm2 (Op (Inl k)) = (Op . Inr . Inl) (fmap comm2 k)
+comm2 (Op (Inr (Inl k))) = (Op . Inl) (fmap comm2 k)
+
+local2global :: Functor f
+             => Free (StateF s :+: NondetF :+: f) a
+             -> Free (NondetF :+: StateF s :+: f) a
+local2global = comm2 . trans
+
+local2state :: (Functor f, MNondet m)
+            => Free (StateF s :+: NondetF :+: f) a
+            -- -> Free (StateF (SS m a (StateF s :+: f)) :+: StateF s :+: f) ()
+            -> Free (StateF (SS m a (StateF s :+: f), s) :+: f) ()
+local2state = states2state . nd2state . local2global
+
+simulate2 :: (Functor f, MNondet m)
+          => Free (StateF s :+: NondetF :+: f) a
+          -> StateT (SS m a (StateF s :+: f), s) (Free f) ()
+simulate2 = hStateT . local2state
+
+-- extract2 :: (Functor f, MNondet m)
+--          => StateT (SS m a (StateF s :+: f), s) (Free f) ()
+--          -> (s -> Free f (m a))
+extract2 :: (Functor f)
+         => StateT (SS ([]) a (StateF s :+: f), s) (Free f) ()
+         -> (s -> Free f [a])
+extract2 x = \s -> fst . unSS . fst . snd <$> runStateT x (SS (mzero, []), s)
+
+hLocal' :: Functor f => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a])
+hLocal' = extract2 . simulate2
+
+\end{code}
+
+We have |extract2 . hStateT . states2state . nd2state . local2global = hLocal|.
+Some test program:
+
+\begin{code}
+or1 :: Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a
+or1 x y = Op (Inr $ Inl $ Or x y)
+
+fail1 :: Free (f :+: (NondetF :+: g)) a
+fail1 = Op (Inr $ Inl Fail)
+
+get1 :: Functor f => Free (StateF s :+: f) s
+get1 = Op (Inl $ Get return)
+
+put1 :: Functor f => s -> Free (StateF s :+: f) ()
+put1 s = Op (Inl $ Put s (return ()))
+
+prog :: Free (StateF Int :+: NondetF :+: Void) Int
+prog =
+  or1 (do put1 10; return 5)
+      (do x <- get1; return x)
+
+tt :: [Int]
+tt = runVoid $ hLocal' prog 0
+-- [5, 0]
+tt' :: [Int]
+tt' = runVoid $ hLocal prog 0
+-- [5, 0]
 \end{code}
