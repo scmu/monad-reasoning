@@ -478,10 +478,10 @@ failOp    :: Prog s f a
 failOp    = (Op . Inr . Inl) Fail 
 
 hLocal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap fst) . hNDl) . hState
+hLocal = fmap (fmap (fmap fst) . hNDl) . S.runStateT . hStateT
 
 hGlobal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hGlobal = fmap (fmap fst) . hState . comm . hNDl . assocr . comm
+hGlobal = fmap (fmap fst) . S.runStateT . hStateT . comm . hNDl . assocr . comm
 
 -- The code below is used to assist proof.
 hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
@@ -559,8 +559,9 @@ semantics.
 We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
+\birthe{I changed |hState| to |S.runStateT . hStateT|}
 < hLocal :: Functor f => Prog s f a -> s -> Free f [a]
-< hLocal = fmap (fmap (fmap fst) . hNDl) . hState
+< hLocal = fmap (fmap (fmap fst) . hNDl) . S.runStateT . hStateT
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Prog s f a -> s -> Free f [a]

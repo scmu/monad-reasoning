@@ -14,6 +14,7 @@
 module Background where
 
 import Control.Monad (ap, liftM)
+import qualified Control.Monad.Trans.State.Lazy as S
 
 \end{code}
 %endif
@@ -378,11 +379,7 @@ hNondet' = fold gen alg
     alg (Inl Fail)      = Var mzero
     alg (Inl (Or p q))  = mplus <$> p <*> q
     alg (Inr y)         = Op y
-\end{code}
-%endif
-For state and nondeterminism, with their typical Haskell implementations as 
-|State s| and |List|, respectively, the handlers are defined as follows:
-\begin{code}
+
 hState :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (a, s))
 hState  =  fold genS (algS # fwdS)
   where 
@@ -390,7 +387,22 @@ hState  =  fold genS (algS # fwdS)
     algS (Get k)    s  = k s s
     algS (Put s k)  _  = k s
     fwdS y          s  = Op (fmap ($s) y)
-    
+\end{code}
+%endif
+
+The handlers for state and nondeterminism use the |StateT| monad and |List|
+monad, respectively, to interpret their part of the semantics.
+The |StateT| monad is the state transformer from the Monad Transformer Library \ref{}.
+< newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
+The handlers are defined as follows:
+\begin{code}
+hStateT :: Functor f => Free (StateF s :+: f) a -> S.StateT s (Free f) a
+hStateT = fold genS (algS # fwdS)
+  where
+    genS x           = S.StateT $ \s -> return (x, s)
+    algS (Get     k)  = S.StateT $ \s -> S.runStateT (k s) s
+    algS (Put s'  k)  = S.StateT $ \s -> S.runStateT k s'
+    fwdS op           = S.StateT $ \s -> Op $ fmap (\k -> S.runStateT k s) op
 hNDl :: Functor f => Free (NondetF :+: f) a -> Free f [a]
 hNDl  =  fold genND (algND # Op)
   where
@@ -402,7 +414,8 @@ hNDl  =  fold genND (algND # Op)
 
 %-------------------------------------------------------------------------------
 \subsection{Motivation and Challenges}
-Show the n-queens example, explain the challenges.
+
+\todo{Show the n-queens example, explain the challenges.}
 
 State + ND -> State + State -> State
 
