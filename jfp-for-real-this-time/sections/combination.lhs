@@ -9,9 +9,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+module Combination where
+
 import Background
-import LocalGlobal (trans, hLocal)
-import NondetState (runNDf)
+import LocalGlobal (local2global, hLocal)
+import NondetState (runNDf, SS(..), nondet2state)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 \end{code}
@@ -19,11 +21,14 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 \section{Combination}
 \label{sec:combination}
 
-\todo{intro}
+Throughout the paper, we have shown several cases in which a high-level effect
+can be simulated by means of a lower-level effect. 
+This section combines these simulations to ultimately model the combination of 
+nondeterminism and state with a single state effect. 
 
 %-------------------------------------------------------------------------------
 \subsection{Modeling Multiple States with State}
-\label{sec:state}
+\label{sec:multiple-states}
 
 It is straightforward to simulate an effect that contains multiple states with 
 a single state effect.
@@ -40,176 +45,123 @@ states2state  = fold return (alg # fwd)
     alg  :: (Functor f) 
          => StateF s1 (Free (StateF (s1, s2) :+: f) a) 
          -> Free (StateF (s1, s2) :+: f) a
-    alg (Get k)      = get >>= \(s1, _) -> k s1
-    alg (Put s1' k)  = get >>= \(_, s2) -> put (s1', s2) k
+    alg (Get k)      = get' >>= \(s1,  _)   -> k s1
+    alg (Put s1' k)  = get' >>= \(_,   s2)  -> put' (s1', s2) k
     fwd  :: (Functor f) 
          => (StateF s2 :+: f) (Free (StateF (s1, s2) :+: f) a) 
          -> Free (StateF (s1, s2) :+: f) a
-    fwd (Inl (Get k))      = get >>= \ (_, s2) -> k s2
-    fwd (Inl (Put s2' k))  = get >>= \(s1, _) -> put (s1, s2') k
+    fwd (Inl (Get k))      = get' >>= \(_,   s2)  -> k s2
+    fwd (Inl (Put s2' k))  = get' >>= \(s1,  _)   -> put' (s1, s2') k
     fwd (Inr op)           = Op (Inr op)
-    get        :: Functor f => Free (StateF (s1, s2) :+: f) (s1, s2)
-    get        = Op $ Inl $ Get return
-    put        :: (s1, s2) -> Free (StateF (s1, s2) :+: f) a -> Free (StateF (s1, s2) :+: f) a
-    put sts k  = Op $ Inl $ Put sts k
 \end{code}
-
-%----------------------------------------------------------------
-\subsection{New Simulation of Nondeterminism}
-\wenhao{I think we can replace the simulation in S3 with this new simulation.}
-
-A new simulation of nondeterminism with state which is similar to the simulation of local state with global state.
-The simulation function is |nd2state :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free (StateF (SS m a f) :+: f) ()|, which is also a syntax-level simulation similar to |trans| in S4.
-We have the equation |hStateT . nd2state = hNDf|, which is similar to the equation |hGlobal . trans = hLocal|.
-It uses the syntax (free monad) of state to do the simulation instead of using the state monad directly.
-In this way, we can easily combine the result of two simulations.
-
+Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
 \begin{code}
-newtype SS m a f = SS { unSS :: (m a, [Free (StateF (SS m a f) :+: f) ()]) }
+get'        :: Functor f => Free (StateF (s1, s2) :+: f) (s1, s2)
+get'        = Op $ Inl $ Get return
 
-get' :: Functor f => Free (StateF s :+: f) s
-get' = Op (Inl $ Get return)
-
-put' :: Functor f => s -> Free (StateF s :+: f) ()
-put' s = Op (Inl $ Put s (return ()))
-
-popSS :: Functor f => Free (StateF (SS m a f) :+: f) ()
-popSS = do
-  SS (xs, stack) <- get'
-  case stack of
-    [] -> return ()
-    op : ps -> do
-      put' (SS (xs, ps)); op
-pushSS :: Functor f
-       => Free (StateF (SS m a f) :+: f) ()
-       -> Free (StateF (SS m a f) :+: f) ()
-       -> Free (StateF (SS m a f) :+: f) ()
-pushSS q p = do
-  SS (xs, stack) <- get'
-  put' (SS (xs, q : stack))
-  p
-appendSS :: (Functor f, MNondet m)
-         => a
-         -> Free (StateF (SS m a f) :+: f) ()
-         -> Free (StateF (SS m a f) :+: f) ()
-appendSS x p = do
- SS (xs, stack) <- get'
- put' (SS (xs `mplus` return x, stack))
- p
-
-nd2state :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free (StateF (SS m a f) :+: f) ()
-nd2state = fold gen (alg # fwd)
-  where
-    gen x = appendSS x popSS
-    alg Fail = popSS
-    alg (Or p q) = pushSS q p
-    fwd :: Functor f => f (Free (StateF (SS m a f) :+: f) ()) -> Free (StateF (SS m a f) :+: f) ()
-    fwd y = Op (Inr y)
-
-hStateT :: Functor f => Free (StateF s :+: f) a -> StateT s (Free f) a -- (s -> Free f (a, s))
-hStateT = fold gen (alg # fwd)
-  where
-    gen x = StateT $ \s -> return (x, s)
-    alg :: StateF s (StateT s (Free f) a) -> StateT s (Free f) a
-    alg (Get k) = StateT $ \s -> runStateT (k s) s
-    alg (Put s' k) = StateT $ \s -> runStateT k s'
-    fwd :: Functor f => f (StateT s (Free f) a) -> StateT s (Free f) a
-    fwd op = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
-
-extract'' :: (Functor f, MNondet m) => StateT (SS m a f) (Free f) () -> Free f (m a)
-extract'' x = fst . unSS . snd <$> runStateT x (SS (mzero, []))
-
-runndf :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
-runndf = extract'' . hStateT . nd2state
+put'        :: (s1, s2) -> Free (StateF (s1, s2) :+: f) a -> Free (StateF (s1, s2) :+: f) a
+put' sts k  = Op $ Inl $ Put sts k
 \end{code}
 
-We have |runndf = runNDf = hNDf|.
-Some test program:
+\subsection{Simulating Nondeterminism and State with Only State}
 
+By now we have defined three simulations for encoding a high-level effect as a lower-level effect.
+\begin{itemize}
+  \item The function |nondet2state| simulates the high-level nondeterminism effect with the state effect 
+  (Section \ref{sec:nondeterminism-state}).
+  \item The function |local2global| simulates the high-level local state effect with global state 
+  semantics (Section \ref{sec:local-global}).
+  \item The function |states2state| simulates multiple state effects with a single state semantics 
+  (Section \ref{sec:multiple-states}).
+\end{itemize}
+
+Combining these simulations, we can encode the semantics for nondeterminism and state with 
+just the state monad. 
+We get to the following simulation:
 \begin{code}
-or' :: Functor f => Free (NondetF :+: f) a -> Free (NondetF :+: f) a -> Free (NondetF :+: f) a
-or' x y = Op (Inl $ Or x y)
-
-fail' :: Functor f => Free (NondetF :+: f) a
-fail' = Op (Inl Fail)
-
-prog1 :: Free (NondetF :+: Void) Int
-prog1 = or' (or' (return 1) (return 2)) (or' fail' (return 3))
-
-t :: [Int]
-t = runVoid $ runndf prog1
--- [1,2,3]
-t' :: [Int]
-t' = runVoid $ runNDf prog1
--- [1,2,3]
+simulate  :: (Functor f, MNondet m) 
+          => Free (StateF s :+: NondetF :+: f) a 
+          -> StateT (SS m a (StateF s :+: f), s) (Free f) ()
+simulate  = hStateT . states2state . nondet2state . comm2 . local2global
 \end{code}
-
-\subsection{Combine S3 and S4}
-
-By now we have three simulations: |nd2state, local2global, states2state|.
-We want to combine these three simulations to simulate the local state semantics only with the state monad.
-
+Furthermore, we can define an |extract| function to extract the final result.
+\begin{code}
+extract :: (Functor f)
+         => StateT (SS ([]) a (StateF s :+: f), s) (Free f) ()
+         -> (s -> Free f [a])
+extract x s = fst . unSS . fst . snd <$> runStateT x (SS (mzero, []), s)
+\end{code}
+%if False
 \begin{code}
 comm2 :: (Functor f1, Functor f2)
      => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
 comm2 (Var x) = Var x
 comm2 (Op (Inl k)) = (Op . Inr . Inl) (fmap comm2 k)
 comm2 (Op (Inr (Inl k))) = (Op . Inl) (fmap comm2 k)
-
-local2global :: Functor f
-             => Free (StateF s :+: NondetF :+: f) a
-             -> Free (NondetF :+: StateF s :+: f) a
-local2global = comm2 . trans
-
-local2state :: (Functor f, MNondet m)
-            => Free (StateF s :+: NondetF :+: f) a
-            -- -> Free (StateF (SS m a (StateF s :+: f)) :+: StateF s :+: f) ()
-            -> Free (StateF (SS m a (StateF s :+: f), s) :+: f) ()
-local2state = states2state . nd2state . local2global
-
-simulate2 :: (Functor f, MNondet m)
-          => Free (StateF s :+: NondetF :+: f) a
-          -> StateT (SS m a (StateF s :+: f), s) (Free f) ()
-simulate2 = hStateT . local2state
-
--- extract2 :: (Functor f, MNondet m)
---          => StateT (SS m a (StateF s :+: f), s) (Free f) ()
---          -> (s -> Free f (m a))
-extract2 :: (Functor f)
-         => StateT (SS ([]) a (StateF s :+: f), s) (Free f) ()
-         -> (s -> Free f [a])
-extract2 x = \s -> fst . unSS . fst . snd <$> runStateT x (SS (mzero, []), s)
-
-hLocal' :: Functor f => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a])
-hLocal' = extract2 . simulate2
-
 \end{code}
+%endif
 
-We have |extract2 . hStateT . states2state . nd2state . local2global = hLocal|.
-Some test program:
+The simulation happens in several steps (Figure \ref{fig:simulation}).
+First, |local2global| models the local-state semantics with a global state.
+Second, a commutativity function |comm2| changes the order of state and nondeterminism.
+Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
+Then, |states2state| combines the two state effects into a single state.
+Finally, |hStateT| handles this state effect and translates it to the state transformer |StateT|.
+Additionally, the |extract| function pulls out the result in a more readable form.
+\begin{figure}[h]
+% https://q.uiver.app/?q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiAoU3RhdGVGIHMgOis6IGYpKSBhfCJdLFswLDMsInxGcmVlIChTdGF0ZUYgKFNTIG0gYSAoU3RhdGVGIHMgOis6IGYpKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDQsInxGcmVlIChTdGF0ZUYgKFNTIG0gYSAoU3RhdGVGIHMgOis6IGYpLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgbSBhIChTdGF0ZUYgcyA6KzogZiksIHMpIChGcmVlIGYpICgpfCJdLFswLDYsInxzIC0+IEZyZWUgZiBbYV18Il0sWzAsMSwifGxvY2FsMmdsb2JhbHwiXSxbMSwyLCJ8Y29tbTJ8Il0sWzIsMywifG5vbmRldDJzdGF0ZXwiXSxbMyw0LCJ8c3RhdGVzMnN0YXRlfCJdLFs0LDUsInxoU3RhdGVUfCJdLFs1LDYsInxleHRyYWN0fCIsMCx7ImNvbG91ciI6WzAsMCw1MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzAsMCw1MCwxXV0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXV0=
+\[\begin{tikzcd}
+  {|Free (StateF s :+: NondetF :+: f) a|} \\
+  {|Free (StateF s :+: NondetF :+: f) a|} \\
+  {|Free (NondetF :+: StateF s :+: f) a|} \\
+  {|Free (StateF (SS m a (StateF s :+: f)) :+: StateF s :+: f) ()|} \\
+  {|Free (StateF (SS m a (StateF s :+: f), s) :+: f) ()|} \\
+  {|StateT (SS m a (StateF s :+: f), s) (Free f) ()|} \\
+  {|s -> Free f [a]|}
+  \arrow["{|local2global|}", from=1-1, to=2-1]
+  \arrow["{|comm2|}", from=2-1, to=3-1]
+  \arrow["{|nondet2state|}", from=3-1, to=4-1]
+  \arrow["{|states2state|}", from=4-1, to=5-1]
+  \arrow["{|hStateT|}", from=5-1, to=6-1]
+  \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=6-1, to=7-1]
+  \arrow["{|simulate|}", shift left=30, color={rgb,255:red,128;green,128;blue,128}, curve={height=-70pt}, shorten <=-10pt, dotted, from=1-1, to=6-1]
+\end{tikzcd}\]
+\label{fig:simulation}
+\caption{The simulation explained.}
+\end{figure}
 
-\begin{code}
-or1 :: Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a
-or1 x y = Op (Inr $ Inl $ Or x y)
+To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|, 
+or, in a more elaborate form: \\
+|extract . hStateT . states2state . nondet2state . comm2 . local2global = hLocal|.
 
-fail1 :: Free (f :+: (NondetF :+: g)) a
-fail1 = Op (Inr $ Inl Fail)
+% Some test program:
 
-get1 :: Functor f => Free (StateF s :+: f) s
-get1 = Op (Inl $ Get return)
+% \begin{code}
+% or1 :: Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a
+% or1 x y = Op (Inr $ Inl $ Or x y)
 
-put1 :: Functor f => s -> Free (StateF s :+: f) ()
-put1 s = Op (Inl $ Put s (return ()))
+% fail1 :: Free (f :+: (NondetF :+: g)) a
+% fail1 = Op (Inr $ Inl Fail)
 
-prog :: Free (StateF Int :+: NondetF :+: Void) Int
-prog =
-  or1 (do put1 10; return 5)
-      (do x <- get1; return x)
+% get1 :: Functor f => Free (StateF s :+: f) s
+% get1 = Op (Inl $ Get return)
 
-tt :: [Int]
-tt = runVoid $ hLocal' prog 0
--- [5, 0]
-tt' :: [Int]
-tt' = runVoid $ hLocal prog 0
--- [5, 0]
-\end{code}
+% put1 :: Functor f => s -> Free (StateF s :+: f) ()
+% put1 s = Op (Inl $ Put s (return ()))
+
+% prog :: Free (StateF Int :+: NondetF :+: Void) Int
+% prog =
+%   or1 (do put1 10; return 5)
+%       (do x <- get1; return x)
+
+% tt :: [Int]
+% tt = runVoid $ hLocal' prog 0
+% -- [5, 0]
+% tt' :: [Int]
+% tt' = runVoid $ hLocal prog 0
+% -- [5, 0]
+% \end{code}
+
+\subsection{The Simulation for N-queens}
+
+\todo{show how this works on an example (n-queens?)}

@@ -375,7 +375,7 @@ and then restores the saved state |t|.
 Figure \ref{fig:state-restoring-put} shows how the state-passing works
 and the flow of execution for a computation after a state-restoring put.
 
-\begin{figure}
+\begin{figure}[h]
 % https://q.uiver.app/?q=WzAsNixbMSwwLCJ8Z2V0IFxccyd8Il0sWzEsMSwifG1wbHVzfCJdLFswLDIsInxwdXQgc3wiXSxbMCwzLCJ8Y29tcHwiXSxbMiwyLCJ8cHV0IHMnfCJdLFsyLDMsInxtemVyb3wiXSxbMCwxLCIiLDAseyJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsMiwiIiwwLHsic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDQsIiIsMCx7InN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiwzLCIiLDAseyJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsNSwiIiwwLHsic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDIsInxzJ3wiLDIseyJvZmZzZXQiOjUsImN1cnZlIjotMywic2hvcnRlbiI6eyJzb3VyY2UiOjEwfSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbMiwzLCJ8c3wiLDIseyJvZmZzZXQiOjMsImNvbG91ciI6WzAsMCw1MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzAsMCw1MCwxXV0sWzQsNSwifHMnfCIsMix7Im9mZnNldCI6MywiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbMyw0LCJ8c3wiLDIseyJsYWJlbF9wb3NpdGlvbiI6NjAsImN1cnZlIjotNSwic2hvcnRlbiI6eyJzb3VyY2UiOjEwLCJ0YXJnZXQiOjEwfSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXV0=
 \[\begin{tikzcd}
     & {|get -> \s'|} \\
@@ -454,33 +454,35 @@ becomes explicit in the program.
 \paragraph{Proving the |putR| Operation Correct}
 It is time to give a more formal definition for the translation between 
 global-state and local-state semantics. 
-Let's define a datatype |Prog s f a| that represents a program with state, 
-nondeterminism and some other effects.
-\begin{code}
-type Prog s f a = Free (StateF s :+: NondetF :+: f) a
-\end{code}
-We also use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
+% Let's define a datatype |Prog s f a| that represents a program with state, 
+% nondeterminism and some other effects.
+% \begin{code}
+% type Prog s f a = Free (StateF s :+: NondetF :+: f) a
+% \end{code}
+We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
 notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
 constructors. Their implementations are straightforwardly defined in terms of
 |Get|, |Put|, |Or| and |Fail|.
 %if False
 \begin{code}
-getOp     :: (s -> Prog s f a)  -> Prog s f a 
+getOp     :: (s -> Free (StateF s :+: NondetF :+: f) a)  
+          -> Free (StateF s :+: NondetF :+: f) a 
 getOp     = Op . Inl . Get
 
-putOp     :: s                  -> Prog s f a    -> Prog s f a 
+putOp     :: s                  
+          -> Free (StateF s :+: NondetF :+: f) a    
+          -> Free (StateF s :+: NondetF :+: f) a 
 putOp s   = Op . Inl  . Put s
 
-orOp      :: Prog s f a         -> Prog s f a    -> Prog s f a
+orOp      :: Free (StateF s :+: NondetF :+: f) a         
+          -> Free (StateF s :+: NondetF :+: f) a    
+          -> Free (StateF s :+: NondetF :+: f) a
 orOp p q  = (Op . Inr . Inl) (Or p q)
 
-failOp    :: Prog s f a
+failOp    :: Free (StateF s :+: NondetF :+: f) a
 failOp    = (Op . Inr . Inl) Fail 
 
-hLocal :: (Functor f) => Prog s f a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap fst) . hNDl) . S.runStateT . hStateT
-
-hGlobal :: (Functor f) => Prog s f a -> s -> Free f [a]
+hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
 hGlobal = fmap (fmap fst) . S.runStateT . hStateT . comm . hNDl . assocr . comm
 
 -- The code below is used to assist proof.
@@ -522,7 +524,7 @@ alg' (Inr (Inl Fail))      = \ s -> Var []
 alg' (Inr (Inl (Or p q)))  = \ s -> liftA2 (++) (p s) (q s)
 alg' (Inr (Inr y))         = \ s -> Op (fmap ($s) y)
 
-alg :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a) -> Prog s f a
+alg :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a) -> Free (StateF s :+: NondetF :+: f) a
 alg = undefined
 
 t2 :: Functor f
@@ -539,18 +541,18 @@ t2' = alg' . fmap hGlobal
 %endif
 We can then define |putROp| in terms of these helper functions.
 \begin{code}
-putROp :: s -> Prog s f a -> Prog s f a
+putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
 putROp t k = getOp (\s -> orOp (putOp t k) (putOp s failOp))
 \end{code}
 Note the similarity with the |putR| definition of the previous paragraph.
-The corresponding translation function |trans| transforms every |Put| into
+The corresponding translation function |local2global| transforms every |Put| into
 a |putROp| and leaves the rest of the program untouched.
 \begin{code}
-trans :: Functor f => Prog s f a -> Prog s f a
-trans = fold Var alg
+local2global :: Functor f => Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
+local2global = fold Var alg
   where 
     alg (Inl (Put t k)) = putROp t k
-    alg p = Op p
+    alg p               = Op p
 \end{code}
 Now, we want to prove this translation correct, but what does correctness mean 
 in this context?
@@ -560,19 +562,22 @@ We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
 \birthe{I changed |hState| to |S.runStateT . hStateT|}
-< hLocal :: Functor f => Prog s f a -> s -> Free f [a]
-< hLocal = fmap (fmap (fmap fst) . hNDl) . S.runStateT . hStateT
+\begin{code}
+hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+hLocal = fmap (fmap (fmap fst) . hNDl) . S.runStateT . hStateT
+\end{code}
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
-< hGlobal :: Functor f => Prog s f a -> s -> Free f [a]
-< hGlobal = fmap (fmap fst) . hState . hNDl
+< hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+< hGlobal = fmap (fmap fst) . S.runStateT . hStateT . hNDl
 Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
-< hGlobal . trans = hLocal
+< hGlobal . local2global = hLocal
+\birthe{I changed the name |trans|  to |local2global| so should change it in the proofs}
 We use equational reasoning techniques to prove this equality. 
 First, we use fold fusion to transfrom |hLocal| to a single fold.
-Second, we do the same to |hGlobal . trans|: use fold fusion to make it a single
+Second, we do the same to |hGlobal . local2global|: use fold fusion to make it a single
 fold. 
 Third, the universality of fold tells us that this equality holds.
 \todo{refer to appendices for proof}

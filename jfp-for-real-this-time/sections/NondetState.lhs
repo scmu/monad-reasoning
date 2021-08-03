@@ -219,8 +219,8 @@ a stack of computations or branches to be evaluated.
 We can define a simulation function as follows:
 
 \begin{code}
-nd2state :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free (StateF (SS m a f) :+: f) ()
-nd2state = fold gen (alg # fwd)
+nondet2state :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free (StateF (SS m a f) :+: f) ()
+nondet2state = fold gen (alg # fwd)
   where
     gen x         = appendSS x popSS
     alg Fail      = popSS
@@ -299,7 +299,7 @@ a free monad where the result is wrapped in the nondeterminism monad.
 The other effects |f| are to be dealt with by the appropriate handlers.
 \begin{code}
 runNDf :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
-runNDf = extractState . hStateT . nd2state
+runNDf = extractState . hStateT . nondet2state
 \end{code}
 
 To prove this approach correct, we should show that this |runNDf| function

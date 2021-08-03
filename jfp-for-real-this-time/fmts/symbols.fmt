@@ -126,6 +126,7 @@
 %format sig2 = "\Varid{\sigma_2}"
 %format alg1
 %format alg2
+%format comm2 = "\Varid{comm}"
 
 
 
