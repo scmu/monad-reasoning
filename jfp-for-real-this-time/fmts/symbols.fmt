@@ -14,6 +14,10 @@
 %format f2
 
 %format s0
+%format s1
+%format s2
+%format s1'
+%format s2'
 
 %format * = "\mathbin{^\star}"
 %format -* = "\mathbin{-^\star}"

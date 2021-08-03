@@ -19,26 +19,39 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 \section{Combination}
 \label{sec:combination}
 
+\todo{intro}
+
 %-------------------------------------------------------------------------------
 \subsection{Modeling Multiple States with State}
 \label{sec:state}
 
+It is straightforward to simulate an effect that contains multiple states with 
+a single state effect.
+In particular, it is intuitive to simulate two state functors |StateF s1 :+: StateF s2| 
+with a single state functor that contains a tuple of the two states |StateF (s1, s2)|.
+The simulation works as follows:
+
 \begin{code}
-states2state :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF (s1, s2) :+: f) a
-states2state = fold gen (alg # fwd)
+states2state  :: (Functor f) 
+              => Free (StateF s1 :+: StateF s2 :+: f) a 
+              -> Free (StateF (s1, s2) :+: f) a
+states2state  = fold return (alg # fwd)
   where
-    gen = return
-    alg :: Functor f => StateF s1 (Free (StateF (s1, s2) :+: f) a) -> Free (StateF (s1, s2) :+: f) a
-    alg (Get k) = Op $ Inl $ Get (\ (s1, s2) -> k s1)
-    alg (Put s1' k) = do
-      (s1, s2) <- Op $ Inl $ Get return
-      Op $ Inl $ Put (s1', s2) k
-    fwd :: Functor f => (StateF s2 :+: f) (Free (StateF (s1, s2) :+: f) a) -> Free (StateF (s1, s2) :+: f) a
-    fwd (Inl (Get k)) = Op $ Inl $ Get (\ (s1, s2) -> k s2)
-    fwd (Inl (Put s2' k)) = do
-      (s1, s2) <- Op $ Inl $ Get return
-      Op $ Inl $ Put (s1, s2') k
-    fwd (Inr op) = Op (Inr op)
+    alg  :: (Functor f) 
+         => StateF s1 (Free (StateF (s1, s2) :+: f) a) 
+         -> Free (StateF (s1, s2) :+: f) a
+    alg (Get k)      = get >>= \(s1, _) -> k s1
+    alg (Put s1' k)  = get >>= \(_, s2) -> put (s1', s2) k
+    fwd  :: (Functor f) 
+         => (StateF s2 :+: f) (Free (StateF (s1, s2) :+: f) a) 
+         -> Free (StateF (s1, s2) :+: f) a
+    fwd (Inl (Get k))      = get >>= \ (_, s2) -> k s2
+    fwd (Inl (Put s2' k))  = get >>= \(s1, _) -> put (s1, s2') k
+    fwd (Inr op)           = Op (Inr op)
+    get        :: Functor f => Free (StateF (s1, s2) :+: f) (s1, s2)
+    get        = Op $ Inl $ Get return
+    put        :: (s1, s2) -> Free (StateF (s1, s2) :+: f) a -> Free (StateF (s1, s2) :+: f) a
+    put sts k  = Op $ Inl $ Put sts k
 \end{code}
 
 %----------------------------------------------------------------
