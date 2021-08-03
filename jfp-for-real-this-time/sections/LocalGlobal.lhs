@@ -360,9 +360,6 @@ putR :: MStateNondet s m => s -> m ()
 putR s = get >>= \t -> put s `mplus` side (put t)
 \end{code}
 
-\todo{include figure + reference}
-\birthe{figure about the example below is better?}
-\wenhao{I think so}
 For example, assume an arbitrary computation |comp| is placed after 
 a state-restoring put. Now we reason as follows.
 <    putR s >> comp
@@ -375,6 +372,31 @@ a state-restoring put. Now we reason as follows.
 
 So, |putR| saves the current state |t|, computes |comp| using state |s|,
 and then restores the saved state |t|.
+Figure \ref{fig:state-restoring-put} shows how the state-passing works
+and the flow of execution for a computation after a state-restoring put.
+
+\begin{figure}
+% https://q.uiver.app/?q=WzAsNixbMSwwLCJ8Z2V0IFxccyd8Il0sWzEsMSwifG1wbHVzfCJdLFswLDIsInxwdXQgc3wiXSxbMCwzLCJ8Y29tcHwiXSxbMiwyLCJ8cHV0IHMnfCJdLFsyLDMsInxtemVyb3wiXSxbMCwxLCIiLDAseyJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsMiwiIiwwLHsic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDQsIiIsMCx7InN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiwzLCIiLDAseyJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsNSwiIiwwLHsic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDIsInxzJ3wiLDIseyJvZmZzZXQiOjUsImN1cnZlIjotMywic2hvcnRlbiI6eyJzb3VyY2UiOjEwfSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbMiwzLCJ8c3wiLDIseyJvZmZzZXQiOjMsImNvbG91ciI6WzAsMCw1MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzAsMCw1MCwxXV0sWzQsNSwifHMnfCIsMix7Im9mZnNldCI6MywiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbMyw0LCJ8c3wiLDIseyJsYWJlbF9wb3NpdGlvbiI6NjAsImN1cnZlIjotNSwic2hvcnRlbiI6eyJzb3VyY2UiOjEwLCJ0YXJnZXQiOjEwfSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXV0=
+\[\begin{tikzcd}
+    & {|get -> \s'|} \\
+    & {|mplus|} \\
+    {|put s|} && {|put s'|} \\
+    {|comp|} && {|mzero|}
+    \arrow[no head, from=1-2, to=2-2]
+    \arrow[no head, from=2-2, to=3-1]
+    \arrow[no head, from=2-2, to=3-3]
+    \arrow[no head, from=3-1, to=4-1]
+    \arrow[no head, from=3-3, to=4-3]
+    \arrow["{|s'|}"', shift right=5, color={rgb,255:red,128;green,128;blue,128}, curve={height=-18pt}, shorten <=5pt, dotted, from=1-2, to=3-1]
+    \arrow["{|s|}"', shift right=3, color={rgb,255:red,128;green,128;blue,128}, dotted, from=3-1, to=4-1]
+    \arrow["{|s'|}"', shift right=3, color={rgb,255:red,128;green,128;blue,128}, dotted, from=3-3, to=4-3]
+    \arrow["{|s|}"'{pos=0.6}, color={rgb,255:red,128;green,128;blue,128}, curve={height=-30pt}, shorten <=8pt, shorten >=8pt, dotted, from=4-1, to=3-3]
+\end{tikzcd}\]
+\label{fig:state-restoring-put}
+\caption{State-restoring put-operation.}
+\end{figure}
+
+
 Another example is shown in Table \ref{tab:state-restoring-put}, where
 three programs are run with initial state |s0|. 
 Note the difference between the final state and the program result for the
