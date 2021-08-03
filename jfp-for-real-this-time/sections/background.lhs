@@ -255,8 +255,7 @@ instance Monad (State s) where
  
 Because of the axiomatic definitions of our effects, it is straightforward to 
 reason about their combinations and interactions.
-This paper is about the interaction between nondeterminism and---local or global---state.
-\wenhao{The dash looks a little bit strange in the pdf.}
+This paper is about the interaction between nondeterminism and local or global state.
 We define a class |MStateNondet| that inherits the operations of its 
 superclasses |MState| and |MNondet| without adding new operations.
 \begin{code}
