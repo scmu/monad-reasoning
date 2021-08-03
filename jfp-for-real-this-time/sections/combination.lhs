@@ -82,7 +82,7 @@ We get to the following simulation:
 simulate  :: (Functor f, MNondet m) 
           => Free (StateF s :+: NondetF :+: f) a 
           -> StateT (SS m a (StateF s :+: f), s) (Free f) ()
-simulate  = hStateT . states2state . nondet2state . comm2 . local2global
+simulate  = hState . states2state . nondet2state . comm2 . local2global
 \end{code}
 Furthermore, we can define an |extract| function to extract the final result.
 \begin{code}
@@ -106,7 +106,7 @@ First, |local2global| models the local-state semantics with a global state.
 Second, a commutativity function |comm2| changes the order of state and nondeterminism.
 Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
 Then, |states2state| combines the two state effects into a single state.
-Finally, |hStateT| handles this state effect and translates it to the state transformer |StateT|.
+Finally, |hState| handles this state effect and translates it to the state transformer |StateT|.
 Additionally, the |extract| function pulls out the result in a more readable form.
 \begin{figure}[h]
 % https://q.uiver.app/?q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiAoU3RhdGVGIHMgOis6IGYpKSBhfCJdLFswLDMsInxGcmVlIChTdGF0ZUYgKFNTIG0gYSAoU3RhdGVGIHMgOis6IGYpKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDQsInxGcmVlIChTdGF0ZUYgKFNTIG0gYSAoU3RhdGVGIHMgOis6IGYpLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgbSBhIChTdGF0ZUYgcyA6KzogZiksIHMpIChGcmVlIGYpICgpfCJdLFswLDYsInxzIC0+IEZyZWUgZiBbYV18Il0sWzAsMSwifGxvY2FsMmdsb2JhbHwiXSxbMSwyLCJ8Y29tbTJ8Il0sWzIsMywifG5vbmRldDJzdGF0ZXwiXSxbMyw0LCJ8c3RhdGVzMnN0YXRlfCJdLFs0LDUsInxoU3RhdGVUfCJdLFs1LDYsInxleHRyYWN0fCIsMCx7ImNvbG91ciI6WzAsMCw1MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzAsMCw1MCwxXV0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXV0=
@@ -122,7 +122,7 @@ Additionally, the |extract| function pulls out the result in a more readable for
   \arrow["{|comm2|}", from=2-1, to=3-1]
   \arrow["{|nondet2state|}", from=3-1, to=4-1]
   \arrow["{|states2state|}", from=4-1, to=5-1]
-  \arrow["{|hStateT|}", from=5-1, to=6-1]
+  \arrow["{|hState|}", from=5-1, to=6-1]
   \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=6-1, to=7-1]
   \arrow["{|simulate|}", shift left=30, color={rgb,255:red,128;green,128;blue,128}, curve={height=-70pt}, shorten <=-10pt, dotted, from=1-1, to=6-1]
 \end{tikzcd}\]
@@ -131,36 +131,37 @@ Additionally, the |extract| function pulls out the result in a more readable for
 \end{figure}
 
 To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|, 
-or, in a more elaborate form: \\
-|extract . hStateT . states2state . nondet2state . comm2 . local2global = hLocal|.
+or, in a more elaborate form:
+< extract . hState . states2state . nondet2state . comm2 . local2global = hLocal
 
-% Some test program:
 
-% \begin{code}
-% or1 :: Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a
-% or1 x y = Op (Inr $ Inl $ Or x y)
+%if False
+\begin{code}
+or1 :: Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a -> Free (f :+: (NondetF :+: g)) a
+or1 x y = Op (Inr $ Inl $ Or x y)
 
-% fail1 :: Free (f :+: (NondetF :+: g)) a
-% fail1 = Op (Inr $ Inl Fail)
+fail1 :: Free (f :+: (NondetF :+: g)) a
+fail1 = Op (Inr $ Inl Fail)
 
-% get1 :: Functor f => Free (StateF s :+: f) s
-% get1 = Op (Inl $ Get return)
+get1 :: Functor f => Free (StateF s :+: f) s
+get1 = Op (Inl $ Get return)
 
-% put1 :: Functor f => s -> Free (StateF s :+: f) ()
-% put1 s = Op (Inl $ Put s (return ()))
+put1 :: Functor f => s -> Free (StateF s :+: f) ()
+put1 s = Op (Inl $ Put s (return ()))
 
-% prog :: Free (StateF Int :+: NondetF :+: Void) Int
-% prog =
-%   or1 (do put1 10; return 5)
-%       (do x <- get1; return x)
+prog :: Free (StateF Int :+: NondetF :+: NilF) Int
+prog =
+  or1 (do put1 10; return 5)
+      (do x <- get1; return x)
 
-% tt :: [Int]
-% tt = runVoid $ hLocal' prog 0
-% -- [5, 0]
-% tt' :: [Int]
-% tt' = runVoid $ hLocal prog 0
-% -- [5, 0]
-% \end{code}
+tt :: [Int]
+tt = hNil $ (extract . simulate) prog 0
+-- [5, 0]
+tt' :: [Int]
+tt' = hNil $ hLocal prog 0
+-- [5, 0]
+\end{code}
+%endif
 
 \subsection{The Simulation for N-queens}
 

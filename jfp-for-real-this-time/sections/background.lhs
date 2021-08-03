@@ -14,7 +14,8 @@
 module Background where
 
 import Control.Monad (ap, liftM)
-import qualified Control.Monad.Trans.State.Lazy as S
+-- import qualified Control.Monad.Trans.State.Lazy as S
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
 \end{code}
 %endif
@@ -128,13 +129,8 @@ instance Functor f => Applicative (Free f) where
 instance Functor f => Monad (Free f) where
     return   = Var
     m >>= f  = fold f Op m
-
-data Void a deriving Functor -- Empty Signature
-
-runVoid :: Free Void a -> a
-runVoid (Var x) = x
-
 \end{code}
+
 %fmap f (Op op) = Op (fmap (fmap f) op)
 %(Op op) >>= f = Op (fmap (>>= f) op)
 
@@ -149,6 +145,15 @@ Precomposing or postcomposing a function with a fold works as follows:
 
 We use these laws in due course to prove correctness of laws for state, 
 nondeterminism or a combination.
+
+% We can define an empty signature and the run function for it.
+% \begin{code}
+% data Void a deriving Functor
+
+% runVoid :: Free Void a -> a
+% runVoid (Var x) = x
+
+% \end{code}
 
 %-------------------------------------------------------------------------------
 \subsection{Nondeterminism}
@@ -232,8 +237,8 @@ Haskell's implementation for state is the |State s| monad.
 newtype State s a = State { runState :: s -> (a, s) }
 
 instance MState s (State s) where
-  get = State (\s -> (s, s))
-  put s = State (\ _ -> ((), s))
+  get    = State (\s -> (s, s))
+  put s  = State (\ _ -> ((), s))
 \end{code}
 %if False
 \begin{code}
@@ -277,11 +282,11 @@ data StateF s a  = Get (s -> a) | Put s a
 data NondetF a   = Fail | Or a a
 \end{code}
 Using this encoding, stateful and nondeterministic computations 
-are represented by the types |StateC| and |NondetC| respectively.
-\begin{code}
-type StateC s a  =  Free (StateF s) a
-type NondetC a   =  Free NondetF a
-\end{code}
+are represented by the types |Free (StateF s) a| and |Free NondetF a| respectively.
+% \begin{code}
+% type StateC s a  =  Free (StateF s) a
+% type NondetC a   =  Free NondetF a
+% \end{code}
 %if False
 \begin{code}
 infixr :+:
@@ -305,8 +310,13 @@ modular definition of the signature of effects.
 For instance, we can encode programs with both state and nondeterminism as 
 effects using the data type 
 |Free (StateF :+: NondetF) a|. 
-The coproduct also has a neutral element |NilF|, representing the empty effect set.
-< data NilF a
+The coproduct also has a neutral element |NilF|, representing the empty effect set, and a function |hNil|, extracting return values from |Free NilF a|.
+\begin{code}
+data NilF a deriving (Functor)
+
+hNil :: Free NilF a -> a 
+hNil (Var x) = x
+\end{code}
 Consequently, we can compose the state effects with any other 
 effect functor |f| using |Free (StateF s :+: f) a|.
 
@@ -324,11 +334,6 @@ A mediator can be used to seperate the algebras for the components of the coprod
 \end{code} 
 %if False
 \begin{code}
-data NilF a deriving (Functor)
-
-hNil :: Free NilF a -> a 
-hNil (Var x) = x
-
 instance (Functor f, Functor g) => Functor (f :+: g) where
     fmap f (Inl x)  =  Inl (fmap f x)
     fmap f (Inr y)  =  Inr (fmap f y)
@@ -364,7 +369,9 @@ instance MState s (Free (StateF s)) where
 instance (Functor f, MState s (Free (StateF s))) => MState s (Free (StateF s :+: f)) where
     get    = Op (Inl (Get return))
     put x  = Op (Inl (Put x (return ())))
+\end{code}
 
+\begin{spec}
 hState' :: (Functor f, MState s m) => Free (StateF s :+: f) a -> Free f (m a)
 hState' (Var x)               = Var (return x)
 hState' (Op (Inl (Get k)))    = hState' (get >>= k)
@@ -387,7 +394,7 @@ hState  =  fold genS (algS # fwdS)
     algS (Get k)    s  = k s s
     algS (Put s k)  _  = k s
     fwdS y          s  = Op (fmap ($s) y)
-\end{code}
+\end{spec}
 %endif
 
 The handlers for state and nondeterminism use the |StateT| monad and |List|
@@ -396,13 +403,13 @@ The |StateT| monad is the state transformer from the Monad Transformer Library \
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
 The handlers are defined as follows:
 \begin{code}
-hStateT :: Functor f => Free (StateF s :+: f) a -> S.StateT s (Free f) a
-hStateT = fold genS (algS # fwdS)
+hState :: Functor f => Free (StateF s :+: f) a -> StateT s (Free f) a
+hState = fold genS (algS # fwdS)
   where
-    genS x           = S.StateT $ \s -> return (x, s)
-    algS (Get     k)  = S.StateT $ \s -> S.runStateT (k s) s
-    algS (Put s'  k)  = S.StateT $ \s -> S.runStateT k s'
-    fwdS op           = S.StateT $ \s -> Op $ fmap (\k -> S.runStateT k s) op
+    genS x            = StateT $ \s -> return (x, s)
+    algS (Get     k)  = StateT $ \s -> runStateT (k s) s
+    algS (Put s'  k)  = StateT $ \s -> runStateT k s'
+    fwdS op           = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
 hNDl :: Functor f => Free (NondetF :+: f) a -> Free f [a]
 hNDl  =  fold genND (algND # Op)
   where

@@ -16,7 +16,8 @@ module NondetState where
 
 import Background hiding (hND)
 import Control.Monad (ap, join, liftM)
-import qualified Control.Monad.Trans.State.Lazy as S
+-- import qualified Control.Monad.Trans.State.Lazy as S
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Control.Monad.Trans (lift)
 
 \end{code}
@@ -27,7 +28,7 @@ and state.
 Typically, nondeterminism is modelled using a |List| monad.
 However, many efficient nondeterministic systems, such as Prolog, 
 use a state-based implementation to simulate this effect.
-This section shows how this simulation works, and proofs it correct using 
+This section shows how this simulation works, and proves it correct using 
 equational reasoning techniques and initiality of the |List| monad.
 
 %-------------------------------------------------------------------------------
@@ -89,6 +90,10 @@ can be found in Appendix \ref{app:initiality-nondeterminism}.
 \subsection{Simulating Nondeterministic Programs with State}
 \label{sec:sim-nondet-state}
 
+\wenhao{I was wondering whether this section is needed.
+I think Section 3.3 is enough. And in Section 4, we also only give a simulation |local2global| with other effects.
+If we want to remain Section 3.2, maybe we should change it to the same style of Section 3.3, i.e. using a syntax-level simulation like |simulate :: MNondet m => Free NondetF a -> Free (StateF SomeStateHere) ()|.}
+
 This section shows how to use a state-based implementation to simulate nondeterminism.
 
 For this, we use a wrapper |STND| around |State| that uses as state a tuple with 
@@ -98,7 +103,7 @@ The return type of |State| is a unit |()|.
 \begin{code}
 newtype STND m a = STND { runSTND :: State (m a, [STND m a]) () }
 \end{code}
-To simulate a nondeterministic computation |NondetC| with this state wrapper, 
+To simulate a nondeterministic computation |Free NondetF a| with this state wrapper, 
 we define a helper functions in Figure \ref{fig:pop-push-append}.
 The function |popND| takes the upper element of the stack.
 The function |pushND| adds a branch to the stack.
@@ -155,7 +160,7 @@ appendND x p = STND $ do
 Now everything is in place to define a simulation function |simulate| that
 interprets every nondeterministic computation as a state-wrapped program. 
 \begin{code}
-simulate :: MNondet m => NondetC a -> STND m a
+simulate :: MNondet m => Free NondetF a -> STND m a
 simulate = fold gen alg
   where
     gen x         = appendND x popND
@@ -173,7 +178,7 @@ the simulate function. It transforms
 every nondeterministic computation to a result that is encapsulated in a
 nondeterminism monad.
 \begin{code}
-runND :: MNondet m => NondetC a -> m a
+runND :: MNondet m => Free NondetF a -> m a
 runND = extract . simulate
 \end{code}
 
@@ -183,13 +188,13 @@ For that, we zoom in on a version of such a handler
 (Section \ref{sec:combining-effects}) with no other effects
 (|f = NilF|). 
 We replace the |List| monad by any other nondeterminism monad |m|.
-Consequently, the type signature for the handler changes from \\
-|hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|\\ 
-to \\
-|hND :: MNondet m => NondetC a -> m a|.\\
+Consequently, the type signature for the handler changes from 
+|hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|
+to 
+|hND :: MNondet m => Free NondetF a -> m a|.
 This leaves us with the following implementation for the handler.
 \begin{code}
-hND :: MNondet m => NondetC a -> m a
+hND :: MNondet m => Free NondetF a -> m a
 hND = fold genND algND
   where 
     genND           = return 
@@ -219,7 +224,9 @@ a stack of computations or branches to be evaluated.
 We can define a simulation function as follows:
 
 \begin{code}
-nondet2state :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free (StateF (SS m a f) :+: f) ()
+nondet2state  :: (Functor f, MNondet m)
+              => Free (NondetF :+: f) a
+              -> Free (StateF (SS m a f) :+: f) ()
 nondet2state = fold gen (alg # fwd)
   where
     gen x         = appendSS x popSS
@@ -289,8 +296,8 @@ appendSS x p = do
 To extract the final result from the |SS| wrapper, we define an |extractState| 
 function.
 \begin{code}
-extractState :: (Functor f, MNondet m) => S.StateT (SS m a f) (Free f) () -> Free f (m a)
-extractState x = fst . unSS . snd <$> S.runStateT x (SS (mzero, []))
+extractState :: (Functor f, MNondet m) => StateT (SS m a f) (Free f) () -> Free f (m a)
+extractState x = fst . unSS . snd <$> runStateT x (SS (mzero, []))
 \end{code}
 
 Finally, |runNDf| is again a trivial extension of the simulation.
@@ -299,7 +306,7 @@ a free monad where the result is wrapped in the nondeterminism monad.
 The other effects |f| are to be dealt with by the appropriate handlers.
 \begin{code}
 runNDf :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
-runNDf = extractState . hStateT . nondet2state
+runNDf = extractState . hState . nondet2state
 \end{code}
 
 To prove this approach correct, we should show that this |runNDf| function

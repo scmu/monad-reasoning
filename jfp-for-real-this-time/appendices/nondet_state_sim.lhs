@@ -7,7 +7,7 @@ This section shows that the |runND| function is equivalent
 to the following nondeterminism handler.
 
 \begin{code}
-hND :: MNondet m => NondetC a -> m a
+hND :: MNondet m => Free NondetF a -> m a
 hND = fold genND algND
   where 
     genND           = return 

@@ -266,7 +266,7 @@ hCut = foldS gen (Alg (algNDCut # Call) (algSC # fwdSC))
 Examples:
 \begin{code}
 
-run :: FreeS Void Void a -> a
+run :: FreeS NilF NilF a -> a
 run (Return x) = x
 
 fail'     = (Call . Inl . Inl) Fail
@@ -306,10 +306,10 @@ We use a wrapper |STCut| around State \todo{}.
 \begin{code}
 newtype STCut a = STCut {runSTCut :: State (CutList a, [STCut a]) ()}
 
-type V a = FreeS Void Void a
+type V a = FreeS NilF NilF a
 
 -- Doesn't deal with f and g currently.
-simulate :: FreeS (NondetF' :+: Void) (ScopeF :+: Void) a -> V (STCut a)
+simulate :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> V (STCut a)
 simulate = foldS genCut (Alg (algNDCut # undefined) (algSCCut # undefined)) where
   genCut :: a -> V (STCut a)
   genCut x                 = return $ appendCut x popCut
@@ -317,7 +317,7 @@ simulate = foldS genCut (Alg (algNDCut # undefined) (algSCCut # undefined)) wher
   algNDCut (Inl Fail)      = return $ popCut
   algNDCut (Inl (Or p q))  = return $ pushCut (run q) (run p)
   algNDCut (Inr Cut)       = return $ undoCut
-  algSCCut :: ScopeF (FreeS (NondetF' :+: Void) (ScopeF :+: Void) (V (STCut a))) -> V (STCut a)
+  algSCCut :: ScopeF (FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) (V (STCut a))) -> V (STCut a)
   algSCCut (Scope k)       = return $ qwq (run (simulate (fmap run k)))
 
 qwq :: STCut (STCut a) -> STCut a

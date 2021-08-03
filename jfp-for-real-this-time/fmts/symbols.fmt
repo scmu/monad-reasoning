@@ -80,12 +80,10 @@
 
 %format extractNDf = "\Varid{extract^{\prime}}"
 
-%format S.StateT = "\Varid{StateT}"
-%format S.runStateT = "\Varid{runStateT}"
-
 %format hState = "\Varid{h_{State}}"
 %format hStateT = "\Varid{h_{StateT}}"
 %format hND = "\Varid{h_{ND}}"
+%format hNil = "\Varid{h_{Nil}}"
 %format hNDl = "\Varid{h_{ND_{[]}}}"
 %format hNDf = "\Varid{h_{ND+f}}"
 %format hLocal = "\Varid{h_{Local}}"

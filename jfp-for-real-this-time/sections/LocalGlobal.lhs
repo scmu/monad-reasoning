@@ -17,35 +17,36 @@ module LocalGlobal where
 import Background
 import Control.Monad (ap, liftM) 
 import Control.Applicative (liftA2)
-import qualified Control.Monad.Trans.State.Lazy as S
+-- import qualified Control.Monad.Trans.State.Lazy as S
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
 class MStateNondet s m => MSt s m where
     alph :: n a -> m a
 
-local :: MSt s n => S.StateT s m a -> n a
+local :: MSt s n => StateT s m a -> n a
 local x = do 
     s <- get
-    (a, s') <- alph (S.runStateT x s)
+    (a, s') <- alph (runStateT x s)
     put s'
     etan a
 
 etan :: Monad n => a -> n a
 etan = return
 
-etals :: MStateNondet s m => a -> S.StateT s m a
-etals x = S.StateT $ \s -> return (x, s)
+etals :: MStateNondet s m => a -> StateT s m a
+etals x = StateT $ \s -> return (x, s)
 
-muls :: MStateNondet s m => S.StateT s m (S.StateT s m a) -> S.StateT s m a
-muls mx = S.StateT $ \s -> S.runStateT mx s >>= \(x, s') -> S.runStateT x s'
+muls :: MStateNondet s m => StateT s m (StateT s m a) -> StateT s m a
+muls mx = StateT $ \s -> runStateT mx s >>= \(x, s') -> runStateT x s'
 
 mun :: MSt s n => n (n a) -> n a
 mun nx = alph nx >>= id -- do
     -- x <- alph nx
     -- x
 
-instance (Monad m) => MState s (S.StateT s m) where
-    get = S.StateT (\s -> return (s, s))
-    put s = S.StateT (\ _ -> return ((), s))
+instance (Monad m) => MState s (StateT s m) where
+    get = StateT (\s -> return (s, s))
+    put s = StateT (\ _ -> return ((), s))
 
 \end{code}
 %endif
@@ -483,7 +484,7 @@ failOp    :: Free (StateF s :+: NondetF :+: f) a
 failOp    = (Op . Inr . Inl) Fail 
 
 hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hGlobal = fmap (fmap fst) . S.runStateT . hStateT . comm . hNDl . assocr . comm
+hGlobal = fmap (fmap fst) . runStateT . hState . comm . hNDl . assocr . comm
 
 -- The code below is used to assist proof.
 hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
@@ -561,15 +562,15 @@ semantics.
 We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
-\birthe{I changed |hState| to |S.runStateT . hStateT|}
+\birthe{I changed |hState| to |runStateT . hState|}
 \begin{code}
 hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap fst) . hNDl) . S.runStateT . hStateT
+hLocal = fmap (fmap (fmap fst) . hNDl) . runStateT . hState
 \end{code}
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-< hGlobal = fmap (fmap fst) . S.runStateT . hStateT . hNDl
+< hGlobal = fmap (fmap fst) . runStateT . hState . hNDl
 Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
