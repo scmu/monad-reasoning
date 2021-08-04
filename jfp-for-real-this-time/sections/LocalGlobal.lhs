@@ -266,6 +266,8 @@ Branching first exhausts the left branch before switching to the right branch.
 %-------------------------------------------------------------------------------
 \subsection{Transforming Between Local and Global State}
 \label{sec:transforming-between-local-and-global-state}
+\wenhao{I am wondering whether we can directly use the free monad representation to organize the presentation of S4.3 or the whole S4, because the final simulation function |local2global| uses free monad.}
+
 
 Both local state and global state have their own laws and semantics. 
 Also, both interpretations of nondeterminism with state have their own 
@@ -562,7 +564,6 @@ semantics.
 We can define handlers for these semantics.
 Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
-\birthe{I changed |hState| to |runStateT . hState|}
 \begin{code}
 hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
 hLocal = fmap (fmap (fmap fst) . hNDl) . runStateT . hState
@@ -575,7 +576,6 @@ Note that, for this handler to work, we assume implicit
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
 < hGlobal . local2global = hLocal
-\birthe{I changed the name |trans|  to |local2global| so should change it in the proofs}
 We use equational reasoning techniques to prove this equality. 
 First, we use fold fusion to transfrom |hLocal| to a single fold.
 Second, we do the same to |hGlobal . local2global|: use fold fusion to make it a single
