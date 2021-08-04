@@ -68,6 +68,7 @@
 %format StateC = "\Varid{State_{C}}"
 
 %format NondetF = "\Varid{Nondet_{F}}"
+%format NondetF' = "\Varid{Nondet_{F}}^\prime"
 %format StateF = "\Varid{State_{F}}"
 %format NilF = "\Varid{Nil_{F}}"
 

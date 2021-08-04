@@ -13,6 +13,7 @@ import Background
 
 import Control.Monad (ap, join, liftM, when)
 import Control.Monad.Trans (lift)
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Data.Either (isLeft)
 import Prelude hiding (fail)
 import Debug.Trace
@@ -189,9 +190,9 @@ Effects with scoping operations can be captured modularly in an adapted version 
 the free monad we defined in Section \ref{sec:free-monads}.
 
 \begin{code}
-data FreeS f g a  = Return a
-                  | Call (f (FreeS f g a))
-                  | Enter (g (FreeS f g (FreeS f g a)))
+data FreeS f g a  =  Return a
+                  |  Call (f (FreeS f g a))
+                  |  Enter (g (FreeS f g (FreeS f g a)))
 \end{code}
 %if False
 \begin{code}
@@ -295,20 +296,27 @@ prefixes' = or' (takeWhileS even prog1) (takeWhileS even prog2)
 
 prog :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (ScopeF :+: g) Int
 prog = or' (scope' (or' (return $ return 2) (return $ return 4))) (return 6)
-
 \end{code}
 
 \subsubsection{Simulating the Cut Effect with State}
 
 This section shows how to use a state-based implementation to simulate the cut effect.
-We use a wrapper |STCut| around State \todo{}.
+We use a wrapper |STCut| around State.
 
+\todo{The simulation here assumes there is no other effects. Maybe we need to add other effects?}
+
+\wenhao{I have wrote two simulations here, one directly uses the state monad to simulate nondet free monad, and the other uses the state free monad to simulate nondet free monad. I think we should remain the second simulation as it is more consistent with S3 and S4.}
+
+The first simulation is given by:
+< simulate :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> FreeS Nil Nil (STCut a)
+< extractCut . run . simulate :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> CutList a
+
+Code :
 \begin{code}
 newtype STCut a = STCut {runSTCut :: State (CutList a, [STCut a]) ()}
 
 type V a = FreeS NilF NilF a
 
--- Doesn't deal with f and g currently.
 simulate :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> V (STCut a)
 simulate = foldS genCut (Alg (algNDCut # undefined) (algSCCut # undefined)) where
   genCut :: a -> V (STCut a)
@@ -318,29 +326,20 @@ simulate = foldS genCut (Alg (algNDCut # undefined) (algSCCut # undefined)) wher
   algNDCut (Inl (Or p q))  = return $ pushCut (run q) (run p)
   algNDCut (Inr Cut)       = return $ undoCut
   algSCCut :: ScopeF (FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) (V (STCut a))) -> V (STCut a)
-  algSCCut (Scope k)       = return $ qwq (run (simulate (fmap run k)))
+  algSCCut (Scope k)       = return $ joinSTCut (run (simulate (fmap run k)))
 
-qwq :: STCut (STCut a) -> STCut a
--- qwq x = STCut $ State $ \ prev -> let t = join $ fmap (\ st -> (fst . snd) $ (runState . runSTCut) st prev) (extractCut x) in ((), (t, []))
-qwq x = STCut $ State $ \ (cl, stack) -> let t = scope $ fmap extractCut (extractCut x) in 
+joinSTCut :: STCut (STCut a) -> STCut a
+joinSTCut x = let t = scope $ fmap extractCut (extractCut x) in STCut $ State $ \ (cl, stack) ->
   case stack of
     [] -> ((), (append cl (join t), []))
     STCut p : ps -> runState p (append cl (join t), ps)
-  -- in let t' = (append cl (join t), st) in trace (sar (fst t') ++ "-" ++ show (length st)) ((), t')
 
-sar :: CutList a -> String
-sar (CutList (Ret xs))= ("[Ret " ++ show (length xs) ++ "]")
-sar (CutList (Flag xs))= ("[Flag " ++ show (length xs) ++ "]")
--- append'   :: CutList a -> CutList a -> CutList a
--- append'   (CutList (Ret xs))   ys  = CutList $ fmap ((++) xs) $ unCutList ys
--- append'   (CutList (Flag xs))   ys  = CutList $ fmap ((++) xs) $ unCutList ys
--- -- append'   (CutList (Flag xs))  _   = CutList (Flag xs)
--- 
--- flatten :: CutList (CutList a) -> CutList a
--- flatten (CutList (Ret [])) = CutList (Ret [])
--- flatten (CutList (Flag [])) = CutList (Flag [])
--- flatten (CutList (Ret (x:xs))) = append' x (flatten (CutList (Ret xs)))
--- flatten (CutList (Flag (x:xs))) = (CutList . Flag . unIdem . unCutList) $ append' x (flatten (CutList (Flag xs)))
+joinSTCut' :: STCut (STCut a) -> STCut a
+joinSTCut' x = let t = scope $ fmap extractCut (extractCut x) in STCut $ do
+  (cl, stack) <- get
+  case stack of
+    [] -> put (append cl (join t), [])
+    STCut p : ps -> do put (append cl (join t), ps); p
 
 extractCut :: STCut a -> CutList a
 extractCut x = fst $ snd $ runState (runSTCut x) (fail, [])
@@ -368,15 +367,92 @@ undoCut :: STCut a
 undoCut = STCut $ do
   (xs, stack) <- get
   put (append xs (cut >> fail), stack)
+
+test1 :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> CutList a
+test1 = extractCut . run . simulate
 \end{code}
 
-% Examples:
-% *Main> (extractCut . run . simulate) prog
-% CutList {unCutList = Ret [2,4,6]}
-% *Main> (extractCut . run . simulate) prefixes' 
-% CutList {unCutList = Ret [2,4,6]}
-% *Main> (extractCut . run . simulate) (takeWhileS even prog1)
-% CutList {unCutList = Ret [2,4]}
+
+The second simulation is given by:
+< cut2state :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> FreeS (StateF (SCut a NilF NilF) :+: NilF) NilF ()
+< run . extractSC . hStateS . cut2state :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> CutList a
+
+Code:
+
+\begin{code}
+newtype SCut a f g = SCut { runSCut :: (CutList a, [FreeS (StateF (SCut a f g) :+: f) g ()]) }
+
+getSC :: (Functor f, Functor g) => FreeS (StateF s :+: f) g s
+getSC = Call (Inl $ Get return)
+
+putSC :: (Functor f, Functor g) => s -> FreeS (StateF s :+: f) g ()
+putSC s = Call (Inl $ Put s (return ()))
+
+popSC :: (Functor f, Functor g) => FreeS (StateF (SCut a f g) :+: f) g ()
+popSC = do
+  SCut (xs, stack) <- getSC
+  case stack of
+    [] -> return ()
+    p : ps -> do putSC (SCut (xs, ps)); p
+
+pushSC :: (Functor f, Functor g)
+       => FreeS (StateF (SCut a f g) :+: f) g ()
+       -> FreeS (StateF (SCut a f g) :+: f) g ()
+       -> FreeS (StateF (SCut a f g) :+: f) g ()
+pushSC q p = do
+  SCut (xs, stack) <- getSC
+  putSC (SCut (xs, q : stack)); p
+
+appendSC :: (Functor f, Functor g) => a
+         -> FreeS (StateF (SCut a f g) :+: f) g ()
+         -> FreeS (StateF (SCut a f g) :+: f) g ()
+appendSC x p = do
+  SCut (xs, stack) <- getSC
+  putSC (SCut (append xs (return x), stack)); p
+
+undoSC :: (Functor f, Functor g) => FreeS (StateF (SCut a f g) :+: f) g ()
+undoSC = do
+  SCut (xs, stack) <- getSC
+  putSC (SCut (append xs (cut >> fail), stack))
+
+cut2state :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> FreeS (StateF (SCut a NilF NilF) :+: NilF) NilF ()
+cut2state = foldS genCut (Alg (algNDCut # undefined) (algSCCut # undefined))
+  where
+  genCut x = appendSC x popSC
+  algNDCut (Inl Fail) = popSC
+  algNDCut (Inl (Or p q)) = pushSC q p
+  algNDCut (Inr Cut) = undoSC
+  algSCCut :: ScopeF (FreeS ((NondetF :+: CutF) :+: NilF) (ScopeF :+: NilF) (FreeS (StateF (SCut a NilF NilF) :+: NilF) NilF ())) -> FreeS (StateF (SCut a NilF NilF) :+: NilF) NilF ()
+  algSCCut (Scope k) = joinSC $ cut2state k
+
+joinSC :: FreeS (StateF (SCut (FreeS (StateF (SCut a NilF NilF) :+: NilF) NilF ()) NilF NilF) :+: NilF) NilF ()
+       -> FreeS (StateF (SCut a NilF NilF) :+: NilF) NilF ()
+joinSC x =
+  let t = scope $ fmap (run . extractSC . hStateS) $ (run . extractSC . hStateS) x
+  in do
+    SCut (cl, stack) <- getSC
+    case stack of
+      [] -> putSC $ SCut (append cl (join t), [])
+      p : ps -> do putSC $ SCut (append cl (join t), ps); p
+
+extractSC :: (Functor f, Functor g) => StateT (SCut a f g) (FreeS f g) () -> FreeS f g (CutList a)
+extractSC x = fst . runSCut . snd <$> runStateT x (SCut (cutList [], []))
+
+hStateS :: (Functor f, Functor g) => FreeS (StateF s :+: f) g a -> StateT s (FreeS f g) a
+hStateS = foldS gen (Alg (alg # fwd) fwdsc)
+  where
+    gen x            = StateT $ \s -> return (x, s)
+    alg (Get     k)  = StateT $ \s -> runStateT (k s) s
+    alg (Put s'  k)  = StateT $ \s -> runStateT k s'
+    fwd op           = StateT $ \s -> Call $ fmap (\k -> runStateT k s) op
+    fwdsc :: (Functor f, Functor g) => g (FreeS (StateF s :+: f) g (StateT s (FreeS f g) a)) -> StateT s (FreeS f g) a
+    fwdsc x          =
+      let t = StateT $ \s -> Enter $ fmap (fmap (\(a, b) -> runStateT a b) . ($s) . runStateT . hStateS) x
+      in t
+
+test2 :: FreeS (NondetF' :+: NilF) (ScopeF :+: NilF) a -> CutList a
+test2 = (run . extractSC . hStateS . cut2state)
+\end{code}
 
 %if False
 \begin{spec}
