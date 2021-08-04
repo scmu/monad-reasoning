@@ -17,7 +17,7 @@ module NondetState where
 import Background hiding (hND)
 import Control.Monad (ap, join, liftM)
 -- import qualified Control.Monad.Trans.State.Lazy as S
-import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT, state)
 import Control.Monad.Trans (lift)
 
 \end{code}
@@ -90,88 +90,92 @@ can be found in Appendix \ref{app:initiality-nondeterminism}.
 \subsection{Simulating Nondeterministic Programs with State}
 \label{sec:sim-nondet-state}
 
-\wenhao{I was wondering whether this section is needed.
-I think Section 3.3 is enough. And in Section 4, we also only give a simulation |local2global| with other effects.
-If we want to remain Section 3.2, maybe we should change it to the same style of Section 3.3, i.e. using a syntax-level simulation like |simulate :: MNondet m => Free NondetF a -> Free (StateF SomeStateHere) ()|.}
+\wenhao{ I have changed this section to the same style of Section 3.3, i.e. using a syntax-level simulation like |nondet2stateS :: MNondet m => Free NondetF a -> Free (StateF (S m a)) ()|.
+I was wondering whether this section is needed.
+I think it is ok to directly give the simulation with other effects.
+It is what we do in Section 4, where we also only give a simulation |local2global| with other effects.}
 
 This section shows how to use a state-based implementation to simulate nondeterminism.
 
-For this, we use a wrapper |STND| around |State| that uses as state a tuple with 
+For this, we use a type |S| that uses as a tuple with 
 (1) the current solution(s) |m a| wrapped in a monad and 
 (2) the branches to be evaluated, which we will call the \emph{stack}.
-The return type of |State| is a unit |()|.
+The braches in the stack are represented by the free monad of state.
 \begin{code}
-newtype STND m a = STND { runSTND :: State (m a, [STND m a]) () }
+newtype S m a = S { runS :: (m a, [Free (StateF (S m a)) ()]) }
 \end{code}
 To simulate a nondeterministic computation |Free NondetF a| with this state wrapper, 
 we define a helper functions in Figure \ref{fig:pop-push-append}.
-The function |popND| takes the upper element of the stack.
-The function |pushND| adds a branch to the stack.
-The function |appendND| adds a solution to the given solutions. 
+The function |popS| takes the upper element of the stack.
+The function |pushS| adds a branch to the stack.
+The function |appendS| adds a solution to the given solutions. 
+Furthermore, we define smart constructors |getS| and |putS s| for getting 
+the state and putting a new state.
+\begin{code}
+getS :: Free (StateF s) s
+getS = Op (Get return)
+
+putS :: s -> Free (StateF s) ()
+putS s = Op (Put s (return ()))
+\end{code} 
 
 \noindent
 \begin{figure}[h]
 \small
 \begin{subfigure}[t]{0.33\linewidth}
 \begin{code}
-popND  :: MNondet m 
-       => STND m a 
-popND = STND $ do 
-    (xs, stack) <- get
-    case stack of 
-        []         ->  return ()
-        STND p : ps  ->  do 
-            put (xs, ps) ; p
+popS  :: Free (StateF (S m a)) ()
+popS = do
+  S (xs, stack) <- getS
+  case stack of
+    []       -> return ()
+    op : ps  -> do
+      putS (S (xs, ps)); op
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-pushND  :: MNondet m 
-        => STND m a 
-        -> STND m a 
-        -> STND m a
-pushND q p = STND $ do
-    (x, stack) <- get
-    put (x, q:stack)
-    runSTND p
+pushS   :: Free (StateF (S m a)) ()
+        -> Free (StateF (S m a)) ()
+        -> Free (StateF (S m a)) ()
+pushS q p = do
+  S (xs, stack) <- getS
+  putS (S (xs, q : stack)); p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-appendND  :: MNondet m 
-          => a 
-          -> STND m a 
-          -> STND m a
-appendND x p = STND $ do
-    (xs, stack) <- get
-    put (xs `mplus` return x, stack)
-    runSTND p
+appendS   :: (MNondet m) => a
+          -> Free (StateF (S m a)) ()
+          -> Free (StateF (S m a)) ()
+appendS x p = do
+ S (xs, stack) <- getS
+ putS (S (xs `mplus` return x, stack)); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append}
 \end{subfigure}%
 \label{fig:pop-push-append}
-\caption{Helper functions |popND|, |pushND| and |appendND|.}
+\caption{Helper functions |popS|, |pushS| and |appendS|.}
 \end{figure}
 Now everything is in place to define a simulation function |simulate| that
-interprets every nondeterministic computation as a state-wrapped program. 
+interprets every nondeterministic computation as a state-wrapped program.
 \begin{code}
-simulate :: MNondet m => Free NondetF a -> STND m a
-simulate = fold gen alg
+nondet2stateS :: MNondet m => Free NondetF a -> Free (StateF (S m a)) ()
+nondet2stateS = fold gen alg
   where
-    gen x         = appendND x popND
-    alg :: MNondet m => NondetF (STND m a) -> STND m a
-    alg Fail      = popND
-    alg (Or p q)  = pushND q p
+    gen x         = appendS x popS
+    alg Fail      = popS
+    alg (Or p q)  = pushS q p
 \end{code}
-To extract the final result from the |STND| wrapper, we define the |extract| function.
+To extract the final result from the |S| wrapper, we define the |extractS| function.
 \begin{code}
-extract :: MNondet m => STND m a -> m a
-extract x = fst . snd $ runState (runSTND x) (mzero, [])
+extractS :: MNondet m => State (S m a) () -> m a
+extractS x = fst . runS <$> snd $ runState x (S (mzero, []))
 \end{code}
 This way, |runND| is a trivial extension of 
 the simulate function. It transforms
@@ -179,7 +183,7 @@ every nondeterministic computation to a result that is encapsulated in a
 nondeterminism monad.
 \begin{code}
 runND :: MNondet m => Free NondetF a -> m a
-runND = extract . simulate
+runND = extractS . hState' . nondet2stateS
 \end{code}
 
 To prove that this simulation is correct, we should show that this 
@@ -188,10 +192,10 @@ For that, we zoom in on a version of such a handler
 (Section \ref{sec:combining-effects}) with no other effects
 (|f = NilF|). 
 We replace the |List| monad by any other nondeterminism monad |m|.
-Consequently, the type signature for the handler changes from 
-|hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|
-to 
-|hND :: MNondet m => Free NondetF a -> m a|.
+% Consequently, the type signature for the handler changes from 
+% |hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|
+% to 
+% |hND :: MNondet m => Free NondetF a -> m a|.
 This leaves us with the following implementation for the handler.
 \begin{code}
 hND :: MNondet m => Free NondetF a -> m a
@@ -207,6 +211,7 @@ above.
 |runND = hND|
 \end{theorem}
 The proof of this theorem is added in Appendix \ref{app:runnd-hnd}. 
+\todo{adapt the proof to the new function definition.}
 
 \subsection{Combining the Simulation with Other Effects}
 \label{sec:combining-the-simulation-with-other-effects}
@@ -238,14 +243,14 @@ nondet2state = fold gen (alg # fwd)
 The helper functions |popSS|, |pushSS| and |appendSS| 
 (Figure \ref{fig:pop-push-append-SS}) are very much like the
 previous definitions, but adapted to the new state-wrapper type.
-Furtermore, |get'| and |put' s| are smart constructors for getting 
+Furtermore, |getSS| and |putSS s| are smart constructors for getting 
 the stating and putting a new state.
 \begin{code}
-get' :: Functor f => Free (StateF s :+: f) s
-get' = Op (Inl $ Get return)
+getSS :: Functor f => Free (StateF s :+: f) s
+getSS = Op (Inl $ Get return)
 
-put' :: Functor f => s -> Free (StateF s :+: f) ()
-put' s = Op (Inl $ Put s (return ()))
+putSS :: Functor f => s -> Free (StateF s :+: f) ()
+putSS s = Op (Inl $ Put s (return ()))
 \end{code}
 
 \begin{figure}[h]
@@ -255,11 +260,11 @@ put' s = Op (Inl $ Put s (return ()))
 popSS  :: Functor f 
        => Free (StateF (SS m a f) :+: f) ()
 popSS = do
-  SS (xs, stack) <- get'
+  SS (xs, stack) <- getSS
   case stack of
     []       -> return ()
     op : ps  -> do
-      put' (SS (xs, ps)); op
+      putSS (SS (xs, ps)); op
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop-ss}
@@ -271,8 +276,8 @@ pushSS  :: Functor f
         -> Free (StateF (SS m a f) :+: f) ()
         -> Free (StateF (SS m a f) :+: f) ()
 pushSS q p = do
-  SS (xs, stack) <- get'
-  put' (SS (xs, q : stack)); p
+  SS (xs, stack) <- getSS
+  putSS (SS (xs, q : stack)); p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push-ss}
@@ -283,8 +288,8 @@ appendSS  :: (Functor f, MNondet m) => a
           -> Free (StateF (SS m a f) :+: f) () 
           -> Free (StateF (SS m a f) :+: f) ()
 appendSS x p = do
- SS (xs, stack) <- get'
- put' (SS (xs `mplus` return x, stack)); p
+ SS (xs, stack) <- getSS
+ putSS (SS (xs `mplus` return x, stack)); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append-ss}
@@ -330,6 +335,125 @@ The proof of this theorem uses equational reasoning and is added in the
 appendices.
 \todo{adapt the proof to the new function definition.}
 
+% -------------------------------------------------------------------------
+% Old 3.2 and 3.3
+% -------------------------------------------------------------------------
+% \subsection{Simulating Nondeterministic Programs with State}
+% \label{sec:sim-nondet-state}
+
+% This section shows how to use a state-based implementation to simulate nondeterminism.
+
+% For this, we use a wrapper |STND| around |State| that uses as state a tuple with 
+% (1) the current solution(s) |m a| wrapped in a monad and 
+% (2) the branches to be evaluated, which we will call the \emph{stack}.
+% The return type of |State| is a unit |()|.
+% \begin{code}
+% newtype STND m a = STND { runSTND :: State (m a, [STND m a]) () }
+% \end{code}
+% To simulate a nondeterministic computation |Free NondetF a| with this state wrapper, 
+% we define a helper functions in Figure \ref{fig:pop-push-append}.
+% The function |popND| takes the upper element of the stack.
+% The function |pushND| adds a branch to the stack.
+% The function |appendND| adds a solution to the given solutions. 
+
+% \noindent
+% \begin{figure}[h]
+% \small
+% \begin{subfigure}[t]{0.33\linewidth}
+% \begin{code}
+% popND  :: MNondet m 
+%        => STND m a 
+% popND = STND $ do 
+%     (xs, stack) <- get
+%     case stack of 
+%         []         ->  return ()
+%         STND p : ps  ->  do 
+%             put (xs, ps) ; p
+% \end{code}
+% \caption{Popping from the stack.}
+% \label{fig:pop}
+% \end{subfigure}%
+% \begin{subfigure}[t]{0.3\linewidth}
+% \begin{code}
+% pushND  :: MNondet m 
+%         => STND m a 
+%         -> STND m a 
+%         -> STND m a
+% pushND q p = STND $ do
+%     (x, stack) <- get
+%     put (x, q:stack)
+%     runSTND p
+% \end{code}
+% \caption{Pushing to the stack.}
+% \label{fig:push}
+% \end{subfigure}%
+% \begin{subfigure}[t]{0.3\linewidth}
+% \begin{code}
+% appendND  :: MNondet m 
+%           => a 
+%           -> STND m a 
+%           -> STND m a
+% appendND x p = STND $ do
+%     (xs, stack) <- get
+%     put (xs `mplus` return x, stack)
+%     runSTND p
+% \end{code}
+% \caption{Appending a solution.}
+% \label{fig:append}
+% \end{subfigure}%
+% \label{fig:pop-push-append}
+% \caption{Helper functions |popND|, |pushND| and |appendND|.}
+% \end{figure}
+% Now everything is in place to define a simulation function |simulate| that
+% interprets every nondeterministic computation as a state-wrapped program. 
+% \begin{code}
+% simulate :: MNondet m => Free NondetF a -> STND m a
+% simulate = fold gen alg
+%   where
+%     gen x         = appendND x popND
+%     alg :: MNondet m => NondetF (STND m a) -> STND m a
+%     alg Fail      = popND
+%     alg (Or p q)  = pushND q p
+% \end{code}
+% To extract the final result from the |STND| wrapper, we define the |extract| function.
+% \begin{code}
+% extract :: MNondet m => STND m a -> m a
+% extract x = fst . snd $ runState (runSTND x) (mzero, [])
+% \end{code}
+% This way, |runND| is a trivial extension of 
+% the simulate function. It transforms
+% every nondeterministic computation to a result that is encapsulated in a
+% nondeterminism monad.
+% \begin{code}
+% runND :: MNondet m => Free NondetF a -> m a
+% runND = extract . simulate
+% \end{code}
+
+% To prove that this simulation is correct, we should show that this 
+% |runND| function is equivalent to a nondeterminism handler. 
+% For that, we zoom in on a version of such a handler 
+% (Section \ref{sec:combining-effects}) with no other effects
+% (|f = NilF|). 
+% We replace the |List| monad by any other nondeterminism monad |m|.
+% Consequently, the type signature for the handler changes from 
+% |hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|
+% to 
+% |hND :: MNondet m => Free NondetF a -> m a|.
+% This leaves us with the following implementation for the handler.
+% \begin{code}
+% hND :: MNondet m => Free NondetF a -> m a
+% hND = fold genND algND
+%   where 
+%     genND           = return 
+%     algND Fail      = mzero
+%     algND (Or p q)  = p `mplus` q
+% \end{code}
+% We can now show that this handler is equal to the |runND| function defined 
+% above.
+% \begin{theorem}
+% |runND = hND|
+% \end{theorem}
+% The proof of this theorem is added in Appendix \ref{app:runnd-hnd}.
 
 % %-------------------------------------------------------------------------------
 % \subsection{Combining the Simulation with Other Effects}

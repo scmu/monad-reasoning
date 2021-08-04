@@ -317,6 +317,13 @@ data NilF a deriving (Functor)
 hNil :: Free NilF a -> a 
 hNil (Var x) = x
 \end{code}
+We also provide a helper function |addNil|, which adds a |NilF| to a free monad |Free f a|.
+\begin{code}
+addNil :: Functor f => Free f a -> Free (f :+: NilF) a
+addNil (Var a) = Var a
+addNil (Op x) = (Op $ Inl $ fmap addNil x)
+\end{code}
+
 Consequently, we can compose the state effects with any other 
 effect functor |f| using |Free (StateF s :+: f) a|.
 
@@ -416,6 +423,15 @@ hNDl  =  fold genND (algND # Op)
     genND           = Var . return
     algND Fail      = Var []
     algND (Or p q)  = (++) <$> p <*> q
+\end{code}
+
+We also provides two simpler versions of the two handlers above which restrict the free monad to have no other syntax.
+\begin{code}
+hState' :: Free (StateF s) a -> State s a
+hState' x = State $ \ s -> hNil $ (runStateT . hState . addNil $ x) s
+
+hNDl' :: Free NondetF a -> [a]
+hNDl' = hNil . hNDl . addNil
 \end{code}
 
 

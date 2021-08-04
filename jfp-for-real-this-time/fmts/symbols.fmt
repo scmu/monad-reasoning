@@ -85,6 +85,7 @@
 %format hND = "\Varid{h_{ND}}"
 %format hNil = "\Varid{h_{Nil}}"
 %format hNDl = "\Varid{h_{ND_{[]}}}"
+%format hNDl' = "\Varid{h_{ND_{[]}}}^\prime"
 %format hNDf = "\Varid{h_{ND+f}}"
 %format hLocal = "\Varid{h_{Local}}"
 %format hGlobal = "\Varid{h_{Global}}"
