@@ -15,6 +15,34 @@
                   https://dblp.org}
 }
 
+@article{Gibbons11,
+author = {Gibbons, Jeremy and Hinze, Ralf},
+title = {Just Do It: Simple Monadic Equational Reasoning},
+year = {2011},
+issue_date = {September 2011},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {46},
+number = {9},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2034574.2034777},
+doi = {10.1145/2034574.2034777},
+abstract = {One of the appeals of pure functional programming is that it is so amenable to equational
+reasoning. One of the problems of pure functional programming is that it rules out
+computational effects. Moggi and Wadler showed how to get round this problem by using
+monads to encapsulate the effects, leading in essence to a phase distinction - a pure
+functional evaluation yielding an impure imperative computation. Still, it has not
+been clear how to reconcile that phase distinction with the continuing appeal of functional
+programming; does the impure imperative part become inaccessible to equational reasoning?
+We think not; and to back that up, we present a simple axiomatic approach to reasoning
+about programs with computational effects.},
+journal = {SIGPLAN Not.},
+month = sep,
+pages = {2–14},
+numpages = {13},
+keywords = {lawvere theories, equational reasoning, monads, algebraic specification}
+}
+
 @article{Pirog17,
   title        = {Backtracking with cut via a distributive law and left-zero monoids*},
   author       = {Maciej Pir{\'o}g and S. Staton},
@@ -56,3 +84,64 @@
   bibsource    = {dblp computer science bibliography,
                   https://dblp.org}
 }
+
+@article{Kiselyov15,
+author = {Kiselyov, Oleg and Ishii, Hiromi},
+title = {Freer Monads, More Extensible Effects},
+year = {2015},
+issue_date = {December 2015},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {50},
+number = {12},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2887747.2804319},
+doi = {10.1145/2887747.2804319},
+abstract = { We present a rational reconstruction of extensible effects, the recently proposed
+alternative to monad transformers, as the confluence of efforts to make effectful
+computations compose. Free monads and then extensible effects emerge from the straightforward
+term representation of an effectful computation, as more and more boilerplate is abstracted
+away. The generalization process further leads to freer monads, constructed without
+the Functor constraint. The continuation exposed in freer monads can then be represented
+as an efficient type-aligned data structure. The end result is the algorithmically
+efficient extensible effects library, which is not only more comprehensible but also
+faster than earlier implementations. As an illustration of the new library, we show
+three surprisingly simple applications: non-determinism with committed choice (LogicT),
+catching IO exceptions in the presence of other effects, and the semi-automatic management
+of file handles and other resources through monadic regions. We extensively use and
+promote the new sort of `laziness', which underlies the left Kan extension: instead
+of performing an operation, keep its operands and pretend it is done. },
+journal = {SIGPLAN Not.},
+month = aug,
+pages = {94–105},
+numpages = {12},
+keywords = {coroutine, effect handler, effect interaction, free monad, open union, Kan extension, type and effect system}
+}
+
+@misc{mtl,
+  author = {Andy Gill and Edward Kmett and others},
+  title = {mtl},
+  year = {2021},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/haskell/mtl}},
+  commit = {d63bacd41e5a09005435a91e619e0c22a86829b9}
+}
+
+@misc{Volkov14,
+  author = {Nikita Volkov},
+  title = {list-t: {ListT} done right},
+  year = {2014},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/nikita-volkov/list-t}},
+  commit = {e13dbfe7f897ec4d3e34d78cf8ea2bedcf9369c0}
+}
+
+@misc{Gale,
+  Author = {Gale, Yitzchak},
+  Date-Added = {2017-02-23 17:14:35 +0000},
+  Date-Modified = {2017-03-22 12:55:42 +0000},
+  Howpublished = {\url{https://wiki.haskell.org/ListT_done_right_alternative}},
+  Title = {{ListT} done right alternative},
+  Year = {2007}}
