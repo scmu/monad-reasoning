@@ -20,7 +20,7 @@ import Debug.Trace
 \end{code}
 %endif
 
-Prolog interpreters implement more complex control flow constructs.
+Prolog interpreters implement more complex control-flow constructs.
 The |cut| operator, 
 known from Prolog as a goal that always succeeds and never backtracks, 
 trims the search space either to improve the program's efficiency 
@@ -30,7 +30,7 @@ with state.
 
 \subsubsection{Representing Cut and Backtracking}
 
-Lists monads and backtracking are unseparable in functional programming.
+List monads and backtracking are unseparable in functional programming.
 Therefore, it is natural to encode the representation of backtracking with cut as
 an advanced version of a |List| monad.
 We can think of |cut| then as a list with a single element: |[()]|. 
@@ -65,7 +65,6 @@ The first three laws are the monoid laws.
 The left-cut law (\ref{eq:left-cut}) states that operations after a |cut| are ignored.
 The right-cut law (\ref{eq:right-cut}) indicates that the |cut| leaves previous computations untouched.
 The final law (\ref{eq:idempotence}) contains the idempotence of |-*|.
-
 In what follows, we describe how to model this representation in Haskell.
 
 The idempotent cut operation |-*| is represented by a datatype |Idem|
@@ -132,8 +131,8 @@ instance Traversable CutList where
 \end{code}
 %endif
 
-We can now encode some smart constructors for cutting, failing,
-delimiting a scope (only allow cuts within the argument)
+We can now encode smart constructors for cutting, failing, constructing a |CutList|
+delimiting a scope
 and appending two |CutList|s.
 
 \begin{code}
@@ -180,19 +179,19 @@ To be algebraic, an operation |op| should satisfy the algebraicity property
 which states that
 %format p1
 %format pn = "\Varid{p}_{n}"
-< op (p1, ..., pn) >>= k = op (p1 >>= k, ..., pn >>= k)
+|op (p1, ..., pn) >>= k = op (p1 >>= k, ..., pn >>= k)|.
 Indeed, |Scope| does not satisfy this property:
 < scope (cutList [1,2,3]) >> cut = cut
 < scope (cutList [1,2,3] >> cut) = cutList [()]
-This scope is a typical example of a scoped effect \cite{Pirog18,Wu14}.
+This is a typical example of a scoped effect \cite{Pirog18,Wu14}.
 
 Effects with scoping operations can be captured modularly in an adapted version of
 the free monad we defined in Section \ref{sec:free-monads}.
 
 \begin{code}
-data FreeS f g a  =  Return a
-                  |  Call (f (FreeS f g a))
-                  |  Enter (g (FreeS f g (FreeS f g a)))
+data FreeS f g a  =  Return  a
+                  |  Call    (f (FreeS f g a))
+                  |  Enter   (g (FreeS f g (FreeS f g a)))
 \end{code}
 %if False
 \begin{code}
@@ -211,7 +210,7 @@ instance (Functor f, Functor g) => Monad (FreeS f g) where
 \end{code}
 %endif
 This implementation, borrowed from \citet{Pirog18}, is also monadic.
-We can fold over this |FreeS| monad using the following function:
+We can fold over this |FreeS| monad using the following algebra:
 
 \begin{code}
 data Alg f g a = Alg  { call   :: f a -> a
@@ -225,7 +224,9 @@ foldS gen alg (Enter   op)  = (enter  alg  . fmap (fmap (foldS gen alg)))  op
 
 With this, we have everything in place to write a handler for the cut effect.
 
-The algebraic effects consist of nondeterministic operations and the cut operation.
+The algebraic effects consist of nondeterministic operations, the cut operation
+and possibly other effects |f|. 
+The scoped effects consist of the scoping operation and possibly other effects |g|.
 \begin{code}
 type NondetF' = NondetF :+: CutF
 \end{code}
@@ -263,40 +264,61 @@ hCut = foldS gen (Alg (algNDCut # Call) (algSC # fwdSC))
     fwdSC                    = Enter . fmap (fmap (fmap join . sequenceA) . hCut)
 \end{code}
 
-\todo{example}
-Examples:
+\subsubsection{Example}
+
+To show the semantics of the cut operation and scoped effect, we can define a function
+|takeWhileS| that returns all programs |prog| that satisfy a predicate |p|.
+Throughout this example, we will use smart constructors |or'|, |fail'|, |cut'| and |scope'|
+for their corresponding datatype.
 \begin{code}
+takeWhileS  :: (Functor f, Functor g) 
+            => (a -> Bool) 
+            -> FreeS (NondetF' :+: f) (ScopeF :+: g) a 
+            -> FreeS (NondetF' :+: f) (ScopeF :+: g) a
+takeWhileS p prog = scope' $ do
+  x <- prog
+  when (not $ p x) cut'
+  return $ return x
+\end{code}
 
-run :: FreeS NilF NilF a -> a
-run (Return x) = x
-
-fail'     = (Call . Inl . Inl) Fail
-or' x y   = (Call . Inl . Inl) $ Or x y
-cut'      = (Call . Inl . Inr) Cut
-scope' x  = (Enter . Inl) $ Scope x
-
-takeWhileS :: (Functor f, Functor g) => (a -> Bool) -> FreeS (NondetF' :+: f) (ScopeF :+: g) a -> FreeS (NondetF' :+: f) (ScopeF :+: g) a
-takeWhileS p prog = scope'
-  (do x <- prog; when (not (p x)) cut'; return $ return x)
-
+We define two example programs and a |prefixes| function which takes the
+even prefixes of these programs:
+%format prog1
+%format prog2
+\begin{code}
 prog1 :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (ScopeF :+: g) Int
 prog1 = or' (or' (return 2) (return 4)) (or' (return 5) (return 8))
 
 prog2 :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (ScopeF :+: g) Int
 prog2 = or' (or' (return 6) (return 9)) (return 10)
 
-prefixes' :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (ScopeF :+: g) Int
-prefixes' = or' (takeWhileS even prog1) (takeWhileS even prog2)
+prefixes :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (ScopeF :+: g) Int
+prefixes = or' (takeWhileS even prog1) (takeWhileS even prog2)
+\end{code}
+The result of handling this |prefixes| function, is a |CutList| of the even prefixes
+of |prog1| and |prog2|.
+< > run (hCut prefixes)
+< CutList {unCutList = Ret [2,4,6]}
+Here, |run| takes the final result from the leave of the |FreeS| monad:
+\begin{code}
+run :: FreeS NilF NilF a -> a
+run (Return x) = x
+\end{code}
+
+%if False
+\begin{code}
+fail'     = (Call . Inl . Inl) Fail
+or' x y   = (Call . Inl . Inl) $ Or x y
+cut'      = (Call . Inl . Inr) Cut
+scope' x  = (Enter . Inl) $ Scope x
 
 -- > (run . hCut) (takeWhileS even prog1)
 -- CutList {unCutList = Flag [2,4]}
 
--- > (run . hCut) prefixes'
--- CutList {unCutList = Ret [2,4,6]}
-
 prog :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (ScopeF :+: g) Int
 prog = or' (scope' (or' (return $ return 2) (return $ return 4))) (return 6)
 \end{code}
+%endif
 
 \subsubsection{Simulating the Cut Effect with State}
 
