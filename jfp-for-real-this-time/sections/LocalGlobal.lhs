@@ -115,7 +115,7 @@ It is then easy to show that this term must be equal to both
 |return x `mplus` return x `mplus` return y `mplus` return y|
 and 
 |return x `mplus` return y `mplus` return x `mplus` return y|
-\footnote{Gibbons and Hinze \cite{} were mistaken in their claim that the type
+\footnote{Gibbons and Hinze \cite{Gibbons11} were mistaken in their claim that the type
 |s -> [(a, s)]| constitutes a model of their backtrackable state laws.
 It is not a model because its |`mplus`| does not commute with itself.
 One could consider a relaxed semantics that admits |s ->[(a, s)]|, 
@@ -154,9 +154,9 @@ One implementation satisfying the laws is
 < Local s a = s -> m (a, s)
 where |m| is a nondeterministic monad, the simplest structure of which is a list.
 This implementation is exactly that of |StateT s m a| 
-in the Monad Transformer Library \cite{}, or as we introduced in 
+in the Monad Transformer Library \cite{mtl}, or as we introduced in 
 Section \ref{sec:combining-the-simulation-with-other-effects}.
-With effect handling \cite{}, the monad behaves similarly
+With effect handling \cite{Kiselyov15, Wu14}, the monad behaves similarly
 (except for the limited commutativity implied by law (\ref{eq:left-dist}))
 if we run the handler for state before that for list.
 
@@ -202,7 +202,6 @@ For example, in any given implementation, the programs
 either semantically identical or distinct.
 The same goes for the programs |return x `mplus` return x| and |return x|
 or other examples.
-\todo{sth about S5.2 original paper}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Implementation}
@@ -212,13 +211,13 @@ is a natural implementation of such a monad.
 However, the usual, naive implementation of |(>>=)| does not satisfy
 right-distributivity (\ref{eq:mplus-dist}), 
 violates monad laws and is therefore not even a monad. 
-The type |ListT (State s)| from the Monad Transformer Library \cite{}
+The type |ListT (State s)| from the Monad Transformer Library \cite{mtl}
 expands to essentially the same implementation with 
 monad |m| instantiated by the list monad. 
 This implementation has the same flaws.
 More careful implementations of |ListT|\footnote{Often referred to as |ListT| done right.}, that do satisfy right-distributivity
-(\ref{eq:mplus-dist}) and the monad laws have been proposed by \todo{} \cite{}.
-Effect handlers \cite{} produce implementations that match our intuition of 
+(\ref{eq:mplus-dist}) and the monad laws have been proposed by \cite{Volkov14, Gale}.
+Effect handlers \cite{Kiselyov15, Wu14} produce implementations that match our intuition of 
 non-backtrackable computations if we run the handler for nondeterminism before
 that for state. 
 The following implementation has a non-commutative |mplus| operation.
@@ -267,7 +266,7 @@ Branching first exhausts the left branch before switching to the right branch.
 \subsection{Transforming Between Local and Global State}
 \label{sec:transforming-between-local-and-global-state}
 \wenhao{I am wondering whether we can directly use the free monad representation to organize the presentation of S4.3 or the whole S4, because the final simulation function |local2global| uses free monad.}
-
+\birthe{I didn't do it yet.}
 
 Both local state and global state have their own laws and semantics. 
 Also, both interpretations of nondeterminism with state have their own 
@@ -447,7 +446,6 @@ differentiated:
 
 Those two programs do not behave in the same way when |s /= t|.
 
-\todo{forward reference to formal definition of contexts}
 Thus, provided that all occurences of |put| in a program are replaced by |putR|,
 we can simulate local-state semantics.
 However, the unnecessary copying of the state can not be avoided and even 
@@ -484,7 +482,10 @@ orOp p q  = (Op . Inr . Inl) (Or p q)
 
 failOp    :: Free (StateF s :+: NondetF :+: f) a
 failOp    = (Op . Inr . Inl) Fail 
-
+\end{code}
+%endif
+%if False
+\begin{code}
 hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
 hGlobal = fmap (fmap fst) . runStateT . hState . comm . hNDl . assocr . comm
 
@@ -545,13 +546,15 @@ t2' = alg' . fmap hGlobal
 We can then define |putROp| in terms of these helper functions.
 \begin{code}
 putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
-putROp t k = getOp (\s -> orOp (putOp t k) (putOp s failOp))
+putROp t k = getOp (\s -> (putOp t k) `orOp` (putOp s failOp))
 \end{code}
 Note the similarity with the |putR| definition of the previous paragraph.
 The corresponding translation function |local2global| transforms every |Put| into
 a |putROp| and leaves the rest of the program untouched.
 \begin{code}
-local2global :: Functor f => Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
+local2global  :: Functor f 
+              => Free (StateF s :+: NondetF :+: f) a 
+              -> Free (StateF s :+: NondetF :+: f) a
 local2global = fold Var alg
   where 
     alg (Inl (Put t k)) = putROp t k
@@ -572,7 +575,7 @@ Global-state semantics can be implemented by simply inverting the order of the
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
 < hGlobal = fmap (fmap fst) . runStateT . hState . hNDl
-Note that, for this handler to work, we assume implicit
+Note that, for this handler to work, we implicitly assume
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
 < hGlobal . local2global = hLocal
@@ -581,6 +584,6 @@ First, we use fold fusion to transfrom |hLocal| to a single fold.
 Second, we do the same to |hGlobal . local2global|: use fold fusion to make it a single
 fold. 
 Third, the universality of fold tells us that this equality holds.
-\todo{refer to appendices for proof}
+The full proof of this simulation is included in Appendix \ref{app:local-global}.
 
 % %-------------------------------------------------------------------------------
