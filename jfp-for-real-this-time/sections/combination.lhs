@@ -39,17 +39,18 @@ The |hStates| function handles these two functors to interpret them with the |St
 hStates :: (Functor f) => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
 hStates = fold gen (alg1 # (alg2 # fwd))
   where
-    gen :: (Functor f) => a -> StateT (s1, s2) (Free f) a
+    gen :: Functor f => a -> StateT (s1, s2) (Free f) a
     gen = return
-    alg1 :: (Functor f) => StateF s1 (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
+
+    alg1 :: Functor f => StateF s1 (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
     alg1 (Get k)      = StateT $ \sts -> runStateT (k $ fst sts) sts
     alg1 (Put s1' k)  = StateT $ \sts -> runStateT k (s1', snd sts)
 
-    alg2 :: (Functor f) => StateF s2 (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
+    alg2 :: Functor f => StateF s2 (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
     alg2 (Get k)      = StateT $ \sts -> runStateT (k $ snd sts) sts
     alg2 (Put s2' k)  = StateT $ \sts -> runStateT k (fst sts, s2')
 
-    fwd :: (Functor f) => f (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
+    fwd :: Functor f => f (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
     fwd op = StateT $ \sts -> Op $ fmap (\k -> runStateT k sts) op
 \end{code}
 
@@ -60,14 +61,14 @@ The hStateTuple function handles this representation.
 hStateTuple :: (Functor f) => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
 hStateTuple = fold gen (alg # fwd)
   where
-    gen :: (Functor f) => a -> StateT (s1, s2) (Free f) a
+    gen :: Functor f => a -> StateT (s1, s2) (Free f) a
     gen = return
 
-    alg :: (Functor f) => StateF (s1, s2) (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
+    alg :: Functor f => StateF (s1, s2) (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
     alg (Get k) = StateT $ \sts -> runStateT (k sts) sts
     alg (Put s k) = StateT $ \sts -> runStateT k s
 
-    fwd :: (Functor f) => f (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
+    fwd :: Functor f => f (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
     fwd op = StateT $ \sts -> Op $ fmap (\k -> runStateT k sts) op
 \end{code}
 
@@ -81,24 +82,21 @@ states2state  :: (Functor f)
               -> Free (StateF (s1, s2) :+: f) a
 states2state  = fold gen (alg1 # (alg2 # fwd))
   where
-    gen :: (Functor f) => a -> Free (StateF (s1, s2) :+: f) a
+    gen :: Functor f => a -> Free (StateF (s1, s2) :+: f) a
     gen = return 
 
-    alg1  :: (Functor f) 
-          => StateF s1 (Free (StateF (s1, s2) :+: f) a) 
-          -> Free (StateF (s1, s2) :+: f) a
+    alg1  :: Functor f  => StateF s1 (Free (StateF (s1, s2) :+: f) a) 
+                        -> Free (StateF (s1, s2) :+: f) a
     alg1 (Get k)      = get' >>= \(s1,  _)   -> k s1
     alg1 (Put s1' k)  = get' >>= \(_,   s2)  -> put' (s1', s2) k
 
-    alg2  :: (Functor f)
-          => StateF s2 (Free (StateF (s1, s2) :+: f) a)
-          -> Free (StateF (s1, s2) :+: f) a
+    alg2  :: Functor f  => StateF s2 (Free (StateF (s1, s2) :+: f) a) 
+                        -> Free (StateF (s1, s2) :+: f) a
     alg2 (Get k)      = get' >>= \(_,   s2)  -> k s2
     alg2 (Put s2' k)  = get' >>= \(s1,  _)   -> put' (s1, s2') k
 
-    fwd  :: (Functor f) 
-         => f (Free (StateF (s1, s2) :+: f) a)
-         -> Free (StateF (s1, s2) :+: f) a
+    fwd  :: Functor f   => f (Free (StateF (s1, s2) :+: f) a) 
+                        -> Free (StateF (s1, s2) :+: f) a
     fwd op            = Op (Inr op)
 \end{code}
 Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
