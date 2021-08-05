@@ -68,21 +68,21 @@ The proof proceeds by substructrual induction on the list |xs|.
 < = {-~  definition of |choose|  -}
 <    choose [] `mplus` choose ys
 
-\noindent
-\mbox{\underline{case |xs = [x]|}}
-\wenhao{I think we need to include this case because it is used in the case |xs = (x:xs)|.}
+% \noindent
+% \mbox{\underline{case |xs = [x]|}}
+% \wenhao{I think we need to include this case because it is used in the case |xs = (x:xs)|.}
 
-<    choose ([x] ++ ys)
-< = {-~  definition of |(++)|  -}
-<    choose (x : ys)
-< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
-<    (mplus . etand) x (choose ys)
-< = {-~  reformulation  -}
-<    etand x `mplus` choose ys
-< = {-~  definition of |etand = choose . etal|  -}
-<    choose (etal x) `mplus` choose ys
-< = {-~  definition of |etal|  -}
-<    choose [x] `mplus` choose ys
+% <    choose ([x] ++ ys)
+% < = {-~  definition of |(++)|  -}
+% <    choose (x : ys)
+% < = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+% <    (mplus . etand) x (choose ys)
+% < = {-~  reformulation  -}
+% <    etand x `mplus` choose ys
+% < = {-~  definition of |etand = choose . etal|  -}
+% <    choose (etal x) `mplus` choose ys
+% < = {-~  definition of |etal|  -}
+% <    choose [x] `mplus` choose ys
 
 \noindent
 \mbox{\underline{case |xs = (x:xs)|}}
@@ -92,23 +92,40 @@ The proof proceeds by substructrual induction on the list |xs|.
 <    choose (x : (xs ++ ys))
 < = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
 <    (mplus . etand) x (choose (xs ++ ys))
+< = {-~  induction hypothesis  -}
+<    (mplus . etand) x (choose xs `mplus` choose ys)
 < = {-~  reformulation  -}
-<    etand x `mplus` choose (xs ++ ys)
-< = {-~  definition of |etand = choose . etal|  -}
-<    choose (etal x) `mplus` choose (xs ++ ys)
-< = {-~  definition of |etal|  -}
-<    choose [x] `mplus` choose (xs ++ ys)
-< = {-~  induction hypothesis  -}
-<    choose [x] `mplus` choose xs `mplus` choose ys
-< = {-~  induction hypothesis  -}
-<    choose ([x] ++ xs) `mplus` choose ys
-< = {-~  definition of |(++)|  -}
+<    etand x `mplus` (choose xs `mplus` choose ys)
+< = {-~  associativity of |mplus| (\ref{eq:mplus-assoc})  -}
+<    (etand x `mplus` choose xs) `mplus` choose ys
+< = {-~  definition of |choose|  -}
+<    (etand x `mplus` foldr (mplus . etand) mzero xs) `mplus` choose ys
+< = {-~  property of |foldr|  -}
+<    foldr (mplus . etand) mzero (x:xs) `mplus` choose ys
+< = {-~  definition of |choose|  -}
 <    choose (x:xs) `mplus` choose ys
+
+% < = {-~  reformulation  -}
+% <    etand x `mplus` choose (xs ++ ys)
+% < = {-~  definition of |etand = choose . etal|  -}
+% <    choose (etal x) `mplus` choose (xs ++ ys)
+% < = {-~  definition of |etal|  -}
+% <    choose [x] `mplus` choose (xs ++ ys)
+% < = {-~  induction hypothesis  -}
+% <    choose [x] `mplus` choose xs `mplus` choose ys
+% < = {-~  induction hypothesis  -}
+% <    choose ([x] ++ xs) `mplus` choose ys
+% < = {-~  definition of |(++)|  -}
+% <    choose (x:xs) `mplus` choose ys
 
 \vspace{-6mm}
 \end{proof}
 
 Now everything is in place to prove the second property.
+It suffices to prove on of the following two properties:
+< choose . mul = mund . choose . fmap choose
+< choose . mul = mund . fmap choose . choose 
+Both properties are equivalent due to the naturality of the natural transformation |choose|.
 We do a case analysis on the list argument.
 We use the laws of Section \ref{sec:background}, utilizing the fact that 
 |mu f = f >>= id|.
@@ -116,7 +133,6 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 % \fbox{|choose . mul = mund . choose . fmap choose|}
 \begin{theorem}
 |choose . mul = mund . choose . fmap choose|
-\wenhao{Do we need to prove |choose . mul = mund . fmap choose . choose| ?}
 \end{theorem}
 
 \begin{proof}
