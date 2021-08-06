@@ -82,6 +82,7 @@
 %format extractNDf = "\Varid{extract^{\prime}}"
 
 %format hState = "\Varid{h_{State}}"
+%format hState1 = "\Varid{h_{State1}}"
 %format hStates = "\Varid{h_{States}}"
 %format hStateTuple = "\Varid{h_{State_{(,)}}}"
 %format hState' = "\Varid{h_{State}^\prime}"
