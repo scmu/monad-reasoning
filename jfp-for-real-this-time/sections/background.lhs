@@ -25,8 +25,7 @@ import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
 This section summarizes the main concepts for equational reasoning with 
 effects. 
-For a more extensive treatment we refer to the work of Gibbons and
-Hinze \ref{}.
+For a more extensive treatment we refer to the work of \citep{Gibbons11}.
 We discuss the two paramount effects of this paper: state and nondeterminism.
 Furthermore, this section explains how to arbitrarily combine effects using 
 free monads and the coproduct operator.
@@ -56,11 +55,36 @@ Furthermore, a functor should satisfy the two functor laws:
 \end{alignat}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{Applicatives}
+Applicative functors, introcuced by \citet{mcbride08}, 
+allow sequencing of functorial computations.
+An applicative functor |f :: * -> *| in Haskell has two operations: |pure| for 
+embedding pure data and
+|(<*>)| for sequencing.
+< class Functor f => Applicative f where
+<     pure   :: a -> f a
+<     (<*>)  :: f (a -> b) -> f a -> f b
+
+An applicative functor should satisfy the following four laws:
+\begin{alignat}{2}
+    &\mbox{\bf identity}:\quad &
+    |pure id <*> x| &= |x|\mbox{~~,} \label{eq:functor-identity}\\
+    &\mbox{\bf composition}:~ &
+    |pure (.) <*> x <*> y <*> z| &= |x <*> (y <*> z)| \mbox{~~,} \label{eq:functor-composition} \\
+    &\mbox{\bf homomorphism}:~ &
+    |pure f <*> pure x| &= |pure (f x)| \mbox{~~,} \label{eq:functor-composition} \\
+    &\mbox{\bf interchange}:~ &
+    |x <*> pure y| &= |pure ($ y) <*> x| \mbox{~~.} \label{eq:functor-composition}
+\end{alignat}
+
+Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Monads}
 
 Side effects are those effects that are affected by previous computations. 
 In Haskell, a pure functional language, we typically encapsulate side effects
-in a monad \cite{Moggi1991}. 
+in a monad \cite{Moggi91}. 
 A monad |m :: * -> *| instantiates the monad type class, which has two 
 operations: return (|eta|) and bind (|>>=|).
 
@@ -87,8 +111,9 @@ Furthermore, it supports a join operator |(>>) :: m a -> m b -> m b| so that
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Free Monads and Their Folds} 
 
-Free monads are gaining popularity for their use in algebraic effect handlers
-\cite{PlotkinPower}, which elegantly seperate syntax and semantics of effectful
+Free monads are gaining popularity for their use in algebraic effects \cite{Plotkin02} 
+and their handlers \cite{Plotkin09, Plotkin13}, 
+which elegantly separate syntax and semantics of effectful
 operations.
 A free monad, the syntax of an effectful program,
 can be captured generically in Haskell.
@@ -100,7 +125,7 @@ and nodes |Op (f (Free f a))| with a signature functor |f|
 representing the branching structure. 
 
 Free monads arise from the free-forgetful adjunction and come equipped with a 
-unique catamorphism or a fold, a recursion scheme over the free monad.
+unique catamorphism or a fold: a recursion scheme over the free monad.
 We can define this recursive structure and recursion scheme generically in Haskell:
 \begin{code}
 fold :: Functor f => (a -> b) -> (f b -> b) -> Free f a -> b
@@ -134,7 +159,7 @@ instance Functor f => Monad (Free f) where
 %fmap f (Op op) = Op (fmap (fmap f) op)
 %(Op op) >>= f = Op (fmap (>>= f) op)
 
-When a fold is composed with other functions, it adheres to so-called fusion laws \cite{fusionForFree}.
+When a fold is composed with other functions, it adheres to so-called fusion laws \cite{Wu15}.
 Precomposing or postcomposing a function with a fold works as follows:
 \begin{alignat}{2}
     &\mbox{\bf fusion-pre}:\quad &
@@ -160,7 +185,7 @@ nondeterminism or a combination.
 \label{sec:nondeterminism}
 
 The first effect we introduce is nondeterminism.
-Following the approach of \citet{HuttonFulger} and Gibbons and Hinze \cite{}, 
+Following the approach of \citet{Hutton08} and \citet{Gibbons11}, 
 we introduce effects based on an axiomatic characterisation rather than 
 a specific implementation.
 We define a type class to capture the nondeterministic interface as follows:
@@ -190,7 +215,7 @@ The last two laws show that |>>=| is right-distributive
 over |mplus| and that |mzero| is a left identity for the bind operation.
 
 One might expect additional laws such as idempotence or commutativity. 
-As argued by \cite{Kiselyov}, these laws differ depending on where the 
+As argued by \cite{Kiselyov15monadplus}, these laws differ depending on where the 
 monad is used and their interactions with other effects.
 We choose to present a minimal setting for nondeterminism here.
 
@@ -304,24 +329,25 @@ with a coproduct operator |(:+:)| for functors.
 \begin{code}
 data (f :+: g) a = Inl (f a) | Inr (g a)
 \end{code}
-This coproduct functor (with |Void| as a neutral element) allows a 
+This coproduct functor allows a 
 modular definition of the signature of effects.
-
 For instance, we can encode programs with both state and nondeterminism as 
 effects using the data type 
 |Free (StateF :+: NondetF) a|. 
-The coproduct also has a neutral element |NilF|, representing the empty effect set, and a function |hNil|, extracting return values from |Free NilF a|.
+The coproduct also has a neutral element |NilF|, representing the empty effect set, 
+and a function |hNil|, extracting return values from |Free NilF a|.
 \begin{code}
 data NilF a deriving (Functor)
 
 hNil :: Free NilF a -> a 
 hNil (Var x) = x
 \end{code}
+\birthe{do we need this?}
 We also provide a helper function |addNil|, which adds a |NilF| to a free monad |Free f a|.
 \begin{code}
 addNil :: Functor f => Free f a -> Free (f :+: NilF) a
-addNil (Var a) = Var a
-addNil (Op x) = (Op $ Inl $ fmap addNil x)
+addNil (Var a)  = Var a
+addNil (Op x)   = (Op $ Inl $ fmap addNil x)
 \end{code}
 
 Consequently, we can compose the state effects with any other 
@@ -329,19 +355,20 @@ effect functor |f| using |Free (StateF s :+: f) a|.
 
 To give semantics to the free monad constructs of these effects, we can use
 their folds, also called handlers. 
-These handlers can be modularly composed: they only need to know about
+The handlers can be modularly composed: they only need to know about
 the part of the syntax their effect is handling, and forward the rest
 of the syntax to other handlers.
 
-A mediator can be used to seperate the algebras for the components of the coproduct \cite{Schrijvers2019}.
+A mediator |(#)| is used to separate the algebra |alg| for handling the effects and
+the forwarding function |fwd| for forwarding the rest of the effects \cite{Schrijvers2019}.
 \begin{code}
-infixr #
-(#) :: (sig1 a -> p) -> (sig2 a -> p) -> (sig1 :+: sig2) a -> p
-(alg1 # alg2) (Inl op) = alg1 op
-(alg1 # alg2) (Inr op) = alg2 op
+(#) :: (f a -> b) -> (g a -> b) -> (f :+: g) a -> b
+(alg # fwd) (Inl op) = alg op
+(alg # fwd) (Inr op) = fwd op
 \end{code} 
 %if False
 \begin{code}
+infixr #
 instance (Functor f, Functor g) => Functor (f :+: g) where
     fmap f (Inl x)  =  Inl (fmap f x)
     fmap f (Inr y)  =  Inr (fmap f y)
@@ -407,7 +434,7 @@ hState  =  fold genS (algS # fwdS)
 
 The handlers for state and nondeterminism use the |StateT| monad and |List|
 monad, respectively, to interpret their part of the semantics.
-The |StateT| monad is the state transformer from the Monad Transformer Library \ref{}.
+The |StateT| monad is the state transformer from the Monad Transformer Library \cite{mtl}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
 The handlers are defined as follows:
 \begin{code}
@@ -426,7 +453,8 @@ hNDl  =  fold genND (algND # Op)
     algND (Or p q)  = (++) <$> p <*> q
 \end{code}
 
-We also provides two simpler versions of the two handlers above which restrict the free monad to have no other syntax.
+\birthe{do we need these?}
+We also provide two simpler versions of the two handlers above which restrict the free monad to have no other syntax.
 \begin{code}
 hState' :: Free (StateF s) a -> State s a
 hState' x = State $ \ s -> hNil $ (runStateT . hState . addNil $ x) s
@@ -442,6 +470,23 @@ hNDl' = hNil . hNDl . addNil
 \todo{Show the n-queens example, explain the challenges.}
 
 State + ND -> State + State -> State
+
+\begin{figure}
+% https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
+\[\begin{tikzcd}
+  {\text{State + Nondeterminism}} \\
+  {\text{State + State}} \\
+  \text{State}
+  \arrow["{\text{\Cref{sec:nondeterminism-state}: Nondeterminism to State}}"{pos=0.2}, shift left=2, draw=none, from=1-1, to=2-1]
+  \arrow["{\text{\Cref{sec:multiple-states}}}", shift left=2, draw=none, from=2-1, to=3-1]
+  \arrow["{\text{\Cref{sec:local-global}: Local state to global state}}"{pos=0.7}, shift left=2, draw=none, from=1-1, to=2-1]
+  \arrow[from=1-1, to=2-1]
+  \arrow[from=2-1, to=3-1]
+\end{tikzcd}\]
+\label{fig:overview}
+\caption{Overview.}
+\end{figure}
+
 
 
 
