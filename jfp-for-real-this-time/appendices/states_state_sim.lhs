@@ -119,4 +119,61 @@ For each following case of |t|, we assume that the continuation |t'| in |t| sati
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inl (Get k)))
 
+\noindent \mbox{\underline{case |t = Op (Inl (Put s k))|}}
+<    (hState . states2state) (Op (Inl (Put s k)))
+< = {-~  definition of |states2state|  -}
+<    (hState . fold gen (alg1 # alg2 # fwd)) (Op (Inl (Put s k)))
+< = {-~  definition of |fold|  -}
+<    hState $ (alg1 # alg2 # fwd) (fmap states2state (Inl (Put s k)))
+< = {-~  definition of |fmap|  -}
+<    hState $ (alg1 # alg2 # fwd) (Inl (Put s (states2state k)))
+< = {-~  definition of |(#)|  -}
+<    hState $ alg1 (Put s (states2state k))
+< = {-~  definition of |alg1|  -}
+<    hState $ get' >>= \ (_,   s2)  -> put' (s, s2) (states2state k)
+< = {-~  definition of |get'| and |put'|  -}
+<    hState $ Op (Inl (Get return)) >>= \(_, s2) -> Op (Inl (Put (s, s2) (states2state k)))
+< = {-~  definition of |(>>=)|  -}
+<    hState $ Op (Inl (Get (\ (_, s2) -> Op (Inl (Put (s, s2) (states2state k))))))
+< = {-~  definition of |hState|  -}
+<    algS (Get (\ (_, s2) -> hState (Op (Inl (Put (s, s2) (hState (states2state k))))))
+< = {-~  definition of |algS|  -}
+<    StateT $ \ s' -> runStateT ((\ (_, s2) -> hState (Op (Inl (Put (s, s2) (states2state k))))) s') s'
+< = {-~  let |s' = (s1, s2)|  -}
+<    StateT $ \ (s1, s2) -> runStateT ((\ (_, s2) -> hState (Op (Inl (Put (s, s2) (states2state k))))) (s1, s2)) (s1, s2)
+< = {-~  function application  -}
+<    StateT $ \ (s1, s2) -> runStateT (hState (Op (Inl (Put (s, s2) (states2state k))))) (s1, s2)
+< = {-~  definition of |hState|  -}
+<    StateT $ \ (s1, s2) -> runStateT (algS (Put (s, s2) (hState (states2state k)))) (s1, s2)
+< = {-~  definition of |algS|  -}
+<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ s' -> runStateT (hState (states2state k)) (s, s2)) (s1, s2)
+< = {-~  definition of |runStateT|  -}
+<    StateT $ \ (s1, s2) -> (\ s' -> runStateT (hState (states2state k)) (s, s2)) (s1, s2)
+< = {-~  function application  -}
+<    StateT $ \ (s1, s2) -> runStateT (hState (states2state k)) (s, s2)
+< = {-~  induction hypothesis of continuation |k|  -}
+<    StateT $ \ (s1, s2) -> runStateT (hStates' k) (s, s2)
+< = {-~  definition of |hStates'| -}
+<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
+<       $ runStateT (hState (runStateT (hState k) s1)) s2) (s, s2)
+< = {-~  definition of |runStateT| -}
+<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<                                        $   runStateT (hState (runStateT (hState k) s1)) s2) (s, s2)
+< = {-~  function application -}
+<    StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState k) s)) s2
+< = {-~  |eta|-expansion -}
+<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<                         $   runStateT (hState ((\s' -> runStateT (hState k) s) s1)) s2
+< = {-~  definition of |runStateT| -}
+<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<                         $   runStateT (hState (runStateT (StateT $ \s' -> runStateT (hState k) s) s1)) s2
+< = {-~  definition of |algS|  -}
+<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<                         $   runStateT (hState (runStateT (algS (Put s (hState k))) s1)) s2
+< = {-~  definition of |hState|  -}
+<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<                         $   runStateT (hState (runStateT (hState (Op (Inl (Put s k)))) s1)) s2
+< = {-~  definition of |hStates'|  -}
+<    hStates' (Op (Inl (Put s k)))
+
 \end{proof}

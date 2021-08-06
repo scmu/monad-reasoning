@@ -454,6 +454,7 @@ hNDl  =  fold genND (algND # Op)
 \end{code}
 
 \birthe{do we need these?}
+\wenhao{|hState'| is used in |runND|}
 We also provide two simpler versions of the two handlers above which restrict the free monad to have no other syntax.
 \begin{code}
 hState' :: Free (StateF s) a -> State s a

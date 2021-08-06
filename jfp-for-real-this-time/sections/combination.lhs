@@ -39,7 +39,7 @@ This transformation is characterized by the isomorphism |flatten| with the inver
 
 \begin{code}
 hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-hStates x = StateT $ \s1 -> hState $ runStateT (hState x) s1
+hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
 
 flatten :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
 flatten t = StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (runStateT t s1) s2
@@ -111,12 +111,13 @@ x0 :: a -> Free (StateF s1 :+: StateF s2 :+: f) a
 x0 x = Var x
 
 x1 :: Functor f => (s1 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x1 k = let t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-                      $   runStateT (hState (runStateT (hState (k s1)) s1)) s2
-       in Op (Inl (Get k))
+x1 k = Op (Inl (Get k))
 
-x2 :: s1 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x2 s k = Op (Inl (Put s k))
+x2 :: Functor f => s1 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
+x2 s k = 
+  let tmp = 
+        StateT $ \ (s1, s2) -> runStateT (hState (Op (Inl (Put (s, s2) (states2state k))))) (s1, s2)
+          in Op (Inl (Put s k))
 
 x3 :: (s2 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
 x3 k = Op (Inr (Inl (Get k)))
