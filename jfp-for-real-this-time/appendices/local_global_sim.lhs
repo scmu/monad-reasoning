@@ -5,7 +5,7 @@
 
 This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|, where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:local2globalforming-between-local-and-global-state}.
 
-It is easy to see that |runStateT . hState1| can be fused into a single fold defined as follows:
+It is easy to see that |runStateT . hState| can be fused into a single fold defined as follows:
 \begin{code}
 hState1 :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (a, s))
 hState1  =  fold genS (algS # fwdS)
@@ -15,7 +15,7 @@ hState1  =  fold genS (algS # fwdS)
     algS (Put s k)  _  = k s
     fwdS y          s  = Op (fmap ($s) y)
 \end{code}
-For simplicity, we will use |hState1| to replace |runStateT . hState1| in the following proofs.
+For simplicity, we will use |hState1| to replace |runStateT . hState| in the following proofs.
 
 
 \begin{theorem}\label{eq:local-global}
