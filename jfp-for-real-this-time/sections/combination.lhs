@@ -114,13 +114,16 @@ x1 :: Functor f => (s1 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (State
 x1 k = Op (Inl (Get k))
 
 x2 :: Functor f => s1 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x2 s k = 
-  let tmp = 
-        StateT $ \ (s1, s2) -> runStateT (hState (Op (Inl (Put (s, s2) (states2state k))))) (s1, s2)
-          in Op (Inl (Put s k))
+x2 s k = Op (Inl (Put s k))
 
-x3 :: (s2 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x3 k = Op (Inr (Inl (Get k)))
+x3 :: Functor f => (s2 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
+x3 k = 
+  let tmp =
+          StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))  
+          $ runStateT (hState (runStateT (StateT $ \s -> Op $ (Inl (Get ((\k -> runStateT k s) . hState . k)))) s1)) s2
+  in Op (Inr (Inl (Get k)))
+
+fwdS op           = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
 
 x4 :: s2 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
 x4 s k = Op (Inr (Inl (Put s k)))
