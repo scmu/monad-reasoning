@@ -42,13 +42,17 @@ hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (Sta
 hStates x = StateT $ \s1 -> hState $ runStateT (hState x) s1
 
 flatten :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
-flatten t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (runStateT t s1) s2
+flatten t = StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (runStateT t s1) s2
 nested :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
 nested t = StateT $ \ s1 -> StateT $ \ s2 -> fmap (\ (a, (x, y)) -> ((a, x), y)) $ runStateT t (s1, s2)
 \end{code}
-% hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
-% hStates x = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-%                                  $   flip runStateT s2 $ hState $ flip runStateT s1 (hState x)
+
+We can easily fuse the composition |flatten . hStates| into a single function |hStates'|, which is defined as:
+\begin{code}
+hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
+hStates' t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+                                  $   runStateT (hState (runStateT (hState t) s1)) s2
+\end{code}
 
 Second, we can also have a single state effect functor that contains a tuple of two states |StateF (s1, s2)|.
 The |hStateTuple| function handles this representation.
@@ -89,15 +93,38 @@ states2state  = fold gen (alg1 # alg2 # fwd)
 Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
 \begin{code}
 get'        :: Functor f => Free (StateF s :+: f) s
-get'        = Op $ Inl $ Get return
+get'        = Op (Inl (Get return))
 
 put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
-put' sts k  = Op $ Inl $ Put sts k
+put' sts k  = Op (Inl (Put sts k))
 \end{code}
 
 To prove that the two representations are equivalent and that the simulation is correct, 
-we show that |flatten . hStates = hState . states2state|.
+we show that |hStates' = hState . states2state|.
 \todo{prove in appendices and refer to it.}
+
+%if False
+% NOTE: some test code to assit in writing proofs
+\begin{code}
+-- x :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a
+x1 :: Functor f => (s1 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
+x1 k = let t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+                      $   runStateT (hState (runStateT (hState (k s1)) s1)) s2
+       in Op (Inl (Get k))
+
+x2 :: s1 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
+x2 s k = Op (Inl (Put s k))
+
+x3 :: (s2 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
+x3 k = Op (Inr (Inl (Get k)))
+
+x4 :: s2 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
+x4 s k = Op (Inr (Inl (Put s k)))
+
+x5 :: f (Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
+x5 y = Op (Inr (Inr y))
+\end{code}
+%endif
 
 \subsection{Simulating Nondeterminism and State with Only State}
 

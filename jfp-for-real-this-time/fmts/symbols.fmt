@@ -84,6 +84,7 @@
 %format hState = "\Varid{h_{State}}"
 %format hState1 = "\Varid{h_{State1}}"
 %format hStates = "\Varid{h_{States}}"
+%format hStates' = "\Varid{h_{States}^\prime}"
 %format hStateTuple = "\Varid{h_{State_{(,)}}}"
 %format hState' = "\Varid{h_{State}^\prime}"
 %format hStateT = "\Varid{h_{StateT}}"
