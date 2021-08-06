@@ -106,7 +106,10 @@ we show that |hStates' = hState . states2state|.
 %if False
 % NOTE: some test code to assit in writing proofs
 \begin{code}
--- x :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a
+
+x0 :: a -> Free (StateF s1 :+: StateF s2 :+: f) a
+x0 x = Var x
+
 x1 :: Functor f => (s1 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
 x1 k = let t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
                       $   runStateT (hState (runStateT (hState (k s1)) s1)) s2
