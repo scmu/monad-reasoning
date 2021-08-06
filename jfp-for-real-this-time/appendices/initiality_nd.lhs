@@ -213,7 +213,7 @@ For any other morphism |g :: MNondet m => [a] -> m a| which satisfies the five e
 \end{theorem}
 
 \begin{proof}
-Bacuase |choose = foldr (mplus . etand) mzero|, by the universal property of |foldr|, we only need to prove the following two equations:
+Because |choose = foldr (mplus . etand) mzero|, by the universal property of |foldr|, we only need to prove the following two equations:
 \begin{enumerate}
 \item[1] |g [] = mzero|
 
@@ -224,13 +224,13 @@ It follows directly from the equation (1) in Figure \ref{fig:5eqs}.
 < = {-~  definition of |(++)|  -}
 <    g ([x] ++ xs)
 < = {-~  equation (2) in Figure \ref{fig:5eqs}  -}
-<    g [x] mplus g xs
+<    g [x] `mplus` g xs
 < = {-~  definition of  |etal|  -}
-<    g (etal x) mplus g xs
+<    g (etal x) `mplus` g xs
 < = {-~  reformulation  -}
-<    (g . etal) x mplus g xs
+<    (g . etal) x `mplus` g xs
 < = {-~  equation (3) in Figure \ref{fig:5eqs}  -}
-<    etand x mplus g xs
+<    etand x `mplus` g xs
 < = {-~  reformulation  -}
 <    (mplus . etand) x (g xs)
 \end{enumerate}
