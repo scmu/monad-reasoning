@@ -200,13 +200,13 @@ The proof proceeds by structrual induction on the list |xs|.
 \end{proof}
 
 To prove that |choose| is unique, we use the universality of |foldr|.
-\begin{Theorem}[Universal Property of |fold|] \label{thm:univ-fold}
+\begin{theorem}[Universal Property of |fold|] \label{thm:univ-fold}
 \begin{align*}
 |g []| &= |v| &  & \\
 & &\Longleftrightarrow \hspace{10ex} |g| &= |foldr f v| \\
 |g (x:xs)| &= |f x (g xs)| & & 
 \end{align*}
-\end{Theorem}
+\end{theorem}
 
 \begin{theorem}[Uniqueness of |choose|]
 For any other morphism |g :: MNondet m => [a] -> m a| which satisfies the five equations in Figure \ref{fig:5eqs}, we have |g = choose|.
