@@ -43,6 +43,8 @@ For the left hand side, we can also expand the definition of |local2global| and 
 < = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
 <    fold (hGlobal . Var) alg' {-" \text{with } "-} hGlobal . alg = alg' . fmap hGlobal
 
+The algebras |alg'| and |algS'| will be constructed later.
+
 Therefore, we can use the universal property of fold to show that |hLocal = fold (hL . genS) algS'| and |hGlobal . local2global = fold (hGlobal . Var) alg'| are equal.
 To do this, we have to prove that
 \begin{enumerate}
@@ -52,13 +54,12 @@ To do this, we have to prove that
 The first item is simple to prove with equational reasoning.
 We want to prove that |hL . genS = hGlobal . Var| for all inputs |x :: a|.
 
-For the left-hand side, we have:
 <    (hL . genS) x
 < = {-~  definition of |genS|  -}
 <    hL (\ s -> Var (x, s))
 < = {-~  definition of |hL|  -}
 <    fmap (fmap (fmap fst) . hND) (\ s -> Var (x, s))
-< = {-~  functor law: composition of |fmap| \ref{eq:functor-composition}  -}
+< = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition})  -}
 <    (fmap (fmap (fmap fst)) . fmap hND) (\ s -> Var (x, s))
 < = {-~  application of |fmap hND|  -}
 <    fmap (fmap (fmap fst)) (\ s -> hND (Var (x, s)))
@@ -66,23 +67,20 @@ For the left-hand side, we have:
 <    fmap (fmap (fmap fst)) (\ s -> Var [(x, s)])
 < = {-~  evaluation of |fmap (fmap (fmap fst))|  -}
 <    \ s -> Var [x]
-
-And for the right-hand side, we have:
-<    (hGlobal . Var) x
-< = {-~  reformulation  -}
-<    hGlobal (Var x)
-< = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hND) (Var x)
-< = {-~  evaluation of |hND|  -}
-<    (fmap (fmap fst) . hState1) (Var [x])
-< = {-~  evaluation of |hState1|  -}
+< = {-~  property of |fmap| and |fst|  -}
 <    fmap (fmap fst) (\ s -> Var ([x], s))
-< = {-~  evaluation of |fmap (fmap fst)|  -}
-<    \ s -> Var [x]
+< = {-~  property of |hState1|  -}
+<    (fmap (fmap fst) . hState1) (Var [x])
+< = {-~  property of |hND|  -}
+<    (fmap (fmap fst) . hState1 . hND) (Var x)
+< = {-~  definition of |hGlobal|  -}
+<    hGlobal (Var x)
+< = {-~  reformulation  -}
+<    (hGlobal . Var) x
 
 So we have |hL . genS = hGlobal . Var|.
 
-For the second item, instead of constructing |alg'| and |algS'| individually, we only construct one |alg'| and then verify that the following two equations hold: 
+For the second item, instead of constructing |alg'| and |algS'| individually, we only construct |alg'| and then verify that the following two equations hold: 
 
 \begin{enumerate}
     \item |hL . algS = alg' . fmap hL|
@@ -98,7 +96,7 @@ alg' (Inr (Inl Fail))      = \ s -> Var []
 alg' (Inr (Inl (Or p q)))  = \ s -> (++) <$> p s <*> q s
 alg' (Inr (Inr y))         = \ s -> Op (fmap ($s) y)
 \end{code}
-The two equations are proved in Lemma \ref{eq:fusion-cond-1} and Lemma \ref{eq:fusion-cond-2} respectively.
+The two equations (1) and (2) are proved in Lemma \ref{eq:fusion-cond-1} and Lemma \ref{eq:fusion-cond-2} respectively.
 Thus, we have our original equation |hLocal = fold (hL . genS) alg' = fold (hGlobal . Var) alg' = hGlobal . local2global| holds.
 \end{proof}
 
@@ -158,7 +156,7 @@ We do a case analysis on |t|.
 \noindent \mbox{\underline{case |t = Inr (Inl Fail)|}}
 
 <    (alg' . fmap hL) (Inr (Inl Fail))
-< = {-~  definition of |fmap| \birthe{dropped the |hL|?}  -}
+< = {-~  definition of |fmap|  -}
 <    alg' (Inr (Inl Fail))
 < = {-~  definition of |alg'|  -}
 <    \ s -> Var []
