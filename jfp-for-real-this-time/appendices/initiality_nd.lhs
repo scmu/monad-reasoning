@@ -54,7 +54,7 @@ We prove the four equations in sequence.
 \end{theorem}
 
 \begin{proof}
-The proof proceeds by structrual induction on the list |xs|.
+The proof proceeds by structural induction on the list |xs|.
 
 \noindent
 \mbox{\underline{case |xs = []|}}
@@ -99,7 +99,7 @@ The proof proceeds by structrual induction on the list |xs|.
 <    (etand x `mplus` choose xs) `mplus` choose ys
 < = {-~  definition of |choose|  -}
 <    (etand x `mplus` foldr (mplus . etand) mzero xs) `mplus` choose ys
-< = {-~  property of |foldr|  -}
+< = {-~  definition of |foldr|  -}
 <    foldr (mplus . etand) mzero (x:xs) `mplus` choose ys
 < = {-~  definition of |choose|  -}
 <    choose (x:xs) `mplus` choose ys
@@ -156,7 +156,7 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 
 \begin{proof}
 We prove that the equation |(choose . mul) xs = (mund . choose . fmap choose) xs| holds for every list |xs|.
-The proof proceeds by structrual induction on the list |xs|.
+The proof proceeds by structural induction on the list |xs|.
 
 \noindent
 \mbox{\underline{case |xs = []|}}
@@ -200,13 +200,13 @@ The proof proceeds by structrual induction on the list |xs|.
 \end{proof}
 
 To prove that |choose| is unique, we use the universality of |foldr|.
-\begin{Theorem}[Universal Property of |fold|] \label{thm:univ-fold}
+\begin{theorem}[Universal Property of |fold|] \label{thm:univ-fold}
 \begin{align*}
 |g []| &= |v| &  & \\
 & &\Longleftrightarrow \hspace{10ex} |g| &= |foldr f v| \\
 |g (x:xs)| &= |f x (g xs)| & & 
 \end{align*}
-\end{Theorem}
+\end{theorem}
 
 \begin{theorem}[Uniqueness of |choose|]
 For any other morphism |g :: MNondet m => [a] -> m a| which satisfies the five equations in Figure \ref{fig:5eqs}, we have |g = choose|.
