@@ -43,12 +43,76 @@ numpages = {13},
 keywords = {lawvere theories, equational reasoning, monads, algebraic specification}
 }
 
+@inproceedings{Wu15,
+  title = {Fusion for Free: Efficient Algebraic Effect Handlers},
+  author = {Nicolas Wu and Tom Schrijvers},
+  year = {2015},
+  booktitle = {MPC 2015},
+  url = {/Research/papers/mpc2015.pdf}
+}
+
+@article{Moggi91,
+  Author = {Moggi, Eugenio},
+  Date-Added = {2017-02-08 07:14:08 +0000},
+  Date-Modified = {2017-02-08 07:15:52 +0000},
+  Journal = {Information and Computation},
+  Number = {1},
+  Pages = {55-92},
+  Title = {Notions of computation and monads},
+  Volume = {93},
+  Year = {1991}}
+
 @article{Pirog17,
   title        = {Backtracking with cut via a distributive law and left-zero monoids*},
   author       = {Maciej Pir{\'o}g and S. Staton},
   journal      = {Journal of Functional Programming},
   year         = {2017},
   volume       = {27}
+}
+
+@inproceedings{Plotkin02,
+author = {Plotkin, Gordon D. and Power, John},
+title = {Notions of Computation Determine Monads},
+year = {2002},
+isbn = {354043366X},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+abstract = {We model notions of computation using algebraic operations and equations. We show
+that these generate several of the monads of primary interest that have been used
+to model computational effects, with the striking omission of the continuations monad.
+We focus on semantics for global and local state, showing that taking operations and
+equations as primitive yields a mathematical relationship that reflects their computational
+relationship.},
+booktitle = {Proceedings of the 5th International Conference on Foundations of Software Science and Computation Structures},
+pages = {342–356},
+numpages = {15},
+series = {FoSSaCS '02}
+}
+
+@InProceedings{Plotkin09,
+author="Plotkin, Gordon
+and Pretnar, Matija",
+editor="Castagna, Giuseppe",
+title="Handlers of Algebraic Effects",
+booktitle="Programming Languages and Systems",
+year="2009",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="80--94",
+abstract="We present an algebraic treatment of exception handlers and, more generally, introduce handlers for other computational effects representable by an algebraic theory. These include nondeterminism, interactive input/output, concurrency, state, time, and their combinations; in all cases the computation monad is the free-model monad of the theory. Each such handler corresponds to a model of the theory for the effects at hand. The handling construct, which applies a handler to a computation, is based on the one introduced by Benton and Kennedy, and is interpreted using the homomorphism induced by the universal property of the free model. This general construct can be used to describe previously unrelated concepts from both theory and practice.",
+isbn="978-3-642-00590-9"
+}
+
+@article{Plotkin13,
+  TITLE = {{Handling Algebraic Effects}},
+  AUTHOR = {Gordon D Plotkin and Matija Pretnar},
+  URL = {https://lmcs.episciences.org/705},
+  DOI = {10.2168/LMCS-9(4:23)2013},
+  JOURNAL = {{Logical Methods in Computer Science}},
+  VOLUME = {{Volume 9, Issue 4}},
+  YEAR = {2013},
+  MONTH = Dec,
+  KEYWORDS = {Computer Science - Logic in Computer Science ; Computer Science - Programming Languages},
 }
 
 @InProceedings{Wu14,
@@ -85,6 +149,14 @@ keywords = {lawvere theories, equational reasoning, monads, algebraic specificat
                   https://dblp.org}
 }
 
+@misc{Kiselyov:15:Laws,
+  Author = {Kiselyov, Oleg},
+  Date-Added = {2017-02-10 05:13:59 +0000},
+  Date-Modified = {2017-02-10 05:31:26 +0000},
+  Howpublished = {\url{http://okmij.org/ftp/Computation/monads.html\#monadplus}},
+  Title = {Laws of MonadPlus},
+  Year = {2015}}
+
 @article{Kiselyov15,
 author = {Kiselyov, Oleg and Ishii, Hiromi},
 title = {Freer Monads, More Extensible Effects},
@@ -116,6 +188,25 @@ month = aug,
 pages = {94–105},
 numpages = {12},
 keywords = {coroutine, effect handler, effect interaction, free monad, open union, Kan extension, type and effect system}
+}
+
+@article{mcbride08, 
+  title={Applicative programming with effects}, 
+  volume={18}, 
+  DOI={10.1017/S0956796807006326}, 
+  number={1}, 
+  journal={Journal of Functional Programming}, 
+  publisher={Cambridge University Press}, 
+  author={McBride, Conor and Paterson, Ross}, 
+  year={2008}, 
+  pages={1–13}}
+
+@article{Hutton08,
+author = {Hutton, Graham and Fulger, Diana},
+year = {2008},
+month = {01},
+pages = {},
+title = {Reasoning About Effects: Seeing the Wood Through the Trees (Extended Version)}
 }
 
 @misc{mtl,
