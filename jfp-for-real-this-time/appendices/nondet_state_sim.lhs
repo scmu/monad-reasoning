@@ -142,7 +142,7 @@ First, we use equational reasoning to prove the first item:
 
 % \begin{theorem}[pop-extract part 2]
 % \,
-Then, we use equational reasoning with case analysis and substructrual induction on |x| to prove the second item:
+Then, we use equational reasoning with case analysis and structrual induction on |x| to prove the second item:
 <     runState (runSTND (alg x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (alg x), stack)
 % \end{theorem}
 % \begin{proof}

@@ -6,8 +6,8 @@ that the |List| monad is the inital lawful instance of state.
 
 Therefore, there must be a unique morphism from the |List| monad
 to every other lawful instance of nondeterminism. 
-To show this morphism exists, we have to make the following two
-drawings commute:
+To show this morphism exists, we have to show the following two
+diagrams commute:
 
 \[\begin{tikzcd}
     {|[a]|} && {|m a|} && {|[[a]]|} &&&& {|m (m a)|} \\
@@ -55,7 +55,7 @@ For the second proof, we require the distributivity of |choose|.
 \end{lemma}
 
 \begin{proof}
-The proof proceeds by substructrual induction on the list |xs|.
+The proof proceeds by structrual induction on the list |xs|.
 
 \noindent
 \mbox{\underline{case |xs = []|}}
@@ -137,7 +137,7 @@ We use the laws of Section \ref{sec:background}, utilizing the fact that
 
 \begin{proof}
 We prove that the equation |(choose . mul) xs = (mund . choose . fmap choose) xs| holds for every list |xs|.
-The proof proceeds by substructrual induction on the list |xs|.
+The proof proceeds by structrual induction on the list |xs|.
 
 \noindent
 \mbox{\underline{case |xs = []|}}
