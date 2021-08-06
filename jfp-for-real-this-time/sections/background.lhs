@@ -335,6 +335,7 @@ of the syntax to other handlers.
 
 A mediator can be used to seperate the algebras for the components of the coproduct \cite{Schrijvers2019}.
 \begin{code}
+infixr #
 (#) :: (sig1 a -> p) -> (sig2 a -> p) -> (sig1 :+: sig2) a -> p
 (alg1 # alg2) (Inl op) = alg1 op
 (alg1 # alg2) (Inr op) = alg2 op

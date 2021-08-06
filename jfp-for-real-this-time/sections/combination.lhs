@@ -33,43 +33,30 @@ nondeterminism and state with a single state effect.
 For an effect that contains multiple states we can define two approaches to handle them.
 
 First, we can make an effect functor with two state functors |StateF s1 :+: StateF s2|.
-The |hStates| function handles these two functors to interpret them with the |StateT| monad.
+The |hStates| function applies two |hState| in sequence to handle these two functors and interpret them with two nested the |StateT| monad.
+These two |StateT| monad can be transformed into one |StateT| with a pair |(s1, s2)| as the state.
+This transformation is characterized by the isomorphism |flatten| with the inverse |nested|.
 
 \begin{code}
-hStates :: (Functor f) => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
-hStates = fold gen (alg1 # (alg2 # fwd))
-  where
-    gen :: Functor f => a -> StateT (s1, s2) (Free f) a
-    gen = return
+hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
+hStates x = StateT $ \s1 -> hState $ runStateT (hState x) s1
 
-    alg1 :: Functor f => StateF s1 (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
-    alg1 (Get k)      = StateT $ \sts -> runStateT (k $ fst sts) sts
-    alg1 (Put s1' k)  = StateT $ \sts -> runStateT k (s1', snd sts)
-
-    alg2 :: Functor f => StateF s2 (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
-    alg2 (Get k)      = StateT $ \sts -> runStateT (k $ snd sts) sts
-    alg2 (Put s2' k)  = StateT $ \sts -> runStateT k (fst sts, s2')
-
-    fwd :: Functor f => f (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
-    fwd op = StateT $ \sts -> Op $ fmap (\k -> runStateT k sts) op
+flatten :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
+flatten t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (runStateT t s1) s2
+nested :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
+nested t = StateT $ \ s1 -> StateT $ \ s2 -> fmap (\ (a, (x, y)) -> ((a, x), y)) $ runStateT t (s1, s2)
 \end{code}
+% hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
+% hStates x = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+%                                  $   flip runStateT s2 $ hState $ flip runStateT s1 (hState x)
 
 Second, we can also have a single state effect functor that contains a tuple of two states |StateF (s1, s2)|.
-The hStateTuple function handles this representation.
+The |hStateTuple| function handles this representation.
+Since it is exactly the same as the |hState|, we will use |hState| in the following presentation.
 
 \begin{code}
-hStateTuple :: (Functor f) => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
-hStateTuple = fold gen (alg # fwd)
-  where
-    gen :: Functor f => a -> StateT (s1, s2) (Free f) a
-    gen = return
-
-    alg :: Functor f => StateF (s1, s2) (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
-    alg (Get k) = StateT $ \sts -> runStateT (k sts) sts
-    alg (Put s k) = StateT $ \sts -> runStateT k s
-
-    fwd :: Functor f => f (StateT (s1, s2) (Free f) a) -> StateT (s1, s2) (Free f) a
-    fwd op = StateT $ \sts -> Op $ fmap (\k -> runStateT k sts) op
+hStateTuple :: Functor f => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
+hStateTuple = hState
 \end{code}
 
 In fact, it is possible to simulate the situation with two state effect handlers using
@@ -80,7 +67,7 @@ Indeed, we can define a simulation function |states2state| as follows.
 states2state  :: (Functor f) 
               => Free (StateF s1 :+: StateF s2 :+: f) a 
               -> Free (StateF (s1, s2) :+: f) a
-states2state  = fold gen (alg1 # (alg2 # fwd))
+states2state  = fold gen (alg1 # alg2 # fwd)
   where
     gen :: Functor f => a -> Free (StateF (s1, s2) :+: f) a
     gen = return 
@@ -101,29 +88,16 @@ states2state  = fold gen (alg1 # (alg2 # fwd))
 \end{code}
 Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
 \begin{code}
-get'        :: Functor f => Free (StateF (s1, s2) :+: f) (s1, s2)
+get'        :: Functor f => Free (StateF s :+: f) s
 get'        = Op $ Inl $ Get return
 
-put'        :: (s1, s2) -> Free (StateF (s1, s2) :+: f) a -> Free (StateF (s1, s2) :+: f) a
+put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
 put' sts k  = Op $ Inl $ Put sts k
 \end{code}
 
 To prove that the two representations are equivalent and that the simulation is correct, 
-we show that |hStates = hStateTuple . states2state|.
+we show that |flatten . hStates = hState . states2state|.
 \todo{prove in appendices and refer to it.}
-
-\wenhao{Maybe we should prove the equation |reorder . left = right|.}
-\begin{code}
-left :: (Functor f) => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-left x = StateT $ \s1 -> hState $ runStateT (hState x) s1
-
-reorder :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
-reorder x = StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ flip runStateT s2 $ flip runStateT s1 x
-
-
-right  :: (Functor f) => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
-right = hState . states2state
-\end{code}
 
 \subsection{Simulating Nondeterminism and State with Only State}
 
