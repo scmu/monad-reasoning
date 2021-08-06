@@ -2,57 +2,56 @@
 \label{app:universality-nondeterminism}
 
 This section shows, with a proof using equational reasoning techniques,
-that the |List| monad is the inital lawful instance of state. 
+that the |List| monad is the inital lawful instance of |MNondet|. 
 
-Therefore, there must be a unique morphism from the |List| monad
-to every other lawful instance of nondeterminism. 
-To show this morphism exists, we have to show the following two
-diagrams commute:
+Therefore, there must be a unique morphism |g :: MNondet m => [a] -> m a| from the |List| monad
+to every other lawful instance of nondeterminism which preserves the five equations in Figure \ref{fig:5eqs}.
 
-\[\begin{tikzcd}
-    {|[a]|} && {|m a|} && {|[[a]]|} &&&& {|m (m a)|} \\
-    \\
-    & {|a|} & && {|[a]|} &&&& {|m a|}
-    \arrow["{|mul|}", from=1-5, to=3-5]
-    \arrow["{|choose . fmap choose|}", from=1-5, to=1-9]
-    \arrow["{|fmap choose . choose|}"', draw=none, from=1-5, to=1-9]
-    \arrow["{|mund|}", from=1-9, to=3-9]
-    \arrow["{|choose|}"', from=3-5, to=3-9]
-    \arrow["{|choose|}", from=1-1, to=1-3]
-    \arrow["{|etand|}"', from=3-2, to=1-3]
-    \arrow["{|etal|}", from=3-2, to=1-1]
-\end{tikzcd}\]
+\begin{figure}[htbp]
+  \centering
+\begin{align*}
+&|g [] = mzero| \tag{1} \\
+&|g (x ++ y) = g x `mplus` g y| \tag{2} \\
+&|g . etal = etand| \tag{3} \\
+&|g . mul = mund . g . fmap g| \tag{4} \\
+&|g . mul = mund . fmap g . g| \tag{5}
+\end{align*}
+  \caption{Properties of morphism |g :: MNondet m => [a] -> m a|.}
+  \label{fig:5eqs}
+\end{figure}
 
-The first equality is easy to prove using equational reasoning:
+% And the following two diagrams commute:
+% \[\begin{tikzcd}
+%     {|[a]|} && {|m a|} && {|[[a]]|} &&&& {|m (m a)|} \\
+%     \\
+%     & {|a|} & && {|[a]|} &&&& {|m a|}
+%     \arrow["{|mul|}", from=1-5, to=3-5]
+%     \arrow["{|g . fmap g|}", from=1-5, to=1-9]
+%     \arrow["{|fmap g . g|}"', draw=none, from=1-5, to=1-9]
+%     \arrow["{|mund|}", from=1-9, to=3-9]
+%     \arrow["{|g|}"', from=3-5, to=3-9]
+%     \arrow["{|g|}", from=1-1, to=1-3]
+%     \arrow["{|etand|}"', from=3-2, to=1-3]
+%     \arrow["{|etal|}", from=3-2, to=1-1]
+% \end{tikzcd}\]
 
-% \fbox{|choose . etal = etand|}
+First, we show that this morphism exists and is the |choose| function.
+We prove the four equations in sequence.
 
 \begin{theorem}
-|choose . etal = etand|
+|choose [] = mzero|
 \end{theorem}
-
 \begin{proof}~
-<    choose (etal x)
-< = {-~  definition of |etal|  -}
-<    choose [x]
+<    choose []
 < = {-~  definition of |choose|  -}
-<    foldr (mplus . etand) mzero [x]
-< = {-~  evaluation of |foldr|  -}
-<    (mplus . etand) x mzero
-< = {-~  reformulation  -}
-<    etand x `mplus` mzero
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    etand x
-\vspace{-6mm}
+<    foldr (mplus . etand) mzero []
+< = {-~  definition of |fold|  -}
+<    mzero
 \end{proof}
 
-For the second proof, we require the distributivity of |choose|.
-
-% \fbox{|choose (xs ++ ys) = choose xs `mplus` choose ys|}
-
-\begin{lemma}
+\begin{theorem} \label{eq:A2}
 |choose (xs ++ ys) = choose xs `mplus` choose ys|
-\end{lemma}
+\end{theorem}
 
 \begin{proof}
 The proof proceeds by structrual induction on the list |xs|.
@@ -121,8 +120,28 @@ The proof proceeds by structrual induction on the list |xs|.
 \vspace{-6mm}
 \end{proof}
 
-Now everything is in place to prove the second property.
-It suffices to prove on of the following two properties:
+\begin{theorem}
+|choose . etal = etand|
+\end{theorem}
+
+\begin{proof}~
+<    choose (etal x)
+< = {-~  definition of |etal|  -}
+<    choose [x]
+< = {-~  definition of |choose|  -}
+<    foldr (mplus . etand) mzero [x]
+< = {-~  evaluation of |foldr|  -}
+<    (mplus . etand) x mzero
+< = {-~  reformulation  -}
+<    etand x `mplus` mzero
+< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
+<    etand x
+\vspace{-6mm}
+\end{proof}
+
+
+
+For the last two equations, it suffices to prove one of the following two equations:
 < choose . mul = mund . choose . fmap choose
 < choose . mul = mund . fmap choose . choose 
 Both properties are equivalent due to the naturality of the natural transformation |choose|.
@@ -162,7 +181,7 @@ The proof proceeds by structrual induction on the list |xs|.
 <    choose (mul (x:xs))
 < = {-~  definition of |mul = foldr (++) []|  -}
 <    choose (x ++ mul xs)
-< = {-~  distributivity of |choose|  -}
+< = {-~  Theorem \ref{eq:A2}  -}
 <    choose x `mplus` choose (mul xs)
 < = {-~  induction hypothesis  -}
 <    choose x `mplus` mund (choose (fmap choose xs))
@@ -180,7 +199,43 @@ The proof proceeds by structrual induction on the list |xs|.
 \vspace{-6mm}
 \end{proof}
 
-To prove that this morphism is unique, we use the universality of fold.
+To prove that |choose| is unique, we use the universality of |foldr|.
+\begin{Theorem}[Universal Property of |fold|] \label{thm:univ-fold}
+\begin{align*}
+|g []| &= |v| &  & \\
+& &\Longleftrightarrow \hspace{10ex} |g| &= |foldr f v| \\
+|g (x:xs)| &= |f x (g xs)| & & 
+\end{align*}
+\end{Theorem}
+
+\begin{theorem}[Uniqueness of |choose|]
+For any other morphism |g :: MNondet m => [a] -> m a| which satisfies the five equations in Figure \ref{fig:5eqs}, we have |g = choose|.
+\end{theorem}
+
+\begin{proof}
+Bacuase |choose = foldr (mplus . etand) mzero|, by the universal property of |foldr|, we only need to prove the following two equations:
+\begin{enumerate}
+\item[1] |g [] = mzero|
+
+It follows directly from the equation (1) in Figure \ref{fig:5eqs}.
+
+\item[2] |g (x:xs) = (mplus . etand) x (g xs)|
+<    g (x:xs)
+< = {-~  definition of |(++)|  -}
+<    g ([x] ++ xs)
+< = {-~  equation (2) in Figure \ref{fig:5eqs}  -}
+<    g [x] mplus g xs
+< = {-~  definition of  |etal|  -}
+<    g (etal x) mplus g xs
+< = {-~  reformulation  -}
+<    (g . etal) x mplus g xs
+< = {-~  equation (3) in Figure \ref{fig:5eqs}  -}
+<    etand x mplus g xs
+< = {-~  reformulation  -}
+<    (mplus . etand) x (g xs)
+\end{enumerate}
+
+\end{proof}
 
 
 

@@ -112,6 +112,19 @@ To prove that the two representations are equivalent and that the simulation is 
 we show that |hStates = hStateTuple . states2state|.
 \todo{prove in appendices and refer to it.}
 
+\wenhao{Maybe we should prove the equation |reorder . left = right|.}
+\begin{code}
+left :: (Functor f) => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
+left x = StateT $ \s1 -> hState $ runStateT (hState x) s1
+
+reorder :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
+reorder x = StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ flip runStateT s2 $ flip runStateT s1 x
+
+
+right  :: (Functor f) => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
+right = hState . states2state
+\end{code}
+
 \subsection{Simulating Nondeterminism and State with Only State}
 
 By now we have defined three simulations for encoding a high-level effect as a lower-level effect.
