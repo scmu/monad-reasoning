@@ -70,11 +70,11 @@ An applicative functor should satisfy the following four laws:
     &\mbox{\bf identity}:\quad &
     |pure id <*> x| &= |x|\mbox{~~,} \label{eq:functor-identity}\\
     &\mbox{\bf composition}:~ &
-    |pure (.) <*> x <*> y <*> z| &= |x <*> (y <*> z)| \mbox{~~,} \label{eq:functor-composition} \\
+    |pure (.) <*> x <*> y <*> z| &= |x <*> (y <*> z)| \mbox{~~,} \\
     &\mbox{\bf homomorphism}:~ &
-    |pure f <*> pure x| &= |pure (f x)| \mbox{~~,} \label{eq:functor-composition} \\
+    |pure f <*> pure x| &= |pure (f x)| \mbox{~~,} \\
     &\mbox{\bf interchange}:~ &
-    |x <*> pure y| &= |pure ($ y) <*> x| \mbox{~~.} \label{eq:functor-composition}
+    |x <*> pure y| &= |pure ($ y) <*> x| \mbox{~~.}
 \end{alignat}
 
 Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.

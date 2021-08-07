@@ -230,7 +230,7 @@ For the left-hand side, we have:
 <    \ s -> algL' ((fmap hL' . fmap (\ k -> k s)) y)
 < = {-~  definition of |algL'|  -}
 <    \ s -> Op ((fmap hL' . fmap (\ k -> k s)) y)
-< = {-~  |fmap|-fusion law  -}
+< = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition})  -}
 <    \ s -> Op (fmap (hL' . (\ k -> k s)) y)
 
 For the right-hand side, we have:

@@ -134,8 +134,12 @@ x4 s k =
           $ runStateT (hState (runStateT (fwdS (Inl (Put s (hState k)))) s1)) s2
   in Op (Inr (Inl (Put s k)))
 
-x5 :: f (Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x5 y = Op (Inr (Inr y))
+x5 :: Functor f => f (Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
+x5 y = 
+  let tmp =
+        StateT $ \ (s1, s2) -> Op (fmap (fmap (\ ((a, x), y) -> (a, (x, y))) . (\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
+  in let tmp2 = StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap (\t -> StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState t) s1)) s2) y)
+  in Op (Inr (Inr y))
 \end{code}
 %endif
 
