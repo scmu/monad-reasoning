@@ -2,8 +2,38 @@
 \label{app:states-state}
 
 %-------------------------------------------------------------------------------
+\subsection{Fusion of the Handlers for Multiple States}
+\label{app:states-state-fusion}
 
-This section shows that the function |combine . hStates| is equivalent to |hState . states2state|, where |flatten|, |hStates| and |states2state| are defined in Section \ref{sec:multiple-states}.
+This sections shows that |flatten . hStates = hStates'|, where |hStates'| and |flatten| are defined in Section \ref{sec:multiple-states}.
+We need to prove that for all |t :: Free (StateF s1 :+: StateF s2 :+: f) a|, the equation |(flatten . hStates) t = hStates' t| holds.
+We prove this by equational reasoning.
+
+<    (flatten . hStates) t
+< = {-~  definition of |hStates|  -}
+<    (flatten . (\t -> StateT $ \s1 -> hState $ runStateT (hState t) s1)) t
+< = {-~  definition of |.|, function application  -}
+<    flatten (StateT $ \s1 -> hState $ runStateT (hState t) s1)
+< = {-~  definition of |flatten|  -}
+<    (\t -> StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (runStateT t s1) s2)
+<      (StateT $ \s1 -> hState $ runStateT (hState t) s1)
+< = {-~  function application  -}
+<    StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT
+<      (runStateT (StateT $ \s1 -> hState $ runStateT (hState t) s1) s1) s2
+< = {-~  definition of |runStateT|  -}
+<    StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT ((\s1 -> hState $ runStateT (hState t) s1) s1) s2
+< = {-~  function application  -}
+<    StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState $ runStateT (hState t) s1) s2
+< = {-~  definition of |($)|  -}
+<    StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2
+< = {-~  definition of |hStates'|  -}
+<    hStates' t
+
+
+\subsection{Correctness of the Simulation of Multiple States with State}
+\label{app:states-state-sim}
+
+This section shows that the function |hStates'| is equivalent to |hState . states2state|, where |hStates'| and |states2state| are defined in Section \ref{sec:multiple-states}.
 
 \begin{theorem}\label{eq:states-state}
 |hStates' = hState . states2state|

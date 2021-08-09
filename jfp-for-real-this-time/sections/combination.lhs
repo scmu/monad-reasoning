@@ -53,12 +53,12 @@ alpha2 (a, (x, y)) = ((a, x), y)
 \end{code}
 
 We can easily fuse the composition |flatten . hStates| into a single function |hStates'|, which is defined as:
-\todo{Add a proof for the fusion.}
 
 \begin{code}
 hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
-hStates' t = StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2
+hStates' t = StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2
 \end{code}
+The proof of this fusion can be found in Appendix \ref{app:states-state-fusion}.
 
 Second, we can also have a single state effect functor that contains a tuple of two states |StateF (s1, s2)|.
 The |hStateTuple| function handles this representation.
@@ -106,7 +106,7 @@ put' sts k  = Op (Inl (Put sts k))
 \end{code}
 
 To prove that the two representations are equivalent and that the simulation is correct, 
-we show that |hStates' = hState . states2state| in Appendix \ref{app:states-state}.
+we show that |hStates' = hState . states2state| in Appendix \ref{app:states-state-sim}.
 
 %if False
 % NOTE: some test code to assit in writing proofs
