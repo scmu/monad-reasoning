@@ -37,24 +37,27 @@ The |hStates| function applies two |hState| in sequence to handle these two func
 These two |StateT| monad can be transformed into one |StateT| with a pair |(s1, s2)| as the state.
 This transformation is characterized by the isomorphism |flatten| with the inverse |nested|.
 
-\todo{Use |alpha = \ ((a, x), y) -> (a, (x, y))| to simplify the definition and proofs.}
-
 \begin{code}
 hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
 hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
 
 flatten :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
-flatten t = StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (runStateT t s1) s2
+flatten t = StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (runStateT t s1) s2
 nested :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
-nested t = StateT $ \ s1 -> StateT $ \ s2 -> fmap (\ (a, (x, y)) -> ((a, x), y)) $ runStateT t (s1, s2)
+nested t = StateT $ \ s1 -> StateT $ \ s2 -> fmap alpha2 $ runStateT t (s1, s2)
+
+alpha1 :: ((a, x), y) -> (a, (x, y))
+alpha1 ((a, x), y) = (a, (x, y))
+alpha2 :: (a, (x, y)) -> ((a, x), y)
+alpha2 (a, (x, y)) = ((a, x), y)
 \end{code}
 
 We can easily fuse the composition |flatten . hStates| into a single function |hStates'|, which is defined as:
 \todo{Add a proof for the fusion.}
+
 \begin{code}
 hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
-hStates' t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-                                  $   runStateT (hState (runStateT (hState t) s1)) s2
+hStates' t = StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2
 \end{code}
 
 Second, we can also have a single state effect functor that contains a tuple of two states |StateF (s1, s2)|.
@@ -103,8 +106,7 @@ put' sts k  = Op (Inl (Put sts k))
 \end{code}
 
 To prove that the two representations are equivalent and that the simulation is correct, 
-we show that |hStates' = hState . states2state|.
-\todo{prove in appendices and refer to it.}
+we show that |hStates' = hState . states2state| in Appendix \ref{app:states-state}.
 
 %if False
 % NOTE: some test code to assit in writing proofs

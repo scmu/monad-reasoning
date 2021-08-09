@@ -134,4 +134,6 @@
 %format comm2 = "\Varid{comm}"
 
 %format alpha = "\alpha"
+%format alpha1
+%format alpha2
 

@@ -28,31 +28,27 @@ We do structural induction on |t|.
 < = {-~  let |s = (s1, s2)|  -}
 <    StateT $ \ (s1, s2) -> Var (x, (s1, s2))
 < = {-~  definition of |alpha|  -}
-<    StateT $ \ (s1, s2)  ->  Var ((\ ((a, x), y) -> (a, (x, y))) ((x, s1), s2))
+<    StateT $ \ (s1, s2)  ->  Var (alpha1 ((x, s1), s2))
 < = {-~  definition of |fmap|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ Var ((x, s1), s2)
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ Var ((x, s1), s2)
 < = {-~  definition of |return|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ return ((x, s1), s2)
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ return ((x, s1), s2)
 < = {-~  |eta|-expansion  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ (\ s -> return ((x, s1), s)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ (\ s -> return ((x, s1), s)) s2
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (StateT $ \ s -> return ((x, s1), s)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (StateT $ \ s -> return ((x, s1), s)) s2
 < = {-~  definition of |genS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (genS (x, s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (genS (x, s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (return (x, s1))) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (return (x, s1))) s2
 < = {-~  |eta|-expansion  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState ((\ s -> return (x, s)) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState ((\ s -> return (x, s)) s1)) s2
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (StateT $ \ s -> return (x, s)) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (StateT $ \ s -> return (x, s)) s1)) s2
 < = {-~  definition of |genS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (genS x) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (genS x) s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (hState (Var x)) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (Var x)) s1)) s2
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Var x)
 
@@ -100,26 +96,22 @@ Induction hypothesis: $\forall s$, |hStates' (k s) = (hState . states2state) (k 
 < = {-~  induction hypothesis of continuation |k s1|  -}
 <    StateT $ \ (s1, s2) -> runStateT (hStates' (k s1)) (s1, s2)
 < = {-~  definition of |hStates'|, function application -}
-<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (hState (runStateT (hState (k s1)) s1)) s2) (s1, s2)
 < = {-~  definition of |runStateT|-}
-<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (hState (runStateT (hState (k s1)) s1)) s2) (s1, s2)
 < = {-~  function application -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (hState (k s1)) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (k s1)) s1)) s2
 < = {-~  |eta|-expansion -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState ((\s -> runStateT (hState (k s)) s) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState ((\s -> runStateT (hState (k s)) s) s1)) s2
 < = {-~  definition of |runStateT| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (StateT $ \s -> runStateT (hState (k s)) s) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1
+<      $   runStateT (hState (runStateT (StateT $ \s -> runStateT (hState (k s)) s) s1)) s2
 < = {-~  definition of |algS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (algS (Get (hState . k))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (algS (Get (hState . k))) s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (hState (Op (Inl (Get k)))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (Op (Inl (Get k)))) s1)) s2
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inl (Get k)))
 
@@ -160,25 +152,20 @@ Induction hypothesis: |hStates' k = (hState . states2state) k|.
 < = {-~  induction hypothesis of continuation |k|  -}
 <    StateT $ \ (s1, s2) -> runStateT (hStates' k) (s, s2)
 < = {-~  definition of |hStates'| -}
-<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2) -> fmap alpha1
 <       $ runStateT (hState (runStateT (hState k) s1)) s2) (s, s2)
 < = {-~  definition of |runStateT| -}
-<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                                        $   runStateT (hState (runStateT (hState k) s1)) s2) (s, s2)
+<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState k) s1)) s2) (s, s2)
 < = {-~  function application -}
-<    StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState k) s)) s2
+<    StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState (runStateT (hState k) s)) s2
 < = {-~  |eta|-expansion -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState ((\s' -> runStateT (hState k) s) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState ((\s' -> runStateT (hState k) s) s1)) s2
 < = {-~  definition of |runStateT| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (StateT $ \s' -> runStateT (hState k) s) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (StateT $ \s' -> runStateT (hState k) s) s1)) s2
 < = {-~  definition of |algS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (algS (Put s (hState k))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (algS (Put s (hState k))) s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (hState (Op (Inl (Put s k)))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (Op (Inl (Put s k)))) s1)) s2
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inl (Put s k)))
 
@@ -219,44 +206,39 @@ Induction hypothesis: $\forall s$, |hStates' (k s) = (hState . states2state) (k 
 < = {-~  induction hypothesis of continuation |k s2|  -}
 <    StateT $ \ (s1, s2) -> runStateT (hStates' (k s2)) (s1, s2)
 < = {-~  definition of |hStates'|, function application -}
-<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (hState (runStateT (hState (k s2)) s1)) s2) (s1, s2)
 < = {-~  definition of |runStateT|, function application -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                         $   runStateT (hState (runStateT (hState (k s2)) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (k s2)) s1)) s2
 < = {-~  |eta|-expansion  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<      $ (runStateT ((hState . (\k -> runStateT k s1) . hState . k) s2) s2)
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ (runStateT ((hState . (\k -> runStateT k s1) . hState . k) s2) s2)
 < = {-~  |eta|-expansion  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<      $ (\s -> runStateT ((hState . (\k -> runStateT k s1) . hState . k) s) s) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ (\s -> runStateT ((hState . (\k -> runStateT k s1) . hState . k) s) s) s2
 < = {-~  definition of |runStateT| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (StateT $ \s -> runStateT ((hState . (\k -> runStateT k s1) . hState . k) s) s) s2
 < = {-~  definition of |algS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (algS (Get (hState . (\k -> runStateT k s1) . hState . k))) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (hState (Op (Inl (Get ((\k -> runStateT k s1) . hState . k))))) s2
 < = {-~  definition of |($)|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (hState (Op $ (Inl (Get ((\k -> runStateT k s1) . hState . k))))) s2
 < = {-~  |eta|-expansion  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2)  ->  fmap alpha1
 <      $ runStateT (hState ((\s -> Op $ (Inl (Get ((\k -> runStateT k s) . hState . k)))) s1)) s2
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT 
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT 
 <      (hState (runStateT (StateT $ \s -> Op $ (Inl (Get ((\k -> runStateT k s) . hState . k)))) s1)) s2
 < = {-~  definition of |fmap|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT 
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT 
 <      (hState (runStateT (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (Inl (Get (hState . k)))) s1)) s2
 < = {-~  definition of |fwdS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT 
-<      (hState (runStateT (fwdS (Inl (Get (hState . k)))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (fwdS (Inl (Get (hState . k)))) s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT 
-<      (hState (runStateT (hState (Op (Inr (Inl (Get k))))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (Op (Inr (Inl (Get k))))) s1)) s2
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inr (Inl (Get k))))
 
@@ -297,46 +279,37 @@ Induction hypothesis: |hStates' k = (hState . states2state) k|.
 < = {-~  induction hypothesis of continuation |k|  -}
 <    StateT $ \ (s1, s2) -> runStateT (hStates' k) (s1, s)
 < = {-~  definition of |hStates'| -}
-<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2) -> fmap alpha1
 <       $ runStateT (hState (runStateT (hState k) s1)) s2) (s1, s)
 < = {-~  definition of |runStateT| -}
-<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                                        $   runStateT (hState (runStateT (hState k) s1)) s2) (s1, s)
+<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState k) s1)) s2) (s1, s)
 < = {-~  function application -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState k) s1)) s
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState k) s1)) s
 < = {-~  |eta|-expansion -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $
-<      (\ s' -> runStateT (hState (runStateT (hState k) s1)) s) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ (\ s' -> runStateT (hState (runStateT (hState k) s1)) s) s2
 < = {-~  definition of |runStateT| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (StateT $ \ s' -> runStateT (hState (runStateT (hState k) s1)) s) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (StateT $ \ s' -> runStateT (hState (runStateT (hState k) s1)) s) s2
 < = {-~  definition of |algS| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (algS (Put s (hState (runStateT (hState k) s1)))) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (algS (Put s (hState (runStateT (hState k) s1)))) s2
 < = {-~  definition of |hState| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (Op (Inl (Put s (runStateT (hState k) s1))))) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (Op (Inl (Put s (runStateT (hState k) s1))))) s2
 < = {-~  |eta|-expansion -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (Op (Inl (Put s ((\k -> runStateT k s1) (hState k)))))) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (Op (Inl (Put s ((\k -> runStateT k s1) (hState k)))))) s2
 < = {-~  definition of |($)| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (Op $ (Inl (Put s ((\k -> runStateT k s1) (hState k)))))) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (Op $ (Inl (Put s ((\k -> runStateT k s1) (hState k)))))) s2
 < = {-~  definition of |fmap| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (Op $ fmap (\k -> runStateT k s1) (Inl (Put s (hState k))))) s2
 < = {-~  |eta|-expansion -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState ((\s' -> Op $ fmap (\k -> runStateT k s') (Inl (Put s (hState k)))) s1)) s2
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (runStateT (StateT $ \s' -> Op $ fmap (\k -> runStateT k s') (Inl (Put s (hState k)))) s1)) s2
 < = {-~  definition of |fwdS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (runStateT (fwdS (Inl (Put s (hState k)))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (fwdS (Inl (Put s (hState k)))) s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (runStateT (hState (Op (Inr (Inl (Put s k))))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (Op (Inr (Inl (Put s k))))) s1)) s2
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inr (Inl (Put s k))))
 
@@ -363,71 +336,68 @@ Induction hypothesis: |hStates' y = (hState . states2state) y|.
 < = {-~  induction hypothesis of continuation in |y|  -}
 <    fwdS (fmap hStates' y)
 < = {-~  definition of |hStates'|  -}
-<    fwdS (fmap (\t -> StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-<                                     $   runStateT (hState (runStateT (hState t) s1)) s2) y)
+<    fwdS (fmap (\t -> StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2) y)
 < = {-~  definition of |fwdS|  -}
 <    StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap (\t -> StateT
-<      $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState t) s1)) s2) y)
+<      $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2) y)
 < = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition})  -}
 <    StateT $ \s -> Op $ (fmap ((\k -> runStateT k s) . (\t -> StateT
-<      $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState t) s1)) s2)) y)
+<      $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2)) y)
 < = {-~  definition of |.|  -}
-<    StateT $ \s -> Op $ (fmap (\t -> runStateT (StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \s -> Op $ (fmap (\t -> runStateT (StateT $ \ (s1, s2) -> fmap alpha1
 <      $ runStateT (hState (runStateT (hState t) s1)) s2) s) y)
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \s -> Op $ (fmap (\t -> (\ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \s -> Op $ (fmap (\t -> (\ (s1, s2) -> fmap alpha1
 <      $ runStateT (hState (runStateT (hState t) s1)) s2) s) y)
 < = {-~  let |s = (s1, s2)|  -}
-<    StateT $ \ (s1, s2) -> Op $ (fmap (\t -> (\ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> Op $ (fmap (\t -> (\ (s1, s2) -> fmap alpha1
 <      $ runStateT (hState (runStateT (hState t) s1)) s2) (s1, s2)) y)
 < = {-~  function application  -}
-<    StateT $ \ (s1, s2) -> Op $ (fmap (\t -> (fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> Op $ (fmap (\t -> (fmap alpha1
 <      $ runStateT (hState (runStateT (hState t) s1)) s2)) y)
 < = {-~  definition of |.|  -}
-<    StateT $ \ (s1, s2) -> Op (fmap (fmap (\ ((a, x), y) -> (a, (x, y)))
+<    StateT $ \ (s1, s2) -> Op (fmap (fmap alpha1
 <      . (\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
 < = {-~  definition of |fmap|  -}
-<    StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $
+<    StateT $ \ (s1, s2) -> fmap alpha1 $
 <      Op (fmap ((\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
 < = {-~  definition of |($)|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $
 <      Op $ (fmap ((\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
 < = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition})  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $
 <      Op $ fmap (\k -> runStateT k s2) (fmap (hState . (\k -> runStateT k s1) . hState) y)
 < = {-~  |eta|-expansion  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $
 <      (\s -> Op $ fmap (\k -> runStateT k s) (fmap (hState . (\k -> runStateT k s1) . hState) y)) s2
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap (hState . (\k -> runStateT k s1) . hState) y)) s2
 < = {-~  definition of |fwdS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (fwdS (fmap (hState . (\k -> runStateT k s1) . hState) y)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (Op (Inr (fmap ((\k -> runStateT k s1) . hState) y)))) s2
 < = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition})  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (Op (Inr (fmap (\k -> runStateT k s1) (fmap hState y))))) s2
 < = {-~  definition of |($)| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (Op $ (Inr (fmap (\k -> runStateT k s1) (fmap hState y))))) s2
 < = {-~  definition of |fmap| -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (Op $ fmap (\k -> runStateT k s1) (Inr (fmap hState y)))) s2
 < = {-~  |eta|-expansion -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState ((\s -> Op $ fmap (\k -> runStateT k s) (Inr (fmap hState y))) s1)) s2
 < = {-~  definition of |runStateT|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT
 <      (hState (runStateT (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (Inr (fmap hState y))) s1)) s2
 < = {-~  definition of |fwdS|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (runStateT (fwdS (Inr (fmap hState y))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (fwdS (Inr (fmap hState y))) s1)) s2
 < = {-~  definition of |hState|  -}
-<    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT
-<      (hState (runStateT (hState (Op (Inr (Inr y)))) s1)) s2
+<    StateT $ \ (s1, s2)  ->  fmap alpha1 $ runStateT (hState (runStateT (hState (Op (Inr (Inr y)))) s1)) s2
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inr (Inr y)))
 
