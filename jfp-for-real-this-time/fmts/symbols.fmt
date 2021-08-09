@@ -133,5 +133,5 @@
 %format alg2
 %format comm2 = "\Varid{comm}"
 
-
+%format alpha = "\alpha"
 

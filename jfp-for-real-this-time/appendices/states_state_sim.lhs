@@ -11,7 +11,7 @@ This section shows that the function |combine . hStates| is equivalent to |hStat
 
 \begin{proof}
 We need to prove that for any input |t :: Free (StateF s1 :+: StateF s2 :+: f) a|, the equation |hStates' t = (hState . states2state) t| holds.
-We do a structural induction on |t|.
+We do structural induction on |t|.
 
 \noindent \mbox{\underline{base case |t = Var x|}}
 <    (hState . states2state) (Var x)
@@ -27,7 +27,7 @@ We do a structural induction on |t|.
 <   StateT $ \ s -> return (x, s) 
 < = {-~  let |s = (s1, s2)|  -}
 <    StateT $ \ (s1, s2) -> Var (x, (s1, s2))
-< = {-~  reformulation  -}
+< = {-~  definition of |alpha|  -}
 <    StateT $ \ (s1, s2)  ->  Var ((\ ((a, x), y) -> (a, (x, y))) ((x, s1), s2))
 < = {-~  definition of |fmap|  -}
 <    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ Var ((x, s1), s2)
@@ -60,9 +60,12 @@ We do a structural induction on |t|.
 $
 %endif
 
-For each following case of |t|, we assume that the continuation |t'| in |t| satisfies the equation |hStates' t' = (hState . states2state) t'|.
+There are five inductive cases of |t|, for each case the induction hypothesis says that the continuation |t'| in |t| satisfies the equation |hStates' t' = (hState . states2state) t'|.
+We will show the induction hypothesis in detail at the beginning of each case.
 
 \noindent \mbox{\underline{case |t = Op (Inl (Get k))|}}
+
+Induction hypothesis: $\forall s$, |hStates' (k s) = (hState . states2state) (k s)|.
 <    (hState . states2state) (Op (Inl (Get k)))
 < = {-~  definition of |states2state|  -}
 <    (hState . fold gen (alg1 # alg2 # fwd)) (Op (Inl (Get k)))
@@ -88,20 +91,21 @@ For each following case of |t|, we assume that the continuation |t'| in |t| sati
 <    algS (Get (\ (s1, _) -> hState (states2state (k s1))))
 < = {-~  definition of |algS|  -}
 <    StateT $ \s -> runStateT ((\ (s1, _) -> hState (states2state (k s1))) s) s
-< = {-~  function application  -}
-<    StateT $ \s -> runStateT ((\ (s1, _) -> hState (states2state (k s1))) s) s
 < = {-~  let |s = (s1, s2)|  -}
 <    StateT $ \ (s1, s2) -> runStateT ((\ (s1, _) -> hState (states2state (k s1))) (s1, s2)) (s1, s2)
 < = {-~  function application  -}
 <    StateT $ \ (s1, s2) -> runStateT (hState (states2state (k s1))) (s1, s2)
-< = {-~  reformulation  -}
+< = {-~  definition of |.|  -}
 <    StateT $ \ (s1, s2) -> runStateT ((hState . states2state) (k s1)) (s1, s2)
 < = {-~  induction hypothesis of continuation |k s1|  -}
 <    StateT $ \ (s1, s2) -> runStateT (hStates' (k s1)) (s1, s2)
 < = {-~  definition of |hStates'|, function application -}
 <    StateT $ \ (s1, s2) -> runStateT (StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
 <      $ runStateT (hState (runStateT (hState (k s1)) s1)) s2) (s1, s2)
-< = {-~  definition of |runStateT|, function application -}
+< = {-~  definition of |runStateT|-}
+<    StateT $ \ (s1, s2) -> (\ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
+<      $ runStateT (hState (runStateT (hState (k s1)) s1)) s2) (s1, s2)
+< = {-~  function application -}
 <    StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
 <                         $   runStateT (hState (runStateT (hState (k s1)) s1)) s2
 < = {-~  |eta|-expansion -}
@@ -120,6 +124,8 @@ For each following case of |t|, we assume that the continuation |t'| in |t| sati
 <    hStates' (Op (Inl (Get k)))
 
 \noindent \mbox{\underline{case |t = Op (Inl (Put s k))|}}
+
+Induction hypothesis: |hStates' k = (hState . states2state) k|.
 <    (hState . states2state) (Op (Inl (Put s k)))
 < = {-~  definition of |states2state|  -}
 <    (hState . fold gen (alg1 # alg2 # fwd)) (Op (Inl (Put s k)))
@@ -132,7 +138,7 @@ For each following case of |t|, we assume that the continuation |t'| in |t| sati
 < = {-~  definition of |alg1|  -}
 <    hState $ get' >>= \ (_,   s2)  -> put' (s, s2) (states2state k)
 < = {-~  definition of |get'| and |put'|  -}
-<    hState $ Op (Inl (Get return)) >>= \(_, s2) -> Op (Inl (Put (s, s2) (states2state k)))
+<    hState $ Op (Inl (Get return)) >>= \ (_, s2) -> Op (Inl (Put (s, s2) (states2state k)))
 < = {-~  definition of |(>>=)|  -}
 <    hState $ Op (Inl (Get (\ (_, s2) -> Op (Inl (Put (s, s2) (states2state k))))))
 < = {-~  definition of |hState|  -}
@@ -181,6 +187,8 @@ $
 %endif
 
 \noindent \mbox{\underline{case |t = Op (Inr (Inl (Get k)))|}}
+
+Induction hypothesis: $\forall s$, |hStates' (k s) = (hState . states2state) (k s)|.
 <    (hState . states2state) (Op (Inr (Inl (Get k))))
 < = {-~  definition of |states2state|  -}
 <    (hState . fold gen (alg1 # alg2 # fwd)) (Op (Inr (Inl (Get k))))
@@ -206,7 +214,7 @@ $
 <    StateT $ \ (s1, s2) -> runStateT ((\ (_, s2) -> hState (states2state (k s2))) (s1, s2)) (s1, s2)
 < = {-~  function application  -}
 <    StateT $ \ (s1, s2) -> runStateT (hState (states2state (k s2))) (s1, s2)
-< = {-~  reformulation  -}
+< = {-~  definition of |.|  -}
 <    StateT $ \ (s1, s2) -> runStateT ((hState . states2state) (k s2)) (s1, s2)
 < = {-~  induction hypothesis of continuation |k s2|  -}
 <    StateT $ \ (s1, s2) -> runStateT (hStates' (k s2)) (s1, s2)
@@ -253,6 +261,8 @@ $
 <    hStates' (Op (Inr (Inl (Get k))))
 
 \noindent \mbox{\underline{case |t = Op (Inr (Inl (Put s k)))|}}
+
+Induction hypothesis: |hStates' k = (hState . states2state) k|.
 <    (hState . states2state) (Op (Inr (Inl (Put s k))))
 < = {-~  definition of |states2state|  -}
 <    (hState . fold gen (alg1 # alg2 # fwd)) (Op (Inr (Inl (Put s k))))
@@ -330,7 +340,13 @@ $
 < = {-~  definition of |hStates'|  -}
 <    hStates' (Op (Inr (Inl (Put s k))))
 
+%if False
+$
+%endif
+
 \noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
+
+Induction hypothesis: |hStates' y = (hState . states2state) y|.
 <    (hState . states2state) (Op (Inr (Inr y)))
 < = {-~  definition of |states2state|  -}
 <    (hState . fold gen (alg1 # alg2 # fwd)) (Op (Inr (Inr y)))
@@ -355,7 +371,7 @@ $
 < = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition})  -}
 <    StateT $ \s -> Op $ (fmap ((\k -> runStateT k s) . (\t -> StateT
 <      $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState t) s1)) s2)) y)
-< = {-~  reformulation  -}
+< = {-~  definition of |.|  -}
 <    StateT $ \s -> Op $ (fmap (\t -> runStateT (StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
 <      $ runStateT (hState (runStateT (hState t) s1)) s2) s) y)
 < = {-~  definition of |runStateT|  -}
@@ -367,7 +383,7 @@ $
 < = {-~  function application  -}
 <    StateT $ \ (s1, s2) -> Op $ (fmap (\t -> (fmap (\ ((a, x), y) -> (a, (x, y)))
 <      $ runStateT (hState (runStateT (hState t) s1)) s2)) y)
-< = {-~  reformulation  -}
+< = {-~  definition of |.|  -}
 <    StateT $ \ (s1, s2) -> Op (fmap (fmap (\ ((a, x), y) -> (a, (x, y)))
 <      . (\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
 < = {-~  definition of |fmap|  -}

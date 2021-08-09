@@ -37,6 +37,8 @@ The |hStates| function applies two |hState| in sequence to handle these two func
 These two |StateT| monad can be transformed into one |StateT| with a pair |(s1, s2)| as the state.
 This transformation is characterized by the isomorphism |flatten| with the inverse |nested|.
 
+\todo{Use |alpha = \ ((a, x), y) -> (a, (x, y))| to simplify the definition and proofs.}
+
 \begin{code}
 hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
 hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
@@ -48,6 +50,7 @@ nested t = StateT $ \ s1 -> StateT $ \ s2 -> fmap (\ (a, (x, y)) -> ((a, x), y))
 \end{code}
 
 We can easily fuse the composition |flatten . hStates| into a single function |hStates'|, which is defined as:
+\todo{Add a proof for the fusion.}
 \begin{code}
 hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
 hStates' t = StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
