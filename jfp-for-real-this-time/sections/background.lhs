@@ -342,13 +342,13 @@ data NilF a deriving (Functor)
 hNil :: Free NilF a -> a 
 hNil (Var x) = x
 \end{code}
-\birthe{do we need this?}
-We also provide a helper function |addNil|, which adds a |NilF| to a free monad |Free f a|.
-\begin{code}
-addNil :: Functor f => Free f a -> Free (f :+: NilF) a
-addNil (Var a)  = Var a
-addNil (Op x)   = (Op $ Inl $ fmap addNil x)
-\end{code}
+% \birthe{do we need this?}
+% We also provide a helper function |addNil|, which adds a |NilF| to a free monad |Free f a|.
+% \begin{code}
+% addNil :: Functor f => Free f a -> Free (f :+: NilF) a
+% addNil (Var a)  = Var a
+% addNil (Op x)   = (Op $ Inl $ fmap addNil x)
+% \end{code}
 
 Consequently, we can compose the state effects with any other 
 effect functor |f| using |Free (StateF s :+: f) a|.
@@ -445,20 +445,30 @@ hState = fold genS (algS # fwdS)
     algS (Get     k)  = StateT $ \s -> runStateT (k s) s
     algS (Put s'  k)  = StateT $ \s -> runStateT k s'
     fwdS op           = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
-hNDl :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-hNDl  =  fold genND (algND # Op)
+hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+hNDf  =  fold genNDf (algNDf # fwdNDf)
   where
-    genND           = Var . return
-    algND Fail      = Var []
-    algND (Or p q)  = (++) <$> p <*> q
+    genNDf           = Var . return
+    algNDf Fail      = Var []
+    algNDf (Or p q)  = (++) <$> p <*> q
+    fwdNDf op        = Op op
 \end{code}
 
-\birthe{do we need these?}
-\wenhao{|hState'| is used in |runND|}
-We also provide two simpler versions of the two handlers above which restrict the free monad to have no other syntax.
+We also provide simpler versions of the two handlers above which restrict the free monad to have no other effects (|f = NilF|).
 \begin{code}
 hState' :: Free (StateF s) a -> State s a
-hState' x = State $ \ s -> hNil $ (runStateT . hState . addNil $ x) s
+hState' = fold genS' algS'
+  where
+    genS' x            = State $ \s -> (x, s)
+    algS' (Get     k)  = State $ \s -> runState (k s) s
+    algS' (Put s'  k)  = State $ \s -> runState k s'
+
+hND :: Free NondetF a -> [a]
+hND = fold genND algND
+  where 
+    genND           = return 
+    algND Fail      = []
+    algND (Or p q)  = p ++ q
 \end{code}
 
 

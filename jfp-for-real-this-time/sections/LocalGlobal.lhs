@@ -487,14 +487,14 @@ failOp    = (Op . Inr . Inl) Fail
 %if False
 \begin{code}
 hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hGlobal = fmap (fmap fst) . runStateT . hState . comm . hNDl . assocr . comm
+hGlobal = fmap (fmap fst) . runStateT . hState . comm . hND . assocr . comm
 
 -- The code below is used to assist proof.
 hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
 hL = fmap hL'
   where
     hL' :: Functor f => Free (NondetF :+: f) (a, s) -> Free f [a]
-    -- hL' = (fmap (fmap fst) . hNDl)
+    -- hL' = (fmap (fmap fst) . hND)
     hL' = fold (fmap (fmap fst) . genND) algL'
     genND = Var . return
     algL' :: Functor f => (NondetF :+: f) (Free f [a]) -> Free f [a]
@@ -569,12 +569,12 @@ Local-state semantics is the semantics where we nondeterministically choose
 between different stateful computations. 
 \begin{code}
 hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap fst) . hNDl) . runStateT . hState
+hLocal = fmap (fmap (fmap fst) . hND) . runStateT . hState
 \end{code}
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
 < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-< hGlobal = fmap (fmap fst) . runStateT . hState . hNDl
+< hGlobal = fmap (fmap fst) . runStateT . hState . hND
 Note that, for this handler to work, we implicitly assume
 commutativity and associativity of the coproduct operator |(:+:)|.
 A correct translation then transforms local state to global state.
