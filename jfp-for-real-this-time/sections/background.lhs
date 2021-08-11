@@ -459,9 +459,6 @@ We also provide two simpler versions of the two handlers above which restrict th
 \begin{code}
 hState' :: Free (StateF s) a -> State s a
 hState' x = State $ \ s -> hNil $ (runStateT . hState . addNil $ x) s
-
-hNDl' :: Free NondetF a -> [a]
-hNDl' = hNil . hNDl . addNil
 \end{code}
 
 

@@ -64,6 +64,13 @@
 %format algS' = "\Varid{alg_{S}^\prime}"
 %format algL' = "\Varid{alg_{L}^\prime}"
 
+%format getS = "\Varid{get_S}"
+%format putS = "\Varid{put_S}"
+%format popS = "\Varid{pop_S}"
+%format pushS = "\Varid{push_S}"
+%format appendS = "\Varid{append_S}"
+%format extractS = "\Varid{extract_S}"
+
 %format NondetC = "\Varid{Nondet_{C}}"
 %format StateC = "\Varid{State_{C}}"
 

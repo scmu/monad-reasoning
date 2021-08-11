@@ -84,77 +84,64 @@ which is stated for lists and |choose| as follows:
 \end{align*}
 An extended version of this proof, which uses equational reasoning techniques
 to show these properties are satisfied, 
-can be found in Appendix \ref{app:initiality-nondeterminism}.
+can be found in Appendix \ref{app:universality-nondeterminism}.
 
 %-------------------------------------------------------------------------------
 \subsection{Simulating Nondeterministic Programs with State}
 \label{sec:sim-nondet-state}
 
-\wenhao{ I have changed this section to the same style of Section 3.3, i.e. using a syntax-level simulation like |nondet2stateS :: MNondet m => Free NondetF a -> Free (StateF (S m a)) ()|.
-I was wondering whether this section is needed.
-I think it is ok to directly give the simulation with other effects.
-It is what we do in Section 4, where we also only give a simulation |local2global| with other effects.}
-
 This section shows how to use a state-based implementation to simulate nondeterminism.
 
 For this, we use a type |S| that uses as a tuple with 
-(1) the current solution(s) |m a| wrapped in a monad and 
+(1) the current solution(s) |[a]| wrapped in the list monad and 
 (2) the branches to be evaluated, which we will call the \emph{stack}.
 The braches in the stack are represented by the free monad of state.
 \begin{code}
-newtype S m a = S { runS :: (m a, [Free (StateF (S m a)) ()]) }
+type Comp s a = Free (StateF s) a
+data S a = S { results :: [a], stack :: [Comp (S a) ()]}
 \end{code}
 To simulate a nondeterministic computation |Free NondetF a| with this state wrapper, 
 we define a helper functions in Figure \ref{fig:pop-push-append}.
 The function |popS| takes the upper element of the stack.
 The function |pushS| adds a branch to the stack.
 The function |appendS| adds a solution to the given solutions. 
-Furthermore, we define smart constructors |getS| and |putS s| for getting 
-the state and putting a new state.
-\begin{code}
-getS :: Free (StateF s) s
-getS = Op (Get return)
-
-putS :: s -> Free (StateF s) ()
-putS s = Op (Put s (return ()))
-\end{code} 
 
 \noindent
 \begin{figure}[h]
 \small
 \begin{subfigure}[t]{0.33\linewidth}
 \begin{code}
-popS  :: Free (StateF (S m a)) ()
+popS  :: Comp (S a) ()
 popS = do
-  S (xs, stack) <- getS
+  S xs stack <- getS
   case stack of
     []       -> return ()
     op : ps  -> do
-      putS (S (xs, ps)); op
+      putS (S xs ps); op
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-pushS   :: Free (StateF (S m a)) ()
-        -> Free (StateF (S m a)) ()
-        -> Free (StateF (S m a)) ()
+pushS   :: Comp (S a) ()
+        -> Comp (S a) ()
+        -> Comp (S a) ()
 pushS q p = do
-  S (xs, stack) <- getS
-  putS (S (xs, q : stack)); p
+  S xs stack <- getS
+  putS (S xs (q : stack)); p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-appendS   :: (MNondet m) => a
-          -> Free (StateF (S m a)) ()
-          -> Free (StateF (S m a)) ()
+appendS   :: a
+          -> Comp (S a) ()
+          -> Comp (S a) ()
 appendS x p = do
- S (xs, stack) <- getS
- putS (S (xs `mplus` return x, stack)); p
+ S xs stack <- getS
+ putS (S (xs ++ [x]) stack); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append}
@@ -162,10 +149,27 @@ appendS x p = do
 \label{fig:pop-push-append}
 \caption{Helper functions |popS|, |pushS| and |appendS|.}
 \end{figure}
-Now everything is in place to define a simulation function |simulate| that
+
+Furthermore, we define smart constructors |getS| and |putS s| for getting 
+the state and putting a new state.
+
+\begin{minipage}[t][][t]{0.5\textwidth}
+\begin{code}
+getS :: Comp s s
+getS = Op (Get return)
+\end{code}
+\end{minipage}
+\begin{minipage}[t][][t]{0.5\textwidth}
+\begin{code}
+putS :: s -> Comp s ()
+putS s = Op (Put s (return ()))
+\end{code}
+\end{minipage}
+
+Now, everything is in place to define a simulation function |simulate| that
 interprets every nondeterministic computation as a state-wrapped program.
 \begin{code}
-nondet2stateS :: MNondet m => Free NondetF a -> Free (StateF (S m a)) ()
+nondet2stateS :: Free NondetF a -> Comp (S a) ()
 nondet2stateS = fold gen alg
   where
     gen x         = appendS x popS
@@ -174,42 +178,56 @@ nondet2stateS = fold gen alg
 \end{code}
 To extract the final result from the |S| wrapper, we define the |extractS| function.
 \begin{code}
-extractS :: MNondet m => State (S m a) () -> m a
-extractS x = fst . runS <$> snd $ runState x (S (mzero, []))
+extractS :: State (S a) () -> [a]
+extractS x = results <$> snd $ runState x (S [] [])
 \end{code}
 This way, |runND| is a trivial extension of 
 the simulate function. It transforms
 every nondeterministic computation to a result that is encapsulated in a
 nondeterminism monad.
 \begin{code}
-runND :: MNondet m => Free NondetF a -> m a
+runND :: Free NondetF a -> [a]
 runND = extractS . hState' . nondet2stateS
 \end{code}
 
-To prove that this simulation is correct, we should show that this 
+To prove this simulation correct, we show that the
 |runND| function is equivalent to a nondeterminism handler. 
 For that, we zoom in on a version of such a handler 
 (Section \ref{sec:combining-effects}) with no other effects
 (|f = NilF|). 
-We replace the |List| monad by any other nondeterminism monad |m|.
 % Consequently, the type signature for the handler changes from 
 % |hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|
 % to 
 % |hND :: MNondet m => Free NondetF a -> m a|.
 This leaves us with the following implementation for the handler.
 \begin{code}
-hND :: MNondet m => Free NondetF a -> m a
+hND :: Free NondetF a -> [a]
 hND = fold genND algND
   where 
     genND           = return 
-    algND Fail      = mzero
-    algND (Or p q)  = p `mplus` q
+    algND Fail      = []
+    algND (Or p q)  = p ++ q
 \end{code}
 We can now show that this handler is equal to the |runND| function defined 
 above.
 \begin{theorem}
 |runND = hND|
 \end{theorem}
+
+We start with expanding the definition of |runND|:
+< extractS . hState' . nondet2stateS = hND
+Both |nondet2stateS| and |hND| are written as a fold.
+We can use the universal property of fold to show that the two sides of the equation
+are equal.
+For this, we use the fold fusion law for postcomposition as defined in 
+Equation \ref{eq:fusion-post}.
+We have to prove the following two equations.
+\begin{enumerate}
+    \item |extract . gen = genND|
+    \item |extract . alg = algND . fmap extract|
+\end{enumerate}
+
+
 The proof of this theorem is added in Appendix \ref{app:runnd-hnd}. 
 \todo{adapt the proof to the new function definition.}
 
