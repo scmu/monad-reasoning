@@ -41,12 +41,14 @@ The return |etal| of the |List| monad is a singleton list
 and the join operation is concatenation or flattening: 
 |mul = foldr (++) []|.
 This leads us towards the following monad instance.
+\tom{Odd that the |MNondet| instance is given earlier, but the |Monad| instance
+     is only shown here.}
 
 < instance Monad [] where
 <   return x   = [x]
 <   m >>= f    = foldr ((++) . f) [] m
 
-We can interpret these nondeterministic programs encoded in lists 
+We can interpret nondeterministic programs encoded as lists 
 by means of the |choose| function, which can be implemented as a fold.
 %if False
 \begin{code}
@@ -79,11 +81,16 @@ the following equalities hold.
 
 To prove that the morphism is unique, we use the universality of fold, 
 which is stated for lists and |choose| as follows:
-\begin{align*}
-|choose []| &= |v| &  & \\
-& &\Longleftrightarrow \hspace{10ex} |choose| &= |fold f v| \\
-|choose (x:xs)| &= |f x (choose xs)| & & 
-\end{align*}
+\begin{equation*}
+\begin{array}{r@@{\,}c@@{\,}l}
+|choose []| & = & |v| \\
+|choose (x:xs)| & = & |f x (choose x)| \\
+\end{array}
+\qquad\Longleftrightarrow\qquad
+|choose = fold f v|
+\end{equation*}
+
+
 An extended version of this proof, which uses equational reasoning techniques
 to show these properties are satisfied, 
 can be found in Appendix \ref{app:universality-nondeterminism}.
@@ -109,7 +116,7 @@ The function |pushS| adds a branch to the stack.
 The function |appendS| adds a solution to the given solutions. 
 
 \noindent
-\begin{figure}[h]
+\begin{figure}[t]
 \small
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
