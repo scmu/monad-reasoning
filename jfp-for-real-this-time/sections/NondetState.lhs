@@ -25,7 +25,7 @@ import Control.Monad.Trans (lift)
 
 Two of the most well-known and well-investigated side-effects are nondeterminism
 and state. 
-Typically, nondeterminism is modelled using a |List| monad.
+Typically, nondeterminism is modelled using the |List| monad.
 However, many efficient nondeterministic systems, such as Prolog, 
 use a state-based implementation to simulate this effect.
 This section shows how this simulation works, and proves it correct using 
@@ -62,8 +62,10 @@ choose :: MNondet m => [a] -> m a
 choose = foldr (mplus . etand) mzero
 \end{code}
 
+\tom{|choose| is a nondeterminism-monad morphism}
+
 In fact, the |List| monad is not just an instance for nondeterminism; 
-it is the initial lawful instance. 
+it is the \emph{initial} lawful instance. 
 This means that, for every other lawful instance of nondeterminism, there is a
 unique monad morphism from |List| to that instance.
 The above definition of |choose| is exactly that monad morphism.
@@ -92,10 +94,10 @@ can be found in Appendix \ref{app:universality-nondeterminism}.
 
 This section shows how to use a state-based implementation to simulate nondeterminism.
 
-For this, we use a type |S| that uses as a tuple with 
+For this, we use a type |S| that is a essentially a tuple of 
 (1) the current solution(s) |[a]| wrapped in the list monad (|results|), and 
 (2) the branches with computations to be evaluated, which we will call the |stack|.
-The braches in the stack are represented by the free monad of state.
+The brachens in the stack are represented by the free monad of state.
 \begin{code}
 type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], stack :: [Comp (S a) ()]}
@@ -151,7 +153,7 @@ appendS x p = do
 \end{figure}
 
 Furthermore, we define smart constructors |getS| and |putS s| for getting 
-the state and putting a new state.
+the current state and putting a new state.
 
 \begin{minipage}[t][][t]{0.5\textwidth}
 \begin{code}
