@@ -71,6 +71,9 @@
 %format NondetF' = "\Varid{Nondet_{F}}^\prime"
 %format StateF = "\Varid{State_{F}}"
 %format NilF = "\Varid{Nil_{F}}"
+%format ScopeF = "\Varid{Scope_{F}}"
+%format CutF = "\Varid{Cut_{F}}"
+%format StackF = "\Varid{Stack_{F}}"
 
 %format runState = "\Varid{run_{State}}"
 %format runStateT = "\Varid{run_{StateT}}"
