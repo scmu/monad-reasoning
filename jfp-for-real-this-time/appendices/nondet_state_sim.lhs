@@ -185,6 +185,7 @@ the proofs do work out.
 
 %-------------------------------------------------------------------------------
 \subsection{In Combination with Other Effects}
+\label{app:in-combination-with-other-effects}
 
 This section shows that the |runNDf| function of
 Section \ref{sec:combining-the-simulation-with-other-effects}
