@@ -27,7 +27,7 @@ We rewrite |hLocal| as |hL . hState1|, where |hL| is defined as follows:
 \begin{code}
 hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
 hL = fmap hL'
-  where hL' = fmap (fmap fst) . hNDl
+  where hL' = fmap (fmap fst) . hND
 \end{code}
 We can expand the definition of |hState1| and use the fold fusion law for postcomposition as defined in Equation \ref{eq:fusion-post}:
 <    hL . hState1
@@ -162,8 +162,8 @@ We do a case analysis on |t|.
 <    \ s -> Var []
 < = {-~  definition of |fmap|  -}
 <    \ s -> fmap (fmap fst) (Var [])
-< = {-~  definition of |hNDl|  -}
-<    \ s -> (fmap (fmap fst) . hNDl) (Op (Inl Fail))
+< = {-~  definition of |hND|  -}
+<    \ s -> (fmap (fmap fst) . hND) (Op (Inl Fail))
 < = {-~  definition of |hL'|  -}
 <    \ s -> hL' (Op (Inl Fail))
 < = {-~  definition of |fmap|  -}
@@ -296,8 +296,8 @@ where |algL'| is defined as follows:
 \begin{proof} ~
 <    hL'
 < = {-~  definition of |hL'|  -}
-<    fmap (fmap fst) . hNDl
-< = {-~  definition of |hNDl|  -}
+<    fmap (fmap fst) . hND
+< = {-~  definition of |hND|  -}
 <    fmap (fmap fst) . fold genND algND
 < = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
 <    fold (fmap (fmap fst) genND) algL'
@@ -357,23 +357,23 @@ For the left-hand side, we have:
 < = {-~  definition of |alg|  -}
 <    hGlobal (Op (Inl (Get k)))
 < = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hNDl) (Op (Inl (Get k)))
-< = {-~  evaluation of |hNDl|  -}
-<    (fmap (fmap fst) . hState1) (Op (Inl (Get (hNDl . k))))
+<    (fmap (fmap fst) . hState1 . hND) (Op (Inl (Get k)))
+< = {-~  evaluation of |hND|  -}
+<    (fmap (fmap fst) . hState1) (Op (Inl (Get (hND . k))))
 < = {-~  evaluation of |hState1|  -}
-<    fmap (fmap fst) (algS (Inl (Get (hState1 . hNDl . k))))
+<    fmap (fmap fst) (algS (Inl (Get (hState1 . hND . k))))
 < = {-~  evaluation of |algS|  -}
-<    fmap (fmap fst) (\ s -> (hState1 . hNDl . k) s s)
+<    fmap (fmap fst) (\ s -> (hState1 . hND . k) s s)
 < = {-~  function application  -}
-<    fmap (fmap fst) (\ s -> (hState1 . hNDl) (k s) s)
+<    fmap (fmap fst) (\ s -> (hState1 . hND) (k s) s)
 < = {-~  definition of |fmap|  -}
-<    \ s -> fmap fst ((hState1 . hNDl) (k s) s)
+<    \ s -> fmap fst ((hState1 . hND) (k s) s)
 < = {-~  reformulation  -}
-<    \ s -> (fmap fst . (hState1 . hNDl) (k s)) s
+<    \ s -> (fmap fst . (hState1 . hND) (k s)) s
 < = {-~  definition of |fmap|  -}
-<    \ s -> (fmap (fmap fst) ((hState1 . hNDl) (k s))) s
+<    \ s -> (fmap (fmap fst) ((hState1 . hND) (k s))) s
 < = {-~  reformulation  -}
-<    \ s -> (fmap (fmap fst) . hState1 . hNDl) (k s) s
+<    \ s -> (fmap (fmap fst) . hState1 . hND) (k s) s
 < = {-~  definition of |hGlobal|  -}
 <    \ s -> hGlobal (k s) s
 
@@ -396,31 +396,31 @@ For the left-hand side, we have:
 < = {-~  definition of |putROp|  -}
 <    hGlobal (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
 < = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hNDl) (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
-< = {-~  evaluation of |hNDl|  -}
-<    (fmap (fmap fst) . hState1) (getOp (\ s' -> liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))))
+<    (fmap (fmap fst) . hState1 . hND) (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
+< = {-~  evaluation of |hND|  -}
+<    (fmap (fmap fst) . hState1) (getOp (\ s' -> liftA2 (++) (putOp s (hND k)) (putOp s' (Var []))))
 < = {-~  evaluation of |hState1|  -}
-<    fmap (fmap fst) (\ s' -> (hState1 . (\ s' -> liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var [])))) s' s')
+<    fmap (fmap fst) (\ s' -> (hState1 . (\ s' -> liftA2 (++) (putOp s (hND k)) (putOp s' (Var [])))) s' s')
 < = {-~  function application  -}
-<    fmap (fmap fst) (\ s' -> hState1 (liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))) s')
+<    fmap (fmap fst) (\ s' -> hState1 (liftA2 (++) (putOp s (hND k)) (putOp s' (Var []))) s')
 < = {-~  definition of |fmap|  -}
-<    \ s' -> fmap fst (hState1 (liftA2 (++) (putOp s (hNDl k)) (putOp s' (Var []))) s')
+<    \ s' -> fmap fst (hState1 (liftA2 (++) (putOp s (hND k)) (putOp s' (Var []))) s')
 < = {-~  definition of |liftA2|  -}
-<    \ s' -> fmap fst (hState1 (do {x <- putOp s (hNDl k); y <- putOp s' (Var []); return (x++y)}) s')
+<    \ s' -> fmap fst (hState1 (do {x <- putOp s (hND k); y <- putOp s' (Var []); return (x++y)}) s')
 < = {-~  |y = []| (property of free monad)  -}
-<    \ s' -> fmap fst (hState1 (do {x <- putOp s (hNDl k); putOp s' (Var []); return x}) s')
+<    \ s' -> fmap fst (hState1 (do {x <- putOp s (hND k); putOp s' (Var []); return x}) s')
 < = {-~  property of do-notation  -}
-<    \ s' -> fmap fst (hState1 (putOp s (hNDl k) >>= \ x -> putOp s' (Var []) >> return x) s')
+<    \ s' -> fmap fst (hState1 (putOp s (hND k) >>= \ x -> putOp s' (Var []) >> return x) s')
 < = {-~  definition of |(>>=)|, let |f = (>>= \ x -> putOp s' (Var []) >> return x)|  -}
-<    \ s' -> fmap fst (hState1 (putOp s (f (hNDl k))) s')
+<    \ s' -> fmap fst (hState1 (putOp s (f (hND k))) s')
 < = {-~  evaluation of |hState1|  -}
-<    \ s' -> fmap fst ((\ _ -> hState1 (f (hNDl k)) s) s')
+<    \ s' -> fmap fst ((\ _ -> hState1 (f (hND k)) s) s')
 < = {-~  function application  -}
-<    \ s' -> fmap fst (hState1 (f (hNDl k)) s)
+<    \ s' -> fmap fst (hState1 (f (hND k)) s)
 < = {-~  reformulation, definition of |fmap|  -}
-<    \ s' -> (fmap (fmap fst) . hState1 . f . hNDl) k s
+<    \ s' -> (fmap (fmap fst) . hState1 . f . hND) k s
 < = {-~  because we drop the state in the end using |fmap (fmap fst)|, |f| won't make any changes  -}
-<    \ s' -> (fmap (fmap fst) . hState1 . hNDl) k s
+<    \ s' -> (fmap (fmap fst) . hState1 . hND) k s
 < = {-~  definition of |hGlobal|, replace |s'| with |_|  -}
 <    \ _ -> hGlobal k s
 
@@ -438,8 +438,8 @@ For the left-hand side, we have:
 < = {-~  definition of |alg|  -}
 <    hGlobal (Op (Inr (Inl Fail)))
 < = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hNDl) (Op (Inr (Inl Fail)))
-< = {-~  evaluation of |hNDl|  -}
+<    (fmap (fmap fst) . hState1 . hND) (Op (Inr (Inl Fail)))
+< = {-~  evaluation of |hND|  -}
 <    (fmap (fmap fst) . hState1) (Var [])
 < = {-~  evaluation of |hState1|  -}
 <    fmap (fmap fst) (\ s -> Var ([], s))
@@ -460,21 +460,21 @@ For the left-hand side, we have:
 < = {-~  definition of |alg|  -}
 <    hGlobal (Op (Inr (Inl (Or p q))))
 < = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hNDl) (Op (Inr (Inl (Or p q))))
-< = {-~  evaluation of |hNDl|  -}
-<    (fmap (fmap fst) . hState1) (algND (Inl (Or (hNDl p) (hNDl q))))
+<    (fmap (fmap fst) . hState1 . hND) (Op (Inr (Inl (Or p q))))
+< = {-~  evaluation of |hND|  -}
+<    (fmap (fmap fst) . hState1) (algND (Inl (Or (hND p) (hND q))))
 < = {-~  evaluation of |algND|  -}
-<    (fmap (fmap fst) . hState1) (liftA2 (++) (hNDl p) (hNDl q))
+<    (fmap (fmap fst) . hState1) (liftA2 (++) (hND p) (hND q))
 < = {-~  definition of |liftA2|  -}
-<    (fmap (fmap fst) . hState1) (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
+<    (fmap (fmap fst) . hState1) (do {x <- hND p; y <- hND q; return (x ++ y)})
 < = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
-<    hState' (do {x <- hNDl p; y <- hNDl q; return (x ++ y)})
+<    hState' (do {x <- hND p; y <- hND q; return (x ++ y)})
 % < = {-~  property of handlers \wenhao{add more?}\birthe{Say something like: propagate fold to the subtrees?} -}
 < = {-~  property of fold: propagate fold to subtrees of free monad -}
-<    \ s -> do {x <- hState' (hNDl p) s; y <- hState' (hNDl q) s; return (x ++ y)})
+<    \ s -> do {x <- hState' (hND p) s; y <- hState' (hND q) s; return (x ++ y)})
 < = {-~  definition of |hState'|  -}
-<    \ s -> do  x <- (fmap (fmap fst) . hState1) (hNDl p) s;
-<               y <- (fmap (fmap fst) . hState1) (hNDl q) s;
+<    \ s -> do  x <- (fmap (fmap fst) . hState1) (hND p) s;
+<               y <- (fmap (fmap fst) . hState1) (hND q) s;
 <               return (x ++ y)}
 
 For the right-hand side, we have:
@@ -484,21 +484,21 @@ For the right-hand side, we have:
 < = {-~  definition of |alg'|  -}
 <    \ s -> liftA2 (++) (hGlobal p s) (hGlobal q s)
 < = {-~  definition of |hGlobal|  -}
-<    \ s -> liftA2 (++) ((fmap (fmap fst) . hState1 . hNDl) p s) ((fmap (fmap fst) . hState1 . hNDl) q s)
+<    \ s -> liftA2 (++) ((fmap (fmap fst) . hState1 . hND) p s) ((fmap (fmap fst) . hState1 . hND) q s)
 < = {-~  definition of |liftA2|  -}
-<    \ s -> do  x <- (fmap (fmap fst) . hState1 . hNDl) p s;
-<               y <- (fmap (fmap fst) . hState1 . hNDl) q s;
+<    \ s -> do  x <- (fmap (fmap fst) . hState1 . hND) p s;
+<               y <- (fmap (fmap fst) . hState1 . hND) q s;
 <               return (x ++ y)
 < = {-~  reformulation  -}
-<    \ s -> do  x <- fmap fst (hState1 (hNDl p) s);
-<               y <- fmap fst (hState1 (hNDl p) s);
+<    \ s -> do  x <- fmap fst (hState1 (hND p) s);
+<               y <- fmap fst (hState1 (hND p) s);
 <               return (x ++ y)
 % < = {-~  property of |monad|  -}
-% <    \ s -> do  x <- hState1 (hNDl p) s;
-% <               y <- hState1 (hNDl q) s;
+% <    \ s -> do  x <- hState1 (hND p) s;
+% <               y <- hState1 (hND q) s;
 % <               return (fst x ++ fst y)
 % < = {-~  definition of |liftA2|  -}
-% <    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState1 (hNDl p) s) (hState1 (hNDl q) s)
+% <    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState1 (hND p) s) (hState1 (hND q) s)
 
 In the above proof, we fuse |fmap (fmap fst) . hState1| into a single handler |hState'| by dropping the second component of the result (the state).
 \begin{code}
@@ -517,17 +517,17 @@ For the left-hand side, we have:
 < = {-~  definition of |alg|  -}
 <    hGlobal (Op (Inr (Inr y)))
 < = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hNDl) (Op (Inr (Inr y)))
-< = {-~  evaluation of |hNDl|  -}
-<    (fmap (fmap fst) . hState1) (Op (Inr (fmap hNDl y)))
+<    (fmap (fmap fst) . hState1 . hND) (Op (Inr (Inr y)))
+< = {-~  evaluation of |hND|  -}
+<    (fmap (fmap fst) . hState1) (Op (Inr (fmap hND y)))
 < = {-~  evaluation of |hState1|  -}
-<    fmap (fmap fst) (\ s -> Op (fmap ((\ k -> k s) . hState1 . hNDl) y))
+<    fmap (fmap fst) (\ s -> Op (fmap ((\ k -> k s) . hState1 . hND) y))
 < = {-~  evaluation of |fmap (fmap fst)|  -}
-<    \ s -> fmap fst (Op (fmap ((\ k -> k s) . hState1 . hNDl) y))
+<    \ s -> fmap fst (Op (fmap ((\ k -> k s) . hState1 . hND) y))
 < = {-~  evaluation of |fmap fst|  -}
-<    \ s -> Op (fmap (fmap fst . (\ k -> k s) . hState1 . hNDl) y)
+<    \ s -> Op (fmap (fmap fst . (\ k -> k s) . hState1 . hND) y)
 < = {-~  Lemma \ref{eq:dollar-fmap-comm} with |f = fst|  -}
-<    \ s -> Op (fmap ((\ k -> k s) . fmap (fmap fst) . hState1 . hNDl) y)
+<    \ s -> Op (fmap ((\ k -> k s) . fmap (fmap fst) . hState1 . hND) y)
 < = {-~  definition of |hGlobal|  -}
 <    \ s -> Op (fmap ((\ k -> k s) . hGlobal) y)
 

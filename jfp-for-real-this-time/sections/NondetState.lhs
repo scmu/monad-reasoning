@@ -111,7 +111,7 @@ The function |appendS| adds a solution to the given solutions.
 \small
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-popS  :: Comp (S a) ()
+popS :: Comp (S a) ()
 popS = do
   S xs stack <- getS
   case stack of
@@ -166,7 +166,7 @@ putS s = Op (Put s (return ()))
 \end{code}
 \end{minipage}
 
-Now, everything is in place to define a simulation function |simulate| that
+Now, everything is in place to define a simulation function |nondet2stateS| that
 interprets every nondeterministic computation as a state-wrapped program.
 \begin{code}
 nondet2stateS :: Free NondetF a -> Comp (S a) ()
@@ -191,25 +191,8 @@ runND = extractS . hState' . nondet2stateS
 \end{code}
 
 To prove this simulation correct, we show that the
-|runND| function is equivalent to a nondeterminism handler. 
-For that, we zoom in on a version of such a handler 
-(Section \ref{sec:combining-effects}) with no other effects
-(|f = NilF|). 
-% Consequently, the type signature for the handler changes from 
-% |hND :: MNondet m => Free (NondetF :+: NilF) a -> Free NilF (m a)|
-% to 
-% |hND :: MNondet m => Free NondetF a -> m a|.
-This leaves us with the following implementation for the handler.
-\begin{code}
-hND :: Free NondetF a -> [a]
-hND = fold genND algND
-  where 
-    genND           = return 
-    algND Fail      = []
-    algND (Or p q)  = p ++ q
-\end{code}
-We can now show that this handler is equal to the |runND| function defined 
-above.
+|runND| function is equivalent to the nondeterminism handler |hND| defined in Section \ref{sec:combining-effects}.
+
 \begin{theorem}
 |runND = hND|
 \end{theorem}
@@ -221,10 +204,13 @@ We can use the universal property of fold to show that the two sides of the equa
 are equal.
 For this, we use the fold fusion law for postcomposition as defined in 
 Equation \ref{eq:fusion-post}.
+
 We have to prove the following two equations.
 \begin{enumerate}
-    \item |extractS . gen = genND|
-    \item |extractS . alg = algND . fmap extractS|
+    % \item |extractS . gen = genND|
+    % \item |extractS . alg = algND . fmap extractS|
+    \item |(extractS . hState') . gen = genND|
+    \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
 \end{enumerate}
 The full proof of this theorem is added in Appendix \ref{app:runnd-hnd}. 
 \todo{adapt the proof to the new function definition.}
@@ -327,13 +313,13 @@ appendSS x p = do
 \caption{Helper functions |popSS|, |pushSS| and |appendSS|.}
 \end{figure}
 
-To extract the final result from the |SS| wrapper, we define an |extractState| 
+To extract the final result from the |SS| wrapper, we define an |extractSS| 
 function.
 Compared to |extractS|, this function deals with the state transformer |StateT| 
 instead of |State|. 
 \begin{code}
-extractState :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
-extractState x = resultsSS . snd <$> runStateT x (SS [] [])
+extractSS :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
+extractSS x = resultsSS . snd <$> runStateT x (SS [] [])
 \end{code}
 
 Finally, |runNDf| is again a trivial extension of the simulation.
@@ -342,35 +328,36 @@ a free monad where the result is wrapped in the nondeterminisc list monad.
 Other effects |f| are to be dealt with by their appropriate handlers.
 \begin{code}
 runNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-runNDf = extractState . hState . nondet2state
+runNDf = extractSS . hState . nondet2state
 \end{code}
 
 To prove this approach correct, we show that this |runNDf| function
-is equal to a nondeterminism handler.
-For that, we compare with the version of the nondeterminism handler defined in
-\Cref{sec:combining-effects}.
-\begin{code}
-hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-hNDf = fold genNDf (algNDf # fwdNDf)
-  where 
-    genNDf           = Var . return 
-    algNDf Fail      = Var []
-    algNDf (Or p q)  = (++) <$> p <*> q
-    fwdNDf op        = Op op
-\end{code}
-We prove that this handler |hNDf| and the |runNDf| function are equal.
+is equivalent to the nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
+% For that, we compare with the version of the nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
+% \begin{code}
+% hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+% hNDf = fold genNDf (algNDf # fwdNDf)
+%   where 
+%     genNDf           = Var . return 
+%     algNDf Fail      = Var []
+%     algNDf (Or p q)  = (++) <$> p <*> q
+%     fwdNDf op        = Op op
+% \end{code}
+% We prove that this handler |hNDf| and the |runNDf| function are equal.
 \begin{theorem}
 |runNDf = hNDf|
 \end{theorem}
 As before, we first expand the definition of |runNDf|, 
 which is written in terms of |nondet2state|, a fold. 
-We use fold fusion to incorporate |extractState . hState| in this fold.
+We use fold fusion to incorporate |extractSS . hState| in this fold.
 The universal property of fold then teaches us that |runNDf| and
 |hNDf| are equal.
 More concretely, we have to prove the following two things:
 \begin{enumerate}
-    \item |extractState . gen = genNDf|
-    \item |extractState . (alg # fwd) = (algNDf # fwdNDf) . fmap extractState|
+    % \item |extractSS . gen = genNDf|
+    % \item |extractSS . (alg # fwd) = (algNDf # fwdNDf) . fmap extractSS|
+    \item |(extractSS . hState) . gen = genNDf|
+    \item |(extractSS . hState) . (alg # fwd) = (algNDf # fwdNDf) . fmap (extractSS . hState)|
 \end{enumerate}
 Due to the modularity, we need to include a different case for the forwarding algebra.
 The full proof of this theorem, using equational reasoning techniques,
