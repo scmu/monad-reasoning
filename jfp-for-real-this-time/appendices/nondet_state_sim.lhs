@@ -193,25 +193,158 @@ We also have the following lemmas used in the above proof:
 \begin{lemma}[evaluation-append]\label{eq:eval-append}~
 < runState (hState' (appendS x p)) (S xs stack) = runState (hState' p) (S (xs ++ [x]) stack)
 \end{lemma}
-\begin{proof}
+\begin{proof}~
+<    runState (hState' (appendS x p)) (S xs stack)
+< = {-~  definition of |appendS|  -}
+<    runState (hState' (do S xs stack <- getS; putS (S (xs ++ [x]) stack); p)) (S xs stack)
+< = {-~  definition of |do|  -}
+<    runState (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
+< = {-~  definition of |getS|  -}
+<    runState (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
+< = {-~  definition of |(>>=)|  -}
+<    runState (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)))) (S xs stack)
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) s)) s))
+<      (S xs stack)
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) s)) s) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) (S xs stack))) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' (putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
+< = {-~  definition of |putS|  -}
+<    runState (hState' (Op (Put (S (xs ++ [x]) stack) (return ())) >> p)) (S xs stack)
+< = {-~  definition of |(>>)|  -}
+<    runState (hState' (Op (Put (S (xs ++ [x]) stack) p))) (S xs stack)
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' p) (S (xs ++ [x]) stack))) (S xs stack)
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' p) (S (xs ++ [x]) stack)) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' p) (S (xs ++ [x]) stack)
 \end{proof}
 
 \begin{lemma}[evaluation-pop1]\label{eq:eval-pop1}~
 < runState (hState' popS) (S xs []) = ((), S xs [])
 \end{lemma}
 \begin{proof}
+To prove this lemma, we restate the definition of |popS| using the definition of |do|:
+< popS =  (getS >>= \ (S xs stack) ->
+<           case stack of  []       -> return ()
+<                          op : ps  -> do putS (S xs ps); op)
+
+Then we use the equational reasoning.
+
+<    runState (hState' popS) (S xs [])
+< = {-~  definition of |popS|  -}
+<    runState (hState' (getS >>= \ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op)) (S xs [])
+< = {-~  definition of |getS|  -}
+<    runState (hState' (Op (Get return) >>= \ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op)) (S xs [])
+< = {-~  definition of |(>>=)|  -}
+<    runState (hState' (Op (Get (\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op)))) (S xs [])
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' ((\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op) s)) s)) (S xs [])
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' ((\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op) s)) s) (S xs [])
+< = {-~  function application  -}
+<    runState (hState' ((\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op) (S xs []))) (S xs [])
+< = {-~  function application, definition of |case|  -}
+<    runState (hState' (return ())) (S xs [])
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> ((), s))) (S xs [])
+< = {-~  definition of |runState|  -}
+<    ((), S xs [])
 \end{proof}
 
 \begin{lemma}[evaluation-pop2]\label{eq:eval-pop2}~
 < runState (hState' popS) (S xs (q:stack)) = runState (hState' q) (S xs stack)
 \end{lemma}
-\begin{proof}
+\begin{proof}~
+<    runState (hState' popS) (S xs (q:stack))
+< = {-~  definition of |popS|  -}
+<    runState (hState' (getS >>= \ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op)) (S xs (q:stack))
+< = {-~  definition of |getS|  -}
+<    runState (hState' (Op (Get return) >>= \ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op)) (S xs (q:stack))
+< = {-~  definition of |(>>=)|  -}
+<    runState (hState' (Op (Get (\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op)))) (S xs (q:stack))
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' ((\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op) s)) s)) (S xs (q:stack))
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' ((\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op) s)) s) (S xs (q:stack))
+< = {-~  function application  -}
+<    runState (hState' ((\ (S xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putS (S xs ps); op) (S xs (q:stack)))) (S xs (q:stack))
+< = {-~  function application, definition of |case|  -}
+<    runState (hState' (do putS (S xs stack); q)) (S xs (q:stack))
+< = {-~  definition of |do|  -}
+<    runState (hState' (putS (S xs stack) >> q)) (S xs (q:stack))
+< = {-~  definition of |putS|  -}
+<    runState (hState' (Op (Put (S xs stack) (return ())) >> q)) (S xs (q:stack))
+< = {-~  definition of |(>>)|  -}
+<    runState (hState' (Op (Put (S xs stack) q))) (S xs (q:stack))
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' q) (S xs stack))) (S xs (q:stack))
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' q) (S xs stack)) (S xs (q:stack))
+< = {-~  function application  -}
+<    runState (hState' q) (S xs stack)
 \end{proof}
 
 \begin{lemma}[evaluation-push]\label{eq:eval-push}~
 < runState (hState' (pushS q p)) (S xs stack) = runState (hState' p) (S xs (q:stack))
 \end{lemma}
-\begin{proof}
+\begin{proof}~
+<    runState (hState' (pushS q p)) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' (do S xs stack <- getS; putS (S xs (q : stack)); p)) (S xs stack)
+< = {-~  definition of |do|  -}
+<    runState (hState' (getS >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
+< = {-~  definition of |getS|  -}
+<    runState (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
+< = {-~  definition of |(>>=)|  -}
+<    runState (hState' (Op (Get (\ (S xs stack) -> putS (S xs (q : stack)) >> p)))) (S xs stack)
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s)) (S xs stack)
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) (S xs stack))) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' (putS (S xs (q : stack)) >> p)) (S xs stack)
+< = {-~  definition of |putS|  -}
+<    runState (hState' (Op (Put (S xs (q : stack)) (return ())) >> p)) (S xs stack)
+< = {-~  definition of |(>>)|  -}
+<    runState (hState' (Op (Put (S xs (q : stack)) p))) (S xs stack)
+< = {-~  definition of |hState'|  -}
+<    runState (State (\s -> runState (hState' p) (S xs (q : stack)))) (S xs stack)
+< = {-~  definition of |runState|  -}
+<    (\s -> runState (hState' p) (S xs (q : stack))) (S xs stack)
+< = {-~  function application  -}
+<    runState (hState' p) (S xs (q : stack))
+
 \end{proof}
 
 %-------------------------------------------------------------------------------
