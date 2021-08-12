@@ -4,7 +4,7 @@
 \label{app:runnd-hnd}
 
 This section shows that the |runND| function in Section \ref{sec:sim-nondet-state} is equivalent
-to the following nondeterminism handler |hND| in Section \ref{sec:combining-effects}.
+to the nondeterminism handler |hND| in Section \ref{sec:combining-effects}.
 
 \begin{theorem}\label{eq:runnd-hnd}
 |runND = hND|
@@ -25,11 +25,10 @@ We have to prove the following two equations.
 \end{enumerate}
 
 The first equation is simple to prove with equational reasoning.
-For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|
+For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|.
 <    extractS (hState' (gen x))
 < = {-~  definition of |gen|  -}
 <    extractS (hState' (appendS x popS))
-
 < = {-~  definition of |extractS|  -}
 <    results . snd $ runState (hState' (appendS x popS)) (S [] [])
 < = {-~  Lemma \ref{eq:eval-append}  -}
@@ -52,9 +51,7 @@ The property that |extractS . hState' . gen = return| is called
 
 For the second equation that we have to prove, we do a case analysis.
 
-% \fbox{|Fail|}
-\noindent
-\mbox{\underline{case |Fail|}}
+\noindent \mbox{\underline{case |Fail|}}
 
 <    extractS (hState' (alg Fail))
 < = {-~  definition of |alg|  -}
@@ -69,12 +66,11 @@ For the second equation that we have to prove, we do a case analysis.
 <    algND Fail
 < = {-~  definition of |fmap|  -}
 <    (algND . fmap (extractS . hState')) Fail
+
 The property that |extractS (hState' (alg Fail)) = []| is called 
 \emph{extract-alg-1}\label{eq:extract-alg-1}.
 
-% \fbox{|Or p q|}
-\noindent
-\mbox{\underline{case |Or p q|}}
+\noindent \mbox{\underline{case |Or p q|}}
 
 <    extractS (hState' (alg (Or p q)))
 < = {-~  definition of |alg|  -}
@@ -100,13 +96,13 @@ The property that |extractS (hState' (alg Fail)) = []| is called
 < = {-~  definition of |fmap|  -}
 <    (algND . fmap (extractS . hState')) (Or p q)
 
+%if False
+$
+%endif
 The property that |extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
 is called \emph{extract-alg-2}\label{eq:extract-alg-2}.
 \end{proof}
 
-%if False
-$
-%endif
 
 In this proof we have used the property pop-extract, which states the following: 
 \begin{theorem}[pop-extract]\label{eq:pop-extract}
@@ -351,179 +347,313 @@ Then we use the equational reasoning.
 \subsection{In Combination with Other Effects}
 \label{app:in-combination-with-other-effects}
 
-This section shows that the |runNDf| function of
+This section shows that the |runNDf| function in
 Section \ref{sec:combining-the-simulation-with-other-effects}
-is equivalent to 
-the following nondeterminism handler.
+is equivalent to the nondeterminism handler |hNDf| in Section \ref{sec:combining-effects}.
 
-< hNDf :: (Functor f, MNondet m) => Free (NondetF :+: f) a -> Free f (m a)
-< hNDf = fold genNDf algNDf
-<   where 
-<     genNDf = Var . return 
-<     algNDf (Inl Fail)      = Var mzero
-<     algNDf (Inl (Or p q))  = mplus <$> p <*> q
-<     algNDf (Inr y)         = Op y
-
-%if False
-$
-% only to make my syntax highlighting correct
-%endif
 
 \begin{theorem}
 |runNDf = hNDf|
 \end{theorem}
 \begin{proof}
 As before, we first expand the definition of |runNDf|, 
-which is written in terms of |simulate'|, a fold. 
-We use fold fusion to incorporate |extractNDf| in the fold of |simulate'|.
+which is written in terms of |nondet2state|, a fold. 
+We use fold fusion to incorporate |extractSS . hState| in this fold.
 The universal property of fold then teaches us that |runNDf| and
 |hNDf| are equal.
-More concretely, we have to prove the following two things:
+More concretely, we have to prove the following two equations.
 \begin{enumerate}
-    \item |extractNDf . gen' = genNDf|
-    \item |extractNDf . alg' = algNDf . fmap extractNDf|
+    \item |(extractSS . hState) . gen = genNDf|
+    \item |(extractSS . hState) . (alg # fwd) = (algNDf # fwdNDf) . fmap (extractSS . hState)|
 \end{enumerate}
+
 For the first item we use simple equational reasoning techniques.
-<    extractNDf (gen' x)
-< = {-~  definition of |gen'|  -}
-<    extractNDf (appendNDf x popNDf)
-< = {-~  definition of |extractNDf|  -}
-<    fst . snd <$> runStateT (runSTNDf (appendNDf x popNDf)) (mzero, [])
-< = {-~  evaluation of |appendNDf|  -}
-<    fst . snd <$> runStateT (runSTNDf popNDf) (mzero `mplus` return x, [])
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    fst . snd <$> runStateT (runSTNDf popNDf) (return x, [])
-< = {-~  evaluation of |runSTNDf popNDf|, |runStateT|  -}
-<    fst . snd <$> Var ((), (return x, []))
-< = {-~  evaluation of |fst|, |snd|  -}
-<    Var (return x)
-< = {-~  definition of |genNDf|  -}
+For all input |x|, we need to prove that |extractSS (hState (gen x)) = genNDf x|
+
+<    extractSS (hState (gen x))
+< = {-~  definition of |gen|  -}
+<    extractSS (hState (appendSS x popSS))
+< = {-~  definition of |extractSS|  -}
+<    resultsSS . snd <$> runStateT (hState (appendSS x popSS)) (SS [] [])
+< = {-~  Lemma \ref{eq:eval-append-f}  -}
+<    resultsSS . snd <$> runStateT (hState popSS) (SS ([] ++ [x]) [])
+< = {-~  definition of |(++)|  -}
+<    resultsSS . snd <$> runStateT (hState popSS) (SS [x] [])
+< = {-~  Lemma \ref{eq:eval-pop1-f}  -}
+<    resultsSS . snd <$> return ((), SS [x] [])
+< = {-~  evaluation of |results, snd|  -}
+<    return [x]
+< = {-~  definition of |return|  -}
+<    Var [x]
+< = {-~  definition of |return|  -}
+<    (Var . return) x
+< = {-~  definition of |genND|  -}
 <    genNDf x
+
+The property that |extractSS . hState . gen = Var . return| is called \emph{extract-gen'}\label{eq:extract-gen'}.
 
 For the second item that we have to prove, we do a case analysis.
 
-% \fbox{|Inl Fail|}
 \noindent \mbox{\underline{case |Inl Fail|}}
 
-<    extractNDf (alg' (Inl Fail))
-< = {-~  definition of |alg'|  -}
-<    extractNDf popNDf
-< = {-~  definition of |extractNDf|  -}
-<    fst . snd <$> runStateT (runSTNDf popNDf) (mzero, [])
-< = {-~  evaluation of |runSTNDf popNDf|, |runStateT|  -}
-<    fst . snd <$> Var ((), (mzero, []))
-< = {-~  evaluation of |fst|, |snd|  -}
-<    Var mzero
+<    extractSS (hState ((alg # fwd) (Inl Fail)))
+< = {-~  definition of |(#)|  -}
+<    extractSS (hState (alg Fail))
+< = {-~  definition of |alg|  -}
+<    extractSS (hState popSS)
+< = {-~  definition of |extractS|  -}
+<    resultsSS . snd <$> runStateT (hState popSS) (SS [] [])
+< = {-~  Lemma \ref{eq:eval-pop1-f}  -}
+<    resultsSS . snd <$> return ((), SS [] [])
+< = {-~  evaluation of |results, snd|  -}
+<    return []
+< = {-~  definition of |return|  -}
+<    Var []
 < = {-~  definition of |algNDf|  -}
-<    algNDf (Inl Fail)
+<    algNDf Fail
 < = {-~  definition of |fmap|  -}
-<    (algNDf . fmap extractNDf) (Inl Fail)
+<    (algNDf . fmap (extractSS . hState)) Fail
+< = {-~  definition of |(#)|  -}
+<    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl Fail)
 
-% \fbox{|Inl (Or p q)|}
+The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extract-alg-1'}\label{eq:extract-alg-1'}.
+
 \noindent \mbox{\underline{case |Inl (Or p q)|}}
 
-<    extractNDf (alg' (Inl (Or p q)))
-< = {-~  definition of |alg'|  -}
-<    extractNDf (pushNDf q p)
-< = {-~  definition of |extractNDf|  -}
-<    fst . snd <$> runStateT (runSTNDf (pushNDf q p)) (mzero, [])
-< = {-~  evaluation of |pushNDf q p|  -}
-<    fst . snd <$> runStateT (runSTNDf p) (mzero, [q])
-< = {-~  property pop-extract for |p|  -}
-<    fst . snd <$> runStateT (runSTNDf popNDf) (mzero `mplus` extractNDf p, [q])
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    fst . snd <$> runStateT (runSTNDf popNDf) (extractNDf p, [q])
-< = {-~  evaluation of |popNDf|  -}
-<    fst . snd <$> runStateT (runSTNDf q) (extractNDf p, []) 
-< = {-~  property pop-extract for |q|  -}
-<    fst . snd <$> runStateT (runSTNDf popNDf) (extractNDf p `mplus` extractNDf q, []) 
-< = {-~  evaluation of |runSTNDf popNDf|, |runStateT|  -}
-<    fst . snd <$> Var ((), (extractNDf p `mplus` extractNDf q, []))
-< = {-~  evaluation of |fst|, |snd|  -}
-<    Var (extractNDf p `mplus` extractNDf q)
+<    extractSS (hState ((alg # fwd) (Inl (Or p q))))
+< = {-~  definition of |(#)|  -}
+<    extractSS (hState (alg (Or p q)))
+< = {-~  definition of |alg|  -}
+<    extractSS (hState (pushSS q p))
+< = {-~  definition of |extractSS|  -}
+<    resultsSS . snd <$> runStateT (hState (pushSS q p)) (SS [] [])
+< = {-~  Lemma \ref{eq:eval-push-f}  -}
+<    resultsSS . snd <$> runStateT (hState p) (SS [] [q])
+< = {-~  property pop-extract (\ref{eq:pop-extract-f}) for |p|  -}
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState popSS) (SS ([]++p') [q]) }
+< = {-~  definition of |(++)|  -}
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState popSS) (SS p' [q]) }
+< = {-~  Lemma \ref{eq:eval-pop2-f}  -}
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState q) (SS p' []) }
+< = {-~  property pop-extract (\ref{eq:pop-extract-f}) for |p|  -}
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); do { q' <- extractSS (hState q); runStateT (hState popSS) (SS (p'++q') []) } }
+< = {-~  property of |do|  -}
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q); runStateT (hState popSS) (SS (p'++q') []) }
+< = {-~  Lemma \ref{eq:eval-pop1-f}  -}
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q); return ((), SS (p'++q') []) }
+< = {-~  evaluation of |resultsSS, snd|  -}
+<    do { p' <- extractSS (hState p); q' <- extractSS (hState q); return (p'++q') }
+< = {-~  definition of |(.)|  -}
+<    do { p' <- ((extractSS . hState) p); q' <- ((extractSS . hState) q); return (p' ++ q')}
 < = {-~  definition of |liftA2|  -}
-<    mplus <$> extractNDf p <*> extractNDf q
+<    liftA2 (++) ((extractSS . hState) p) ((extractSS . hState) q)
 < = {-~  definition of |algNDf|  -}
-<    algNDf (Inl (Or (extractNDf p) (extractNDf q)))
+<    algNDf (Or ((extractSS . hState) p) ((extractSS . hState) q))
 < = {-~  definition of |fmap|  -}
-<    (algNDf . fmap extractNDf) (Inl (Or p q))
+<    (algNDf . fmap (extractSS . hState)) (Or p q)
+< = {-~  definition of |(#)|  -}
+<    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl (Or p q))
 
-% \fbox{|Inr y|}
+The property that |extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
+is called \emph{extract-alg-2}\label{eq:extract-alg-2}.
+
 \noindent \mbox{\underline{case |Inr y|}}
 
-<    extractNDf (alg' (Inr y))
-< = {-~  definition of |alg'|  -}
-<    extractNDf (STNDf $ join $ lift $ Op (return . runSTNDf <$> y))
-< = {-~  definition of |extractNDf|  -}
-<    fst . snd <$> runStateT (runSTNDf (STNDf $ join $ lift $ Op (return . runSTNDf <$> y))) (mzero, [])
-< = {-~  |runSTNDf . STNDf = id|  -}
-<    fst . snd <$> runStateT (join $ lift $ Op (return . runSTNDf <$> y)) (mzero, [])
-< = {-~  definition of |join| for |StateT|  -}
-<    fst . snd <$> runStateT 
-<        (StateT $ \ s -> runStateT (lift $ Op (return . runSTNDf <$> y)) s >>= \(x', s') -> runStateT x' s') 
-<        (mzero, [])
-< = {-~  |runStateT . StateT = id|  -}
-<    fst . snd <$> 
-<        (\ s -> runStateT (lift $ Op (return . runSTNDf <$> y)) s >>= \ (x', s') -> runStateT x' s') 
-<        (mzero, [])
-< = {-~  definition of |lift|  -}
-<    fst . snd <$> 
-<        (\ s -> runStateT (StateT $ \ s -> Op (return . runSTNDf <$> y) 
-<             >>= \ x -> return (x, s)) s 
-<             >>= \ (x', s') -> runStateT x' s') 
-<        (mzero, [])
-< = {-~  |runStateT . StateT = id|  -}
-<    fst . snd <$> 
-<        (\ s -> (\ s -> Op (return . runSTNDf <$> y) 
-<             >>= \ x -> return (x, s)) s 
-<             >>= \ (x', s') -> runStateT x' s') 
-<        (mzero, [])
-< = {-~  application  -}
-<    fst . snd <$> 
-<        (\ s -> Op (return . runSTNDf <$> y) 
-<             >>= \ x -> return (x, s) 
-<             >>= \ (x', s') -> runStateT x' s') 
-<        (mzero, [])
-< = {-~  simplification  -}
-<    fst . snd <$> 
-<        (\ s -> Op (return . runSTNDf <$> y) >>= \ x -> runStateT x s) 
-<        (mzero, [])
-< = {-~  application  -}
-<    fst . snd <$> (Op (return . runSTNDf <$> y) >>= \ x -> runStateT x (mzero, []))
-< = {-~  definition of |>>=| for |Op|   -}
-<    fst . snd <$> Op (fmap (>>= \ x -> runStateT x (mzero, [])) (fmap (return . runSTNDf) y))
-< = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition}) -}
-<    fst . snd <$> Op (fmap ((>>= \ x -> runStateT x (mzero, [])) . return . runSTNDf) y)
-< = {-~  monad law return-bind (\ref{eq:monad-ret-bind}) -}
-<    fst . snd <$> Op (fmap ((\ x -> runStateT x (mzero, [])) . runSTNDf) y)
-< = {-~  simplification -}
-<    fst . snd <$> Op (fmap (\ x -> runStateT (runSTNDf x) (mzero, [])) y)
-< = {-~  definition of |fmap| for |Free| -}
-<    Op (fmap (fmap (fst . snd)) (fmap (\ x -> runStateT (runSTNDf x) (mzero, [])) y))
-< = {-~  functor law: composition of |fmap| (\ref{eq:functor-composition}) -}
-<    Op (fmap ((fmap (fst . snd)) . (\ x -> runStateT (runSTNDf x) (mzero, []))) y)
-< = {-~  simplification -}
-<    Op (fmap (\x -> fst . snd <$> runStateT (runSTNDf x) (mzero, [])) y)
-< = {-~  definition of |extractNDf|  -}
-<    Op (fmap extractNDf y)
-< = {-~  definition of |algNDf|  -}
-<    algNDf (Inr (fmap extractNDf y))
-< = {-~  definition of |fmap| for coproduct  -}
-<    (algNDf (fmap extractNDf (Inr y))
-< = {-~  reformulation  -}
-<    (algNDf . fmap extractNDf) (Inr y)
+<    extractSS (hState ((alg#fwd) (Inr y)))
+< = {-~  definition of |(#)|  -}
+<    extractSS (hState (fwd y))
+< = {-~  definition of |fwd|  -}
+<    extractSS (hState (Op (Inr y)))
+< = {-~  definition of |hState|  -}
+<    extractSS (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y))
+< = {-~  definition of |extractSS|  -}
+<    resultsSS . snd <$> runStateT (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y)) (SS [] [])
+< = {-~  definition of |runStateT|  -}
+<    resultsSS . snd <$> (\s -> Op $ fmap (\k -> runStateT k s) (fmap hState y)) (SS [] [])
+< = {-~  function application  -}
+<    resultsSS . snd <$> Op $ fmap (\k -> runStateT k (SS [] [])) (fmap hState y))
+< = {-~  definition of |<$>|  -}
+<    Op (fmap (\x -> resultsSS . snd <$> runStateT x (SS [] [])) (fmap hState y))
+< = {-~  definition of |fwdNDf|  -}
+<    fwdNDf (fmap (\x -> resultsSS . snd <$> runStateT x (SS [] [])) (fmap hState y))
+< = {-~  definition of |extractSS|  -}
+<    fwdNDf (fmap extractSS (fmap hState y))
+< = {-~  definition of |(.)|  -}
+<    fwdNDf (fmap (extractSS . hState) y)
+< = {-~  definition of |(#)|  -}
+<    (algNDf # fwdNDf) (Inr (fmap (extractSS . hState) y))
+< = {-~  definition of |fmap|  -}
+<    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inr y)
 \end{proof}
 
 
-In this proof we have also used the pop-extract property of |STNDf|, which is similar to the pop-extract of |STND| (Theorem \ref{eq:pop-extract}).
-\begin{theorem}[pop-extract of |STNDf|]\label{eq:pop-extract-f}
-\,
+In this proof we have also used the pop-extract property of |SS|, which is similar to the pop-extract of |S| (Theorem \ref{eq:pop-extract}).
+\begin{theorem}[pop-extract of |SS|]\label{eq:pop-extract-f}
+~
 <    runStateT (runSTNDf p) (q, stack) = runStateT (runSTNDf popNDf) (q `mplus` extract' p, stack)
-holds for all |p| in the domain of the function |simulate'|.
+
+<    runStateT (hState p) (SS xs stack)
+< =  do { p' <- extractSS (hState p); runStateT (hState popSS) (SS (xs++p') stack) }
+holds for all |p| in the domain of the function |nondet2state|.
 \end{theorem}
 
-\wenhao{Should we include the proof of it?}
 
+We also have the following lemmas used in the above proof:
 
+\begin{lemma}[evaluation-append']\label{eq:eval-append-f}~
+< runStateT (hState (appendSS x p)) (SS xs stack) = runStateT (hState p) (SS (xs ++ [x]) stack)
+\end{lemma}
+% \begin{proof}~
+% <    runState (hState' (appendS x p)) (S xs stack)
+% < = {-~  definition of |appendS|  -}
+% <    runState (hState' (do S xs stack <- getS; putS (S (xs ++ [x]) stack); p)) (S xs stack)
+% < = {-~  definition of |do|  -}
+% <    runState (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
+% < = {-~  definition of |getS|  -}
+% <    runState (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
+% < = {-~  definition of |(>>=)|  -}
+% <    runState (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)))) (S xs stack)
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) s)) s))
+% <      (S xs stack)
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) s)) s) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) (S xs stack))) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' (putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
+% < = {-~  definition of |putS|  -}
+% <    runState (hState' (Op (Put (S (xs ++ [x]) stack) (return ())) >> p)) (S xs stack)
+% < = {-~  definition of |(>>)|  -}
+% <    runState (hState' (Op (Put (S (xs ++ [x]) stack) p))) (S xs stack)
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' p) (S (xs ++ [x]) stack))) (S xs stack)
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' p) (S (xs ++ [x]) stack)) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' p) (S (xs ++ [x]) stack)
+% \end{proof}
 
+\begin{lemma}[evaluation-pop1']\label{eq:eval-pop1-f}~
+< runStateT (hState popSS) (SS xs []) = return ((), SS xs [])
+\end{lemma}
+% \begin{proof}
+% To prove this lemma, we restate the definition of |popS| using the definition of |do|:
+% < popS =  (getS >>= \ (S xs stack) ->
+% <           case stack of  []       -> return ()
+% <                          op : ps  -> do putS (S xs ps); op)
+
+% Then we use the equational reasoning.
+
+% <    runState (hState' popS) (S xs [])
+% < = {-~  definition of |popS|  -}
+% <    runState (hState' (getS >>= \ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op)) (S xs [])
+% < = {-~  definition of |getS|  -}
+% <    runState (hState' (Op (Get return) >>= \ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op)) (S xs [])
+% < = {-~  definition of |(>>=)|  -}
+% <    runState (hState' (Op (Get (\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op)))) (S xs [])
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' ((\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op) s)) s)) (S xs [])
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' ((\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op) s)) s) (S xs [])
+% < = {-~  function application  -}
+% <    runState (hState' ((\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op) (S xs []))) (S xs [])
+% < = {-~  function application, definition of |case|  -}
+% <    runState (hState' (return ())) (S xs [])
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> ((), s))) (S xs [])
+% < = {-~  definition of |runState|  -}
+% <    ((), S xs [])
+% \end{proof}
+
+\begin{lemma}[evaluation-pop2]\label{eq:eval-pop2}~
+< runStateT (hState popSS) (SS xs (q:stack)) = runStateT (hState q) (SS xs stack)
+\end{lemma}
+% \begin{proof}~
+% <    runState (hState' popS) (S xs (q:stack))
+% < = {-~  definition of |popS|  -}
+% <    runState (hState' (getS >>= \ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op)) (S xs (q:stack))
+% < = {-~  definition of |getS|  -}
+% <    runState (hState' (Op (Get return) >>= \ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op)) (S xs (q:stack))
+% < = {-~  definition of |(>>=)|  -}
+% <    runState (hState' (Op (Get (\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op)))) (S xs (q:stack))
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' ((\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op) s)) s)) (S xs (q:stack))
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' ((\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op) s)) s) (S xs (q:stack))
+% < = {-~  function application  -}
+% <    runState (hState' ((\ (S xs stack) ->
+% <      case stack of  []       -> return ()
+% <                     op : ps  -> do putS (S xs ps); op) (S xs (q:stack)))) (S xs (q:stack))
+% < = {-~  function application, definition of |case|  -}
+% <    runState (hState' (do putS (S xs stack); q)) (S xs (q:stack))
+% < = {-~  definition of |do|  -}
+% <    runState (hState' (putS (S xs stack) >> q)) (S xs (q:stack))
+% < = {-~  definition of |putS|  -}
+% <    runState (hState' (Op (Put (S xs stack) (return ())) >> q)) (S xs (q:stack))
+% < = {-~  definition of |(>>)|  -}
+% <    runState (hState' (Op (Put (S xs stack) q))) (S xs (q:stack))
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' q) (S xs stack))) (S xs (q:stack))
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' q) (S xs stack)) (S xs (q:stack))
+% < = {-~  function application  -}
+% <    runState (hState' q) (S xs stack)
+% \end{proof}
+
+\begin{lemma}[evaluation-push]\label{eq:eval-push}~
+< runStateT (hState (pushSS q p)) (SS xs stack) = runStateT (hState p) (SS xs (q:stack))
+\end{lemma}
+% \begin{proof}~
+% <    runState (hState' (pushS q p)) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' (do S xs stack <- getS; putS (S xs (q : stack)); p)) (S xs stack)
+% < = {-~  definition of |do|  -}
+% <    runState (hState' (getS >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
+% < = {-~  definition of |getS|  -}
+% <    runState (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
+% < = {-~  definition of |(>>=)|  -}
+% <    runState (hState' (Op (Get (\ (S xs stack) -> putS (S xs (q : stack)) >> p)))) (S xs stack)
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s)) (S xs stack)
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) (S xs stack))) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' (putS (S xs (q : stack)) >> p)) (S xs stack)
+% < = {-~  definition of |putS|  -}
+% <    runState (hState' (Op (Put (S xs (q : stack)) (return ())) >> p)) (S xs stack)
+% < = {-~  definition of |(>>)|  -}
+% <    runState (hState' (Op (Put (S xs (q : stack)) p))) (S xs stack)
+% < = {-~  definition of |hState'|  -}
+% <    runState (State (\s -> runState (hState' p) (S xs (q : stack)))) (S xs stack)
+% < = {-~  definition of |runState|  -}
+% <    (\s -> runState (hState' p) (S xs (q : stack))) (S xs stack)
+% < = {-~  function application  -}
+% <    runState (hState' p) (S xs (q : stack))
+
+% \end{proof}
 

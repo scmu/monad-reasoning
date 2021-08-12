@@ -199,17 +199,6 @@ runND :: Free NondetF a -> [a]
 runND = extractS . hState' . nondet2stateS
 \end{code}
 
-%if False
-% test code for proof
-\begin{code}
-tmp1 :: Comp (S a) () -> [a] -> [Comp (S a) ()] -> ((), S a)
-tmp1 p q stack = runState (hState' p) (S q stack)
-
-tmp2 :: Comp (S a) () -> [a] -> [Comp (S a) ()] -> ((), S a)
-tmp2 p q stack = runState (hState' popS) (S (q ++ extractS (hState' p)) stack)
-\end{code}
-%endif
-
 To prove this simulation correct, we show that the
 |runND| function is equivalent to the nondeterminism handler |hND| defined in Section \ref{sec:combining-effects}.
 
@@ -265,6 +254,24 @@ nondet2state = fold gen (alg # fwd)
     alg (Or p q)  = pushSS q p
     fwd y         = Op (Inr y)
 \end{code}
+
+
+%if False
+% test code for proof
+\begin{code}
+tt y = let qq = extractSS (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y))
+   in hState (Op (Inr y))
+
+tmp1 :: Functor f
+     => CompSS (SS f a) f ()
+     -> [a]
+     -> [CompSS (SS f a) f ()]
+     -> Free f ((), SS f a)
+tmp1 p xs stack = runStateT (hState p) (SS xs stack)
+tmp2 p xs stack = do { p' <- extractSS (hState p); runStateT (hState popSS) (SS (xs++p') stack) }
+\end{code}
+%endif
+
 
 The helper functions |popSS|, |pushSS| and |appendSS| 
 (Figure \ref{fig:pop-push-append-SS}) are very similar to the
