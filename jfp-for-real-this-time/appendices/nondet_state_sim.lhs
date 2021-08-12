@@ -32,44 +32,11 @@ For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|
 
 < = {-~  definition of |extractS|  -}
 <    results . snd $ runState (hState' (appendS x popS)) (S [] [])
-< = {-~  evaluation of |appendS|  -}
-\wenhao{Add more steps?}
+< = {-~  Lemma \ref{eq:eval-append}  -}
 <    results . snd $ runState (hState' popS) (S ([] ++ [x]) [])
 < = {-~  definition of |(++)|  -}
 <    results . snd $ runState (hState' popS) (S [x] [])
-< = {-~  evaluation of |popS|  -}
-\wenhao{Add more steps?}
-% <    results . snd $ ((), S [x] [])
-
-% < = {-~  definition of |appendS|, function application  -}
-% <    extractS (hState' (do (S xs stack) <- getS; putS (S (xs ++ [x]) stack); popS))
-% < = {-~  definition of |do|  -}
-% <    extractS (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
-% < = {-~  definition of |getS|  -}
-% <    extractS (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
-% < = {-~  definition of |(>>=)|  -}
-% <    extractS (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
-% < = {-~  definition of |hState'|  -}
-% <    extractS (algS' (Get (hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
-% < = {-~  definition of |algS'|  -}
-% <    extractS (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s)
-% < = {-~  definition of |extractS|, function application  -}
-% <    results . snd $ runState (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
-% < = {-~  definition of |runState|  -}
-% <    results . snd $ (\s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
-% < = {-~  function application  -}
-% <    results . snd $ (runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) (S [] [])) (S [] []))
-% < = {-~  function application  -}
-% <    results . snd $ (runState (hState' (putS (S ([] ++ [x]) []) >> popS)) (S [] []))
-% < = {-~  definition of |(++)|  -}
-% <    results . snd $ (runState (hState' (putS (S [x] []) >> popS)) (S [] []))
-% < = {-~  definition of |popS|, evaluation of |hState'|  -}
-% \wenhao{Add more steps?}
-% <    results . snd $ (runState (State $ \ S xs stack -> ((), S [x] [])) (S [] []))
-% < = {-~  definition of |runState|  -}
-% <    results . snd $ ((\ S xs stack -> ((), S [x] [])) (S [] []))
-% < = {-~  function application  -}
-
+< = {-~  Lemma \ref{eq:eval-pop1}  -}
 <    results . snd $ ((), S [x] [])
 < = {-~  definition of |snd|  -}
 <    results (S [x] [])
@@ -94,8 +61,7 @@ For the second equation that we have to prove, we do a case analysis.
 <    extractS (hState' popS)
 < = {-~  definition of |extractS|  -}
 <    results . snd $ runState (hState' popS) (S [] [])
-< = {-~  evaluation of |popS|  -}
-\wenhao{Add more steps?}
+< = {-~  Lemma \ref{eq:eval-pop1}  -}
 <    results . snd $ ((), S [] [])
 < = {-~  evaluation of |results|, |snd|  -}
 <    []
@@ -115,15 +81,17 @@ The property that |extractS (hState' (alg Fail)) = []| is called
 <    extractS (hState' (pushS q p))
 < = {-~  definition of |extract|  -}
 <    results . snd $ runState (hState' (pushS q p)) (S [] [])
-< = {-~  evaluation of |pushS|  -}
-\wenhao{Add more steps?}
+< = {-~  Lemma \ref{eq:eval-push}  -}
 <    results . snd $ runState (hState' p) (S [] [q])
 < = {-~  property pop-extract (\ref{eq:pop-extract}) for |p|  -}
 <    results . snd $ runState (hState' popS) (S ([] ++ extractS (hState' p)) [q])
 < = {-~  definition of |(++)|  -}
 <    results . snd $ runState (hState' popS) (S (extractS (hState' p)) [q])
-< = {-~  evaluation of |popS|  -}
-\wenhao{Add more steps?}
+< = {-~  Lemma \ref{eq:eval-pop2}  -}
+<    results . snd $ runState (hState' q) (S (extractS (hState' p)) [])
+< = {-~  property pop-extract (\ref{eq:pop-extract}) for |q|  -}
+<    results . snd $ runState (hState' popS) (S (extractS (hState' p) ++ extractS (hState' q)) [])
+< = {-~  Lemma \ref{eq:eval-pop1}  -}
 <    results . snd $ ((), S (extractS (hState' p) ++ extractS (hState' q)) [])
 < = {-~  evaluation of |results, snd|  -}
 <    extractS (hState' p) ++ extractS (hState' q)
@@ -132,34 +100,19 @@ The property that |extractS (hState' (alg Fail)) = []| is called
 < = {-~  definition of |fmap|  -}
 <    (algND . fmap (extractS . hState')) (Or p q)
 
-% < = {-~  evaluation of |pushND q p|  -}
-% <    fst . snd $ runState (runSTND p) (mzero, [q])
-% < = {-~  property pop-extract (\ref{eq:pop-extract}) for |p|  -}
-% <    fst . snd $ runState (runSTND popND) (mzero `mplus` extract p, [q])
-% < = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-% <    fst . snd $ runState (runSTND popND) (extract p, [q])
-% < = {-~  evaluation of |popND|  -}
-% <    fst . snd $ runState (runSTND q) (extract p, [])
-% < = {-~  property pop-extract (\ref{eq:pop-extract}) for |q|  -}
-% <    fst . snd $ runState (runSTND popND) (extract p `mplus` extract q, [])
-% < = {-~  evaluation of |runSTND popND|, |runState|  -}
-% <    fst . snd $ ((), (extract p `mplus` extract q, []))
-% < = {-~  evaluation of |fst|, |snd|.  -}
-% <    extract p `mplus` extract q
-% < = {-~  definition of |algND|  -}
-% <    algND (Or (extract p) (extract q))
-% < = {-~  definition of |fmap|  -}
-% <    (algND . fmap extract) (Or p q)
 The property that |extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
 is called \emph{extract-alg-2}\label{eq:extract-alg-2}.
 \end{proof}
 
+%if False
+$
+%endif
 
 In this proof we have used the property pop-extract, which states the following: 
 \begin{theorem}[pop-extract]\label{eq:pop-extract}
 ~
 % <    runState (runSTND p) (q, stack) = runState (runSTND popND) (q `mplus` extract p, stack)
-<    runState (hState' p) (S q stack) = runState (hState' popS) (S (q ++ extractS (hState' p)) stack)
+<    runState (hState' p) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' p)) stack)
 holds for all |p| in the domain of the function |nondet2stateS|.
 \end{theorem}
 We call this property the pop-extract property.
@@ -174,42 +127,41 @@ and (2) the algebra preserves this property.
 
 \begin{proof} ~
 First, we use equational reasoning to prove the first item:
-% <   runState (runSTND (gen x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (gen x), stack)
-<    runState (hState' (gen x)) (S q stack) = runState (hState' popS) (S (q ++ extractS (hState' (gen x))) stack)
+% <   runState (runSTND (gen x)) (q, stack) = runState (runSTND popND) (xs `mplus` extract (gen x), stack)
+<    runState (hState' (gen x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)
 
-<    runState (hState' (gen x)) (S q stack)
+<    runState (hState' (gen x)) (S xs stack)
 < = {-~  definition of |gen|  -}
-<    runState (hState' (appendS x popS)) (S q stack)
-< = {-~  evaluation of |appendS|  -}
-\wenhao{Add more steps?}
-<    runState (hState' popS) (S (q ++ [x]) stack)
+<    runState (hState' (appendS x popS)) (S xs stack)
+< = {-~  Lemma \ref{eq:eval-append}  -}
+<    runState (hState' popS) (S (xs ++ [x]) stack)
 < = {-~  definition of |return|  -}
-<    runState (hState' popS) (S (q ++ return x) stack)
+<    runState (hState' popS) (S (xs ++ return x) stack)
 < = {-~  property extract-gen (\ref{eq:extract-gen})  -}
-<    runState (hState' popS) (S (q ++ extractS (hState' (gen x))) stack)
+<    runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)
 
 % <    runState (runSTND (gen x)) (q, stack)
 % < = {-~  definition of |gen|  -}
 % <    runState (runSTND (appendND x popND)) (q, stack)
 % < = {-~  evaluation of |appendND|  -}
-% <    runState (runSTND popND) (q `mplus` return x, stack)
+% <    runState (runSTND popND) (xs `mplus` return x, stack)
 % < = {-~  property extract-gen (\ref{eq:extract-gen})  -}
-% <    runState (runSTND popND) (q `mplus` extract (gen x), stack)
+% <    runState (runSTND popND) (xs `mplus` extract (gen x), stack)
 
 Then, we use equational reasoning with case analysis and structural induction on |x| to prove the second item:
-% <     runState (runSTND (alg x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (alg x), stack)
-<    runState (hState' (alg x)) (S q stack) = runState (hState' popS) (S (q ++ extractS (hState' (alg x))) stack)
+% <     runState (runSTND (alg x)) (q, stack) = runState (runSTND popND) (xs `mplus` extract (alg x), stack)
+<    runState (hState' (alg x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (alg x))) stack)
 
 \noindent
 \mbox{\underline{case |Fail|}}
 
-<    runState (hState' (alg Fail)) (S q stack)
+<    runState (hState' (alg Fail)) (S xs stack)
 < = {-~  definition of |alg|  -}
-<    runState (hState' (popS)) (S q stack)
+<    runState (hState' (popS)) (S xs stack)
 < = {-~  definition of |[]|  -}
-<    runState (hState' popS) (S (q ++ []) stack)
+<    runState (hState' popS) (S (xs ++ []) stack)
 < = {-~  property extract-alg-1 (\ref{eq:extract-alg-1})  -}
-<    runState (hState' popS) (S (q ++ extractS (hState' (alg Fail))) stack)
+<    runState (hState' popS) (S (xs ++ extractS (hState' (alg Fail))) stack)
 
 % \fbox{|Or p1 p2|}
 \noindent
@@ -217,32 +169,49 @@ Then, we use equational reasoning with case analysis and structural induction on
 
 Assume that |p1| and |p2| satisfy this theorem.
 
-<    runState (hState' (alg (Or p1 p2))) (S q stack)
+<    runState (hState' (alg (Or p1 p2))) (S xs stack)
 < = {-~  definition of |alg|  -}
-<    runState (hState' (pushS p2 p1)) (S q stack)
-< = {-~  evaluation of |pushS p2 p1|  -}
-\wenhao{Add more steps?}
-<    runState (hState' p1) (S q (p2:stack))
+<    runState (hState' (pushS p2 p1)) (S xs stack)
+< = {-~  Lemma \ref{eq:eval-push}  -}
+<    runState (hState' p1) (S xs (p2:stack))
 < = {-~  induction: property pop-extract of |p1|  -}
-<    runState (hState' popS) (S (q ++ extractS (hState' p1)) (p2:stack))
-< = {-~  evaluation of |popS|  -}
-\wenhao{Add more steps?}
-<    runState (hState' p2) (S (q ++ extractS (hState' p1)) stack)
+<    runState (hState' popS) (S (xs ++ extractS (hState' p1)) (p2:stack))
+< = {-~  Lemma \ref{eq:eval-pop2}  -}
+<    runState (hState' p2) (S (xs ++ extractS (hState' p1)) stack)
 < = {-~  induction: property pop-extract of |p2|  -}
-<    runState (hState' popS) (S (q ++ extractS (hState' p1) ++ extractS (hState' p2)) stack)
+<    runState (hState' popS) (S (xs ++ extractS (hState' p1) ++ extractS (hState' p2)) stack)
 < = {-~  property extract-alg-2 (\ref{eq:extract-alg-2})  -}
-<    runState (hState' popS) (S (q ++ hState' (alg (Or p1 p2))) stack)
-
-% < = {-~  evaluation of |popND|  -}
-% <    runState (runSTND p2) (q `mplus` extract p1, stack)
-% < = {-~  induction: property pop-extract of |p2|  -}
-% <    runState (runSTND popND) (q `mplus` extract p1 `mplus` extract p2, stack)
-% < = {-~  property extract-alg-2 (\ref{eq:extract-alg-2})  -}
-% <    runState (runSTND popND) (q `mplus` extract (alg (Or p1 p2)), stack)
+<    runState (hState' popS) (S (xs ++ hState' (alg (Or p1 p2))) stack)
 
 Note that the above two proofs of theorems \ref{eq:runnd-hnd} and \ref{eq:pop-extract} are mutually recursive. However, only the 
 second proof uses induction. As we work inductively on (smaller) subterms,
 the proofs do work out. 
+\end{proof}
+
+We also have the following lemmas used in the above proof:
+
+\begin{lemma}[evaluation-append]\label{eq:eval-append}~
+< runState (hState' (appendS x p)) (S xs stack) = runState (hState' p) (S (xs ++ [x]) stack)
+\end{lemma}
+\begin{proof}
+\end{proof}
+
+\begin{lemma}[evaluation-pop1]\label{eq:eval-pop1}~
+< runState (hState' popS) (S xs []) = ((), S xs [])
+\end{lemma}
+\begin{proof}
+\end{proof}
+
+\begin{lemma}[evaluation-pop2]\label{eq:eval-pop2}~
+< runState (hState' popS) (S xs (q:stack)) = runState (hState' q) (S xs stack)
+\end{lemma}
+\begin{proof}
+\end{proof}
+
+\begin{lemma}[evaluation-push]\label{eq:eval-push}~
+< runState (hState' (pushS q p)) (S xs stack) = runState (hState' p) (S xs (q:stack))
+\end{lemma}
+\begin{proof}
 \end{proof}
 
 %-------------------------------------------------------------------------------
