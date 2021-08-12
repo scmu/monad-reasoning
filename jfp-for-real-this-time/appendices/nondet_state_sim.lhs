@@ -29,34 +29,47 @@ For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|
 <    extractS (hState' (gen x))
 < = {-~  definition of |gen|  -}
 <    extractS (hState' (appendS x popS))
-< = {-~  definition of |appendS|, function application  -}
-<    extractS (hState' (do (S xs stack) <- getS; putS (S (xs ++ [x]) stack); popS))
-< = {-~  definition of |do|  -}
-<    extractS (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
-< = {-~  definition of |getS|  -}
-<    extractS (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
-< = {-~  definition of |(>>=)|  -}
-<    extractS (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
-< = {-~  definition of |hState'|  -}
-<    extractS (algS' (Get (hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
-< = {-~  definition of |algS'|  -}
-<    extractS (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s)
-< = {-~  definition of |extractS|, function application  -}
-<    results . snd $ runState (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
-< = {-~  definition of |runState|  -}
-<    results . snd $ (\s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
-< = {-~  function application  -}
-<    results . snd $ (runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) (S [] [])) (S [] []))
-< = {-~  function application  -}
-<    results . snd $ (runState (hState' (putS (S ([] ++ [x]) []) >> popS)) (S [] []))
-< = {-~  definition of |(++)|  -}
-<    results . snd $ (runState (hState' (putS (S [x] []) >> popS)) (S [] []))
-< = {-~  definition of |popS|, evaluation of |hState'|  -}
+
+< = {-~  definition of |extractS|  -}
+<    results . snd $ runState (hState' (appendS x popS)) (S [] [])
+< = {-~  evaluation of |appendS|  -}
 \wenhao{Add more steps?}
-<    results . snd $ (runState (State $ \ S xs stack -> ((), S [x] [])) (S [] []))
-< = {-~  definition of |runState|  -}
-<    results . snd $ ((\ S xs stack -> ((), S [x] [])) (S [] []))
-< = {-~  function application  -}
+<    results . snd $ runState (hState' popS) (S ([] ++ [x]) [])
+< = {-~  definition of |(++)|  -}
+<    results . snd $ runState (hState' popS) (S [x] [])
+< = {-~  evaluation of |popS|  -}
+\wenhao{Add more steps?}
+% <    results . snd $ ((), S [x] [])
+
+% < = {-~  definition of |appendS|, function application  -}
+% <    extractS (hState' (do (S xs stack) <- getS; putS (S (xs ++ [x]) stack); popS))
+% < = {-~  definition of |do|  -}
+% <    extractS (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
+% < = {-~  definition of |getS|  -}
+% <    extractS (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
+% < = {-~  definition of |(>>=)|  -}
+% <    extractS (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
+% < = {-~  definition of |hState'|  -}
+% <    extractS (algS' (Get (hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
+% < = {-~  definition of |algS'|  -}
+% <    extractS (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s)
+% < = {-~  definition of |extractS|, function application  -}
+% <    results . snd $ runState (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
+% < = {-~  definition of |runState|  -}
+% <    results . snd $ (\s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
+% < = {-~  function application  -}
+% <    results . snd $ (runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) (S [] [])) (S [] []))
+% < = {-~  function application  -}
+% <    results . snd $ (runState (hState' (putS (S ([] ++ [x]) []) >> popS)) (S [] []))
+% < = {-~  definition of |(++)|  -}
+% <    results . snd $ (runState (hState' (putS (S [x] []) >> popS)) (S [] []))
+% < = {-~  definition of |popS|, evaluation of |hState'|  -}
+% \wenhao{Add more steps?}
+% <    results . snd $ (runState (State $ \ S xs stack -> ((), S [x] [])) (S [] []))
+% < = {-~  definition of |runState|  -}
+% <    results . snd $ ((\ S xs stack -> ((), S [x] [])) (S [] []))
+% < = {-~  function application  -}
+
 <    results . snd $ ((), S [x] [])
 < = {-~  definition of |snd|  -}
 <    results (S [x] [])
