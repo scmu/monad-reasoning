@@ -3,161 +3,200 @@
 \subsection{Only State and Nondeterminism}
 \label{app:runnd-hnd}
 
-This section shows that the |runND| function is equivalent
-to the following nondeterminism handler.
+This section shows that the |runND| function in Section \ref{sec:sim-nondet-state} is equivalent
+to the following nondeterminism handler |hND| in Section \ref{sec:combining-effects}.
 
-\begin{code}
-hND :: MNondet m => Free NondetF a -> m a
-hND = fold genND algND
-  where 
-    genND           = return 
-    algND Fail      = mzero
-    algND (Or p q)  = p `mplus` q
-\end{code}
-In what follows, we show that this handler is equal to the |runND| function
-of Section \ref{sec:sim-nondet-state}.
 \begin{theorem}\label{eq:runnd-hnd}
 |runND = hND|
 \end{theorem}
 \begin{proof}
 We start with expanding the definition of |runND|:
-< extract . simulate = hND
-Both |simulate| and |hND| are written as a fold.
-We can use the universal property of fold to show that |runND| and
-|hND| are equal.
-Therefore, we will use the fold fusion law for postcomposition as defined in 
+< extractS . hState' . nondet2stateS = hND
+Both |nondet2stateS| and |hND| are written as a fold.
+We can use the universal property of fold to show that the two sides of the equation
+are equal.
+For this, we use the fold fusion law for postcomposition as defined in 
 Equation \ref{eq:fusion-post}.
-We have to prove that
+
+We have to prove the following two equations.
 \begin{enumerate}
-    \item |extract . gen = genND|
-    \item |extract . alg = algND . fmap extract|
+    \item |(extractS . hState') . gen = genND|
+    \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
 \end{enumerate}
-The first item is simple to prove with equational reasoning.
-<    extract (gen x)
+
+The first equation is simple to prove with equational reasoning.
+For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|
+<    extractS (hState' (gen x))
 < = {-~  definition of |gen|  -}
-<    extract (appendND x popND)
-< = {-~  definition of |extract|  -}
-<    fst . snd $ runState (runSTND (appendND x popND)) (mzero, [])
-< = {-~  evaluation of |appendND|  -}
-<    fst . snd $ runState (runSTND popND) (mzero `mplus` return x, [])
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    fst . snd $ runState (runSTND popND) (return x, [])
-< = {-~  evaluation of |runSTND popND|, |runState|  -}
-<    fst . snd $ ((), (return x, []))
-< = {-~  evaluation of |fst|, |snd|  -}
+<    extractS (hState' (appendS x popS))
+< = {-~  definition of |appendS|, function application  -}
+<    extractS (hState' (do (S xs stack) <- getS; putS (S (xs ++ [x]) stack); popS))
+< = {-~  definition of |do|  -}
+<    extractS (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
+< = {-~  definition of |getS|  -}
+<    extractS (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))
+< = {-~  definition of |(>>=)|  -}
+<    extractS (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
+< = {-~  definition of |hState'|  -}
+<    extractS (algS' (Get (hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS))))
+< = {-~  definition of |algS'|  -}
+<    extractS (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s)
+< = {-~  definition of |extractS|, function application  -}
+<    results . snd $ runState (State $ \s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
+< = {-~  definition of |runState|  -}
+<    results . snd $ (\s -> runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) s) s) (S [] [])
+< = {-~  function application  -}
+<    results . snd $ (runState ((hState' . (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> popS)) (S [] [])) (S [] []))
+< = {-~  function application  -}
+<    results . snd $ (runState (hState' (putS (S ([] ++ [x]) []) >> popS)) (S [] []))
+< = {-~  definition of |(++)|  -}
+<    results . snd $ (runState (hState' (putS (S [x] []) >> popS)) (S [] []))
+< = {-~  definition of |popS|, evaluation of |hState'|  -}
+\wenhao{Add more steps?}
+<    results . snd $ (runState (State $ \ S xs stack -> ((), S [x] [])) (S [] []))
+< = {-~  definition of |runState|  -}
+<    results . snd $ ((\ S xs stack -> ((), S [x] [])) (S [] []))
+< = {-~  function application  -}
+<    results . snd $ ((), S [x] [])
+< = {-~  definition of |snd|  -}
+<    results (S [x] [])
+< = {-~  definition of |results|  -}
+<    [x]
+< = {-~  definition of |return|  -}
 <    return x
 < = {-~  definition of |genND|  -}
 <    genND x
-The property that |extract . gen = return| is called 
+
+The property that |extractS . hState' . gen = return| is called 
 \emph{extract-gen}\label{eq:extract-gen}.
 
-For the second item that we have to prove, we do a case analysis.
+For the second equation that we have to prove, we do a case analysis.
 
 % \fbox{|Fail|}
 \noindent
 \mbox{\underline{case |Fail|}}
 
-<    extract (alg Fail)
+<    extractS (hState' (alg Fail))
 < = {-~  definition of |alg|  -}
-<    extract popND
-< = {-~  definition of |extract|  -}
-<    fst . snd $ runState (runSTND popND) (mzero, [])
-< = {-~  evaluation of |runSTND popND|, |runState|  -}
-<    fst . snd $ ((), (mzero, []))
-< = {-~  evaluation of |fst|, |snd|  -}
-<    mzero
+<    extractS (hState' popS)
+< = {-~  definition of |extractS|  -}
+<    results . snd $ runState (hState' popS) (S [] [])
+< = {-~  evaluation of |popS|  -}
+\wenhao{Add more steps?}
+<    results . snd $ ((), S [] [])
+< = {-~  evaluation of |results|, |snd|  -}
+<    []
 < = {-~  definition of |algND|  -}
 <    algND Fail
 < = {-~  definition of |fmap|  -}
-<    (algND . fmap extract) Fail
-The property that |extract (alg Fail) = mzero| is called 
+<    (algND . fmap (extractS . hState')) Fail
+The property that |extractS (hState' (alg Fail)) = []| is called 
 \emph{extract-alg-1}\label{eq:extract-alg-1}.
 
 % \fbox{|Or p q|}
 \noindent
 \mbox{\underline{case |Or p q|}}
 
-<    extract (alg (Or p q))
+<    extractS (hState' (alg (Or p q)))
 < = {-~  definition of |alg|  -}
-<    extract (pushND q p)
+<    extractS (hState' (pushS q p))
 < = {-~  definition of |extract|  -}
-<    fst . snd $ runState (runSTND (pushND q p)) (mzero, [])
-< = {-~  evaluation of |pushND q p|  -}
-<    fst . snd $ runState (runSTND p) (mzero, [q])
+<    results . snd $ runState (hState' (pushS q p)) (S [] [])
+< = {-~  evaluation of |pushS|  -}
+\wenhao{Add more steps?}
+<    results . snd $ runState (hState' p) (S [] [q])
 < = {-~  property pop-extract (\ref{eq:pop-extract}) for |p|  -}
-<    fst . snd $ runState (runSTND popND) (mzero `mplus` extract p, [q])
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    fst . snd $ runState (runSTND popND) (extract p, [q])
-< = {-~  evaluation of |popND|  -}
-<    fst . snd $ runState (runSTND q) (extract p, [])
-< = {-~  property pop-extract (\ref{eq:pop-extract}) for |q|  -}
-<    fst . snd $ runState (runSTND popND) (extract p `mplus` extract q, [])
-< = {-~  evaluation of |runSTND popND|, |runState|  -}
-<    fst . snd $ ((), (extract p `mplus` extract q, []))
-< = {-~  evaluation of |fst|, |snd|.  -}
-<    extract p `mplus` extract q
+<    results . snd $ runState (hState' popS) (S ([] ++ extractS (hState' p)) [q])
+< = {-~  definition of |(++)|  -}
+<    results . snd $ runState (hState' popS) (S (extractS (hState' p)) [q])
+< = {-~  evaluation of |popS|  -}
+\wenhao{Add more steps?}
+<    results . snd $ ((), S (extractS (hState' p) ++ extractS (hState' q)) [])
+< = {-~  evaluation of |results, snd|  -}
+<    extractS (hState' p) ++ extractS (hState' q)
 < = {-~  definition of |algND|  -}
-<    algND (Or (extract p) (extract q))
+<    algND (Or ((extractS . hState') p) ((extractS . hState') q))
 < = {-~  definition of |fmap|  -}
-<    (algND . fmap extract) (Or p q)
-The property that |extract (alg (Or p q)) = extract p `mplus` extract q| 
+<    (algND . fmap (extractS . hState')) (Or p q)
+
+% < = {-~  evaluation of |pushND q p|  -}
+% <    fst . snd $ runState (runSTND p) (mzero, [q])
+% < = {-~  property pop-extract (\ref{eq:pop-extract}) for |p|  -}
+% <    fst . snd $ runState (runSTND popND) (mzero `mplus` extract p, [q])
+% < = {-~  identity of |mzero| (\ref{eq:mzero})  -}
+% <    fst . snd $ runState (runSTND popND) (extract p, [q])
+% < = {-~  evaluation of |popND|  -}
+% <    fst . snd $ runState (runSTND q) (extract p, [])
+% < = {-~  property pop-extract (\ref{eq:pop-extract}) for |q|  -}
+% <    fst . snd $ runState (runSTND popND) (extract p `mplus` extract q, [])
+% < = {-~  evaluation of |runSTND popND|, |runState|  -}
+% <    fst . snd $ ((), (extract p `mplus` extract q, []))
+% < = {-~  evaluation of |fst|, |snd|.  -}
+% <    extract p `mplus` extract q
+% < = {-~  definition of |algND|  -}
+% <    algND (Or (extract p) (extract q))
+% < = {-~  definition of |fmap|  -}
+% <    (algND . fmap extract) (Or p q)
+The property that |extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
 is called \emph{extract-alg-2}\label{eq:extract-alg-2}.
 \end{proof}
 
-%if False
-$
-% only to make my syntax highlighting correct
-%endif
 
 In this proof we have used the property pop-extract, which states the following: 
 \begin{theorem}[pop-extract]\label{eq:pop-extract}
-\,
-<    runState (runSTND p) (q, stack) = runState (runSTND popND) (q `mplus` extract p, stack)
-holds for all |p| in the domain of the function |simulate|.
+~
+% <    runState (runSTND p) (q, stack) = runState (runSTND popND) (q `mplus` extract p, stack)
+<    runState (hState' p) (S q stack) = runState (hState' popS) (S (q ++ extractS (hState' p)) stack)
+holds for all |p| in the domain of the function |nondet2stateS|.
 \end{theorem}
 We call this property the pop-extract property.
 The key element to have this property is to 
-only utilize a subset of terms with type |STND m a|, namely those
-that are generated by the fold of the |simulate| function,
+only utilize a subset of terms with type |Comp (S a) ()|, namely those
+that are generated by the fold of the |nondet2stateS| function,
 so for which this property is true.
 Indeed, we only generate such terms.
 To prove this, we need to show that 
-(1) the generator of |simulate| only generates programs of this subset;
+(1) the generator of |nondet2stateS| only generates programs of this subset;
 and (2) the algebra preserves this property.
 
-% \begin{theorem}[pop-extract part 1]
 \begin{proof} ~
 First, we use equational reasoning to prove the first item:
-<   runState (runSTND (gen x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (gen x), stack)
-% \end{theorem}
-% \begin{proof}
-<    runState (runSTND (gen x)) (q, stack)
+% <   runState (runSTND (gen x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (gen x), stack)
+<    runState (hState' (gen x)) (S q stack) = runState (hState' popS) (S (q ++ extractS (hState' (gen x))) stack)
+
+<    runState (hState' (gen x)) (S q stack)
 < = {-~  definition of |gen|  -}
-<    runState (runSTND (appendND x popND)) (q, stack)
-< = {-~  evaluation of |appendND|  -}
-<    runState (runSTND popND) (q `mplus` return x, stack)
+<    runState (hState' (appendS x popS)) (S q stack)
+< = {-~  evaluation of |appendS|  -}
+\wenhao{Add more steps?}
+<    runState (hState' popS) (S (q ++ [x]) stack)
+< = {-~  definition of |return|  -}
+<    runState (hState' popS) (S (q ++ return x) stack)
 < = {-~  property extract-gen (\ref{eq:extract-gen})  -}
-<    runState (runSTND popND) (q `mplus` extract (gen x), stack)
-% \end{proof}
+<    runState (hState' popS) (S (q ++ extractS (hState' (gen x))) stack)
 
-% \begin{theorem}[pop-extract part 2]
-% \,
+% <    runState (runSTND (gen x)) (q, stack)
+% < = {-~  definition of |gen|  -}
+% <    runState (runSTND (appendND x popND)) (q, stack)
+% < = {-~  evaluation of |appendND|  -}
+% <    runState (runSTND popND) (q `mplus` return x, stack)
+% < = {-~  property extract-gen (\ref{eq:extract-gen})  -}
+% <    runState (runSTND popND) (q `mplus` extract (gen x), stack)
+
 Then, we use equational reasoning with case analysis and structural induction on |x| to prove the second item:
-<     runState (runSTND (alg x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (alg x), stack)
-% \end{theorem}
-% \begin{proof}
+% <     runState (runSTND (alg x)) (q, stack) = runState (runSTND popND) (q `mplus` extract (alg x), stack)
+<    runState (hState' (alg x)) (S q stack) = runState (hState' popS) (S (q ++ extractS (hState' (alg x))) stack)
 
-% \fbox{|Fail|}
 \noindent
 \mbox{\underline{case |Fail|}}
 
-<    runState (runSTND (alg Fail)) (q, stack)
+<    runState (hState' (alg Fail)) (S q stack)
 < = {-~  definition of |alg|  -}
-<    runState (runSTND popND) (q, stack)
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
-<    runState (runSTND popND) (q `mplus` mzero, stack)
+<    runState (hState' (popS)) (S q stack)
+< = {-~  definition of |[]|  -}
+<    runState (hState' popS) (S (q ++ []) stack)
 < = {-~  property extract-alg-1 (\ref{eq:extract-alg-1})  -}
-<    runState (runSTND popND) (q `mplus` extract (alg Fail), stack)
+<    runState (hState' popS) (S (q ++ extractS (hState' (alg Fail))) stack)
 
 % \fbox{|Or p1 p2|}
 \noindent
@@ -165,19 +204,29 @@ Then, we use equational reasoning with case analysis and structural induction on
 
 Assume that |p1| and |p2| satisfy this theorem.
 
-<    runState (runSTND (alg (Or p1 p2))) (q, stack)
+<    runState (hState' (alg (Or p1 p2))) (S q stack)
 < = {-~  definition of |alg|  -}
-<    runState (runSTND (push p2 p1)) (q, stack)
-< = {-~  evaluation of |push p2 p1|  -}
-<    runState (runSTND p1) (q, p2:stack)
+<    runState (hState' (pushS p2 p1)) (S q stack)
+< = {-~  evaluation of |pushS p2 p1|  -}
+\wenhao{Add more steps?}
+<    runState (hState' p1) (S q (p2:stack))
 < = {-~  induction: property pop-extract of |p1|  -}
-<    runState (runSTND popND) (q `mplus` extract p1, p2:stack)
-< = {-~  evaluation of |popND|  -}
-<    runState (runSTND p2) (q `mplus` extract p1, stack)
+<    runState (hState' popS) (S (q ++ extractS (hState' p1)) (p2:stack))
+< = {-~  evaluation of |popS|  -}
+\wenhao{Add more steps?}
+<    runState (hState' p2) (S (q ++ extractS (hState' p1)) stack)
 < = {-~  induction: property pop-extract of |p2|  -}
-<    runState (runSTND popND) (q `mplus` extract p1 `mplus` extract p2, stack)
+<    runState (hState' popS) (S (q ++ extractS (hState' p1) ++ extractS (hState' p2)) stack)
 < = {-~  property extract-alg-2 (\ref{eq:extract-alg-2})  -}
-<    runState (runSTND popND) (q `mplus` extract (alg (Or p1 p2)), stack)
+<    runState (hState' popS) (S (q ++ hState' (alg (Or p1 p2))) stack)
+
+% < = {-~  evaluation of |popND|  -}
+% <    runState (runSTND p2) (q `mplus` extract p1, stack)
+% < = {-~  induction: property pop-extract of |p2|  -}
+% <    runState (runSTND popND) (q `mplus` extract p1 `mplus` extract p2, stack)
+% < = {-~  property extract-alg-2 (\ref{eq:extract-alg-2})  -}
+% <    runState (runSTND popND) (q `mplus` extract (alg (Or p1 p2)), stack)
+
 Note that the above two proofs of theorems \ref{eq:runnd-hnd} and \ref{eq:pop-extract} are mutually recursive. However, only the 
 second proof uses induction. As we work inductively on (smaller) subterms,
 the proofs do work out. 

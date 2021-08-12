@@ -188,7 +188,7 @@ nondet2stateS = fold gen alg
 To extract the final result from the |S| wrapper, we define the |extractS| function.
 \begin{code}
 extractS :: State (S a) () -> [a]
-extractS x = results <$> snd $ runState x (S [] [])
+extractS x = results . snd $ runState x (S [] [])
 \end{code}
 This way, |runND| is a trivial extension of 
 the simulate function. It transforms
@@ -198,6 +198,17 @@ nondeterminism monad.
 runND :: Free NondetF a -> [a]
 runND = extractS . hState' . nondet2stateS
 \end{code}
+
+%if False
+% test code for proof
+\begin{code}
+tmp1 :: Comp (S a) () -> [a] -> [Comp (S a) ()] -> ((), S a)
+tmp1 p q stack = runState (hState' p) (S q stack)
+
+tmp2 :: Comp (S a) () -> [a] -> [Comp (S a) ()] -> ((), S a)
+tmp2 p q stack = runState (hState' popS) (S (q ++ extractS (hState' p)) stack)
+\end{code}
+%endif
 
 To prove this simulation correct, we show that the
 |runND| function is equivalent to the nondeterminism handler |hND| defined in Section \ref{sec:combining-effects}.
