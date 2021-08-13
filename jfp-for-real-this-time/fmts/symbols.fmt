@@ -147,6 +147,11 @@
 %format extractState = "\Varid{extract_{State}}"
 
 %format FreeS = "\Varid{Free_{S}}"
+%format VarS = "\Varid{Var_{S}}"
+%format OpS = "\Varid{Op_{S}}"
+%format ScopeS = "\Varid{Scope_{S}}"
+%format opS = "\Varid{op_{S}}"
+%format scopeS = "\Varid{scope_{S}}"
 %format foldS = "\Varid{fold_{S}}"
 %format algSC = "\Varid{alg_{SC}}"
 %format fwdSC = "\Varid{fwd_{SC}}"
@@ -160,4 +165,15 @@
 %format alpha = "\alpha"
 %format alpha1
 %format alpha2
+
+%format CompCut = "\Varid{Comp_{Cut}}"
+%format resultsCut = "\Varid{results_{Cut}}"
+%format stackCut = "\Varid{stack_{Cut}}"
+
+
+
+
+
+
+
 
