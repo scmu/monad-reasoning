@@ -310,7 +310,8 @@ Then we use the equational reasoning.
 < = {-~  definition of |(>>=)|  -}
 <    runState (hState' (Op (Get (\ (S xs stack) -> putS (S xs (q : stack)) >> p)))) (S xs stack)
 < = {-~  definition of |hState'|  -}
-<    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s)) (S xs stack)
+<    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s))
+<      (S xs stack)
 < = {-~  definition of |runState|  -}
 <    (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s) (S xs stack)
 < = {-~  function application  -}
@@ -456,7 +457,8 @@ is called \emph{extract-alg-2'}\label{eq:extract-alg-2-f}.
 < = {-~  definition of |hState|  -}
 <    extractSS (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y))
 < = {-~  definition of |extractSS|  -}
-<    resultsSS . snd <$> runStateT (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y)) (SS [] [])
+<    resultsSS . snd <$> runStateT (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y))
+<      (SS [] [])
 < = {-~  definition of |runStateT|  -}
 <    resultsSS . snd <$> (\s -> Op $ fmap (\k -> runStateT k s) (fmap hState y)) (SS [] [])
 < = {-~  function application  -}
@@ -571,7 +573,8 @@ We also have the following lemmas used in the above proof, which are also simila
 < = {-~  definition of |do|  -}
 <    runStateT (hState (getSS >>= \ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p)) (SS xs stack)
 < = {-~  definition of |getSS|  -}
-<    runStateT (hState (Op (Inl (Get return)) >>= \ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p)) (SS xs stack)
+<    runStateT (hState (Op (Inl (Get return)) >>= \ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p))
+<      (SS xs stack)
 < = {-~  definition of |(>>=)|  -}
 <    runStateT (hState (Op (Inl (Get (\ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p))))) (SS xs stack)
 < = {-~  definition of |hState|  -}
