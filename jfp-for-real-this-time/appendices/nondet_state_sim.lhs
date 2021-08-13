@@ -109,7 +109,7 @@ In this proof we have used the property pop-extract, which states the following:
 ~
 % <    runState (runSTND p) (q, stack) = runState (runSTND popND) (q `mplus` extract p, stack)
 <    runState (hState' p) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' p)) stack)
-holds for all |p| in the domain of the function |nondet2stateS|.
+holds for all |p| in the range of the function |nondet2stateS|.
 \end{theorem}
 We call this property the pop-extract property.
 The key element to have this property is to 
@@ -123,7 +123,6 @@ and (2) the algebra preserves this property.
 
 \begin{proof} ~
 First, we use equational reasoning to prove the first item:
-% <   runState (runSTND (gen x)) (q, stack) = runState (runSTND popND) (xs `mplus` extract (gen x), stack)
 <    runState (hState' (gen x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)
 
 <    runState (hState' (gen x)) (S xs stack)
@@ -136,20 +135,10 @@ First, we use equational reasoning to prove the first item:
 < = {-~  property extract-gen (\ref{eq:extract-gen})  -}
 <    runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)
 
-% <    runState (runSTND (gen x)) (q, stack)
-% < = {-~  definition of |gen|  -}
-% <    runState (runSTND (appendND x popND)) (q, stack)
-% < = {-~  evaluation of |appendND|  -}
-% <    runState (runSTND popND) (xs `mplus` return x, stack)
-% < = {-~  property extract-gen (\ref{eq:extract-gen})  -}
-% <    runState (runSTND popND) (xs `mplus` extract (gen x), stack)
-
 Then, we use equational reasoning with case analysis and structural induction on |x| to prove the second item:
-% <     runState (runSTND (alg x)) (q, stack) = runState (runSTND popND) (xs `mplus` extract (alg x), stack)
 <    runState (hState' (alg x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (alg x))) stack)
 
-\noindent
-\mbox{\underline{case |Fail|}}
+\noindent \mbox{\underline{case |Fail|}}
 
 <    runState (hState' (alg Fail)) (S xs stack)
 < = {-~  definition of |alg|  -}
@@ -159,9 +148,7 @@ Then, we use equational reasoning with case analysis and structural induction on
 < = {-~  property extract-alg-1 (\ref{eq:extract-alg-1})  -}
 <    runState (hState' popS) (S (xs ++ extractS (hState' (alg Fail))) stack)
 
-% \fbox{|Or p1 p2|}
-\noindent
-\mbox{\underline{case |Or p1 p2|}}
+\noindent \mbox{\underline{case |Or p1 p2|}}
 
 Assume that |p1| and |p2| satisfy this theorem.
 
@@ -224,7 +211,7 @@ We also have the following lemmas used in the above proof:
 < runState (hState' popS) (S xs []) = ((), S xs [])
 \end{lemma}
 \begin{proof}
-To prove this lemma, we restate the definition of |popS| using the definition of |do|:
+To prove this lemma, we rewrite the definition of |popS| using the definition of |do|:
 < popS =  (getS >>= \ (S xs stack) ->
 <           case stack of  []       -> return ()
 <                          op : ps  -> do putS (S xs ps); op)
@@ -260,7 +247,7 @@ Then we use the equational reasoning.
 <    runState (hState' (return ())) (S xs [])
 < = {-~  definition of |hState'|  -}
 <    runState (State (\s -> ((), s))) (S xs [])
-< = {-~  definition of |runState|  -}
+< = {-~  definition of |runState|, function application  -}
 <    ((), S xs [])
 \end{proof}
 
@@ -314,7 +301,7 @@ Then we use the equational reasoning.
 \end{lemma}
 \begin{proof}~
 <    runState (hState' (pushS q p)) (S xs stack)
-< = {-~  function application  -}
+< = {-~  definition of |pushS|  -}
 <    runState (hState' (do S xs stack <- getS; putS (S xs (q : stack)); p)) (S xs stack)
 < = {-~  definition of |do|  -}
 <    runState (hState' (getS >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
@@ -352,7 +339,7 @@ Section \ref{sec:combining-the-simulation-with-other-effects}
 is equivalent to the nondeterminism handler |hNDf| in Section \ref{sec:combining-effects}.
 
 
-\begin{theorem}
+\begin{theorem}\label{eq:runndf-hndf}
 |runNDf = hNDf|
 \end{theorem}
 \begin{proof}
@@ -390,7 +377,7 @@ For all input |x|, we need to prove that |extractSS (hState (gen x)) = genNDf x|
 < = {-~  definition of |genND|  -}
 <    genNDf x
 
-The property that |extractSS . hState . gen = Var . return| is called \emph{extract-gen'}\label{eq:extract-gen'}.
+The property that |extractSS . hState . gen = Var . return| is called \emph{extract-gen'}\label{eq:extract-gen-f}.
 
 For the second item that we have to prove, we do a case analysis.
 
@@ -416,7 +403,7 @@ For the second item that we have to prove, we do a case analysis.
 < = {-~  definition of |(#)|  -}
 <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl Fail)
 
-The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extract-alg-1'}\label{eq:extract-alg-1'}.
+The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extract-alg-1'}\label{eq:extract-alg-1-f}.
 
 \noindent \mbox{\underline{case |Inl (Or p q)|}}
 
@@ -436,9 +423,11 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 < = {-~  Lemma \ref{eq:eval-pop2-f}  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState q) (SS p' []) }
 < = {-~  property pop-extract (\ref{eq:pop-extract-f}) for |p|  -}
-<    resultsSS . snd <$> do { p' <- extractSS (hState p); do { q' <- extractSS (hState q); runStateT (hState popSS) (SS (p'++q') []) } }
+<    resultsSS . snd <$> do { p' <- extractSS (hState p);
+<      do { q' <- extractSS (hState q); runStateT (hState popSS) (SS (p'++q') []) } }
 < = {-~  property of |do|  -}
-<    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q); runStateT (hState popSS) (SS (p'++q') []) }
+<    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q);
+<      runStateT (hState popSS) (SS (p'++q') []) }
 < = {-~  Lemma \ref{eq:eval-pop1-f}  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q); return ((), SS (p'++q') []) }
 < = {-~  evaluation of |resultsSS, snd|  -}
@@ -454,8 +443,8 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 < = {-~  definition of |(#)|  -}
 <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl (Or p q))
 
-The property that |extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
-is called \emph{extract-alg-2}\label{eq:extract-alg-2}.
+The property that |extractSS (hState (alg (Or p q))) = liftA2 (++) (extractSS (hState p)) (extractSS (hState q))|
+is called \emph{extract-alg-2'}\label{eq:extract-alg-2-f}.
 
 \noindent \mbox{\underline{case |Inr y|}}
 
@@ -490,170 +479,245 @@ is called \emph{extract-alg-2}\label{eq:extract-alg-2}.
 In this proof we have also used the pop-extract property of |SS|, which is similar to the pop-extract of |S| (Theorem \ref{eq:pop-extract}).
 \begin{theorem}[pop-extract of |SS|]\label{eq:pop-extract-f}
 ~
-<    runStateT (runSTNDf p) (q, stack) = runStateT (runSTNDf popNDf) (q `mplus` extract' p, stack)
-
 <    runStateT (hState p) (SS xs stack)
 < =  do { p' <- extractSS (hState p); runStateT (hState popSS) (SS (xs++p') stack) }
-holds for all |p| in the domain of the function |nondet2state|.
+holds for all |p| in the range of the function |nondet2state|.
 \end{theorem}
 
+As before, the key element to have this property is to 
+only utilize a subset of terms with type |CompSS (S a) f ()|, namely those
+that are generated by the fold of the |nondet2state| function,
+so for which this property is true.
+Indeed, we only generate such terms.
+To prove this, we need to show that 
+(1) the generator of |nondet2state| only generates programs of this subset;
+and (2) the algebra preserves this property.
 
-We also have the following lemmas used in the above proof:
+\begin{proof} ~
+First, we use equational reasoning to prove the first item:
+<    runStateT (hState (gen x)) (SS xs stack)
+< =  do { p' <- extractSS (hState (gen x)); runStateT (hState popSS) (SS (xs++p') stack) }
+
+<    runStateT (hState (gen x)) (SS xs stack)
+< = {-~  definition of |gen|  -}
+<    runStateT (hState (appendSS x popSS)) (SS xs stack)
+< = {-~  Lemma \ref{eq:eval-append-f}  -}
+<    runStateT (hState popSS) (SS (xs ++ [x]) stack)
+< = {-~  definition of |return|  -}
+<    runStateT (hState popSS) (SS (xs ++ return x) stack)
+< = {-~  definition of |do| and |Var|  -}
+<    do {p' <- Var (return x); runStateT (hState popSS) (SS (xs ++ p') stack) }
+< = {-~  property extract-gen' (\ref{eq:extract-gen-f})  -}
+<    do {p' <- extractSS (hState (gen x)); runStateT (hState popSS) (SS (xs ++ p') stack) }
+
+Then, we use equational reasoning with case analysis and structural induction on |x| to prove the second item:
+<    runStateT (hState (alg x)) (SS xs stack)
+< =  do { p' <- extractSS (hState (alg x)); runStateT (hState popSS) (SS (xs++p') stack) }
+
+\noindent \mbox{\underline{case |Fail|}}
+
+<    runStateT (hState (alg Fail)) (SS xs stack)
+< = {-~  definition of |alg|  -}
+<    runStateT (hState popSS) (SS xs stack)
+< = {-~  definition of |[]|  -}
+<    runStateT (hState popSS) (SS (xs ++ []) stack)
+< = {-~  definition of |do| and |Var|  -}
+<    do {p' <- Var []; runStateT (hState popSS) (SS (xs ++ p') stack) }
+< = {-~  property extract-alg-1' (\ref{eq:extract-alg-1-f})  -}
+<    do {p' <- extractSS (hState (alg Fail)); runStateT (hState popSS) (SS (xs ++ p') stack) }
+
+\noindent \mbox{\underline{case |Or p1 p2|}}
+
+Assume that |p1| and |p2| satisfy this theorem.
+
+<    runStateT (hState (alg (Or p1 p2))) (SS xs stack)
+< = {-~  definition of |alg|  -}
+<    runStateT (hState (pushSS p2 p1)) (SS xs stack)
+< = {-~  Lemma \ref{eq:eval-push-f}  -}
+<    runStateT (hState p1) (SS xs (p2:stack))
+< = {-~  induction: property pop-extract of |p1|  -}
+<    do { p1' <- extractSS (hState p1); runStateT (hState popSS) (SS (xs++p1') (p2:stack)) }
+< = {-~  Lemma \ref{eq:eval-pop2-f}  -}
+<    do { p1' <- extractSS (hState p1); runStateT (hState p2) (SS (xs++p1') stack) }
+< = {-~  induction: property pop-extract of |p2|  -}
+<    do { p2' <- extractSS (hState p2); do { p1' <- extractSS (hState p1);
+<      runStateT (hState popSS) (SS (xs++p1'++p2') stack) } }
+< = {-~  property of |do|  -}
+<    do { p2' <- extractSS (hState p2); p1' <- extractSS (hState p1);
+<      runStateT (hState popSS) (SS (xs++p1'++p2') stack) }
+< = {-~  definition of |let|  -}
+<    do { p2' <- extractSS (hState p2); p1' <- extractSS (hState p1);
+<      let p' = (p1' ++ p2') in runStateT (hState popSS) (SS (xs++p') stack) }
+< = {-~  definition of |liftA2|  -}
+<    do { p' <- liftA2 (++) (extractSS (hState p2)) (extractSS (hState p1));
+<      runStateT (hState popSS) (SS (xs++p') stack) }
+< = {-~  property extract-alg-2' (\ref{eq:extract-alg-2-f})  -}
+<    do { p' <- extractSS (hState (alg (Or p1 p2))); runStateT (hState popSS) (SS (xs++p') stack) }
+
+Note that the above two proofs of theorems \ref{eq:runndf-hndf} and \ref{eq:pop-extract-f} are mutually recursive. However, only the 
+second proof uses induction. As we work inductively on (smaller) subterms,
+the proofs do work out. 
+\end{proof}
+
+We also have the following lemmas used in the above proof, which are also similar to the lemmas used in the proof of Theorem \ref{eq:runnd-hnd}.
 
 \begin{lemma}[evaluation-append']\label{eq:eval-append-f}~
 < runStateT (hState (appendSS x p)) (SS xs stack) = runStateT (hState p) (SS (xs ++ [x]) stack)
 \end{lemma}
-% \begin{proof}~
-% <    runState (hState' (appendS x p)) (S xs stack)
-% < = {-~  definition of |appendS|  -}
-% <    runState (hState' (do S xs stack <- getS; putS (S (xs ++ [x]) stack); p)) (S xs stack)
-% < = {-~  definition of |do|  -}
-% <    runState (hState' (getS >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
-% < = {-~  definition of |getS|  -}
-% <    runState (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
-% < = {-~  definition of |(>>=)|  -}
-% <    runState (hState' (Op (Get (\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p)))) (S xs stack)
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) s)) s))
-% <      (S xs stack)
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) s)) s) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' ((\ (S xs stack) -> putS (S (xs ++ [x]) stack) >> p) (S xs stack))) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' (putS (S (xs ++ [x]) stack) >> p)) (S xs stack)
-% < = {-~  definition of |putS|  -}
-% <    runState (hState' (Op (Put (S (xs ++ [x]) stack) (return ())) >> p)) (S xs stack)
-% < = {-~  definition of |(>>)|  -}
-% <    runState (hState' (Op (Put (S (xs ++ [x]) stack) p))) (S xs stack)
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' p) (S (xs ++ [x]) stack))) (S xs stack)
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' p) (S (xs ++ [x]) stack)) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' p) (S (xs ++ [x]) stack)
-% \end{proof}
+\begin{proof}~
+<    runStateT (hState (appendSS x p)) (SS xs stack)
+< = {-~  definition of |appendSS|  -}
+<    runStateT (hState (do SS xs stack <- getSS; putSS (SS (xs ++ [x]) stack); p)) (SS xs stack)
+< = {-~  definition of |do|  -}
+<    runStateT (hState (getSS >>= \ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p)) (SS xs stack)
+< = {-~  definition of |getSS|  -}
+<    runStateT (hState (Op (Inl (Get return)) >>= \ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p)) (SS xs stack)
+< = {-~  definition of |(>>=)|  -}
+<    runStateT (hState (Op (Inl (Get (\ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p))))) (SS xs stack)
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState ((\ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p) s)) s))
+<      (SS xs stack)
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState ((\ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p) s)) s) (SS xs stack)
+< = {-~  function application  -}
+<    runStateT (hState ((\ (SS xs stack) -> putSS (SS (xs ++ [x]) stack) >> p) (SS xs stack))) (SS xs stack)
+< = {-~  function application  -}
+<    runStateT (hState (putSS (SS (xs ++ [x]) stack) >> p)) (SS xs stack)
+< = {-~  definition of |putSS|  -}
+<    runStateT (hState (Op (Inl (Put (SS (xs ++ [x]) stack) (return ()))) >> p)) (SS xs stack)
+< = {-~  definition of |(>>)|  -}
+<    runStateT (hState (Op (Inl (Put (SS (xs ++ [x]) stack) p)))) (SS xs stack)
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState p) (SS (xs ++ [x]) stack))) (SS xs stack)
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState p) (SS (xs ++ [x]) stack)) (SS xs stack)
+< = {-~  function application  -}
+<    runStateT (hState p) (SS (xs ++ [x]) stack)
+\end{proof}
 
 \begin{lemma}[evaluation-pop1']\label{eq:eval-pop1-f}~
 < runStateT (hState popSS) (SS xs []) = return ((), SS xs [])
 \end{lemma}
-% \begin{proof}
-% To prove this lemma, we restate the definition of |popS| using the definition of |do|:
-% < popS =  (getS >>= \ (S xs stack) ->
-% <           case stack of  []       -> return ()
-% <                          op : ps  -> do putS (S xs ps); op)
+\begin{proof}
+To prove this lemma, we rewrite the definition of |popS| using the definition of |do|:
+< popSS =  (getSS >>= \ (SS xs stack) ->
+<           case stack of  []       -> return ()
+<                          op : ps  -> do putSS (SS xs ps); op)
 
-% Then we use the equational reasoning.
+Then we use the equational reasoning.
 
-% <    runState (hState' popS) (S xs [])
-% < = {-~  definition of |popS|  -}
-% <    runState (hState' (getS >>= \ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op)) (S xs [])
-% < = {-~  definition of |getS|  -}
-% <    runState (hState' (Op (Get return) >>= \ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op)) (S xs [])
-% < = {-~  definition of |(>>=)|  -}
-% <    runState (hState' (Op (Get (\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op)))) (S xs [])
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' ((\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op) s)) s)) (S xs [])
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' ((\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op) s)) s) (S xs [])
-% < = {-~  function application  -}
-% <    runState (hState' ((\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op) (S xs []))) (S xs [])
-% < = {-~  function application, definition of |case|  -}
-% <    runState (hState' (return ())) (S xs [])
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> ((), s))) (S xs [])
-% < = {-~  definition of |runState|  -}
-% <    ((), S xs [])
-% \end{proof}
+<    runStateT (hState popSS) (SS xs [])
+< = {-~  definition of |popSS|  -}
+<    runStateT (hState (getSS >>= \ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op)) (SS xs [])
+< = {-~  definition of |getSS|  -}
+<    runStateT (hState (Op (Inl (Get return)) >>= \ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op)) (SS xs [])
+< = {-~  definition of |(>>=)|  -}
+<    runStateT (hState (Op (Inl (Get (\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op))))) (SS xs [])
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState ((\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op) s)) s)) (SS xs [])
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState ((\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op) s)) s) (SS xs [])
+< = {-~  function application  -}
+<    runStateT (hState ((\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op) (SS xs []))) (SS xs [])
+< = {-~  function application, definition of |case|  -}
+<    runStateT (hState (return ())) (SS xs [])
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> return ((), s))) (SS xs [])
+< = {-~  definition of |runStateT|  -}
+<    (\s -> return ((), s)) (SS xs [])
+< = {-~  function application  -}
+<    ((), SS xs [])
+\end{proof}
 
-\begin{lemma}[evaluation-pop2]\label{eq:eval-pop2}~
+\begin{lemma}[evaluation-pop2']\label{eq:eval-pop2-f}~
 < runStateT (hState popSS) (SS xs (q:stack)) = runStateT (hState q) (SS xs stack)
 \end{lemma}
-% \begin{proof}~
-% <    runState (hState' popS) (S xs (q:stack))
-% < = {-~  definition of |popS|  -}
-% <    runState (hState' (getS >>= \ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op)) (S xs (q:stack))
-% < = {-~  definition of |getS|  -}
-% <    runState (hState' (Op (Get return) >>= \ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op)) (S xs (q:stack))
-% < = {-~  definition of |(>>=)|  -}
-% <    runState (hState' (Op (Get (\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op)))) (S xs (q:stack))
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' ((\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op) s)) s)) (S xs (q:stack))
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' ((\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op) s)) s) (S xs (q:stack))
-% < = {-~  function application  -}
-% <    runState (hState' ((\ (S xs stack) ->
-% <      case stack of  []       -> return ()
-% <                     op : ps  -> do putS (S xs ps); op) (S xs (q:stack)))) (S xs (q:stack))
-% < = {-~  function application, definition of |case|  -}
-% <    runState (hState' (do putS (S xs stack); q)) (S xs (q:stack))
-% < = {-~  definition of |do|  -}
-% <    runState (hState' (putS (S xs stack) >> q)) (S xs (q:stack))
-% < = {-~  definition of |putS|  -}
-% <    runState (hState' (Op (Put (S xs stack) (return ())) >> q)) (S xs (q:stack))
-% < = {-~  definition of |(>>)|  -}
-% <    runState (hState' (Op (Put (S xs stack) q))) (S xs (q:stack))
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' q) (S xs stack))) (S xs (q:stack))
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' q) (S xs stack)) (S xs (q:stack))
-% < = {-~  function application  -}
-% <    runState (hState' q) (S xs stack)
-% \end{proof}
+\begin{proof}~
+<    runStateT (hState popSS) (SS xs (q:stack))
+< = {-~  definition of |popSS|  -}
+<    runStateT (hState (getSS >>= \ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op)) (SS xs (q:stack))
+< = {-~  definition of |getSS|  -}
+<    runStateT (hState (Op (Inl (Get return)) >>= \ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op)) (SS xs (q:stack))
+< = {-~  definition of |(>>=)|  -}
+<    runStateT (hState (Op (Inl (Get (\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op))))) (SS xs (q:stack))
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState ((\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op) s)) s)) (SS xs (q:stack))
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState ((\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op) s)) s) (SS xs (q:stack))
+< = {-~  function application  -}
+<    runStateT (hState ((\ (SS xs stack) ->
+<      case stack of  []       -> return ()
+<                     op : ps  -> do putSS (SS xs ps); op) (SS xs (q:stack)))) (SS xs (q:stack))
+< = {-~  function application, definition of |case|  -}
+<    runStateT (hState (do putSS (SS xs stack); q)) (SS xs (q:stack))
+< = {-~  definition of |do|  -}
+<    runStateT (hState (putSS (SS xs stack) >> q)) (SS xs (q:stack))
+< = {-~  definition of |putSS|  -}
+<    runStateT (hState (Op (Inl (Put (SS xs stack) (return ()))) >> q)) (SS xs (q:stack))
+< = {-~  definition of |(>>)|  -}
+<    runStateT (hState (Op (Inl (Put (SS xs stack) q)))) (SS xs (q:stack))
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState q) (SS xs stack))) (SS xs (q:stack))
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState q) (SS xs stack)) (SS xs (q:stack))
+< = {-~  function application  -}
+<    runStateT (hState q) (SS xs stack)
+\end{proof}
 
-\begin{lemma}[evaluation-push]\label{eq:eval-push}~
+\begin{lemma}[evaluation-push']\label{eq:eval-push-f}~
 < runStateT (hState (pushSS q p)) (SS xs stack) = runStateT (hState p) (SS xs (q:stack))
 \end{lemma}
-% \begin{proof}~
-% <    runState (hState' (pushS q p)) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' (do S xs stack <- getS; putS (S xs (q : stack)); p)) (S xs stack)
-% < = {-~  definition of |do|  -}
-% <    runState (hState' (getS >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
-% < = {-~  definition of |getS|  -}
-% <    runState (hState' (Op (Get return) >>= \ (S xs stack) -> putS (S xs (q : stack)) >> p)) (S xs stack)
-% < = {-~  definition of |(>>=)|  -}
-% <    runState (hState' (Op (Get (\ (S xs stack) -> putS (S xs (q : stack)) >> p)))) (S xs stack)
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s)) (S xs stack)
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) s)) s) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' ((\ (S xs stack) -> putS (S xs (q : stack)) >> p) (S xs stack))) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' (putS (S xs (q : stack)) >> p)) (S xs stack)
-% < = {-~  definition of |putS|  -}
-% <    runState (hState' (Op (Put (S xs (q : stack)) (return ())) >> p)) (S xs stack)
-% < = {-~  definition of |(>>)|  -}
-% <    runState (hState' (Op (Put (S xs (q : stack)) p))) (S xs stack)
-% < = {-~  definition of |hState'|  -}
-% <    runState (State (\s -> runState (hState' p) (S xs (q : stack)))) (S xs stack)
-% < = {-~  definition of |runState|  -}
-% <    (\s -> runState (hState' p) (S xs (q : stack))) (S xs stack)
-% < = {-~  function application  -}
-% <    runState (hState' p) (S xs (q : stack))
+\begin{proof}~
+<    runStateT (hState (pushSS q p)) (SS xs stack)
+< = {-~  definition of |pushSS|  -}
+<    runStateT (hState (do SS xs stack <- getS; putSS (SS xs (q : stack)); p)) (SS xs stack)
+< = {-~  definition of |do|  -}
+<    runStateT (hState (getSS >>= \ (SS xs stack) -> putSS (SS xs (q : stack)) >> p)) (SS xs stack)
+< = {-~  definition of |getSS|  -}
+<    runStateT (hState (Op (Inl (Get return)) >>= \ (SS xs stack) -> putSS (SS xs (q : stack)) >> p)) (SS xs stack)
+< = {-~  definition of |(>>=)|  -}
+<    runStateT (hState (Op (Inl (Get (\ (SS xs stack) -> putSS (SS xs (q : stack)) >> p))))) (SS xs stack)
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState ((\ (SS xs stack) -> putSS (SS xs (q : stack)) >> p) s)) s))
+<      (SS xs stack)
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState ((\ (SS xs stack) -> putSS (SS xs (q : stack)) >> p) s)) s) (SS xs stack)
+< = {-~  function application  -}
+<    runStateT (hState ((\ (SS xs stack) -> putSS (SS xs (q : stack)) >> p) (SS xs stack))) (SS xs stack)
+< = {-~  function application  -}
+<    runStateT (hState (putSS (SS xs (q : stack)) >> p)) (SS xs stack)
+< = {-~  definition of |putSS|  -}
+<    runStateT (hState (Op (Inl (Put (SS xs (q : stack)) (return ()))) >> p)) (SS xs stack)
+< = {-~  definition of |(>>)|  -}
+<    runStateT (hState (Op (Inl (Put (SS xs (q : stack)) p)))) (SS xs stack)
+< = {-~  definition of |hState|  -}
+<    runStateT (StateT (\s -> runStateT (hState p) (SS xs (q : stack)))) (SS xs stack)
+< = {-~  definition of |runStateT|  -}
+<    (\s -> runStateT (hState p) (SS xs (q : stack))) (SS xs stack)
+< = {-~  function application  -}
+<    runStateT (hState p) (SS xs (q : stack))
 
-% \end{proof}
+\end{proof}
 

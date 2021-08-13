@@ -255,24 +255,6 @@ nondet2state = fold gen (alg # fwd)
     fwd y         = Op (Inr y)
 \end{code}
 
-
-%if False
-% test code for proof
-\begin{code}
-tt y = let qq = extractSS (StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap hState y))
-   in hState (Op (Inr y))
-
-tmp1 :: Functor f
-     => CompSS (SS f a) f ()
-     -> [a]
-     -> [CompSS (SS f a) f ()]
-     -> Free f ((), SS f a)
-tmp1 p xs stack = runStateT (hState p) (SS xs stack)
-tmp2 p xs stack = do { p' <- extractSS (hState p); runStateT (hState popSS) (SS (xs++p') stack) }
-\end{code}
-%endif
-
-
 The helper functions |popSS|, |pushSS| and |appendSS| 
 (Figure \ref{fig:pop-push-append-SS}) are very similar to the
 previous definitions, but adapted to the new state-wrapper type.
