@@ -164,17 +164,17 @@ Combining these simulations, we can encode the semantics for nondeterminism and 
 just the state monad. 
 We get to the following simulation:
 \begin{code}
-simulate  :: (Functor f, MNondet m) 
+simulate  :: Functor f 
           => Free (StateF s :+: NondetF :+: f) a 
-          -> StateT (SS m a (StateF s :+: f), s) (Free f) ()
+          -> StateT (SS (StateF s :+: f) a, s) (Free f) ()
 simulate  = hState . states2state . nondet2state . comm2 . local2global
 \end{code}
 Furthermore, we can define an |extract| function to extract the final result.
 \begin{code}
 extract :: (Functor f)
-         => StateT (SS ([]) a (StateF s :+: f), s) (Free f) ()
+         => StateT (SS (StateF s :+: f) a, s) (Free f) ()
          -> (s -> Free f [a])
-extract x s = fst . unSS . fst . snd <$> runStateT x (SS (mzero, []), s)
+extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
 \end{code}
 %if False
 \begin{code}

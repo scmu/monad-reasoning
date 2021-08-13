@@ -9,6 +9,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+module Cut where
+
 import Background
 
 import Control.Monad (ap, join, liftM, when)
@@ -20,6 +22,8 @@ import Debug.Trace
 \end{code}
 %endif
 
+\section{Extension: Simulating Cut Semantics with State}
+
 Prolog interpreters implement more complex control-flow constructs.
 The |cut| operator, 
 known from Prolog as a goal that always succeeds and never backtracks, 
@@ -28,7 +32,8 @@ or to enforce its correct behaviour.
 This section explains how syntax and semantics of the |cut| operator can be simulated
 with state.
 
-\subsubsection{Representing Cut and Backtracking}
+%-------------------------------------------------------------------------------
+\subsection{Representing Cut and Backtracking}
 
 List monads and backtracking are unseparable in functional programming.
 Therefore, it is natural to encode the representation of backtracking with cut as
@@ -153,7 +158,8 @@ append   (CutList (Ret xs))   ys  = CutList $ fmap ((++) xs) $ unCutList ys
 append   (CutList (Flag xs))  _   = CutList (Flag xs)
 \end{code}
 
-\subsubsection{Encoding Cut as a Free Monad}
+%-------------------------------------------------------------------------------
+\subsection{Encoding Cut as a Free Monad}
 
 To separate syntax and semantics of the cut representation, we use free monads.
 Similar to the functors |StateF|, |NondetF| or |StackF| of the previous sections, 
@@ -264,7 +270,8 @@ hCut = foldS gen (Alg (algNDCut # Call) (algSC # fwdSC))
     fwdSC                    = Enter . fmap (fmap (fmap join . sequenceA) . hCut)
 \end{code}
 
-\subsubsection{Example}
+%-------------------------------------------------------------------------------
+\subsection{Example}
 
 To show the semantics of the cut operation and scoped effect, we can define a function
 |takeWhileS| that returns all programs |prog| that satisfy a predicate |p|.
@@ -320,7 +327,8 @@ prog = or' (scope' (or' (return $ return 2) (return $ return 4))) (return 6)
 \end{code}
 %endif
 
-\subsubsection{Simulating the Cut Effect with State}
+%-------------------------------------------------------------------------------
+\subsection{Simulating the Cut Effect with State}
 
 This section shows how to use a state-based implementation to simulate the cut effect.
 We use a wrapper |SCut|.
