@@ -222,7 +222,6 @@ We have to prove the following two equations.
     \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
 \end{enumerate}
 The full proof of this theorem is added in Appendix \ref{app:runnd-hnd}. 
-\todo{adapt the proof to the new function definition.}
 
 %-------------------------------------------------------------------------------
 \subsection{Combining the Simulation with Other Effects}
@@ -371,7 +370,6 @@ More concretely, we have to prove the following two things:
 Due to the modularity, we need to include a different case for the forwarding algebra.
 The full proof of this theorem, using equational reasoning techniques,
 is included in \Cref{app:in-combination-with-other-effects}.
-\todo{adapt the proof to the new definitions.}
 
 % -------------------------------------------------------------------------
 % Old 3.2 and 3.3

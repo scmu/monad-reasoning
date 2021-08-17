@@ -95,6 +95,7 @@
 %format NilF = "\Varid{Nil_{F}}"
 %format ScopeF = "\Varid{Scope_{F}}"
 %format CutF = "\Varid{Cut_{F}}"
+%format CallF = "\Varid{Call_{F}}"
 %format StackF = "\Varid{Stack_{F}}"
 
 %format runState = "\Varid{run_{State}}"
@@ -107,6 +108,7 @@
 %format extractNDf = "\Varid{extract^{\prime}}"
 
 %format hState = "\Varid{h_{State}}"
+%format hStateS = "\Varid{h_{StateS}}"
 %format hState1 = "\Varid{h_{State1}}"
 %format hStates = "\Varid{h_{States}}"
 %format hStates' = "\Varid{h_{States}^\prime}"

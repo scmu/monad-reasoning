@@ -107,6 +107,8 @@ distr (Flag  x  : xs)   = Flag [x]
 distr []                = Ret []
 \end{code}
 Both datatypes |Idem a| and |CutList a| are monadic.
+% The |(>>=)| operation of |Idem a| also preserves the |Flag| constructor as the |distr| function.
+The |(>>=)| operation of |CutList a| uses the |distr| function.
 %if False
 \begin{code}
 instance Functor Idem where
@@ -115,26 +117,31 @@ instance Functor Idem where
 instance Applicative Idem where
   pure = return
   (<*>) = ap
-instance Monad Idem where
-  return a = Ret a
-  Ret a >>= f   = f a
-  Flag a >>= f  = Flag (unIdem (f a))
-
 instance Functor CutList where
   fmap f x = CutList $ fmap (fmap f) (unCutList x)
 instance Applicative CutList where
   pure = return
   (<*>) = ap
+instance Foldable CutList where
+  foldMap f x = foldMap f (unIdem $ unCutList x)
+\end{code}
+%endif
+\begin{code}
+instance Monad Idem where
+  return a = Ret a
+  Ret a >>= f   = f a
+  Flag a >>= f  = Flag (unIdem (f a))
 instance Monad CutList where
   return a = CutList $ return (return a)
   m >>= f = CutList $ fmap join (join (fmap distr (fmap (fmap (unCutList . f)) (unCutList m))))
-instance Foldable CutList where
-  foldMap f x = foldMap f (unIdem $ unCutList x)
+\end{code}
+
+What's more, |CutList a| is also traversable. Its |traverse| function just uses the |traverse| function of list and preserves the data constructor of |Idem|.
+\begin{code}
 instance Traversable CutList where
   traverse f (CutList (Ret xs))  = fmap (CutList . Ret)  $ traverse f xs
   traverse f (CutList (Flag xs)) = fmap (CutList . Flag) $ traverse f xs
 \end{code}
-%endif
 
 We can now encode smart constructors for cutting (|cut|), failing (|fail|), 
 constructing a |CutList| (|cutList|), delimiting a scope (|call|)
@@ -154,9 +161,10 @@ call     :: CutList a -> CutList a
 call     = cutList . unIdem . unCutList
 
 append   :: CutList a -> CutList a -> CutList a
-append   (CutList (Ret xs))   ys  = CutList $ fmap ((++) xs) $ unCutList ys
-append   (CutList (Flag xs))  _   = CutList (Flag xs)
+append xs ys = (CutList . fmap join . distr) [unCutList xs, unCutList ys]
 \end{code}
+% append   (CutList (Ret xs))   ys  = CutList $ fmap ((++) xs) $ unCutList ys
+% append   (CutList (Flag xs))  _   = CutList (Flag xs)
 
 %-------------------------------------------------------------------------------
 \subsection{Encoding Cut as a Free Monad}
@@ -180,7 +188,7 @@ instance Functor CallF where
 %endif
 
 It is necessary to split these functors in two separate ones 
-as |Cut| is an algebraic operation, whereas |Scope| is not.
+as |Cut| is an algebraic operation, whereas |Call| is not.
 To be algebraic, an operation |op| should satisfy the algebraicity property 
 which states that
 %format p1
@@ -266,8 +274,17 @@ hCut = foldS gen (Alg (algNDCut # OpS) (algSC # fwdSC))
     algNDCut (Inl Fail)      = return fail
     algNDCut (Inl (Or x y))  = append <$> x <*> y
     algNDCut (Inr Cut)       = return (cut >> fail)
-    algSC    (Call k)        = (join . fmap (fmap join . sequenceA . call) . hCut) k
-    fwdSC                    = ScopeS . fmap (fmap (fmap join . sequenceA) . hCut)
+    algSC    (Call k)        = (algCut . hCut) k
+    fwdSC                    = ScopeS . fmap (fwdCut . hCut)
+
+algCut  :: (Functor f, Functor g)
+        => FreeS f g (CutList (FreeS f g (CutList a)))
+        -> FreeS f g (CutList a)
+algCut  = join . fwdCut . fmap call
+fwdCut  :: (Functor f, Functor g)
+        => FreeS f g (CutList (FreeS f g (CutList a)))
+        -> FreeS f g (FreeS f g (CutList a))
+fwdCut  = fmap (fmap join . sequenceA)
 \end{code}
 
 %-------------------------------------------------------------------------------
@@ -350,15 +367,14 @@ cut2state = foldS genCut (Alg (algNDCut # fwd) (algSCCut # fwdSc))
   algNDCut (Inl (Or p q)) = pushSC q p
   algNDCut (Inr Cut) = undoSC
   fwd = OpS . Inr
-  algSCCut (Call k)  = cutlistIntoState $ fmap join . join
-                      . fmap (sequenceA . call . fmap (extractSC . hStateS))
-                      . (extractSC . hStateS) $ cut2state k
-  fwdSc oth =  let tmp = fmap  ( fmap ( fmap join . sequenceA . call . fmap (extractSC . hStateS))
-                               . extractSC . hStateS . cut2state) oth
-               in ScopeS $ fmap (shiftLeft . fmap cutlistIntoState) tmp
+  algSCCut (Call k)  =  cutlist2state $ algCut
+                     .  fmap (fmap state2cutlist) .  state2cutlist . cut2state $ k
+  fwdSc oth =  let tmp = fmap  (  fwdCut
+                               .  fmap (fmap state2cutlist) .  state2cutlist . cut2state) oth
+               in ScopeS $ fmap (shiftRight . fmap cutlist2state) tmp
 \end{code}
 
-There are some helper functions |getSC|, |putSC|, |popSC|, |pushSC|, |appendSC|, |undoSC| and |cutlistIntoState|.
+There are some helper functions |getSC|, |putSC|, |popSC|, |pushSC|, |appendSC|, |undoSC|, |state2cutlist| and |cutlist2state|.
 
 \begin{code}
 getSC :: (Functor f, Functor g) => CompCut s f g s
@@ -392,21 +408,26 @@ appendSC x p = do
 undoSC :: (Functor f, Functor g) => CompCut (SCut f g a) f g ()
 undoSC = do
   SCut xs stack <- getSC
-  putSC (SCut (append xs (cut >> fail)) stack)
+  putSC (SCut (append xs (cut >> fail)) stack)  -- can we drop the stack here?
 
-cutlistIntoState  :: (Functor f, Functor g)
-                  => FreeS f g (CutList a) -> CompCut (SCut f g a) f g ()
-cutlistIntoState m = do
-    t <- shiftLeft m
+state2cutlist  :: (Functor f, Functor g)
+               => CompCut (SCut f g a) f g () -> FreeS f g (CutList a)
+state2cutlist = extractSC . hStateS
+
+cutlist2state  :: (Functor f, Functor g)
+               => FreeS f g (CutList a) -> CompCut (SCut f g a) f g ()
+cutlist2state m = do
+    t <- shiftRight m
     SCut xs stack <- getSC
-    case stack of
-      [] -> putSC $ SCut (append xs t) []
-      p : ps -> do putSC $ SCut (append xs t) ps ; p
+    putSC $ SCut (append xs t) stack
+    --case stack of
+    --  [] -> putSC $ SCut (append xs t) []
+    --  p : ps -> do putSC $ SCut (append xs t) ps ; p
 
-shiftLeft :: (Functor f, Functor g) => FreeS f g a -> FreeS (f' :+: f) g a
-shiftLeft (VarS x)   = VarS x
-shiftLeft (OpS k)    = (OpS (Inr (fmap shiftLeft k)))
-shiftLeft (ScopeS k) = ScopeS $ fmap (shiftLeft . (fmap shiftLeft)) k
+shiftRight :: (Functor f, Functor g) => FreeS f g a -> FreeS (f' :+: f) g a
+shiftRight (VarS x)   = VarS x
+shiftRight (OpS k)    = (OpS (Inr (fmap shiftRight k)))
+shiftRight (ScopeS k) = ScopeS $ fmap (shiftRight . (fmap shiftRight)) k
 \end{code}
 
 To extract the result from the |SC| wrapper, we define an |extractSC| function.
