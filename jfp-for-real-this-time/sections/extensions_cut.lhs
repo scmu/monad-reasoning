@@ -287,6 +287,25 @@ fwdCut  :: (Functor f, Functor g)
 fwdCut  = fmap (fmap join . sequenceA)
 \end{code}
 
+\begin{figure}[h]
+% https://q.uiver.app/?q=WzAsNSxbMCwwLCJ8RnJlZVMgZiBnIChDdXRMaXN0IChGcmVlUyBmIGcgKEN1dExpc3QgYSkpKXwiXSxbMCwxLCJ8RnJlZVMgZiBnIChDdXRMaXN0IChGcmVlUyBmIGcgKEN1dExpc3QgYSkpKXwiXSxbMCwyLCJ8RnJlZVMgZiBnIChGcmVlUyBmIGcgKEN1dExpc3QgKEN1dExpc3QgYSkpKXwiXSxbMCwzLCJ8RnJlZVMgZiBnIChGcmVlUyBmIGcgKEN1dExpc3QgYSkpfCJdLFswLDQsInxGcmVlUyBmIGcgKEN1dExpc3QgYSl8Il0sWzAsMSwifGZtYXAgY2FsbHwiXSxbMSwyLCJ8Zm1hcCBzZXF1ZW5jZUF8Il0sWzIsMywifGZtYXAgKGZtYXAgam9pbil8Il0sWzMsNCwifGpvaW58Il0sWzAsNCwifGFsZ0N1dHwiLDIseyJsYWJlbF9wb3NpdGlvbiI6NDAsIm9mZnNldCI6NSwiY3VydmUiOjUsImNvbG91ciI6WzE4MCw2MCw2MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzE4MCw2MCw2MCwxXV0sWzEsMywifGZ3ZEN1dHwiLDAseyJsYWJlbF9wb3NpdGlvbiI6NjAsIm9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMTgwLDYwLDYwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMTgwLDYwLDYwLDFdXV0=
+\[\begin{tikzcd}
+	{|FreeS f g (CutList (FreeS f g (CutList a)))|} \\
+	{|FreeS f g (CutList (FreeS f g (CutList a)))|} \\
+	{|FreeS f g (FreeS f g (CutList (CutList a)))|} \\
+	{|FreeS f g (FreeS f g (CutList a))|} \\
+	{|FreeS f g (CutList a)|}
+	\arrow["{|fmap call|}", from=1-1, to=2-1]
+	\arrow["{|fmap sequenceA|}", from=2-1, to=3-1]
+	\arrow["{|fmap (fmap join)|}", from=3-1, to=4-1]
+	\arrow["{|join|}", from=4-1, to=5-1]
+	\arrow["{|algCut|}"'{pos=0.4}, shift right=5, color={rgb,255:red,92;green,214;blue,214}, curve={height=30pt}, dotted, from=1-1, to=5-1]
+	\arrow["{|fwdCut|}"{pos=0.6}, shift left=5, color={rgb,255:red,92;green,214;blue,214}, curve={height=-30pt}, dotted, from=2-1, to=4-1]
+\end{tikzcd}\]
+\label{fig:hCut}
+\caption{Explanation of |algCut| and |fwdCut|.}
+\end{figure}
+
 %-------------------------------------------------------------------------------
 \subsection{Example}
 
@@ -339,8 +358,27 @@ call' x   = (ScopeS . Inl) $ Call x
 -- > (run . hCut) (takeWhileS even prog1)
 -- CutList {unCutList = Flag [2,4]}
 
-prog :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (CallF :+: g) Int
-prog = or' (call' (or' (return $ return 2) (return $ return 4))) (return 6)
+testprog1 :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (CallF :+: g) Int
+testprog1 = or' (call' (or' (or' (return $ return 1) cut') (return $ return 2))) (return 3)
+testprog2 :: (Functor f, Functor g) => FreeS (NondetF' :+: f) (CallF :+: g) Int
+testprog2 = or' (call' (or' (return (or' (return 1) cut')) (return $ return 2))) (return 3)
+
+
+-- State + Cut
+get'' :: (Functor f', Functor f, Functor g) => FreeS (f' :+: StateF s :+: f) g s
+get'' = (OpS . Inr . Inl) (Get return)
+put'' :: (Functor f', Functor f, Functor g) => s -> FreeS (f' :+: StateF s :+: f) g ()
+put'' s = (OpS . Inr . Inl) (Put s (return ()))
+
+testprog3 :: FreeS (NondetF' :+: StateF Int :+: NilF) (CallF :+: NilF) Int
+testprog3 = do
+  put'' 1
+  or' (call' (or' (return (return 1)) 
+                  (do x <- get''; if x == 1 then cut' else (return (return 2)))))
+       (return 3)
+
+t  = run . flip runStateT 0 . hStateS . hCut $ testprog3
+t' = run . flip runStateT 0 . hStateS . runCut $ testprog3
 \end{code}
 %endif
 
@@ -365,16 +403,40 @@ cut2state = foldS genCut (Alg (algNDCut # fwd) (algSCCut # fwdSc))
   genCut x = appendSC x popSC
   algNDCut (Inl Fail) = popSC
   algNDCut (Inl (Or p q)) = pushSC q p
-  algNDCut (Inr Cut) = undoSC
+  algNDCut (Inr Cut) = cutSC
   fwd = OpS . Inr
-  algSCCut (Call k)  =  cutlist2state $ algCut
-                     .  fmap (fmap state2cutlist) .  state2cutlist . cut2state $ k
-  fwdSc oth =  let tmp = fmap  (  fwdCut
-                               .  fmap (fmap state2cutlist) .  state2cutlist . cut2state) oth
-               in ScopeS $ fmap (shiftRight . fmap cutlist2state) tmp
+  algSCCut (Call k)  =  cutlist2state
+                     .  algCut
+                     .  fmap (fmap state2cutlist) . state2cutlist
+                     .  cut2state $ k
+  fwdSc oth =  ScopeS $ fmap  (  shiftRight . fmap cutlist2state
+                              .  fwdCut
+                              .  fmap (fmap state2cutlist) . state2cutlist
+                              .  cut2state) oth
 \end{code}
+\wenhao{The |algSCCut| and |fwdSc| doesn't look much like simulation because they uses |algCut| and |fwdCut|. I tried to write another implementation without using them but I failed.}
+The idea of the algebra of |Call| is to use |state2cutlist| to extract the cutlist from the state free monad, and then use the |algCut| to actually handle the scoped operation |Call|.
+Finally, it uses |cutlist2state| to put the cutlist back to the state free monad.
+The idea of |fwdSc| here is similar, which uses the |fwdCut| to do the actual forwarding.
 
-There are some helper functions |getSC|, |putSC|, |popSC|, |pushSC|, |appendSC|, |undoSC|, |state2cutlist| and |cutlist2state|.
+% https://q.uiver.app/?q=WzAsNSxbMCwwLCJ8RnJlZVMgKE5vbmRldEYnIDorOiBmKSAoQ2FsbEYgOis6IGcpIChDb21wQ3V0IChTQ3V0IGYgZyBhKSBmIGcgKCkpfCJdLFswLDEsInxDb21wQ3V0IChTQ3V0IGYgZyAoQ29tcEN1dCAoU0N1dCBmIGcgYSkgZiBnICgpKSkgZiBnICgpfCJdLFswLDIsInxGcmVlUyBmIGcgKEN1dExpc3QgKEZyZWVTIGYgZyAoQ3V0TGlzdCBhKSkpfCJdLFswLDMsInxGcmVlUyBmIGcgKEN1dExpc3QgYSl8Il0sWzAsNCwiQ29tcEN1dCAoU0N1dCBmIGcgYSkgZiBnICgpIl0sWzAsMSwifGN1dDJzdGF0ZXwiXSxbMSwyLCJ8Zm1hcCAoZm1hcCBzdGF0ZTJjdXRsaXN0KSAuIHN0YXRlMmN1dGxpc3R8Il0sWzIsMywifGFsZ0N1dHwiXSxbMyw0LCJ8Y3V0bGlzdDJzdGF0ZXwiXSxbMCw0LCJ8XFwgayAtPiBhbGdTQ0N1dCAoQ2FsbCBrKXwiLDAseyJsYWJlbF9wb3NpdGlvbiI6NzAsIm9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMTgwLDYwLDYwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMTgwLDYwLDYwLDFdXV0=
+\[\begin{tikzcd}
+	{|FreeS (NondetF' :+: f) (CallF :+: g) (CompCut (SCut f g a) f g ())|} \\
+	{|CompCut (SCut f g (CompCut (SCut f g a) f g ())) f g ()|} \\
+	{|FreeS f g (CutList (FreeS f g (CutList a)))|} \\
+	{|FreeS f g (CutList a)|} \\
+	{CompCut (SCut f g a) f g ()}
+	\arrow["{|cut2state|}", from=1-1, to=2-1]
+	\arrow["{|fmap (fmap state2cutlist) . state2cutlist|}", from=2-1, to=3-1]
+	\arrow["{|algCut|}", from=3-1, to=4-1]
+	\arrow["{|cutlist2state|}", from=4-1, to=5-1]
+	\arrow["{|\ k -> algSCCut (Call k)|}"{pos=0.7}, shift left=5, color={rgb,255:red,128;green,128;blue,128}, curve={height=-30pt}, dotted, from=1-1, to=5-1]
+\end{tikzcd}\]
+\label{fig:algSCCut}
+\caption{Explanation of |algSCCut|.}
+\end{figure}
+
+There are some helper functions |getSC|, |putSC|, |popSC|, |pushSC|, |appendSC|, |cutSC|, |state2cutlist| and |cutlist2state|.
 
 \begin{code}
 getSC :: (Functor f, Functor g) => CompCut s f g s
@@ -405,11 +467,16 @@ appendSC x p = do
   SCut xs stack <- getSC
   putSC (SCut (append xs (return x)) stack); p
 
-undoSC :: (Functor f, Functor g) => CompCut (SCut f g a) f g ()
-undoSC = do
+cutSC :: (Functor f, Functor g) => CompCut (SCut f g a) f g ()
+cutSC = do
   SCut xs stack <- getSC
-  putSC (SCut (append xs (cut >> fail)) stack)  -- can we drop the stack here?
+  -- putSC (SCut (append xs (cut >> fail)) stack)
+  -- traceM $ "[" ++ show (length stack) ++ "] "
+  putSC (SCut (append xs (cut >> fail)) [])
+\end{code}
+\wenhao{I think we can directly drop the stack here.}
 
+\begin{code}
 state2cutlist  :: (Functor f, Functor g)
                => CompCut (SCut f g a) f g () -> FreeS f g (CutList a)
 state2cutlist = extractSC . hStateS
@@ -420,9 +487,7 @@ cutlist2state m = do
     t <- shiftRight m
     SCut xs stack <- getSC
     putSC $ SCut (append xs t) stack
-    --case stack of
-    --  [] -> putSC $ SCut (append xs t) []
-    --  p : ps -> do putSC $ SCut (append xs t) ps ; p
+    popSC
 
 shiftRight :: (Functor f, Functor g) => FreeS f g a -> FreeS (f' :+: f) g a
 shiftRight (VarS x)   = VarS x
@@ -458,9 +523,14 @@ runCut  :: (Functor f, Functor g)
 runCut = extractSC . hStateS . cut2state
 \end{code}
 To show that the simulation is correct, we prove that |runCut = hCut|.
-\wenhao{Do we need to prove it? It seems the proof would be long.}
+
+
+
+
+
 
 %if False
+% ----------------------------------------------------------------
 % The old simulation
 \wenhao{I have wrote two simulations here, one directly uses the state monad to simulate nondet free monad, and the other uses the state free monad to simulate nondet free monad. I think we should remain the second simulation as it is more consistent with S3 and S4. And I have combine the second simulation with other effects.}
 
