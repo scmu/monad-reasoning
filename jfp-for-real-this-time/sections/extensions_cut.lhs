@@ -287,6 +287,12 @@ fwdCut  :: (Functor f, Functor g)
 fwdCut  = fmap (fmap join . sequenceA)
 \end{code}
 
+The most interesting part of |hCut| is |algSC| and |fwdSC|, which are implemented with |algCut| and |fwdCut|.
+Figure \ref{fig:hCut} shows the detail steps of the two functions.
+Both of the two functions use the function |sequenceA :: CutList (FreeS f g a) -> FreeS f g (CutList a)| of cutlist to move the outer cutlist into the free monad.
+Then the |join| of |CutList| will combine two levels of cutlist into one.
+Because |join| is implemented using |distr|, the |flag| recorded in the |CutList| datatype will take effect, so the cut operation works.
+
 \begin{figure}[h]
 % https://q.uiver.app/?q=WzAsNSxbMCwwLCJ8RnJlZVMgZiBnIChDdXRMaXN0IChGcmVlUyBmIGcgKEN1dExpc3QgYSkpKXwiXSxbMCwxLCJ8RnJlZVMgZiBnIChDdXRMaXN0IChGcmVlUyBmIGcgKEN1dExpc3QgYSkpKXwiXSxbMCwyLCJ8RnJlZVMgZiBnIChGcmVlUyBmIGcgKEN1dExpc3QgKEN1dExpc3QgYSkpKXwiXSxbMCwzLCJ8RnJlZVMgZiBnIChGcmVlUyBmIGcgKEN1dExpc3QgYSkpfCJdLFswLDQsInxGcmVlUyBmIGcgKEN1dExpc3QgYSl8Il0sWzAsMSwifGZtYXAgY2FsbHwiXSxbMSwyLCJ8Zm1hcCBzZXF1ZW5jZUF8Il0sWzIsMywifGZtYXAgKGZtYXAgam9pbil8Il0sWzMsNCwifGpvaW58Il0sWzAsNCwifGFsZ0N1dHwiLDIseyJsYWJlbF9wb3NpdGlvbiI6NDAsIm9mZnNldCI6NSwiY3VydmUiOjUsImNvbG91ciI6WzE4MCw2MCw2MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzE4MCw2MCw2MCwxXV0sWzEsMywifGZ3ZEN1dHwiLDAseyJsYWJlbF9wb3NpdGlvbiI6NjAsIm9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMTgwLDYwLDYwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMTgwLDYwLDYwLDFdXV0=
 \[\begin{tikzcd}
@@ -418,7 +424,9 @@ cut2state = foldS genCut (Alg (algNDCut # fwd) (algSCCut # fwdSc))
 The idea of the algebra of |Call| is to use |state2cutlist| to extract the cutlist from the state free monad, and then use the |algCut| to actually handle the scoped operation |Call|.
 Finally, it uses |cutlist2state| to put the cutlist back to the state free monad.
 The idea of |fwdSc| here is similar, which uses the |fwdCut| to do the actual forwarding.
+Figure \ref{fig:algSCCut} and \ref{fig:fwdSc} shows the two functions in more detail.
 
+\begin{figure}
 % https://q.uiver.app/?q=WzAsNSxbMCwwLCJ8RnJlZVMgKE5vbmRldEYnIDorOiBmKSAoQ2FsbEYgOis6IGcpIChDb21wQ3V0IChTQ3V0IGYgZyBhKSBmIGcgKCkpfCJdLFswLDEsInxDb21wQ3V0IChTQ3V0IGYgZyAoQ29tcEN1dCAoU0N1dCBmIGcgYSkgZiBnICgpKSkgZiBnICgpfCJdLFswLDIsInxGcmVlUyBmIGcgKEN1dExpc3QgKEZyZWVTIGYgZyAoQ3V0TGlzdCBhKSkpfCJdLFswLDMsInxGcmVlUyBmIGcgKEN1dExpc3QgYSl8Il0sWzAsNCwiQ29tcEN1dCAoU0N1dCBmIGcgYSkgZiBnICgpIl0sWzAsMSwifGN1dDJzdGF0ZXwiXSxbMSwyLCJ8Zm1hcCAoZm1hcCBzdGF0ZTJjdXRsaXN0KSAuIHN0YXRlMmN1dGxpc3R8Il0sWzIsMywifGFsZ0N1dHwiXSxbMyw0LCJ8Y3V0bGlzdDJzdGF0ZXwiXSxbMCw0LCJ8XFwgayAtPiBhbGdTQ0N1dCAoQ2FsbCBrKXwiLDAseyJsYWJlbF9wb3NpdGlvbiI6NzAsIm9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMTgwLDYwLDYwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMTgwLDYwLDYwLDFdXV0=
 \[\begin{tikzcd}
 	{|FreeS (NondetF' :+: f) (CallF :+: g) (CompCut (SCut f g a) f g ())|} \\
@@ -435,6 +443,27 @@ The idea of |fwdSc| here is similar, which uses the |fwdCut| to do the actual fo
 \label{fig:algSCCut}
 \caption{Explanation of |algSCCut|.}
 \end{figure}
+
+\begin{figure}
+% https://q.uiver.app/?q=WzAsNixbMCwwLCJ8ZyAoRnJlZVMgICAgICAoTm9uZGV0RicgOis6IGYpIChDYWxsRiA6KzogZykgKENvbXBDdXQgKFNDdXQgZiBnIGEpIGYgZyAoKSkpfCJdLFswLDEsInxnIChDb21wQ3V0IChTQ3V0IGYgZyAoQ29tcEN1dCAoU0N1dCBmIGcgYSkgZiBnICgpKSkgZiBnICgpKXwiXSxbMCwyLCJ8ZyAoRnJlZVMgZiBnIChDdXRMaXN0IChGcmVlUyBmIGcgKEN1dExpc3QgYSkpKSl8Il0sWzAsMywifGcgKCBGcmVlUyBmIGcgKEZyZWVTIGYgZyAoQ3V0TGlzdCBhKSkpfCJdLFswLDQsInxnIChGcmVlUyAoU3RhdGVGIChTQ3V0IGYgZyBhKSA6KzogZikgZyAoQ29tcEN1dCAoU0N1dCBmIGcgYSkgZiBnICgpKSl8Il0sWzAsNSwifEZyZWVTIChTdGF0ZUYgKFNDdXQgZiBnIGEpIDorOiBmKSBnICgpfCJdLFswLDEsInxmbWFwIGN1dDJzdGF0ZXwiXSxbMSwyLCJ8Zm1hcCAoZm1hcCAoZm1hcCBzdGF0ZTJjdXRsaXN0KSAuIHN0YXRlMmN1dGxpc3QpfCJdLFsyLDMsInxmbWFwIGZ3ZEN1dHwiXSxbMyw0LCJ8Zm1hcCAoc2hpZnRSaWdodCAuIGZtYXAgY3V0bGlzdDJzdGF0ZSl8Il0sWzQsNSwifFNjb3BlU3wiXSxbMCw1LCJ8ZndkU2N8IiwwLHsib2Zmc2V0IjotNSwiY3VydmUiOi01LCJjb2xvdXIiOlsxODAsNjAsNjBdfSxbMTgwLDYwLDYwLDFdXV0=
+\[\begin{tikzcd}
+	{|g (FreeS      (NondetF' :+: f) (CallF :+: g) (CompCut (SCut f g a) f g ()))|} \\
+	{|g (CompCut (SCut f g (CompCut (SCut f g a) f g ())) f g ())|} \\
+	{|g (FreeS f g (CutList (FreeS f g (CutList a))))|} \\
+	{|g ( FreeS f g (FreeS f g (CutList a)))|} \\
+	{|g (FreeS (StateF (SCut f g a) :+: f) g (CompCut (SCut f g a) f g ()))|} \\
+	{|FreeS (StateF (SCut f g a) :+: f) g ()|}
+	\arrow["{|fmap cut2state|}", from=1-1, to=2-1]
+	\arrow["{|fmap (fmap (fmap state2cutlist) . state2cutlist)|}", from=2-1, to=3-1]
+	\arrow["{|fmap fwdCut|}", from=3-1, to=4-1]
+	\arrow["{|fmap (shiftRight . fmap cutlist2state)|}", from=4-1, to=5-1]
+	\arrow["{|ScopeS|}", from=5-1, to=6-1]
+	\arrow["{|fwdSc|}", shift left=5, color={rgb,255:red,92;green,214;blue,214}, curve={height=-30pt}, from=1-1, to=6-1]
+\end{tikzcd}\]a
+\label{fig:fwdSc}
+\caption{Explanation of |fwdSc|.}
+\end{figure}
+
 
 There are some helper functions |getSC|, |putSC|, |popSC|, |pushSC|, |appendSC|, |cutSC|, |state2cutlist| and |cutlist2state|.
 
