@@ -165,8 +165,7 @@
 %format comm2 = "\Varid{comm}"
 
 %format alpha = "\alpha"
-%format alpha1
-%format alpha2
+%format alpha1 = "\alpha^{-1}"
 
 %format CompCut = "\Varid{Comp_{Cut}}"
 %format resultsCut = "\Varid{results_{Cut}}"

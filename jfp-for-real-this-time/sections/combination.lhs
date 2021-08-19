@@ -23,58 +23,38 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 Throughout the paper, we have shown several cases in which a high-level effect
 can be simulated by means of a lower-level effect. 
-This section combines these simulations to ultimately model the combination of 
+This section combines these simulations to ultimately simulate the combination of 
 nondeterminism and state with a single state effect. 
 
 %-------------------------------------------------------------------------------
 \subsection{Modeling Multiple States with State}
 \label{sec:multiple-states}
 
-For an effect that contains multiple states we can define two approaches to handle them.
+For an effect that contains multiple states we can define two approaches to represent and handle them:
+\begin{enumerate}
+  \item A representation using and effect functor with two state functors |StateF s1 :+: StateF s2|, 
+        and a corresponding handler |hStates|, which interprets the two state functors as two nested 
+        |StateT| monads. In essence, this handler applies two |hState| handlers in sequence.
+        \begin{code}
+        hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
+        hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
+        \end{code}
+  \item A representation using a single state effect functor that contains a tuple of two states 
+        |StateF (s1, s2)|. The corresponding handler, |hStateTuple|,
+        interprets the state functor as a |StateT| monad. This implementation is exactly the definition
+        of the |hState| handler, in which state |s| is defined as a tuple of two states.
+        \begin{code}
+        hStateTuple :: Functor f => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
+        hStateTuple = hState
+        \end{code}
+\end{enumerate}
 
-First, we can make an effect functor with two state functors |StateF s1 :+: StateF s2|.
-The |hStates| function applies two |hState| in sequence to handle these two functors and interpret them with two nested the |StateT| monad.
-These two |StateT| monad can be transformed into one |StateT| with a pair |(s1, s2)| as the state.
-This transformation is characterized by the isomorphism |flatten| with the inverse |nested|.
-
-\begin{code}
-hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
-
-flatten :: Functor f => StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
-flatten t = StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (runStateT t s1) s2
-nested :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
-nested t = StateT $ \ s1 -> StateT $ \ s2 -> fmap alpha2 $ runStateT t (s1, s2)
-
-alpha1 :: ((a, x), y) -> (a, (x, y))
-alpha1 ((a, x), y) = (a, (x, y))
-alpha2 :: (a, (x, y)) -> ((a, x), y)
-alpha2 (a, (x, y)) = ((a, x), y)
-\end{code}
-
-We can easily fuse the composition |flatten . hStates| into a single function |hStates'|, which is defined as:
-
-\begin{code}
-hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
-hStates' t = StateT $ \ (s1, s2) -> fmap alpha1 $ runStateT (hState (runStateT (hState t) s1)) s2
-\end{code}
-The proof of this fusion can be found in Appendix \ref{app:states-state-fusion}.
-
-Second, we can also have a single state effect functor that contains a tuple of two states |StateF (s1, s2)|.
-The |hStateTuple| function handles this representation.
-Since it is exactly the same as the |hState|, we will use |hState| in the following presentation.
+We can define a simulation of the first representation |StateF s1 :+: StateF s2| in terms of the
+second representation |StateF (s1, s2)|. 
+The |states2state| function defines this simulation using a |fold|:
 
 \begin{code}
-hStateTuple :: Functor f => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
-hStateTuple = hState
-\end{code}
-
-In fact, it is possible to simulate the situation with two state effect handlers using
-the single state effect functor with the tuple of states. 
-Indeed, we can define a simulation function |states2state| as follows.
-
-\begin{code}
-states2state  :: (Functor f) 
+states2state  :: Functor f 
               => Free (StateF s1 :+: StateF s2 :+: f) a 
               -> Free (StateF (s1, s2) :+: f) a
 states2state  = fold gen (alg1 # alg2 # fwd)
@@ -105,8 +85,52 @@ put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
 put' sts k  = Op (Inl (Put sts k))
 \end{code}
 
-To prove that the two representations are equivalent and that the simulation is correct, 
-we show that |hStates' = hState . states2state| in Appendix \ref{app:states-state-sim}.
+To prove this simulation correct, we define a function to transform between
+the nested state transformer and the state transformer with a tuple of states.
+This transformation can be defined in terms of two isomorphic functions 
+|flatten| and |nested|. 
+
+\begin{code}
+flatten    :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
+flatten t  = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
+nested     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
+nested t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
+\end{code}
+
+The isomorphic functions |alpha| and |alpha1| are defined as in the following diagram.
+
+% https://q.uiver.app/?q=WzAsMixbMCwwLCJ8KChhLHgpLHkpfCJdLFsyLDAsInwoYSwgKHgseSkpfCJdLFswLDEsInxhbHBoYXwiLDAseyJvZmZzZXQiOi0zfV0sWzEsMCwifGFscGhhMXwiLDAseyJvZmZzZXQiOi0zfV1d
+\[\begin{tikzcd}
+  {|((x,y),z)|} && {|(x,(y,z))|}
+  \arrow["{|alpha|}", shift left=3, from=1-1, to=1-3]
+  \arrow["{|alpha1|}", shift left=3, from=1-3, to=1-1]
+\end{tikzcd}\]
+
+The proof of this isomorphism can be found in \todo{ref appendix}.
+
+The following commuting diagram shows how the simulation works.
+
+% https://q.uiver.app/?q=WzAsNCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMxIDorOiBTdGF0ZUYgczIgOis6IGYpIGF8Il0sWzAsMiwifEZyZWUgKFN0YXRlRiAoczEsIHMyKSA6KzpmKSBhfCJdLFsyLDAsInxTdGF0ZVQgczEgKFN0YXRlVCBzMiAoRnJlZSBmKSkgYXwiXSxbMiwyLCJ8U3RhdGVUIChzMSwgczIpIChGcmVlIGYpIGF8Il0sWzIsMywifGZsYXR0ZW58IiwyLHsib2Zmc2V0Ijo1fV0sWzMsMiwifG5lc3RlZHwiLDIseyJvZmZzZXQiOjV9XSxbMCwyLCJ8aFN0YXRlc3wiXSxbMSwzLCJ8aFN0YXRlVHVwbGV8IiwyXSxbMCwxLCJ8c3RhdGVzMnN0YXRlfCIsMl1d
+\[\begin{tikzcd}
+  {|Free (StateF s1 :+: StateF s2 :+: f) a|} && {|StateT s1 (StateT s2 (Free f)) a|} \\
+  \\
+  {|Free (StateF (s1, s2) :+:f) a|} && {|StateT (s1, s2) (Free f) a|}
+  \arrow["{|flatten|}"', shift right=5, from=1-3, to=3-3]
+  \arrow["{|nested|}"', shift right=5, from=3-3, to=1-3]
+  \arrow["{|hStates|}", from=1-1, to=1-3]
+  \arrow["{|hStateTuple|}"', from=3-1, to=3-3]
+  \arrow["{|states2state|}"', from=1-1, to=3-1]
+\end{tikzcd}\]
+
+To prove the simulation correct we have to prove the following equivalence:
+< flatten . hStates = hStateTuple . states2state
+As |flatten| and |nested| are isomorphic functions, the following equivalence should hold
+as well:
+< hStates = nested . hStateTuple . states2state
+
+We can easily fuse the composition |flatten . hStates| using equational reasoning techniques, 
+as shown in \Cref{app:states-state-fusion}.
+The correctness of the simulation is written out in \Cref{app:states-state-sim}.
 
 %if False
 % NOTE: some test code to assit in writing proofs
