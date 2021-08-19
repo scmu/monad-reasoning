@@ -89,6 +89,7 @@ To prove this simulation correct, we define a function to transform between
 the nested state transformer and the state transformer with a tuple of states.
 This transformation can be defined in terms of two isomorphic functions 
 |flatten| and |nested|. 
+The proof of this isomorphism can be found in \ref{app:flatten-nested}.
 
 \begin{code}
 flatten    :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
@@ -103,6 +104,9 @@ alpha :: ((a, x), y) -> (a, (x, y))
 alpha ((a, x), y) = (a, (x, y))
 alpha1 :: (a, (x, y)) -> ((a, x), y)
 alpha1 (a, (x, y)) = ((a, x), y)
+
+
+f t = StateT $ \ s1 -> StateT $ \ s2 -> (fmap (alpha1 . alpha) (runStateT (runStateT t s1) s2))
 \end{code}
 %endif 
 
@@ -114,8 +118,6 @@ The isomorphic functions |alpha| and |alpha1| are defined as in the following di
   \arrow["{|alpha|}", shift left=3, from=1-1, to=1-3]
   \arrow["{|alpha1|}", shift left=3, from=1-3, to=1-1]
 \end{tikzcd}\]
-
-The proof of this isomorphism can be found in \todo{ref appendix}.
 
 The following commuting diagram shows how the simulation works.
 
