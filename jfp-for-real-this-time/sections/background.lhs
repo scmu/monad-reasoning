@@ -227,6 +227,12 @@ instance MNondet [] where
   mplus  =  (++)
 \end{code}
 
+The corresponding |Monad| instance has the following standard Haskell implementation.
+
+< instance Monad [] where
+<   return x   = [x]
+<   xs >>= f    = concatMap f xs
+
 %-------------------------------------------------------------------------------
 \subsection{State}
 

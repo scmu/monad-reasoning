@@ -38,18 +38,12 @@ The |List| monad, which is used in Haskell to implement nondeterminism, is a law
 Indeed, all nondeterminism laws of \cref{sec:nondeterminism} are satisfied by
 this implementation.
 The return |etal| of the |List| monad is a singleton list 
-and the join operation is concatenation or flattening: 
+and the join operation is concatenation or flattening, which can be expressed in terms of a |foldr|: 
 |mul = foldr (++) []|.
-This leads us towards the following monad instance.
-\tom{Odd that the |MNondet| instance is given earlier, but the |Monad| instance
-     is only shown here.}
-
-< instance Monad [] where
-<   return x   = [x]
-<   m >>= f    = foldr ((++) . f) [] m
 
 We can interpret nondeterministic programs encoded as lists 
-by means of the |choose| function, which can be implemented as a fold.
+by means of the |choose| function, which can be implemented using a fold.
+This |choose| function is a nondeterminism-monad morphism
 %if False
 \begin{code}
 etand :: MNondet m => a -> m a
@@ -64,19 +58,19 @@ choose :: MNondet m => [a] -> m a
 choose = foldr (mplus . etand) mzero
 \end{code}
 
-\tom{|choose| is a nondeterminism-monad morphism}
-
 In fact, the |List| monad is not just an instance for nondeterminism; 
 it is the \emph{initial} lawful instance. 
 This means that, for every other lawful instance of nondeterminism, there is a
-unique monad morphism from |List| to that instance.
-The above definition of |choose| is exactly that monad morphism.
+unique nondeterminism-monad morphism from |List| to that instance.
+The above definition of |choose| is exactly that nondeterminism-monad morphism.
 Indeed, for every nondeterminism monad |m| (instance of |MNondet m|), 
 the following equalities hold.
 \begin{align*}
-  |choose . etal| &= |etand|\\
-  |choose . mul| &= |mund . choose . fmap choose|\\
-                 &= |mund . fmap choose . choose|
+  |choose []|       &= |mzero|\\
+  |choose (x ++ y)| &= |g x `mplus` g y| \\
+  |choose . etal|   &= |etand|\\
+  |choose . mul|    &= |mund . choose . fmap choose|\\
+                    &= |mund . fmap choose . choose|
 \end{align*}
 
 To prove that the morphism is unique, we use the universality of fold, 
