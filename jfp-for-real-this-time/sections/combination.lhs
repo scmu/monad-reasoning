@@ -35,18 +35,18 @@ For an effect that contains multiple states we can define two approaches to repr
   \item A representation using and effect functor with two state functors |StateF s1 :+: StateF s2|, 
         and a corresponding handler |hStates|, which interprets the two state functors as two nested 
         |StateT| monads. In essence, this handler applies two |hState| handlers in sequence.
-        \begin{code}
-        hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-        hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
-        \end{code}
+\begin{code}
+hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
+hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
+\end{code}
   \item A representation using a single state effect functor that contains a tuple of two states 
         |StateF (s1, s2)|. The corresponding handler, |hStateTuple|,
         interprets the state functor as a |StateT| monad. This implementation is exactly the definition
         of the |hState| handler, in which state |s| is defined as a tuple of two states.
-        \begin{code}
-        hStateTuple :: Functor f => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
-        hStateTuple = hState
-        \end{code}
+\begin{code}
+hStateTuple :: Functor f => Free (StateF (s1, s2) :+: f) a -> StateT (s1, s2) (Free f) a
+hStateTuple = hState
+\end{code}
 \end{enumerate}
 
 We can define a simulation of the first representation |StateF s1 :+: StateF s2| in terms of the
@@ -96,6 +96,15 @@ flatten t  = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
 nested     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
 nested t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
 \end{code}
+
+%if False
+\begin{code}
+alpha :: ((a, x), y) -> (a, (x, y))
+alpha ((a, x), y) = (a, (x, y))
+alpha1 :: (a, (x, y)) -> ((a, x), y)
+alpha1 (a, (x, y)) = ((a, x), y)
+\end{code}
+%endif 
 
 The isomorphic functions |alpha| and |alpha1| are defined as in the following diagram.
 
@@ -178,71 +187,79 @@ By now we have defined three simulations for encoding a high-level effect as a l
 \begin{itemize}
   \item The function |nondet2state| simulates the high-level nondeterminism effect with the state effect 
   (Section \ref{sec:nondeterminism-state}).
-  \item The function |local2global| simulates the high-level local state effect with global state 
+  \item The function |local2global| simulates the high-level local-state effect with global-state 
   semantics (Section \ref{sec:local-global}).
-  \item The function |states2state| simulates multiple state effects with a single state semantics 
+  \item The function |states2state| simulates multiple state effects with a single-state semantics 
   (Section \ref{sec:multiple-states}).
 \end{itemize}
 
 Combining these simulations, we can encode the semantics for nondeterminism and state with 
-just the state monad. 
-We get to the following simulation:
+just the state transformer monad. 
+An overview of this simulation is given in Figure \ref{fig:simulation}.
+
+\begin{figure}[h]
+% https://q.uiver.app/?q=WzAsOCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8Q29tcFNTIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIChTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDUsInxGcmVlIChTdGF0ZUYgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgOis6IGYpICgpfCJdLFswLDYsInxTdGF0ZVQgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgKEZyZWUgZikgKCl8Il0sWzAsNywifHMgLT4gRnJlZSBmIFthXXwiXSxbMCwxLCJ8bG9jYWwyZ2xvYmFsfCJdLFsxLDIsInxjb21tMnwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdLFszLDQsImRlZmluaXRpb24gb2YgfENvbXBTU3wiXSxbNCw1LCJ8c3RhdGVzMnN0YXRlfCJdLFs1LDYsInxoU3RhdGV8Il0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbNiw3LCJ8ZXh0cmFjdHwiLDAseyJjb2xvdXIiOlswLDAsNTBdLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkb3R0ZWQifX19LFswLDAsNTAsMV1dXQ==
+\[\begin{tikzcd}
+  {|Free (StateF s :+: NondetF :+: f) a|} \\
+  {|Free (StateF s :+: NondetF :+: f) a|} \\
+  {|Free (NondetF :+: StateF s :+: f) a|} \\
+  {|CompSS (SS (StateF s :+: f) a) (StateF s :+: f) ()|} \\
+  {|Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) ()|} \\
+  {|Free (StateF (SS (StateF s :+: f) a, s) :+: f) ()|} \\
+  {|StateT (SS (StateF s :+: f) a, s) (Free f) ()|} \\
+  {|s -> Free f [a]|}
+  \arrow["{|local2global|}", from=1-1, to=2-1]
+  \arrow["{|comm2|}", from=2-1, to=3-1]
+  \arrow["{|nondet2state|}", from=3-1, to=4-1]
+  \arrow["{definition of |CompSS|}", from=4-1, to=5-1]
+  \arrow["{|states2state|}", from=5-1, to=6-1]
+  \arrow["{|hState|}", from=6-1, to=7-1]
+  \arrow["{|simulate|}", shift left=30, color={rgb,255:red,128;green,128;blue,128}, curve={height=-70pt}, shorten <=-10pt, dotted, from=1-1, to=7-1]
+  \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=7-1, to=8-1]
+\end{tikzcd}\]
+\label{fig:simulation}
+\caption{The simulation explained.}
+\end{figure}
+
+We explain the steps here in detail. 
+Broadly speaking, we use a simulation function |simulate| to interpret the semantics for state, nondeterminism
+and possibly other effects in terms of a state transformer, 
+and afterwards a function |extract| that gets the result form the state transformer. 
+
+The simulation function is a composition of the different handlers we have defined:
 \begin{code}
 simulate  :: Functor f 
           => Free (StateF s :+: NondetF :+: f) a 
           -> StateT (SS (StateF s :+: f) a, s) (Free f) ()
 simulate  = hState . states2state . nondet2state . comm2 . local2global
 \end{code}
-Furthermore, we can define an |extract| function to extract the final result.
+First, |local2global| models the local-state semantics with a global state.
+Second, we use commutativity and associativity of the coproduct operator to change
+the order of state and nondeterminism.
 \begin{code}
-extract :: (Functor f)
-         => StateT (SS (StateF s :+: f) a, s) (Free f) ()
-         -> (s -> Free f [a])
+comm2 :: (Functor f1, Functor f2) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 (Var x)             = Var x
+comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
+comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
+\end{code}
+Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
+Then, we use the definition of |CompSS| to represent it as a free monad so that the
+|states2state| simulation can combine the two state effects into a single state.
+Finally, |hState| handles this state effect and translates it to the state transformer |StateT|.
+
+Additionally, the |extract| function extracts the final result from the state monad transformer
+into a more readable form.
+\begin{code}
+extract   :: (Functor f)
+          => StateT (SS (StateF s :+: f) a, s) (Free f) ()
+          -> (s -> Free f [a])
 extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
 \end{code}
-%if False
-\begin{code}
-comm2 :: (Functor f1, Functor f2)
-     => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
-comm2 (Var x) = Var x
-comm2 (Op (Inl k)) = (Op . Inr . Inl) (fmap comm2 k)
-comm2 (Op (Inr (Inl k))) = (Op . Inl) (fmap comm2 k)
-\end{code}
-%endif
-
-The simulation happens in several steps (Figure \ref{fig:simulation}).
-First, |local2global| models the local-state semantics with a global state.
-Second, a commutativity function |comm2| changes the order of state and nondeterminism.
-Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
-Then, |states2state| combines the two state effects into a single state.
-Finally, |hState| handles this state effect and translates it to the state transformer |StateT|.
-Additionally, the |extract| function pulls out the result in a more readable form.
-\begin{figure}[h]
-% https://q.uiver.app/?q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiAoU3RhdGVGIHMgOis6IGYpKSBhfCJdLFswLDMsInxGcmVlIChTdGF0ZUYgKFNTIG0gYSAoU3RhdGVGIHMgOis6IGYpKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDQsInxGcmVlIChTdGF0ZUYgKFNTIG0gYSAoU3RhdGVGIHMgOis6IGYpLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgbSBhIChTdGF0ZUYgcyA6KzogZiksIHMpIChGcmVlIGYpICgpfCJdLFswLDYsInxzIC0+IEZyZWUgZiBbYV18Il0sWzAsMSwifGxvY2FsMmdsb2JhbHwiXSxbMSwyLCJ8Y29tbTJ8Il0sWzIsMywifG5vbmRldDJzdGF0ZXwiXSxbMyw0LCJ8c3RhdGVzMnN0YXRlfCJdLFs0LDUsInxoU3RhdGVUfCJdLFs1LDYsInxleHRyYWN0fCIsMCx7ImNvbG91ciI6WzAsMCw1MF0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRvdHRlZCJ9fX0sWzAsMCw1MCwxXV0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXV0=
-\[\begin{tikzcd}
-  {|Free (StateF s :+: NondetF :+: f) a|} \\
-  {|Free (StateF s :+: NondetF :+: f) a|} \\
-  {|Free (NondetF :+: StateF s :+: f) a|} \\
-  {|Free (StateF (SS m a (StateF s :+: f)) :+: StateF s :+: f) ()|} \\
-  {|Free (StateF (SS m a (StateF s :+: f), s) :+: f) ()|} \\
-  {|StateT (SS m a (StateF s :+: f), s) (Free f) ()|} \\
-  {|s -> Free f [a]|}
-  \arrow["{|local2global|}", from=1-1, to=2-1]
-  \arrow["{|comm2|}", from=2-1, to=3-1]
-  \arrow["{|nondet2state|}", from=3-1, to=4-1]
-  \arrow["{|states2state|}", from=4-1, to=5-1]
-  \arrow["{|hState|}", from=5-1, to=6-1]
-  \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=6-1, to=7-1]
-  \arrow["{|simulate|}", shift left=30, color={rgb,255:red,128;green,128;blue,128}, curve={height=-70pt}, shorten <=-10pt, dotted, from=1-1, to=6-1]
-\end{tikzcd}\]
-\label{fig:simulation}
-\caption{The simulation explained.}
-\end{figure}
 
 To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|, 
 or, in a more elaborate form:
-< extract . hState . states2state . nondet2state . comm2 . local2global = hLocal
-
+< hLocal = extract . hState . states2state . nondet2state . comm2 . local2global
+The proof of this simulation can be found in \todo{ref appendix}.
 
 %if False
 \begin{code}
