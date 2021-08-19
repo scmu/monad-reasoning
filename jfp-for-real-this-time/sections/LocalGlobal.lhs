@@ -361,6 +361,7 @@ which restores the original state when it is backtracked over.
 putR :: MStateNondet s m => s -> m ()
 putR s = get >>= \t -> put s `mplus` side (put t)
 \end{code}
+\label{eq:state-restoring-put}
 
 For example, assume an arbitrary computation |comp| is placed after 
 a state-restoring put. Now we reason as follows.
@@ -543,12 +544,16 @@ t2' = alg' . fmap hGlobal
   -- where alg' = undefined
 \end{code}
 %endif
+
 We can then define |putROp| in terms of these helper functions.
 \begin{code}
 putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
 putROp t k = getOp (\s -> (putOp t k) `orOp` (putOp s failOp))
 \end{code}
-Note the similarity with the |putR| definition of the previous paragraph.
+Note the similarity with the |putR| definition (\Cref{eq:state-restoring-put}) of the previous paragraph.
+Here, we use a continuation-based representation, from which we can always recover the
+representation of |putR| by setting the continuation to |return|.
+
 The corresponding translation function |local2global| transforms every |Put| into
 a |putROp| and leaves the rest of the program untouched.
 \begin{code}
