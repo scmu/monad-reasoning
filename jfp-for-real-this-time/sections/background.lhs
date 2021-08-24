@@ -481,11 +481,151 @@ hND = fold genND algND
 %-------------------------------------------------------------------------------
 \subsection{Motivation and Challenges}
 
-\todo{Show the n-queens example, explain the challenges.}
+\todo{intro}
 
-State + ND -> State + State -> State
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{The n-queens Puzzle}
 
-\begin{figure}
+The n-queens problem used here is an adapted and simplified version from that of
+\todo{cite Gibbons and Hinze}.
+The aim of the puzzle is to place n queens on a n-by-n chess board such that no
+two queens can attack eachother. 
+Given n, we number the rows and columns by |[0..n-1]|.
+Since all queens should be placed on distinct rows and distinct columns, a 
+potential solution can be represented by a permutation |xs| of the list |[0..n-1]|, 
+such that |xs !! i = j| denotes that the queen on the |i|th column is placed on 
+the |j|th row. 
+\todo{image}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{A Naive Algorithm}
+
+The naive version of an algorithm for n-queens can be written as a 
+nondeterministic program:
+\begin{code}
+queensNaive :: MNondet m => Int -> m [Int]
+queensNaive n = permutations [0..n-1] >>= filtr safe
+\end{code} 
+On a high level, this function generates all permutations of queens, and then
+checks them one by one for validity.
+
+Here, |permutations| nondeterministically computes a permutation of its input.
+It uses a function |select| that nodeterministically splits a list into a pair
+containing one chosen element and the rest. 
+For example, |select [1,2,3]| yields one of |(1,[2,3])|, |(2,[1,3])| and |(3,[1,2])|.
+\begin{code}
+select :: MNondet m => [a] -> m (a, [a])
+select  []      = mzero
+select  (x:xs)  = return (x, xs) `mplus` fmap (id `times` (x:)) (select xs)
+
+times :: (a -> b) -> (c -> d) -> (a, c) -> (b, d)
+times f g (x, y) = (f x, g y)
+
+permutations :: MNondet m => [a] -> m [a]
+permutations []  = return []
+permutations xs  = select xs >>= \(x, ys) -> fmap (x:) (permutations ys)
+\end{code}
+
+The function |filtr p x| returns |x| if |p x| holds, and fails otherwise.
+\begin{code}
+filtr :: MNondet m => (a -> Bool) -> a -> m a
+filtr p x = (if p x then return () else mzero) >> return x
+\end{code}
+
+The pure function |safe :: [Int] -> Bool| determines whether a solution is
+valid. 
+In our representation, queens cannot be put on the same row or column.
+Therefore, |safe| only needs to make sure that no two queens are put on the same
+diagonal.
+An 8-by-8 chess board has 15 \emph{up diagonals} (those running between
+bottom-left and top-right). Similarly, there are 15 \emph{down diagonals}
+(running between top-left and bottom-right). Routine program calculation shows
+that we can check whether a placement is safe in one left-to-right traversal. 
+\begin{code}
+safe :: [Int] -> Bool
+safe = safeAcc (0,[],[])
+\end{code}
+Operationally, we keep a state that is a triple of 
+(1) the current column we are looking at (|i|), 
+(2) the up diagonals (|ups|) encountered so far, and
+(3) the down diagonals (|dwns|) encountered so far. 
+\begin{code}
+safeAcc :: (Int, [Int], [Int]) -> [Int] -> Bool
+safeAcc state = all valid . tail . scanl plus state
+
+valid  :: (Int, [Int], [Int]) -> Bool
+valid  (_, u:ups, d:dwns)   = u `notElem` ups && d `notElem` dwns
+
+plus   :: (Int, [Int], [Int]) -> Int -> (Int, [Int], [Int])
+plus   (i, ups, dwns) x     = (i+1, i+x : ups, i-x : dwns)
+\end{code}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{A More Performant Backtracking Algorithm}
+
+We can design a backtracking algorithm that attempts to place queens column-by-column,
+proceeds to the next column if |valid| holds and backtracks otherwise.
+The naive implementation for queens uses a two-phase approach in which first 
+all permutations are computed and in a second step these permutations are checked
+for safety. We wish to fuse the two phases into a single one and produce a faster
+implementation.
+
+Instead of the state accumulator of the previous paragraph, we use an actual
+state monad. 
+The function |protect| saves the initial state and restores it after the 
+computation.
+\begin{code}
+protect :: MState s m => m b -> m b
+protect mx = do  s <- get
+                 x <- mx
+                 put s 
+                 return x
+\end{code}
+The |body| function selects an element |x| from the list, checks whether the new
+state |s `plus` x| is valid, updates the state with the new value and appends
+this value to the rest of list.
+\begin{code}
+body :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
+body [] = return []
+body xs = do    (x, ys) <- select xs 
+                s <- get
+                if valid (s `plus` x) then return () else mzero
+                put (s `plus` x)
+                fmap (x:) (body ys)
+\end{code}
+The attentive reader recognizes the |permutations| function and the |safe| function
+in this |body|, merged together.
+Indeed, we can fuse the computation of permutations and the safety checking of the 
+queens into a single phase, resulting in the |queens| function.
+\begin{code}
+queens' :: MStateNondet (Int, [Int], [Int]) m => Int -> m [Int]
+queens' n = protect (put (0, [], []) >> body [0..n-1])
+\end{code}
+ 
+The derivation from the specification to this program relies on properties that
+hold between state and nondeterminism, such as their commutativity.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{Challenges}
+
+% The classic, well-known n-queens puzzle demonstrates that there are 
+% situations in which we want to write a program with both nondeterminism and state
+% using only global-state semantics. 
+% Although local state and the semantics for nondeterminism are, generally speaking,
+% more easy to reason about, global state outperforms these semantics.
+\todo{Challenges without mentioning too much of the details of local and global state}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{Overall Goal}
+
+In this paper, we show how to simulate semantics for nondeterminism and state, 
+using only the low-level state effect. 
+We do this in several steps: 
+\Cref{sec:nondeterminism-state} explains how to simulate nondeterminism with state; 
+\Cref{sec:local-global} simulates local state with global state; and 
+\Cref{sec:multiple-states} shows how we can group multiple states into a single
+state effect. 
+
 % https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
 \[\begin{tikzcd}
   {\text{State + Nondeterminism}} \\
@@ -497,9 +637,6 @@ State + ND -> State + State -> State
   \arrow[from=1-1, to=2-1]
   \arrow[from=2-1, to=3-1]
 \end{tikzcd}\]
-\label{fig:overview}
-\caption{Overview.}
-\end{figure}
 
 
 

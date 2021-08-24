@@ -19,6 +19,12 @@
 %format s1'
 %format s2'
 
+%format `times` = "\mathbin{\times}"
+%format times = "(\mathbin{\times})"
+%format `plus` = "\mathbin{\oplus}"
+%format plus = "(\mathbin{\oplus})"
+%format queensNaive = "\Varid{queens_{naive}}"
+
 %format * = "\mathbin{^\star}"
 %format -* = "\mathbin{-^\star}"
 %format dot = "\mathbin{\cdot}"
