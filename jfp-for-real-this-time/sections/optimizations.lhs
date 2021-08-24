@@ -17,6 +17,8 @@ import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
 import Control.Monad (ap, join, liftM)
 import Control.Monad.Trans (lift)
+
+import LocalGlobal
 \end{code}
 %endif
 
@@ -139,8 +141,6 @@ instance Functor (StackF elem) where
 %endif
 
 The handler for mutable state |hStack| then works as follows:
-\todo{Inr case}
-\todo{example ST transformer}
 \begin{code}
 hStack :: (Functor f) 
        => Free (StackF e :+: f) a 
@@ -181,10 +181,30 @@ test = runST $ do
 \subsection{Undo Semantics}
 \label{sec:undo-semantics}
 
-backtracking in local state
+% backtracking in local state
 
+In \Cref{sec:local-global} we have discussed how to simulate local state using
+a global state.
+But, using |putR|, we clearly make the implicit copying of the local-state 
+semantics explicit in the global-state semantics. 
+This is problematic if the state is big, e.g. a long array.
+Instead, we would want to keep track of the modifications made to the state, 
+and possibly undo them when necessary.
+As mentioned in \Cref{sec:transforming-between-local-and-global-state}, rather
+than using |put|, some algorithms typically use a pair of commands |modify next|
+and |modify prev| to update and roll back the state, respectively.
+Here, |next| and |prev| represent the modifications to the state, with |next . prev = id|.
+This approach is especially recommended when the state is represented using 
+an array or other data structure that is usually not overwritten in its entirety.
+Following a style similar to |putR|, this can be modelled as follows:
+\begin{code}
+modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
+modifyR next prev = modify next `mplus` side (modify prev)
+\end{code}
 
-
+Unlike |putR|, |modifyR| does not keep any copies of the old state alive, as it does 
+not introduce a branchgin point where the right branch refers to a variable
+introduced outside the branching point. 
 
 
 

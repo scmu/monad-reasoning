@@ -312,8 +312,8 @@ Here, |next| advances the state and |prev| undoes the modification so that
 |prev . next = id = next . prev|.
 The functions |modify| and |modReturn| are defined as follows:
 \begin{code}
-modify f = get >>= put . f
-modReturn f v = modify f >> return v
+modify     f    = get >>= put . f
+modReturn  f v  = modify f >> return v
 \end{code}
 Now, assume an initial state |s| and a |search| that finds three choices
 |m1 `mplus` m2 `mplus` m3|.

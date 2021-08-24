@@ -125,6 +125,7 @@
 %format hL' = "\Varid{h_{L}^\prime}"
 
 %format putR = "\Varid{put_{R}}"
+%format modifyR = "\Varid{modify_{R}}"
 
 %format getOp = "\Varid{get}_{Op}"
 %format putOp = "\Varid{put}_{Op}"
@@ -170,8 +171,6 @@
 %format CompCut = "\Varid{Comp_{Cut}}"
 %format resultsCut = "\Varid{results_{Cut}}"
 %format stackCut = "\Varid{stack_{Cut}}"
-
-
 
 
 
