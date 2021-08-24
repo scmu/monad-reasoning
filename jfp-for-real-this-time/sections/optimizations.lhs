@@ -12,8 +12,8 @@ import Background
 import Data.Array.ST
 import Control.Monad.ST
 -- import qualified Control.Monad.ST.Trans as T
-import Control.Monad.ST.Trans (STT)
-import Control.Monad.ST.Trans.Internal (liftST)
+import Control.Monad.ST.Trans (STT, runSTT)
+import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
 import Control.Monad (ap, join, liftM)
 import Control.Monad.Trans (lift)
@@ -151,11 +151,8 @@ hStack = fold gen (alg # fwd)
     gen                   = const . return
     alg (Push x k)  stack = liftST (pushStack x stack)  >> k stack
     alg (Pop k)     stack = liftST (popStack stack)     >>= \x -> k x stack
-    fwd y           stack = undefined
+    fwd y           stack = STT $ \s -> Op ((\f -> unSTT (f stack) s) <$> y)
 \end{code}
-
-% fwd y stack = lift $ Op ((T.runSTT . ($ stack)) <$> y)
-
 
 %if False
 \begin{code}
