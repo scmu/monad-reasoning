@@ -129,6 +129,7 @@
 %format hNDf = "\Varid{h_{ND+f}}"
 %format hLocal = "\Varid{h_{Local}}"
 %format hGlobal = "\Varid{h_{Global}}"
+%format hStack = "\Varid{h_{Stack}}"
 %format hL = "\Varid{h_{L}}"
 %format hL' = "\Varid{h_{L}^\prime}"
 

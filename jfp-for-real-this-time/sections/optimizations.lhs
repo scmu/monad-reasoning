@@ -204,7 +204,7 @@ modifyR next prev = modify next `mplus` side (modify prev)
 \end{code}
 
 Unlike |putR|, |modifyR| does not keep any copies of the old state alive, as it does 
-not introduce a branchgin point where the right branch refers to a variable
+not introduce a branching point where the right branch refers to a variable
 introduced outside the branching point. 
 
 %-------------------------------------------------------------------------------
