@@ -23,6 +23,8 @@
 %format times = "(\mathbin{\times})"
 %format `plus` = "\mathbin{\oplus}"
 %format plus = "(\mathbin{\oplus})"
+%format `minus` = "\mathbin{\ominus}"
+%format minus = "(\mathbin{\ominus})"
 %format queensNaive = "\Varid{queens_{naive}}"
 
 %format * = "\mathbin{^\star}"
@@ -132,6 +134,8 @@
 
 %format putR = "\Varid{put_{R}}"
 %format modifyR = "\Varid{modify_{R}}"
+%format queensR = "\Varid{queens_{R}}"
+%format bodyR = "\Varid{body_{R}}"
 
 %format getOp = "\Varid{get}_{Op}"
 %format putOp = "\Varid{put}_{Op}"

@@ -183,6 +183,7 @@ x5 y =
 \end{code}
 %endif
 
+%-------------------------------------------------------------------------------
 \subsection{Simulating Nondeterminism and State with Only State}
 
 By now we have defined three simulations for encoding a high-level effect as a lower-level effect.
@@ -291,6 +292,27 @@ tt' = hNil $ hLocal prog 0
 \end{code}
 %endif
 
-\subsection{The Simulation for N-queens}
 
-\todo{show how this works on an example (n-queens?)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

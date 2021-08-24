@@ -480,6 +480,7 @@ hND = fold genND algND
 
 %-------------------------------------------------------------------------------
 \subsection{Motivation and Challenges}
+\label{sec:motivation-and-challenges}
 
 \todo{intro}
 

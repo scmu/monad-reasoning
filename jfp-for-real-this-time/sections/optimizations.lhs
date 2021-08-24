@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Optimizations where
 
@@ -206,7 +207,40 @@ Unlike |putR|, |modifyR| does not keep any copies of the old state alive, as it 
 not introduce a branchgin point where the right branch refers to a variable
 introduced outside the branching point. 
 
+%-------------------------------------------------------------------------------
+\subsection{The Simulation for N-queens}
 
+We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
+Recall that, for the puzzle, the operator that alters the state
+(to check whether a chess placement is safe), is defined by
+< (i, ups, dwns) `plus`   x = (i + 1,  i+x : ups,  i-x : dwns)
+Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
+< (i, ups, dwns) `minus`  x = (i - 1,  tail ups,   tail dwns)
+
+Thus, we can compute all the solutions to the puzzle, in a scenario with a 
+shared global state as follows:
+\begin{code}
+queensR :: MStateNondet (Int, [Int], [Int]) m => Int -> m [Int]
+queensR n = put (0, [], []) >> bodyR [0..n-1]
+
+bodyR :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
+bodyR [] = return []
+bodyR xs = do   (x, ys) <- select xs 
+                s <- get
+                if valid (s `plus` x) then return () else mzero
+                modifyR (`plus` x) (`minus` x)
+                fmap (x:) (bodyR ys)
+\end{code}
+This function is similar to the original implementation, but has replaced the 
+|put| operation by a |modifyR|. 
+
+%if False
+\begin{code}
+minus (i, ups, dwns) x = (i - 1,  tail ups,   tail dwns)
+\end{code}
+%endif
+
+\todo{mutable state for n-queens?}
 
 
 
