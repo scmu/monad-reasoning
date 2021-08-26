@@ -591,4 +591,64 @@ fold.
 Third, the universality of fold tells us that this equality holds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
 
-% %-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\subsection{Undo Semantics}
+\label{sec:undo-semantics}
+
+% backtracking in local state
+
+In \Cref{sec:local-global} we have discussed how to simulate local state using
+a global state.
+But, using |putR|, we clearly make the implicit copying of the local-state 
+semantics explicit in the global-state semantics. 
+This is problematic if the state is big, e.g. a long array.
+Instead, we would want to keep track of the modifications made to the state, 
+and possibly undo them when necessary.
+As mentioned in \Cref{sec:transforming-between-local-and-global-state}, rather
+than using |put|, some algorithms typically use a pair of commands |modify next|
+and |modify prev| to update and roll back the state, respectively.
+Here, |next| and |prev| represent the modifications to the state, with |next . prev = id|.
+This approach is especially recommended when the state is represented using 
+an array or other data structure that is usually not overwritten in its entirety.
+Following a style similar to |putR|, this can be modelled as follows:
+\begin{code}
+modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
+modifyR next prev = modify next `mplus` side (modify prev)
+\end{code}
+
+Unlike |putR|, |modifyR| does not keep any copies of the old state alive, as it does 
+not introduce a branching point where the right branch refers to a variable
+introduced outside the branching point. 
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph{The Simulation for N-queens}
+
+We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
+Recall that, for the puzzle, the operator that alters the state
+(to check whether a chess placement is safe), is defined by
+< (i, ups, dwns) `plus`   x = (i + 1,  i+x : ups,  i-x : dwns)
+Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
+< (i, ups, dwns) `minus`  x = (i - 1,  tail ups,   tail dwns)
+
+Thus, we can compute all the solutions to the puzzle, in a scenario with a 
+shared global state as follows:
+\begin{code}
+queensR :: MStateNondet (Int, [Int], [Int]) m => Int -> m [Int]
+queensR n = put (0, [], []) >> bodyR [0..n-1]
+
+bodyR :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
+bodyR [] = return []
+bodyR xs = do   (x, ys) <- select xs 
+                s <- get
+                if valid (s `plus` x) then return () else mzero
+                modifyR (`plus` x) (`minus` x)
+                fmap (x:) (bodyR ys)
+\end{code}
+This function is similar to the original implementation, but has replaced the 
+|put| operation by a |modifyR|. 
+
+%if False
+\begin{code}
+minus (i, ups, dwns) x = (i - 1,  tail ups,   tail dwns)
+\end{code}
+%endif
