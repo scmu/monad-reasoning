@@ -358,6 +358,19 @@ hNil (Var x) = x
 
 Consequently, we can compose the state effects with any other 
 effect functor |f| using |Free (StateF s :+: f) a|.
+It is also easy to see that |Free (StateF s :+: NondetF :+: f)| is an instance of |MStateNondet|.
+
+\begin{code}
+instance (Functor f) => MState s (Free (StateF s :+: f)) where
+    get    = Op $ Inl $ Get return
+    put x  = Op $ Inl $ Put x (return ())
+
+instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
+  mzero      = Op $ Inr $ Inl Fail
+  mplus x y  = Op $ Inr $ Inl (Or x y)
+
+instance (Functor f) => MStateNondet s (Free (StateF s :+: NondetF :+: f))
+\end{code}
 
 To give semantics to the free monad constructs of these effects, we can use
 their folds, also called handlers. 
@@ -406,10 +419,9 @@ instance MState s (Free (StateF s)) where
     get    = Op (Get return)
     put x  = Op (Put x (return ()))
 
-
-instance (Functor f, MState s (Free (StateF s))) => MState s (Free (StateF s :+: f)) where
-    get    = Op (Inl (Get return))
-    put x  = Op (Inl (Put x (return ())))
+instance MNondet (Free NondetF) where
+  mzero = Op Fail
+  mplus x y = Op (Or x y)
 \end{code}
 
 \begin{spec}
@@ -546,18 +558,24 @@ that we can check whether a placement is safe in one left-to-right traversal.
 safe :: [Int] -> Bool
 safe = safeAcc (0,[],[])
 \end{code}
-Operationally, we keep a state that is a triple of 
+Operationally, we keep a state |(i, ups, dwns)| of type
+|Stnq = Stnq| that is a triple of 
 (1) the current column we are looking at (|i|), 
 (2) the up diagonals (|ups|) encountered so far, and
 (3) the down diagonals (|dwns|) encountered so far. 
+%if False
 \begin{code}
-safeAcc :: (Int, [Int], [Int]) -> [Int] -> Bool
+type Stnq = (Int, [Int], [Int])
+\end{code}
+%endif
+\begin{code}
+safeAcc :: Stnq -> [Int] -> Bool
 safeAcc state = all valid . tail . scanl plus state
 
-valid  :: (Int, [Int], [Int]) -> Bool
+valid  :: Stnq -> Bool
 valid  (_, u:ups, d:dwns)   = u `notElem` ups && d `notElem` dwns
 
-plus   :: (Int, [Int], [Int]) -> Int -> (Int, [Int], [Int])
+plus   :: Stnq -> Int -> Stnq
 plus   (i, ups, dwns) x     = (i+1, i+x : ups, i-x : dwns)
 \end{code}
 
@@ -573,20 +591,20 @@ implementation.
 
 Instead of the state accumulator of the previous paragraph, we use an actual
 state monad. 
-The function |protect| saves the initial state and restores it after the 
-computation.
-\begin{code}
-protect :: MState s m => m b -> m b
-protect mx = do  s <- get
-                 x <- mx
-                 put s 
-                 return x
-\end{code}
+% The function |protect| saves the initial state and restores it after the 
+% computation.
+% \begin{code}
+% protect :: MState s m => m b -> m b
+% protect mx = do  s <- get
+%                  x <- mx
+%                  put s 
+%                  return x
+% \end{code}
 The |body| function selects an element |x| from the list, checks whether the new
 state |s `plus` x| is valid, updates the state with the new value and appends
 this value to the rest of list.
 \begin{code}
-body :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
+body :: MStateNondet Stnq m => [Int] -> m [Int]
 body [] = return []
 body xs = do    (x, ys) <- select xs 
                 s <- get
@@ -598,11 +616,16 @@ The attentive reader recognizes the |permutations| function and the |safe| funct
 in this |body|, merged together.
 Indeed, we can fuse the computation of permutations and the safety checking of the 
 queens into a single phase, resulting in the |queens| function.
-\begin{code}
-queens' :: MStateNondet (Int, [Int], [Int]) m => Int -> m [Int]
-queens' n = protect (put (0, [], []) >> body [0..n-1])
-\end{code}
+% \begin{code}
+% queens' :: MStateNondet Stnq m => Int -> m [Int]
+% queens' n = protect (put (0, [], []) >> body [0..n-1])
+% \end{code}
  
+\begin{code}
+queens :: MStateNondet Stnq m => Int -> m [Int]
+queens n = put (0, [], []) >> body [0..n-1]
+\end{code}
+
 The derivation from the specification to this program relies on properties that
 hold between state and nondeterminism, such as their commutativity.
 

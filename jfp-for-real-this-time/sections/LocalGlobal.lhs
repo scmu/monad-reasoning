@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
@@ -265,8 +266,6 @@ Branching first exhausts the left branch before switching to the right branch.
 %-------------------------------------------------------------------------------
 \subsection{Transforming Between Local and Global State}
 \label{sec:transforming-between-local-and-global-state}
-\wenhao{I am wondering whether we can directly use the free monad representation to organize the presentation of S4.3 or the whole S4, because the final simulation function |local2global| uses free monad.}
-\birthe{I didn't do it yet.}
 
 Both local state and global state have their own laws and semantics. 
 Also, both interpretations of nondeterminism with state have their own 
@@ -455,16 +454,12 @@ becomes explicit in the program.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph{Proving the |putR| Operation Correct}
 It is time to give a more formal definition for the translation between 
-global-state and local-state semantics. 
-% Let's define a datatype |Prog s f a| that represents a program with state, 
-% nondeterminism and some other effects.
-% \begin{code}
-% type Prog s f a = Free (StateF s :+: NondetF :+: f) a
-% \end{code}
-We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
-notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
-constructors. Their implementations are straightforwardly defined in terms of
-|Get|, |Put|, |Or| and |Fail|.
+global-state and local-state semantics using the free monad representation.
+% We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
+% notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
+% constructors. Their implementations are straightforwardly defined in terms of
+% |Get|, |Put|, |Or| and |Fail|.
+
 %if False
 \begin{code}
 getOp     :: (s -> Free (StateF s :+: NondetF :+: f) a)  
@@ -485,6 +480,7 @@ failOp    :: Free (StateF s :+: NondetF :+: f) a
 failOp    = (Op . Inr . Inl) Fail 
 \end{code}
 %endif
+
 %if False
 \begin{code}
 hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
@@ -545,24 +541,26 @@ t2' = alg' . fmap hGlobal
 \end{code}
 %endif
 
-We can then define |putROp| in terms of these helper functions.
-\begin{code}
-putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
-putROp t k = getOp (\s -> (putOp t k) `orOp` (putOp s failOp))
-\end{code}
-Note the similarity with the |putR| definition (\Cref{eq:state-restoring-put}) of the previous paragraph.
-Here, we use a continuation-based representation, from which we can always recover the
-representation of |putR| by setting the continuation to |return|.
+% We can then define |putROp| in terms of these helper functions.
+% \begin{code}
+% putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
+% putROp t k = getOp (\s -> (putOp t k) `orOp` (putOp s failOp))
+% \end{code}
+% Note the similarity with the |putR| definition (\Cref{eq:state-restoring-put}) of the previous paragraph.
+% Here, we use a continuation-based representation, from which we can always recover the
+% representation of |putR| by setting the continuation to |return|.
+
+\wenhao{As |Free (StateF s :+: NondetF :+: f) a| is just an instance of |MStateNondet s|, I think we can directly use |putR| here instead of defining a new |putROp|.}
 
 The corresponding translation function |local2global| transforms every |Put| into
-a |putROp| and leaves the rest of the program untouched.
+a |putR| and leaves the rest of the program untouched.
 \begin{code}
 local2global  :: Functor f 
               => Free (StateF s :+: NondetF :+: f) a 
               -> Free (StateF s :+: NondetF :+: f) a
 local2global = fold Var alg
   where 
-    alg (Inl (Put t k)) = putROp t k
+    alg (Inl (Put t k)) = putR t >> k
     alg p               = Op p
 \end{code}
 Now, we want to prove this translation correct, but what does correctness mean 
@@ -590,6 +588,27 @@ Second, we do the same to |hGlobal . local2global|: use fold fusion to make it a
 fold. 
 Third, the universality of fold tells us that this equality holds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
+
+%-------------------------------------------------------------------------------
+\paragraph{N-Queens with Global State}
+\label{sec:n-queens-global}
+\wenhao{paragraph or subsubsection?}
+
+Recall the backtracking algorithm |queens| for the n-queens example in Section \ref{sec:motivation-and-challenges}.
+It is supposed to run in the local-state semantics because every branch maintains its own state and have no fluence on each other.
+The function |nqueensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
+\begin{code}
+nqueensLocal :: Int -> [[Int]]
+nqueensLocal n = hNil $ hLocal (queens n) (0, [], [])
+\end{code}
+For examples, the program |nqueensLocal 4| gives the result |[[1,3,0,2],[2,0,3,1]]|.
+
+Using the simulation function |local2global|, we can also have another function |nqueensGlobal| which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
+\begin{code}
+nqueensGlobal :: Int -> [[Int]]
+nqueensGlobal n = hNil $ (hGlobal . local2global) (queens n) (0,[],[]) 
+\end{code}
+There two functions are obviously equivalent as we have the equation |hGlobal . local2global = hLocal|.
 
 %-------------------------------------------------------------------------------
 \subsection{Undo Semantics}
@@ -621,11 +640,12 @@ not introduce a branching point where the right branch refers to a variable
 introduced outside the branching point. 
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph{The Simulation for N-queens}
+\paragraph{N-queens with |modifyR|}
 
 We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
 Recall that, for the puzzle, the operator that alters the state
-(to check whether a chess placement is safe), is defined by
+% (to check whether a chess placement is safe)
+, is defined by
 < (i, ups, dwns) `plus`   x = (i + 1,  i+x : ups,  i-x : dwns)
 Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
 < (i, ups, dwns) `minus`  x = (i - 1,  tail ups,   tail dwns)
@@ -633,10 +653,10 @@ Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
 Thus, we can compute all the solutions to the puzzle, in a scenario with a 
 shared global state as follows:
 \begin{code}
-queensR :: MStateNondet (Int, [Int], [Int]) m => Int -> m [Int]
+queensR :: MStateNondet Stnq m => Int -> m [Int]
 queensR n = put (0, [], []) >> bodyR [0..n-1]
 
-bodyR :: MStateNondet (Int, [Int], [Int]) m => [Int] -> m [Int]
+bodyR :: MStateNondet Stnq m => [Int] -> m [Int]
 bodyR [] = return []
 bodyR xs = do   (x, ys) <- select xs 
                 s <- get
@@ -645,7 +665,15 @@ bodyR xs = do   (x, ys) <- select xs
                 fmap (x:) (bodyR ys)
 \end{code}
 This function is similar to the original implementation, but has replaced the 
-|put| operation by a |modifyR|. 
+|put| operation by a |modifyR|.
+Note that there is no |put| in the |bodyR| anymore, so it is the same thing to handle |bodyR| with |hLocal| or |hGlobal|.
+Although there is a |put (0, [], [])| in |queensR| which will make some difference on the final state, both |hLocal| and |hGlobal| drops the final state so it does not matter.
+The function |nqueensModify| solves the n-queens problem using the function |queensR|.
+It is equivalent to the previous two implementations we have.
+\begin{code}
+nqueensModify :: Int -> [[Int]]
+nqueensModify n = hNil $ hGlobal (queensR n) (0,[],[]) 
+\end{code}
 
 %if False
 \begin{code}
