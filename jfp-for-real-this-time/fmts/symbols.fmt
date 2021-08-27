@@ -187,6 +187,9 @@
 %format nqueensLocal = "\Varid{nqueens_{Local}}"
 %format nqueensGlobal = "\Varid{nqueens_{Global}}"
 %format nqueensModify = "\Varid{nqueens_{Modify}}"
+%format nqueens2 = "\Varid{nqueens_{2}}"
+%format nqueens2' = "\Varid{nqueens_{2}^\prime}"
+%format nqueens3 = "\Varid{nqueens_{3}}"
 
 
 

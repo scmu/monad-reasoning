@@ -481,66 +481,6 @@ failOp    = (Op . Inr . Inl) Fail
 \end{code}
 %endif
 
-%if False
-\begin{code}
-hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hGlobal = fmap (fmap fst) . runStateT . hState . comm . hNDf . assocr . comm
-
--- The code below is used to assist proof.
-hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
-hL = fmap hL'
-  where
-    hL' :: Functor f => Free (NondetF :+: f) (a, s) -> Free f [a]
-    -- hL' = (fmap (fmap fst) . hND)
-    hL' = fold (fmap (fmap fst) . genND) algL'
-    genND = Var . return
-    algL' :: Functor f => (NondetF :+: f) (Free f [a]) -> Free f [a]
-    algL' (Inl Fail) = Var []
-    algL' (Inl (Or p q)) = liftA2 (++) p q
-    algL' (Inr y) = Op y
-
-algS :: Functor f
-     => (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))
-     -> s -> Free (NondetF :+: f) (a, s)
-algS (Inl (Get k))    = \ s -> k s s
-algS (Inl (Put s k))  = \ _ -> k s
-algS (Inr y)          = \ s -> Op (fmap ($s) y)
-
-t :: Functor f
-  => (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))
-  -> s -> Free f [a]
-t = hL . algS
-
-t' :: Functor f
-   => (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))
-   -> s -> Free f [a]
-t' = alg' . fmap hL
-
-alg' :: Functor f => (StateF s :+: (NondetF :+: f)) (s -> Free f [a]) -> s -> Free f [a]
--- alg' = undefined
-alg' (Inl (Get k))         = \ s -> k s s
-alg' (Inl (Put s k))       = \ _ -> k s
-alg' (Inr (Inl Fail))      = \ s -> Var []
--- alg' (Inr (Inl (Or p q)))  = \ s -> (++) <$> p s <*> q s
-alg' (Inr (Inl (Or p q)))  = \ s -> liftA2 (++) (p s) (q s)
-alg' (Inr (Inr y))         = \ s -> Op (fmap ($s) y)
-
-alg :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a) -> Free (StateF s :+: NondetF :+: f) a
-alg = undefined
-
-t2 :: Functor f
-   => (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a)
-   -> s -> Free f [a]
-t2 = hGlobal . alg
-
-t2' :: Functor f
-    => (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: (NondetF :+: f)) a)
-    -> s -> Free f [a]
-t2' = alg' . fmap hGlobal
-  -- where alg' = undefined
-\end{code}
-%endif
-
 % We can then define |putROp| in terms of these helper functions.
 % \begin{code}
 % putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
@@ -576,10 +516,23 @@ hLocal = fmap (fmap (fmap fst) . hNDf) . runStateT . hState
 \end{code}
 Global-state semantics can be implemented by simply inverting the order of the 
 handlers: we run a single state through a nondeterministic computation.
-< hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-< hGlobal = fmap (fmap fst) . runStateT . hState . hNDf
-Note that, for this handler to work, we implicitly assume
-commutativity and associativity of the coproduct operator |(:+:)|.
+% < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+% < hGlobal = fmap (fmap fst) . runStateT . hState . hNDf
+\begin{code}
+hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
+\end{code}
+The function |comm2| here swaps the order of two functors connected by |(:+:)| in free monads.
+\begin{code}
+comm2 :: (Functor f1, Functor f2) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 (Var x)             = Var x
+comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
+comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
+\end{code}
+For simplicity, we can implicitly assume
+commutativity and associativity of the coproduct operator |(:+:)|
+and ommit the |comm2| in the definition of |hGlobal|.
+
 A correct translation then transforms local state to global state.
 < hGlobal . local2global = hLocal
 We use equational reasoning techniques to prove this equality. 
@@ -599,14 +552,14 @@ It is supposed to run in the local-state semantics because every branch maintain
 The function |nqueensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
 \begin{code}
 nqueensLocal :: Int -> [[Int]]
-nqueensLocal n = hNil $ hLocal (queens n) (0, [], [])
+nqueensLocal n = hNil . flip hLocal (0, [], []) $ queens n
 \end{code}
 For examples, the program |nqueensLocal 4| gives the result |[[1,3,0,2],[2,0,3,1]]|.
 
 Using the simulation function |local2global|, we can also have another function |nqueensGlobal| which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
 \begin{code}
 nqueensGlobal :: Int -> [[Int]]
-nqueensGlobal n = hNil $ (hGlobal . local2global) (queens n) (0,[],[]) 
+nqueensGlobal n = hNil . flip hGlobal (0,[],[]) . local2global $ queens n
 \end{code}
 There two functions are obviously equivalent as we have the equation |hGlobal . local2global = hLocal|.
 
@@ -672,7 +625,7 @@ The function |nqueensModify| solves the n-queens problem using the function |que
 It is equivalent to the previous two implementations we have.
 \begin{code}
 nqueensModify :: Int -> [[Int]]
-nqueensModify n = hNil $ hGlobal (queensR n) (0,[],[]) 
+nqueensModify n = hNil . flip hGlobal (0,[],[]) $ queensR n
 \end{code}
 
 %if False

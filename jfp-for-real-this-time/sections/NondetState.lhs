@@ -19,6 +19,7 @@ import Control.Monad (ap, join, liftM)
 -- import qualified Control.Monad.Trans.State.Lazy as S
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT, state)
 import Control.Monad.Trans (lift)
+import LocalGlobal
 
 \end{code}
 %endif
@@ -364,6 +365,28 @@ More concretely, we have to prove the following two things:
 Due to the modularity, we need to include a different case for the forwarding algebra.
 The full proof of this theorem, using equational reasoning techniques,
 is included in \Cref{app:in-combination-with-other-effects}.
+
+\paragraph{Using State to Simulate Nondeterminism in N-queens}
+
+We can also apply the simulation function |nondet2state| to the n-queens problem after the simulation |local2global|.
+To do this, we start from |nqueensGlobal| and replace the |hNDf| in the definition of |hGlobal| with |runNDf = extractSS . hState . nondet2state|.
+The function |nqueens2| uses the two simulation functions in sequence.
+\begin{code}
+nqueens2 :: Int -> [[Int]]
+nqueens2 n  = hNil
+            . fmap fst . flip runStateT (0, [], []) . hState
+            . (extractSS . hState . nondet2state) . comm2
+            . local2global $ queens n
+\end{code}
+Similarly, we can develop another version of |nqueens2| based on |nqueensModify| which uses the undo semantics.
+\begin{code}
+nqueens2' :: Int -> [[Int]]
+nqueens2' n  = hNil
+             . fmap fst . flip runStateT (0, [], []) . hState
+             . (extractSS . hState . nondet2state) . comm2
+             $ queensR n
+\end{code}
+It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
 
 % -------------------------------------------------------------------------
 % Old 3.2 and 3.3
