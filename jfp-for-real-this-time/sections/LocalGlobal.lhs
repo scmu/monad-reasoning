@@ -534,7 +534,9 @@ commutativity and associativity of the coproduct operator |(:+:)|
 and ommit the |comm2| in the definition of |hGlobal|.
 
 A correct translation then transforms local state to global state.
+\begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal
+\end{theorem}
 We use equational reasoning techniques to prove this equality. 
 First, we use fold fusion to transfrom |hLocal| to a single fold.
 Second, we do the same to |hGlobal . local2global|: use fold fusion to make it a single

@@ -347,7 +347,7 @@ is equivalent to the nondeterminism handler |hNDf| defined in \ref{sec:combining
 %     fwdNDf op        = Op op
 % \end{code}
 % We prove that this handler |hNDf| and the |runNDf| function are equal.
-\begin{theorem}
+\begin{theorem}\label{thm:nondet-state}
 |runNDf = hNDf|
 \end{theorem}
 As before, we first expand the definition of |runNDf|, 

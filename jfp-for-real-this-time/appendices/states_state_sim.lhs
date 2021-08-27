@@ -5,7 +5,7 @@
 \subsection{|flatten| and |nested| form an isomorphism}
 \label{app:flatten-nested}
 
-This section shows that |nested . flatten = id| and |flatten . nested| = id.
+This section shows that |nested . flatten = id| and |flatten . nested = id|.
 
 First, we prove that |(nested . flatten) t = t| for all |t :: StateT s1 (StateT s2 (Free f))| by equational reasoning.
 
@@ -62,7 +62,11 @@ Then, we prove that |(flatten . nested) t = t| for all |t :: StateT (s1, s2) (Fr
 \subsection{Fusion of the Handlers for Multiple States}
 \label{app:states-state-fusion}
 
-This sections shows that |flatten . hStates = hStates'|, where |flatten| is defined in Section \ref{sec:multiple-states} and |hStates'| is defined as
+This sections proves the following equation:
+\begin{lemma}\label{thm:flatten-states}
+|flatten . hStates = hStates'|
+\end{lemma}
+where |flatten| is defined in Section \ref{sec:multiple-states} and |hStates'| is defined as
 < hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
 < hStates' t = StateT $ \ (s1, s2) -> fmap alpha $ runStateT (hState (runStateT (hState t) s1)) s2
 

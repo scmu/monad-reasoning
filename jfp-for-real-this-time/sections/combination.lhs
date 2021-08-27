@@ -19,7 +19,7 @@ import Data.STRef
 
 import Background
 import LocalGlobal (local2global, hLocal, comm2, queensR)
-import NondetState (runNDf, SS(..), nondet2state)
+import NondetState (runNDf, SS(..), nondet2state, extractSS)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 \end{code}
@@ -139,19 +139,42 @@ The following commuting diagram shows how the simulation works.
   \arrow["{|states2state|}"', from=1-1, to=3-1]
 \end{tikzcd}\]
 
-To prove the simulation correct we have to prove the following equivalence:
+To prove the simulation correct we have to prove the following theorem:
+\begin{theorem}\label{thm:states-state}
 < flatten . hStates = hStateTuple . states2state
+\end{theorem}
 As |flatten| and |nested| are isomorphic functions, the following equivalence should hold
 as well:
 < hStates = nested . hStateTuple . states2state
 
 We can easily fuse the composition |flatten . hStates| using equational reasoning techniques, 
 as shown in \Cref{app:states-state-fusion}.
-The correctness of the simulation is written out in \Cref{app:states-state-sim}.
+The correctness of the simulation is written out in Appendix \Cref{app:states-state-sim}.
 
 %if False
 % NOTE: some test code to assit in writing proofs
 \begin{code}
+
+extractqwq x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
+extractSSqwq x = resultsSS . snd <$> runStateT x (SS [] [])
+
+qwq :: (Functor f) => StateT (SS (StateF s :+: f) a) (StateT s (Free f)) () -> (s -> Free f [a])
+qwq = extract . flatten
+
+qwq' :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
+qwq' = extractSS
+
+sar :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
+sar t =
+  \s -> fmap (resultsSS . snd . fst) $ (flip runStateT s . hState) $ runStateT (hState t) (SS [] [])
+
+sar' :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
+sar' t =
+  \s -> fmap fst . (flip runStateT s . hState) $ fmap (resultsSS . snd) $ runStateT (hState t) (SS [] [])
+
+www :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
+www s = flip runStateT s . hState
+----------------------------------------------------------------
 
 x0 :: a -> Free (StateF s1 :+: StateF s2 :+: f) a
 x0 x = Var x
@@ -263,7 +286,7 @@ extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
 To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|, 
 or, in a more elaborate form:
 < hLocal = extract . hState . states2state . nondet2state . comm2 . local2global
-The proof of this simulation can be found in \todo{ref appendix}.
+The proof of this simulation can be found in \ref{app:final-simulate}.
 
 %if False
 \begin{code}
