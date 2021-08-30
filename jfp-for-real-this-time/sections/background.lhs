@@ -374,6 +374,19 @@ hNil (Var x) = x
 
 Consequently, we can compose the state effects with any other
 effect functor |f| using |Free (StateF s :+: f) a|.
+It is also easy to see that |Free (StateF s :+: NondetF :+: f)| is an instance of |MStateNondet|.
+
+\begin{code}
+instance (Functor f) => MState s (Free (StateF s :+: f)) where
+    get    = Op $ Inl $ Get return
+    put x  = Op $ Inl $ Put x (return ())
+
+instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
+  mzero      = Op $ Inr $ Inl Fail
+  mplus x y  = Op $ Inr $ Inl (Or x y)
+
+instance (Functor f) => MStateNondet s (Free (StateF s :+: NondetF :+: f))
+\end{code}
 
 To give semantics to the free monad constructs of these effects, we can use
 their folds, also called handlers.
@@ -422,10 +435,9 @@ instance MState s (Free (StateF s)) where
     get    = Op (Get return)
     put x  = Op (Put x (return ()))
 
-
-instance (Functor f, MState s (Free (StateF s))) => MState s (Free (StateF s :+: f)) where
-    get    = Op (Inl (Get return))
-    put x  = Op (Inl (Put x (return ())))
+instance MNondet (Free NondetF) where
+  mzero = Op Fail
+  mplus x y = Op (Or x y)
 \end{code}
 
 \begin{spec}
@@ -612,6 +624,17 @@ expand n qs = choose [q : qs | q <- [1..n], safe q 1 qs]
 -- instance MState (Int, [[Int]]) [] where
 --     get = _ --[]
 --     put s = _--  state (\_ -> ((), s))
+
+type Stnq = (Int, [Int], [Int])
+
+safeAcc :: Stnq -> [Int] -> Bool
+safeAcc state = all valid' . tail . scanl plus state
+
+valid'  :: Stnq -> Bool
+valid'  (_, u:ups, d:dwns)   = u `notElem` ups && d `notElem` dwns
+
+plus   :: Stnq -> Int -> Stnq
+plus   (i, ups, dwns) x     = (i+1, i+x : ups, i-x : dwns)
 \end{code}
 %endif
 

@@ -11,9 +11,15 @@
 
 module Combination where
 
+import Data.Array.ST
+import Control.Monad.ST
+import Control.Monad.ST.Trans (STT, runSTT)
+import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
+import Data.STRef
+
 import Background
-import LocalGlobal (local2global, hLocal)
-import NondetState (runNDf, SS(..), nondet2state)
+import LocalGlobal (local2global, hLocal, comm2, queensR)
+import NondetState (runNDf, SS(..), nondet2state, extractSS)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 \end{code}
@@ -133,19 +139,42 @@ The following commuting diagram shows how the simulation works.
   \arrow["{|states2state|}"', from=1-1, to=3-1]
 \end{tikzcd}\]
 
-To prove the simulation correct we have to prove the following equivalence:
+To prove the simulation correct we have to prove the following theorem:
+\begin{theorem}\label{thm:states-state}
 < flatten . hStates = hStateTuple . states2state
+\end{theorem}
 As |flatten| and |nested| are isomorphic functions, the following equivalence should hold
 as well:
 < hStates = nested . hStateTuple . states2state
 
 We can easily fuse the composition |flatten . hStates| using equational reasoning techniques, 
 as shown in \Cref{app:states-state-fusion}.
-The correctness of the simulation is written out in \Cref{app:states-state-sim}.
+The correctness of the simulation is written out in Appendix \Cref{app:states-state-sim}.
 
 %if False
 % NOTE: some test code to assit in writing proofs
 \begin{code}
+
+extractqwq x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
+extractSSqwq x = resultsSS . snd <$> runStateT x (SS [] [])
+
+qwq :: (Functor f) => StateT (SS (StateF s :+: f) a) (StateT s (Free f)) () -> (s -> Free f [a])
+qwq = extract . flatten
+
+qwq' :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
+qwq' = extractSS
+
+sar :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
+sar t =
+  \s -> fmap (resultsSS . snd . fst) $ (flip runStateT s . hState) $ runStateT (hState t) (SS [] [])
+
+sar' :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
+sar' t =
+  \s -> fmap fst . (flip runStateT s . hState) $ fmap (resultsSS . snd) $ runStateT (hState t) (SS [] [])
+
+www :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
+www s = flip runStateT s . hState
+----------------------------------------------------------------
 
 x0 :: a -> Free (StateF s1 :+: StateF s2 :+: f) a
 x0 x = Var x
@@ -201,7 +230,7 @@ just the state transformer monad.
 An overview of this simulation is given in Figure \ref{fig:simulation}.
 
 \begin{figure}[h]
-% https://q.uiver.app/?q=WzAsOCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8Q29tcFNTIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIChTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDUsInxGcmVlIChTdGF0ZUYgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgOis6IGYpICgpfCJdLFswLDYsInxTdGF0ZVQgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgKEZyZWUgZikgKCl8Il0sWzAsNywifHMgLT4gRnJlZSBmIFthXXwiXSxbMCwxLCJ8bG9jYWwyZ2xvYmFsfCJdLFsxLDIsInxjb21tMnwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdLFszLDQsImRlZmluaXRpb24gb2YgfENvbXBTU3wiXSxbNCw1LCJ8c3RhdGVzMnN0YXRlfCJdLFs1LDYsInxoU3RhdGV8Il0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbNiw3LCJ8ZXh0cmFjdHwiLDAseyJjb2xvdXIiOlswLDAsNTBdLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkb3R0ZWQifX19LFswLDAsNTAsMV1dXQ==
+% https://q.uiver.app/?q=WzAsOCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8Q29tcFNTIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIChTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDUsInxGcmVlIChTdGF0ZUYgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgOis6IGYpICgpfCJdLFswLDYsInxTdGF0ZVQgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgKEZyZWUgZikgKCl8Il0sWzAsNywifHMgLT4gRnJlZSBmIFthXXwiXSxbMCwxLCJ8bG9jYWwyZ2xvYmFsfCJdLFsxLDIsInxjb21tMnwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdLFszLDQsIlxcdGV4dHtkZWZpbml0aW9uIG9mIH0gfENvbXBTU3wiXSxbNCw1LCJ8c3RhdGVzMnN0YXRlfCJdLFs1LDYsInxoU3RhdGV8Il0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbNiw3LCJ8ZXh0cmFjdHwiLDAseyJjb2xvdXIiOlswLDAsNTBdLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkb3R0ZWQifX19LFswLDAsNTAsMV1dXQ==
 \[\begin{tikzcd}
   {|Free (StateF s :+: NondetF :+: f) a|} \\
   {|Free (StateF s :+: NondetF :+: f) a|} \\
@@ -214,10 +243,10 @@ An overview of this simulation is given in Figure \ref{fig:simulation}.
   \arrow["{|local2global|}", from=1-1, to=2-1]
   \arrow["{|comm2|}", from=2-1, to=3-1]
   \arrow["{|nondet2state|}", from=3-1, to=4-1]
-  \arrow["{definition of |CompSS|}", from=4-1, to=5-1]
+  \arrow["{\text{definition of } |CompSS|}", from=4-1, to=5-1]
   \arrow["{|states2state|}", from=5-1, to=6-1]
   \arrow["{|hState|}", from=6-1, to=7-1]
-  \arrow["{|simulate|}", shift left=30, color={rgb,255:red,128;green,128;blue,128}, curve={height=-70pt}, shorten <=-10pt, dotted, from=1-1, to=7-1]
+  \arrow["{|simulate|}", shift left=5, color={rgb,255:red,128;green,128;blue,128}, curve={height=-30pt}, dotted, from=1-1, to=6-1]
   \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=7-1, to=8-1]
 \end{tikzcd}\]
 \label{fig:simulation}
@@ -239,12 +268,7 @@ simulate  = hState . states2state . nondet2state . comm2 . local2global
 First, |local2global| models the local-state semantics with a global state.
 Second, we use commutativity and associativity of the coproduct operator to change
 the order of state and nondeterminism.
-\begin{code}
-comm2 :: (Functor f1, Functor f2) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
-comm2 (Var x)             = Var x
-comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
-comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
-\end{code}
+
 Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
 Then, we use the definition of |CompSS| to represent it as a free monad so that the
 |states2state| simulation can combine the two state effects into a single state.
@@ -262,7 +286,7 @@ extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
 To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|, 
 or, in a more elaborate form:
 < hLocal = extract . hState . states2state . nondet2state . comm2 . local2global
-The proof of this simulation can be found in \todo{ref appendix}.
+The proof of this simulation can be found in \ref{app:final-simulate}.
 
 %if False
 \begin{code}
@@ -291,6 +315,19 @@ tt' = hNil $ hLocal prog 0
 -- [5, 0]
 \end{code}
 %endif
+
+\paragraph{N-queens with Only State}
+Using the simulation methods showed in Figure \ref{fig:simulation}, we can simulate the backtracking algorithm of the n-queens problem with only state.
+\begin{code}
+nqueens3 :: Int -> [[Int]]
+nqueens3 n  = hNil . flip extract (0, [], []) . simulate $ queens n
+\end{code}
+We can also replace the simulation |local2global| in the definition of |simulate| with the manual simulation |queensR| using the undo semantics.
+\begin{code}
+nqueens3' :: Int -> [[Int]]
+nqueens3' n  = hNil . flip extract (0, [], [])
+             . hState . states2state . nondet2state . comm2 $ queensR n
+\end{code}
 
 %-------------------------------------------------------------------------------
 \subsection{Mutable State}
@@ -440,9 +477,6 @@ test = runST $ do
     return [x, y, z, q]
 \end{code}
 %endif
-
-
-
 
 
 

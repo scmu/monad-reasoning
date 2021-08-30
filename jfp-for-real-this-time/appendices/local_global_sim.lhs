@@ -392,8 +392,15 @@ In this way, we can avoid the tedious details of dealing with these constructors
 For the left-hand side, we have:
 <    (hGlobal . alg) (Inl (Put s k))
 < = {-~  definition of |alg|  -}
-<    hGlobal (putROp s k)
-< = {-~  definition of |putROp|  -}
+% NOTE: putR here
+% <    hGlobal (putROp s k)
+% < = {-~  definition of |putROp|  -}
+<    hGlobal (putR s >> k)
+< = {-~  definition of |putR|  -}
+<    hGlobal (get >>= \ s' -> put s `mplus` side (put s') >> k)
+< = {-~  definition of |side|  -}
+<    hGlobal (get >>= \ s' -> put s `mplus` (put s' >> mzero) >> k)
+< = {-~  definition of |get, put, `mplus`, mzero, >>=|  -}
 <    hGlobal (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
 < = {-~  definition of |hGlobal|  -}
 <    (fmap (fmap fst) . hState1 . hND) (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
