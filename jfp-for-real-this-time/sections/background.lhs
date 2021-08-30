@@ -552,7 +552,7 @@ The naive version of an algorithm for n-queens can be written as a
 nondeterministic program:
 \begin{code}
 queensNaive :: MNondet m => Int -> m [Int]
-queensNaive n = choose (permutations [0..n-1]) >>= filtr valid
+queensNaive n = choose (permutations [1..n]) >>= filtr valid
 \end{code}
 On a high level, this function generates all permutations of queens, and then
 checks them one by one for validity.
@@ -606,33 +606,37 @@ queens n = put (0, []) >> loop
   where
     loop = do  s@(c, sol) <- get
                if c >= n then return sol
-               else do  r <- choose [0..n-1]
+               else do  r <- choose [1..n]
                         filtr valid (r:sol)
                         put (s `plus` r)
                         loop
 \end{code}
-
-%if False
-% not used anymore
-\begin{code}
--- type Stnq = (Int, [Int], [Int])
-
--- safeAcc :: Stnq -> [Int] -> Bool
--- safeAcc state = all valid' . tail . scanl plus state
-
--- valid'  :: Stnq -> Bool
--- valid'  (_, u:ups, d:dwns)   = u `notElem` ups && d `notElem` dwns
-
--- plus   :: Stnq -> Int -> Stnq
--- plus   (i, ups, dwns) x     = (i+1, i+x : ups, i-x : dwns)
-\end{code}
-%endif
 
 The function |s `plus` r| updates the state with a new queen placed on row |r|.
 \begin{code}
 plus   :: (Int, [Int]) -> Int -> (Int, [Int])
 plus   (c, sol) r = (c+1, r:sol)
 \end{code}
+
+%if False
+\begin{code}
+instance MNondet m => MState s (StateT s m) where
+    get    = StateT $ \s -> return (s, s)
+    put x  = StateT $ \s -> return ((), x)
+
+instance MNondet m => MNondet (StateT s m) where
+    mzero      = StateT $ \s -> mzero
+    mplus x y  = StateT $ \s -> runStateT x s `mplus` runStateT y s
+
+instance MNondet m => MStateNondet s (StateT s m)
+
+t :: StateT (Int, [Int]) [] [Int]
+t = queens 4
+
+test :: [[Int]]
+test = fmap fst $ runStateT t (0,[])
+\end{code}
+%endif
 
 The function |safe| checks whether the placement of a queen |q| is safe with
 respect to the list of queens that is already present (for which we need its
@@ -644,7 +648,6 @@ safe :: Int -> Int -> [Int] -> Bool
 safe _ _ [] = True
 safe q n (q1:qs) = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
 \end{code}
-\todo{first check is prob unnecessary}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Transformations and Optimizations}
@@ -682,4 +685,21 @@ state effect.
   \arrow["{\text{\Cref{sec:nondeterminism-state}: Nondeterminism to State}}"{pos=0.7}, shift left=2, draw=none, from=1-1, to=2-1]
   \arrow[from=1-1, to=2-1]
   \arrow[from=2-1, to=3-1]
+\end{tikzcd}\]
+
+% https://q.uiver.app/?q=WzAsNyxbMSwwLCJ8cXVlZW5zTmFpdmV8Il0sWzEsMiwifHF1ZWVuc3wiXSxbMCw0LCJ8cXVlZW5zTG9jYWx8Il0sWzEsNCwifHF1ZWVuc0dsb2JhbHwiXSxbMiw0LCJ8cXVlZW5zU3RhdGV8Il0sWzMsNCwifHF1ZWVuc1NpbXwiXSxbMywxXSxbMCwxLCJlYXJseSBwcnVuaW5nIl0sWzQsNSwiXFxDcmVme3NlYzp9IiwyXSxbMyw0LCJcXENyZWZ7c2VjOn0iLDJdLFsyLDMsIlxcQ3JlZntzZWM6fSIsMl0sWzEsMl0sWzEsM10sWzEsNF0sWzEsNV1d
+\[\begin{tikzcd}
+	& {|queensNaive|} \\
+	&&& {} \\
+	& {|queens|} \\
+	\\
+	{|queensLocal|} & {|queensGlobal|} & {|queensState|} & {|queensSim|}
+	\arrow["{\text{early pruning}}", from=1-2, to=3-2]
+	\arrow["{S\ref{sec:combination}}"', from=5-3, to=5-4]
+	\arrow["{S\ref{sec:nondeterminism-state}}"', from=5-2, to=5-3]
+	\arrow["{S\ref{sec:local-global}}"', from=5-1, to=5-2]
+	\arrow[from=3-2, to=5-1]
+	\arrow[from=3-2, to=5-2]
+	\arrow[from=3-2, to=5-3]
+	\arrow[from=3-2, to=5-4]
 \end{tikzcd}\]

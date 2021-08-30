@@ -184,13 +184,13 @@
 %format stackCut = "\Varid{stack_{Cut}}"
 
 % format Stnq = "\Varid{State_{nqueens}}"
-%format nqueensLocal = "\Varid{nqueens_{Local}}"
-%format nqueensGlobal = "\Varid{nqueens_{Global}}"
-%format nqueensModify = "\Varid{nqueens_{Modify}}"
-%format nqueens2 = "\Varid{nqueens_{2}}"
-%format nqueens2' = "\Varid{nqueens_{2}^\prime}"
-%format nqueens3 = "\Varid{nqueens_{3}}"
-
-
-
-
+%format queensLocal = "\Varid{queens_{Local}}"
+%format queensGlobal = "\Varid{queens_{Global}}"
+%format queensModify = "\Varid{queens_{Modify}}"
+%format queens2 = "\Varid{queens_{2}}"
+%format queens2' = "\Varid{queens_{2}^\prime}"
+%format queens3 = "\Varid{queens_{3}}"
+%format queensState = "\Varid{queens_{State}}"
+%format queensStateR = "\Varid{queens_{State,R}}"
+%format queensSim = "\Varid{queens_{Sim}}"
+%format queensSimR = "\Varid{queens_{Sim,R}}"
