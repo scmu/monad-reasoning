@@ -602,35 +602,37 @@ the current solution with the already placed queens.
 The new implementation of |queens| is as follows:
 \begin{code}
 queens :: MStateNondet (Int, [Int]) m => Int -> m [Int]
-queens n = do
-  put (0, [])
-  loop
-    where
-        loop :: MStateNondet (Int, [Int]) m => m [Int]
-        loop = do
-          (c, sol) <- get
-          if c >= n then return sol
-          else do  r <- choose [0..n-1]
-                   filtr valid (r:sol)
-                   put (c+1, r:sol)
-                   loop
+queens n = put (0, []) >> loop
+  where
+    loop = do  s@(c, sol) <- get
+               if c >= n then return sol
+               else do  r <- choose [0..n-1]
+                        filtr valid (r:sol)
+                        put (s `plus` r)
+                        loop
 \end{code}
 
 %if False
 % not used anymore
 \begin{code}
-type Stnq = (Int, [Int], [Int])
+-- type Stnq = (Int, [Int], [Int])
 
-safeAcc :: Stnq -> [Int] -> Bool
-safeAcc state = all valid' . tail . scanl plus state
+-- safeAcc :: Stnq -> [Int] -> Bool
+-- safeAcc state = all valid' . tail . scanl plus state
 
-valid'  :: Stnq -> Bool
-valid'  (_, u:ups, d:dwns)   = u `notElem` ups && d `notElem` dwns
+-- valid'  :: Stnq -> Bool
+-- valid'  (_, u:ups, d:dwns)   = u `notElem` ups && d `notElem` dwns
 
-plus   :: Stnq -> Int -> Stnq
-plus   (i, ups, dwns) x     = (i+1, i+x : ups, i-x : dwns)
+-- plus   :: Stnq -> Int -> Stnq
+-- plus   (i, ups, dwns) x     = (i+1, i+x : ups, i-x : dwns)
 \end{code}
 %endif
+
+The function |s `plus` r| updates the state with a new queen placed on row |r|.
+\begin{code}
+plus   :: (Int, [Int]) -> Int -> (Int, [Int])
+plus   (c, sol) r = (c+1, r:sol)
+\end{code}
 
 The function |safe| checks whether the placement of a queen |q| is safe with
 respect to the list of queens that is already present (for which we need its

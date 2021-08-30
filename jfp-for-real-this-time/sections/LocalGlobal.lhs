@@ -554,14 +554,14 @@ It is supposed to run in the local-state semantics because every branch maintain
 The function |nqueensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
 \begin{code}
 nqueensLocal :: Int -> [[Int]]
-nqueensLocal n = hNil . flip hLocal (0, [], []) $ queens n
+nqueensLocal n = hNil . flip hLocal (0, []) $ queens n
 \end{code}
 For examples, the program |nqueensLocal 4| gives the result |[[1,3,0,2],[2,0,3,1]]|.
 
 Using the simulation function |local2global|, we can also have another function |nqueensGlobal| which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
 \begin{code}
 nqueensGlobal :: Int -> [[Int]]
-nqueensGlobal n = hNil . flip hGlobal (0,[],[]) . local2global $ queens n
+nqueensGlobal n = hNil . flip hGlobal (0, []) . local2global $ queens n
 \end{code}
 There two functions are obviously equivalent as we have the equation |hGlobal . local2global = hLocal|.
 
@@ -601,37 +601,37 @@ We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
 Recall that, for the puzzle, the operator that alters the state
 % (to check whether a chess placement is safe)
 , is defined by
-< (i, ups, dwns) `plus`   x = (i + 1,  i+x : ups,  i-x : dwns)
+< (c, sol) `plus` r = (c+1, r:sol)
 Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
-< (i, ups, dwns) `minus`  x = (i - 1,  tail ups,   tail dwns)
+< (c, sol) `minus` r = (c-1, tail sol)
 
 Thus, we can compute all the solutions to the puzzle, in a scenario with a 
 shared global state as follows:
 \begin{code}
-queensR :: MStateNondet Stnq m => Int -> m [Int]
-queensR n = put (0, [], []) >> bodyR [0..n-1]
-
-bodyR :: MStateNondet Stnq m => [Int] -> m [Int]
-bodyR [] = return []
-bodyR xs = do   (x, ys) <- select xs 
-                s <- get
-                if valid (s `plus` x) then return () else mzero
-                modifyR (`plus` x) (`minus` x)
-                fmap (x:) (bodyR ys)
+queensR :: MStateNondet (Int, [Int]) m => Int -> m [Int]
+queensR n = put (0, []) >> loop
+  where
+    loop = do  s@(c, sol) <- get
+               if c >= n then return sol
+               else do  r <- choose [0..n-1]
+                        filtr valid (r:sol)
+                        modifyR (`plus` r) (`minus` r)
+                        loop
 \end{code}
 This function is similar to the original implementation, but has replaced the 
 |put| operation by a |modifyR|.
 Note that there is no |put| in the |bodyR| anymore, so it is the same thing to handle |bodyR| with |hLocal| or |hGlobal|.
-Although there is a |put (0, [], [])| in |queensR| which will make some difference on the final state, both |hLocal| and |hGlobal| drops the final state so it does not matter.
+Although there is a |put (0, [])| in |queensR| which will make some difference on the final state, both |hLocal| and |hGlobal| drops the final state so it does not matter.
 The function |nqueensModify| solves the n-queens problem using the function |queensR|.
 It is equivalent to the previous two implementations we have.
 \begin{code}
 nqueensModify :: Int -> [[Int]]
-nqueensModify n = hNil . flip hGlobal (0,[],[]) $ queensR n
+nqueensModify n = hNil . flip hGlobal (0,[]) $ queensR n
 \end{code}
 
 %if False
 \begin{code}
-minus (i, ups, dwns) x = (i - 1,  tail ups,   tail dwns)
+minus   :: (Int, [Int]) -> Int -> (Int, [Int])
+minus   (c, sol) r = (c-1, tail sol)
 \end{code}
 %endif

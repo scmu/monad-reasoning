@@ -375,7 +375,7 @@ The function |nqueens2| uses the two simulation functions in sequence.
 \begin{code}
 nqueens2 :: Int -> [[Int]]
 nqueens2 n  = hNil
-            . fmap fst . flip runStateT (0, [], []) . hState
+            . fmap fst . flip runStateT (0, []) . hState
             . (extractSS . hState . nondet2state) . comm2
             . local2global $ queens n
 \end{code}
@@ -383,7 +383,7 @@ Similarly, we can develop another version of |nqueens2| based on |nqueensModify|
 \begin{code}
 nqueens2' :: Int -> [[Int]]
 nqueens2' n  = hNil
-             . fmap fst . flip runStateT (0, [], []) . hState
+             . fmap fst . flip runStateT (0, []) . hState
              . (extractSS . hState . nondet2state) . comm2
              $ queensR n
 \end{code}
