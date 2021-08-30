@@ -552,7 +552,7 @@ The naive version of an algorithm for n-queens can be written as a
 nondeterministic program:
 \begin{code}
 queensNaive :: MNondet m => Int -> m [Int]
-queensNaive n = choose (permutations [1..n]) >>= filtr valid
+queensNaive n = choose (permutations [0..n-1]) >>= filtr valid
 \end{code}
 On a high level, this function generates all permutations of queens, and then
 checks them one by one for validity.
@@ -597,34 +597,28 @@ In particular, we improve the previous implementation by placing the queens
 column by column so that we only place a queen on a position that is compatible
 with the previously placed queens.
 
-We use a state |(Int, [[Int]])| that contains the column we are looking at, and
-the list of current solutions with the already placed queens.
+We use a state |(Int, [Int])| that contains the column we are looking at, and
+the current solution with the already placed queens.
 The new implementation of |queens| is as follows:
 \begin{code}
-queens :: MStateNondet (Int, [[Int]]) [] => Int -> [[Int]]
+queens :: MStateNondet (Int, [Int]) m => Int -> m [Int]
 queens n = do
-  put (0, [[]])
+  put (0, [])
   loop
     where
-        loop :: MStateNondet (Int, [[Int]]) [] => [[Int]]
+        loop :: MStateNondet (Int, [Int]) m => m [Int]
         loop = do
           (c, sol) <- get
-          if c >= n then sol
-                    else do
-                        put (c+1, join (fmap (expand n) sol))
-                        loop
-expand :: MStateNondet (Int, [[Int]]) [] => Int -> [Int] -> [[Int]]
-expand n qs = choose [q : qs | q <- [1..n], safe q 1 qs]
+          if c >= n then return sol
+          else do  r <- choose [0..n-1]
+                   filtr valid (r:sol)
+                   put (c+1, r:sol)
+                   loop
 \end{code}
 
 %if False
+% not used anymore
 \begin{code}
--- instance MStateNondet (Int, [[Int]]) [] where
---
--- instance MState (Int, [[Int]]) [] where
---     get = _ --[]
---     put s = _--  state (\_ -> ((), s))
-
 type Stnq = (Int, [Int], [Int])
 
 safeAcc :: Stnq -> [Int] -> Bool
