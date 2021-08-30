@@ -320,12 +320,12 @@ tt' = hNil $ hLocal prog 0
 Using the simulation methods showed in Figure \ref{fig:simulation}, we can simulate the backtracking algorithm of the n-queens problem with only state.
 \begin{code}
 nqueens3 :: Int -> [[Int]]
-nqueens3 n  = hNil . flip extract (0, [], []) . simulate $ queens n
+nqueens3 n  = hNil . flip extract (0, []) . simulate $ queens n
 \end{code}
 We can also replace the simulation |local2global| in the definition of |simulate| with the manual simulation |queensR| using the undo semantics.
 \begin{code}
 nqueens3' :: Int -> [[Int]]
-nqueens3' n  = hNil . flip extract (0, [], [])
+nqueens3' n  = hNil . flip extract (0, [])
              . hState . states2state . nondet2state . comm2 $ queensR n
 \end{code}
 
