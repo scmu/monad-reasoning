@@ -33,6 +33,7 @@ equational reasoning techniques and initiality of the |List| monad.
 
 %-------------------------------------------------------------------------------
 \subsection{Interpreting Nondeterministic Programs with List}
+\label{sec:interpreting-nondet-progs-with-list}
 
 The |List| monad, which is used in Haskell to implement nondeterminism, is a lawful instance of |MNondet|.
 Indeed, all nondeterminism laws of \cref{sec:nondeterminism} are satisfied by
