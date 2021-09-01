@@ -28,7 +28,7 @@ Two of the most well-known and well-investigated side-effects are nondeterminism
 and state.
 Typically, nondeterminism is modelled using the |List| monad.
 However, many efficient nondeterministic systems, such as Prolog,
-use a state-based implementation to simulate this effect.
+use a lower-level state-based implementation to simulate this effect.
 This section shows how this simulation works, and proves it correct using
 equational reasoning techniques and initiality of the |List| monad.
 
@@ -367,7 +367,8 @@ Due to the modularity, we need to include a different case for the forwarding al
 The full proof of this theorem, using equational reasoning techniques,
 is included in \Cref{app:in-combination-with-other-effects}.
 
-\paragraph{Using State to Simulate Nondeterminism in N-queens}
+%-------------------------------------------------------------------------------
+\subsection{Using State to Simulate Nondeterminism in N-queens}
 
 We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
 We can apply the simulation function |nondet2state| to the n-queens problem

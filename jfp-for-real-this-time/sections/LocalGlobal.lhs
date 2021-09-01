@@ -48,9 +48,10 @@ mun nx = alph nx >>= id -- do
 \end{code}
 %endif
 
-\birthe{transition}
-
-This section formally distinguishes local state from global state.
+This section illustrates the difference beteween local-state semantics and
+global-state semantics and formally distinguishes the two.
+We argue that local state is a higher-level effect then global state, and thus
+that we can simulate the former using the latter. 
 
 In a program with local state, each nondeterministic branch has its own local
 copy of the state.
@@ -260,7 +261,7 @@ Failure, of course, returns an empty continuation and an unmodified state.
 Branching first exhausts the left branch before switching to the right branch.
 
 %-------------------------------------------------------------------------------
-\subsection{Transforming Between Local and Global State}
+\subsection{Transforming Between Local State and Global State}
 \label{sec:transforming-between-local-and-global-state}
 
 Both local state and global state have their own laws and semantics.
@@ -447,8 +448,8 @@ we can simulate local-state semantics.
 However, the unnecessary copying of the state can not be avoided and even
 becomes explicit in the program.
 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Proving the |putR| Operation Correct}
+%-------------------------------------------------------------------------------
+\subsection{Proving the |putR| Operation Correct}
 It is time to give a more formal definition for the translation between
 global-state and local-state semantics using the free monad representation.
 % We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
@@ -541,7 +542,7 @@ Third, the universality of fold tells us that this equality holds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
 
 %-------------------------------------------------------------------------------
-\paragraph{N-Queens with Global State}
+\subsection{The N-Queens Puzzle with Local or Global State}
 \label{sec:n-queens-global}
 \wenhao{paragraph or subsubsection?}
 
@@ -635,5 +636,11 @@ queensModify = hNil . flip hGlobal (0,[]) . queensR
 \begin{code}
 minus   :: (Int, [Int]) -> Int -> (Int, [Int])
 minus   (c, sol) r = (c-1, tail sol)
+
+tR :: StateT (Int, [Int]) [] [Int]
+tR = queensR 9
+
+testR :: [[Int]]
+testR = fmap fst $ runStateT t (0,[])
 \end{code}
 %endif
