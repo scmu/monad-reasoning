@@ -20,11 +20,11 @@ Writing such a faithful simulation might require careful discipline and be quite
 
 For example, nondeterminism and state can be composed in two distinct ways: 
 a local-state variant, where the state is local to each branch of the nondeterministic computation; 
-and a global-state variant, where a single state persists throughout the entire nondeterminstic computation.
+and a global-state variant, where a single state persists throughout the entire nondeterministic computation.
 Of these two effects, the global-state variant is the lower level one: for every local state program we can construct a global state program that simulates it by carefully restoring the state at every branch of the computation.
 But not all global state programs can be simulated by a local state program.
 
-In a similar way, we can simulate nondeterminism using the ``lower-leve'' state effect.
+In a similar way, we can simulate nondeterminism using the ``lower-level'' state effect.
 Especially mutable state is of interest as it allows for performance optimizations in several programs.
 
 In this paper, we investigate how we can construct programs that are most naturally expressed with a high-level effect, 

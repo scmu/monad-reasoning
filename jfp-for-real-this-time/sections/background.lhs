@@ -62,7 +62,7 @@ Furthermore, a functor should satisfy the two functor laws:
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Applicatives}
-Applicative functors, introcuced by \citet{mcbride08},
+Applicative functors, introduced by \citet{mcbride08},
 allow sequencing of functorial computations.
 An applicative functor |f :: * -> *| in Haskell has two operations: |pure| for
 embedding pure data and
