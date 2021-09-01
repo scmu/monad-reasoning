@@ -364,13 +364,6 @@ data NilF a deriving (Functor)
 hNil :: Free NilF a -> a
 hNil (Var x) = x
 \end{code}
-% \birthe{do we need this?}
-% We also provide a helper function |addNil|, which adds a |NilF| to a free monad |Free f a|.
-% \begin{code}
-% addNil :: Functor f => Free f a -> Free (f :+: NilF) a
-% addNil (Var a)  = Var a
-% addNil (Op x)   = (Op $ Inl $ fmap addNil x)
-% \end{code}
 
 Consequently, we can compose the state effects with any other
 effect functor |f| using |Free (StateF s :+: f) a|.
@@ -517,7 +510,8 @@ to debug, but we miss out on opportunities for optimization that would have
 been available in the low-level style.
 
 Existing systems such as Prolog, the Warren Abstract Machine (WAM) or
-constraint-based systems in general \todo{citations} use a low-level state-based
+constraint-based systems in general \cite{hassan91} \todo{more citations?} 
+use a low-level state-based
 representation that allows them to optimize their programs, e.g. with cut
 semantics or intelligent backtracking.
 
@@ -534,16 +528,15 @@ and state, and can be simulated using only state.
 \paragraph{The n-queens Puzzle}
 
 The n-queens problem used here is an adapted and simplified version from that of
-\todo{cite Gibbons and Hinze}.
+Gibbons and Hinze \cite{Gibbons11}.
 The aim of the puzzle is to place $n$ queens on a $n \times n$ chess board such
 that no two queens can attack eachother.
-Given $n$, we number the rows and columns by |[0..n-1]|.
+Given $n$, we number the rows and columns by |[1..n]|.
 Since all queens should be placed on distinct rows and distinct columns, a
 potential solution can be represented by a permutation |xs| of the list |[0..n-1]|,
 such that |xs !! i = j| denotes that the queen on the |i|th column is placed on
 the |j|th row.
 Using this representation, queens cannot be put on the same row or column.
-\todo{image}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{A Naive Algorithm}
@@ -631,7 +624,7 @@ instance MNondet m => MNondet (StateT s m) where
 instance MNondet m => MStateNondet s (StateT s m)
 
 t :: StateT (Int, [Int]) [] [Int]
-t = queens 4
+t = queens 9
 
 test :: [[Int]]
 test = fmap fst $ runStateT t (0,[])
@@ -673,8 +666,6 @@ In particular, we take the following steps:
 \Cref{sec:multiple-states} shows how we can group multiple states into a single
 state effect.
 
-
-\todo{we could put the names of the new n-queens definitions in this figure, starting with |queensNaive| and |queens|}
 % https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
 \[\begin{tikzcd}
   {\text{State + Nondeterminism}} \\
@@ -686,6 +677,8 @@ state effect.
   \arrow[from=1-1, to=2-1]
   \arrow[from=2-1, to=3-1]
 \end{tikzcd}\]
+
+\birthe{we could put the names of the new n-queens definitions in this figure, starting with |queensNaive| and |queens|, for example:}
 
 % https://q.uiver.app/?q=WzAsNyxbMSwwLCJ8cXVlZW5zTmFpdmV8Il0sWzEsMiwifHF1ZWVuc3wiXSxbMCw0LCJ8cXVlZW5zTG9jYWx8Il0sWzEsNCwifHF1ZWVuc0dsb2JhbHwiXSxbMiw0LCJ8cXVlZW5zU3RhdGV8Il0sWzMsNCwifHF1ZWVuc1NpbXwiXSxbMywxXSxbMCwxLCJlYXJseSBwcnVuaW5nIl0sWzQsNSwiXFxDcmVme3NlYzp9IiwyXSxbMyw0LCJcXENyZWZ7c2VjOn0iLDJdLFsyLDMsIlxcQ3JlZntzZWM6fSIsMl0sWzEsMl0sWzEsM10sWzEsNF0sWzEsNV1d
 \[\begin{tikzcd}
