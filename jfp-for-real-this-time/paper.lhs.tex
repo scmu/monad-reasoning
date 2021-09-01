@@ -114,7 +114,19 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  \todo{}
+  Just as in programming languages, one can think of effects being more
+  low-level than others. Indeed, some effects allow a more fine-grained
+  control over program execution and resources. It is desirable to 
+  write programs using higher-level effects, and at the same time still
+  benefit from the possible optimizations lower-level effects offer. 
+  This paper studies how effects can be simulated using lower-level effects.
+  In particular, we look at the possible interactions between state
+  and nondeterminism and model these interactions using a single state 
+  effect. We distinguish between local-state and global-state semantics
+  and transform the higher-level nondeterminism to state. We demonstrate
+  possible optimizations such as efficient backtracking and mutable state.
+  We illustrate our simulations on the well-known n-queens example and 
+  prove all simulation functions correct using equational reasoning techniques.
 \end{abstract}
 
 %%
@@ -142,7 +154,8 @@
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{\todo{}}
+\keywords{effects, effect handlers, modularity, nondeterminism, 
+          state, equational reasoning, monads}
 
 \maketitle
 
