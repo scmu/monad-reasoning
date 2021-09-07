@@ -7,15 +7,6 @@
 \end{code}
 %endif
 
-\wenhao{It seems that this section hasn't been modified yet.}
-
-\todo{Just do it, state will do, Zhixuan}
-
-
-Hutton and Fulger
-
-Gibbons and Hinze
-
 %-------------------------------------------------------------------------------
 \subsection{Prolog}
 \label{sec:prolog}
