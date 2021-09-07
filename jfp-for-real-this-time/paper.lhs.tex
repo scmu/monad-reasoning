@@ -76,7 +76,16 @@
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{Title}
+\title{From High to Low: Simulating Nondeterminism and State with State}
+
+%% ALTERNATIVE TITLES
+% Simulating Nondeterminism and State
+% Simulating Nondeterminism and State with State
+% Do it at a Lower Level
+% Simulating Higher-Level Effects with Lower-Level Effects
+% From High to Low: a Simulation
+% From High to Low: Simulating Nondeterminism and State with State
+% Nondeterminism + State = State
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -105,7 +114,21 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  \todo{}
+  Just as of programming languages, one can think of some effects as being more
+  low-level than others. Indeed, particular effects allow a more fine-grained
+  control over program execution and resources, while others offer a higher-level
+  of abstraction. It is usually desirable to 
+  write programs using higher-level effects, and at the same time still
+  benefit from the optimizations that lower-level effects afford. 
+
+  This paper studies how higher-level effects can be simulated in trerms of low-level effects.
+  In particular, we look at the possible interactions between state
+  and nondeterminism and model these interactions using a single state 
+  effect. We distinguish between local-state and global-state semantics
+  and transform the higher-level nondeterminism to state. We demonstrate
+  possible optimizations such as efficient backtracking and mutable state.
+  We illustrate our simulations on the well-known n-queens example and 
+  prove all simulation functions correct using equational reasoning techniques.
 \end{abstract}
 
 %%
@@ -133,7 +156,8 @@
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{\todo{}}
+\keywords{effects, effect handlers, modularity, nondeterminism, 
+          state, equational reasoning, monads}
 
 \maketitle
 
@@ -186,6 +210,8 @@
 %include appendices/local_global_sim.lhs
 
 %include appendices/states_state_sim.lhs
+
+%include appendices/final_simulate.lhs
 
 \end{document}
 \endinput

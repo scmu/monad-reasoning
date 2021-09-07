@@ -1,4 +1,5 @@
 \section{Simulating Nondeterminism with State: The Proofs}
+\label{app:nondet-state}
 %-------------------------------------------------------------------------------
 \subsection{Only State and Nondeterminism}
 \label{app:runnd-hnd}
