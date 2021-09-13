@@ -4,42 +4,46 @@
 % \subsection{Overview}
 % \label{sec:overview}
 
-Knowledge of the trade-off between ``high-level'' and ``low-level'' styles of programming is almost as old as the field of computer sciences itself.
-In a high-level style of programming, we lean on abstractions to make our programs less prone to error, and easier to read and write.
-We pay for this comfort by giving up precise control over the underlying machinery; we forego opportunities for optimization or have to trust a (usually opaque) compiler to optimize for us.
-As such, for performance-sensitive applications, we often have to resort to lower-level programming techniques.
-Although they allow a fine-grained control over program execution and the implementation of optimization techniques, they tend not to compose very well.
-This is an important tradeoff to make when choosing an appropriate programming language for implementing an application.
+The trade-off between ``high-level'' and ``low-level'' styles of programming is almost as old as the field of computer sciences itself.
+In a high-level style of programming, we lean on abstractions to make our
+programs easier to read and write, and less error prone.  We pay for this
+comfort by giving up precise control over the underlying machinery; we forego
+optimization opportunities or have to trust a (usually opaque) compiler to
+optimize for us. Hence, for performance-sensitive applications, we often
+have to resort to lower-level programming techniques.  Although they allow a
+fine-grained control over program execution and the implementation of
+optimization techniques, they tend to be harder to write and not compose very well.  This is an
+important trade-off to take into account when choosing an appropriate programming language
+for implementing an application.
 
-Maybe surprisingly, as they are rarely described in this way, 
-we can spot a similar pattern for side-effects within programming languages:
-some effects can be described as ``lower-level'' than others.
-We say that an effect is lower-level than another effect when the lower-level effect can simulate the higher-level effect.
-In other words, it is always possible to write a lower-level program with identical semantics to the higher-level program.
-Writing such a faithful simulation might require careful discipline and be quite error-prone to do by hand.
+Maybe surprisingly, as they are rarely described in this way, there is a
+similar pattern for side-effects within programming languages: some effects can
+be described as ``lower-level'' than others.  We say that an effect is
+lower-level than another effect when the lower-level effect can simulate the
+higher-level effect. In other words, it is always possible to write a
+program using lower-leel effects that has identical semantics to the same program with
+higher-level effects.
+Yet, due to the lack of abstraction of low-level effects, writing a faithful
+simulation requires careful discipline and is quite error-prone.
 
-For example, nondeterminism and state can be composed in two distinct ways: 
-a local-state variant, where the state is local to each branch of the nondeterministic computation; 
-and a global-state variant, where a single state persists throughout the entire nondeterministic computation.
-Of these two effects, the global-state variant is the lower level one: for every local state program we can construct a global state program that simulates it by carefully restoring the state at every branch of the computation.
-But not all global state programs can be simulated by a local state program.
+This article investigates how how we can construct programs that are most
+naturally expressed with a high-level effect, but where we still want access to
+the optimization opportunities of a lower-level effect.  In particular,
+inspired by Prolog and Constraint Programming systems, we investigate programs
+that rely on the high-level interaction between the nondeterminism and state
+effects, called \emph{local state}. Following low-level implementation
+techniques for these systems, like the Warren Abstract Machine (WAM)
+\cite{hassan91}, we show how these can be simulated in terms of their low-level
+interaction, called \emph{global state}, and finally by state alone. This
+allows us to incorporate typical optimizations like exploiting mutable state
+for efficient backtracking based on \emph{trailing}.
 
-In a similar way, we can simulate nondeterminism using the ``lower-level'' state effect.
-Especially mutable state is of interest as it allows for performance optimizations in several programs.
-
-In this paper, we investigate how we can construct programs that are most naturally expressed with a high-level effect, 
-but where we still want access to the optimization opportunities of a lower-level effect.
-In particular, we look into the case of constructing programs using a nondeterminism and state effect. 
-We distinguish between local state and global state and simulate the former using the latter.
-We also simulate nondeterminism using state and take this a step further by showing optimizations these 
-simulations allow, such as efficient backtracking semantics or mutable state. 
-
-In this paper, we come close to modeling Warren's Abstract Machine (WAM) \cite{hassan91}. 
-However, we illustrate the simulations and the resulting optimizations on the well-known n-queens
-puzzle.
-Furthermore, we proof all of our simulations correct using equational reasoning techniques.
-We believe that, in particular, these proof techniques are of interest. 
-
+Our approach is based on algebraic effects and handlers~\cite{} to cleanly
+separate the use of effects from their implementation. This way we can replace
+a high-level implementation with an implementation in terms of a low-level
+effect and incorporate optimizations. Moreover, we can prove all of our
+simulations correct using equational reasoning techniques, exploiting in
+particular the fusion property of handlers
 
 %In particular, a purely functional programming style lets us reason about our programs equationally.
 %At first glance, it may seem that equational reasoning is made possible by the lack of side effects in functional programming.
