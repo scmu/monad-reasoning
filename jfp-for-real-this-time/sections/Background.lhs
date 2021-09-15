@@ -62,6 +62,8 @@ Furthermore, a functor should satisfy the two functor laws:
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Applicatives}
+\tom{Where do we use applicatives? If only minimally, we should check whether we can skip the 
+     general introduction and provide a shorter, more targeted explanation.}
 Applicative functors, introduced by \citet{mcbride08},
 allow sequencing of functorial computations.
 An applicative functor |f :: * -> *| in Haskell has two operations: |pure| for
@@ -185,10 +187,10 @@ These two fusion laws will turn out to be essential in the further proofs of thi
 \subsection{Nondeterminism}
 \label{sec:nondeterminism}
 
-The first effect we introduce is nondeterminism.
 Following the approach of \citet{Hutton08} and \citet{Gibbons11},
 we introduce effects based on an axiomatic characterisation rather than
 a specific implementation.
+The first monadic effect we introduce in this way is nondeterminism.
 We define a type class to capture the nondeterministic interface as follows:
 \begin{code}
 class Monad m => MNondet m where
@@ -196,7 +198,11 @@ class Monad m => MNondet m where
   mplus  :: m a -> m a -> m a
 \end{code}
 Here, |mzero| denotes failure and |mplus| denotes nondeterministic choice.
-Typically, the |MNondet| interface should satisfy the following four laws:
+Instances of the |MNondet| interface should satisfy four laws:\footnote{
+One might expect additional laws such as idempotence or commutativity.
+As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on where the
+monad is used and their interactions with other effects.
+We choose to present a minimal setting for nondeterminism here.}
 \begin{alignat}{2}
     &\mbox{\bf identity}:\quad &
       |mzero `mplus` m| ~=~ & |m| ~=~ |m `mplus` mzero|\mbox{~~,}
@@ -210,17 +216,12 @@ Typically, the |MNondet| interface should satisfy the following four laws:
     &\mbox{\bf left-identity}:\quad &
       |mzero >>= f| ~&=~ |mzero| \label{eq:mzero-zero} \mbox{~~.}
 \end{alignat}
-The first two laws state that |mplus| with |mzero| should form a monoid,
-i.e. |mplus| should be associative with |mzero| as its neutral element.
+The first two laws state that |mplus| and |mzero| should form a monoid,
+i.e., |mplus| should be associative with |mzero| as its neutral element.
 The last two laws show that |>>=| is right-distributive
-over |mplus| and that |mzero| is a left identity for the bind operation.
+over |mplus| and that |mzero| cancels bind on the left.
 
-One might expect additional laws such as idempotence or commutativity.
-As argued by \cite{Kiselyov15monadplus}, these laws differ depending on where the
-monad is used and their interactions with other effects.
-We choose to present a minimal setting for nondeterminism here.
-
-Haskell's implementation for nondeterminism is the |List| monad.
+The quintessential Haskell instance of nondeterminism is that of lists.
 
 \begin{code}
 instance MNondet [] where
@@ -228,7 +229,7 @@ instance MNondet [] where
   mplus  =  (++)
 \end{code}
 
-The corresponding |Monad| instance has the following standard Haskell implementation.
+This extends the following |Monad| instance for lists.
 
 < instance Monad [] where
 <   return x   = [x]
@@ -257,7 +258,7 @@ class Monad m => MState s m | m -> s where
       return x
 \end{code}
 %endif
-These operations are related by the four so-called state laws:
+These operations are related by four laws:
 \begin{alignat}{2}
     &\mbox{\bf put-put}:\quad &
     |put s >> put s'| &= |put s'|~~\mbox{,} \label{eq:put-put}\\
@@ -270,10 +271,7 @@ These operations are related by the four so-called state laws:
     ~~\mbox{.} \label{eq:get-get}
 \end{alignat}
 
-Again, these state laws may be supplemented with other laws that deal with state
-and its interaction with other effects.
-
-Haskell's implementation for state is the |State s| monad.
+Haskell's standard instance of |MState| is that of |State s|.
 
 \begin{code}
 newtype State s a = State { runState :: s -> (a, s) }
