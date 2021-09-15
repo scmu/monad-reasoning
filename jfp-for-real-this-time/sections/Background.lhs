@@ -88,9 +88,8 @@ Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equival
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Monads}
 
-Side effects are those effects that are affected by previous computations.
-In Haskell, a pure functional language, we typically encapsulate side effects
-in a monad \cite{Moggi91}.
+Monadic side effects~\cite{Moggi91}, the main focus of this paper, are those that can dynamically determine what
+happens next. 
 A monad |m :: * -> *| instantiates the monad type class, which has two
 operations: return (|eta|) and bind (|>>=|).
 
@@ -126,23 +125,21 @@ can be captured generically in Haskell.
 \begin{code}
 data Free f a = Var a | Op (f (Free f a))
 \end{code}
-This data type is an AST consisting of leaves |Var a|
-and nodes |Op (f (Free f a))| with a signature functor |f|
-representing the branching structure.
+This data type is a form of abstract syntax tree (AST) consisting of leaves |Var a|
+and internal nodes |Op (f (Free f a))| whose branching structure is
+detetermined by the functor |f|, which is known as the \emph{signature}.
 
-Free monads arise from the free-forgetful adjunction and come equipped with a
-unique catamorphism or a fold: a recursion scheme over the free monad.
-We can define this recursive structure and recursion scheme generically in Haskell:
+Free monads % arise from the free-forgetful adjunction and 
+come equipped with a fold recursion scheme.
 \begin{code}
 fold :: Functor f => (a -> b) -> (f b -> b) -> Free f a -> b
 fold gen alg (Var x)  =  gen x
 fold gen alg (Op op)  =  alg (fmap (fold gen alg) op)
 \end{code}
-This fold has two arguments: a generator |gen :: a -> b|
-and an algebra |alg :: f b -> b| and `folds' over the |Free f a| recursive data type.
-The catamorphism is a handler for free monads;
-handling an effectful program constitutes folding over it with the correct
-generator and algebra.
+This fold interprets an AST structure of type |Free f a| into some
+semantic domain |b|. It does so compositionally using a generator 
+|gen :: a -> b| for the leaves and an algebra |alg :: f b -> b| for the internal
+nodes; together these are also konwn as a \emph{handler}. 
 
 The monad instance of |Free| can now straightforwardly be implemented using
 this fold.
@@ -165,8 +162,7 @@ instance Functor f => Monad (Free f) where
 %fmap f (Op op) = Op (fmap (fmap f) op)
 %(Op op) >>= f = Op (fmap (>>= f) op)
 
-When a fold is composed with other functions, it adheres to so-called fusion laws \cite{Wu15}.
-Precomposing or postcomposing a function with a fold works as follows:
+Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15}.
 \begin{alignat}{2}
     &\mbox{\bf fusion-pre}:\quad &
     |fold gen alg . fmap h| &= |fold (gen . h) alg|\mbox{~~,} \label{eq:fusion-pre}\\
@@ -174,8 +170,7 @@ Precomposing or postcomposing a function with a fold works as follows:
     |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~.}
 \end{alignat}
 
-We use these laws in due course to prove correctness of laws for state,
-nondeterminism or a combination.
+These two fusion laws will turn out to be essential in the further proofs of this paper.
 
 % We can define an empty signature and the run function for it.
 % \begin{code}
