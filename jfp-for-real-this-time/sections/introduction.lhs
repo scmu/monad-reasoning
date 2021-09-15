@@ -33,17 +33,17 @@ inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on the high-level interaction between the nondeterminism and state
 effects, called \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
-\cite{hassan91}, we show how these can be simulated in terms of their low-level
-interaction, called \emph{global state}, and finally by state alone. This
+\cite{hassan91}, we show how these can be simulated in terms of the low-level
+\emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimizations like exploiting mutable state
-for efficient backtracking based on \emph{trailing}.
+for efficient backtracking based on \emph{trailing}~\cite{}.
 
 Our approach is based on algebraic effects and handlers~\cite{} to cleanly
 separate the use of effects from their implementation. This way we can replace
 a high-level implementation with an implementation in terms of a low-level
 effect and incorporate optimizations. Moreover, we can prove all of our
 simulations correct using equational reasoning techniques, exploiting in
-particular the fusion property of handlers
+particular the fusion property of handlers~\cite{}.
 
 %In particular, a purely functional programming style lets us reason about our programs equationally.
 %At first glance, it may seem that equational reasoning is made possible by the lack of side effects in functional programming.
