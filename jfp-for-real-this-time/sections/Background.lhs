@@ -235,6 +235,37 @@ This extends the following |Monad| instance for lists.
 <   return x   = [x]
 <   xs >>= f    = concatMap f xs
 
+In this article we do not use a monad like that of lists, which respects the
+non-determinism laws on the nose. Following the algebraic effects approach, we
+use instead a free monad over an appropriate signature, such as |Free NondetF|
+where |NondetF| is the nondeterminism signature,
+\begin{code}
+data NondetF a   = Fail | Or a a
+\end{code}
+which gives rise to a trivial |MNondet| instance
+\begin{code}
+instance MNondet (Free NondetF) where
+  mzero = Op Fail
+  mplus p q = Op (Or p q)
+\end{code}
+
+This does not respect the identity or associativity law on the nose. Indeed,
+|Op (Or Fail p)| is for instance a different abstract syntax tree than |p|.
+Yet, these syntactic differences do not matter as long as their interpretation
+is the same. This is where the handlers come in; the meaning they assign
+should respect the laws.
+
+This is case for the |hND| handler, which interprets the free monad in terms of
+lists.
+\begin{code}
+hND :: Free NondetF a -> [a]
+hND = fold genND algND
+  where
+    genND x         = [x]
+    algND Fail      = []
+    algND (Or p q)  = p ++ q
+\end{code}
+
 %-------------------------------------------------------------------------------
 \subsection{State}
 
@@ -295,38 +326,41 @@ instance Monad (State s) where
 \end{code}
 %endif
 
+Again we take a more indirect route, through a free monad like |Free (StateF
+s)| over the state signature
+
+\begin{code}
+data StateF s a  = Get (s -> a) | Put s a
+
+\instance MState s (Free (StateF s)) where
+  get    =  Op (Get return)
+  put s  =  Op (Put s (return ()))
+\end{code}
+
+The handler maps this free monad to the |State s| monad.
+\begin{code}
+hState' :: Free (StateF s) a -> State s a
+hState' = fold genS' algS'
+  where
+    genS' x            = State $ \s -> (x, s)
+    algS' (Get     k)  = State $ \s -> runState (k s) s
+    algS' (Put s'  k)  = State $ \s -> runState k s'
+\end{code}
 %-------------------------------------------------------------------------------
 \subsection{Combining Effects}
 \label{sec:combining-effects}
 
-Because of the axiomatic definitions of our effects, it is straightforward to
-reason about their combinations and interactions.
-This paper is about the interaction between nondeterminism and local or global state.
-We define a class |MStateNondet| that inherits the operations of its
-superclasses |MState| and |MNondet| without adding new operations.
-\begin{code}
-class (MState s m, MNondet m) => MStateNondet s m | m -> s
-\end{code}
-Implementations of this class should satisfy all laws of its superclasses.
-Furthermore, this monad comes with additional interaction laws that
-differentiate between local and global state semantics.
-Section \ref{sec:local-global} discusses these interaction laws in detail.
+Combining multiple effects is relatively easy in the axiomatic approach based
+on type classes. By imposing multiple constraints on the monad |m|, e.g.,
+|(MState s m, MNondet m)|, we can express that |m| should support both state
+and nondeterminism and respect their associated laws.  In practice, this is
+often insufficient: we usually require additional laws that govern the
+interactions between the combined effects. We discuss possible interaction
+laws between state and nondeterminism in detail in Section
+\ref{sec:local-global}.
 
-Using free monads, as discussed in \cref{sec:free-monads},
-we can separate syntax from semantics.
-In the syntax, both stateful and nondeterministic computations
-can be represented by such a free monad construct.
-For that, we define the |StateF| and |NondetF| functors:
-\begin{code}
-data StateF s a  = Get (s -> a) | Put s a
-data NondetF a   = Fail | Or a a
-\end{code}
-Using this encoding, stateful and nondeterministic computations
-are represented by the types |Free (StateF s) a| and |Free NondetF a| respectively.
-% \begin{code}
-% type StateC s a  =  Free (StateF s) a
-% type NondetC a   =  Free NondetF a
-% \end{code}
+Combining effects with free monads is a bit more involved.
+Firstly, the signatures of the effects are combined with 
 %if False
 \begin{code}
 infixr :+:
@@ -339,8 +373,7 @@ instance Functor NondetF where
     fmap f (Or x y)  = Or (f x) (f y)
 \end{code}
 %endif
-Computations with multiple effects can be defined independently and combined
-with a coproduct operator |(:+:)| for functors.
+the coproduct operator |(:+:)| for functors.
 \begin{code}
 data (f :+: g) a = Inl (f a) | Inr (g a)
 \end{code}
@@ -349,18 +382,14 @@ modular definition of the signature of effects.
 For instance, we can encode programs with both state and nondeterminism as
 effects using the data type
 |Free (StateF :+: NondetF) a|.
-The coproduct also has a neutral element |NilF|, representing the empty effect set,
-and a function |hNil|, extracting return values from |Free NilF a|.
+The coproduct also has a neutral element |NilF|, representing the empty effect set.
 \begin{code}
 data NilF a deriving (Functor)
-
-hNil :: Free NilF a -> a
-hNil (Var x) = x
 \end{code}
 
 Consequently, we can compose the state effects with any other
 effect functor |f| using |Free (StateF s :+: f) a|.
-It is also easy to see that |Free (StateF s :+: NondetF :+: f)| is an instance of |MStateNondet|.
+It is also easy to see that |Free (StateF s :+: NondetF :+: f)| supports both state and nondeterminism.
 
 \begin{code}
 instance (Functor f) => MState s (Free (StateF s :+: f)) where
@@ -370,18 +399,15 @@ instance (Functor f) => MState s (Free (StateF s :+: f)) where
 instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
   mzero      = Op $ Inr $ Inl Fail
   mplus x y  = Op $ Inr $ Inl (Or x y)
-
-instance (Functor f) => MStateNondet s (Free (StateF s :+: NondetF :+: f))
 \end{code}
 
-To give semantics to the free monad constructs of these effects, we can use
-their folds, also called handlers.
-The handlers can be modularly composed: they only need to know about
-the part of the syntax their effect is handling, and forward the rest
-of the syntax to other handlers.
+In order to interpret composite signatures, we use the forwarding approach of
+\citet{Schrijvers2019}. This way the handlers can be modularly composed: they
+only need to know about the part of the syntax their effect is handling, and
+forward the rest of the syntax to other handlers.
 
-A mediator |(#)| is used to separate the algebra |alg| for handling the effects and
-the forwarding function |fwd| for forwarding the rest of the effects \cite{Schrijvers2019}.
+A mediator |(#)| is used to separate the algebra |alg| for the handled effects and
+the forwarding algebra |fwd| for the unhandled effects.
 \begin{code}
 (#) :: (f a -> b) -> (g a -> b) -> (f :+: g) a -> b
 (alg # fwd) (Inl op) = alg op
@@ -452,9 +478,11 @@ hState  =  fold genS (algS # fwdS)
 \end{spec}
 %endif
 
-The handlers for state and nondeterminism use the |StateT| monad and |List|
-monad, respectively, to interpret their part of the semantics.
-The |StateT| monad is the state transformer from the Monad Transformer Library \cite{mtl}.
+The handlers for state and nondeterminism we have given earlier require a bit of 
+adjustment to be used in the composite setting.
+They now interpret into composite domains, 
+|StateT (Free f) a| and |Free f [a]| respectively.
+Here |StateT| is the state transformer from the Monad Transformer Library \cite{mtl}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
 The handlers are defined as follows:
 \begin{code}
@@ -474,23 +502,11 @@ hNDf  =  fold genNDf (algNDf # fwdNDf)
     fwdNDf op        = Op op
 \end{code}
 
-We also provide simpler versions of the two handlers above which restrict the free monad to have no other effects (|f = NilF|).
+Also, the empty signature |NilF| has a trivial associated handler.
 \begin{code}
-hState' :: Free (StateF s) a -> State s a
-hState' = fold genS' algS'
-  where
-    genS' x            = State $ \s -> (x, s)
-    algS' (Get     k)  = State $ \s -> runState (k s) s
-    algS' (Put s'  k)  = State $ \s -> runState k s'
-
-hND :: Free NondetF a -> [a]
-hND = fold genND algND
-  where
-    genND           = return
-    algND Fail      = []
-    algND (Or p q)  = p ++ q
+hNil :: Free NilF a -> a
+hNil (Var x) = x
 \end{code}
-
 
 %-------------------------------------------------------------------------------
 \subsection{Motivation and Challenges}
