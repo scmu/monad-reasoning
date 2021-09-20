@@ -332,7 +332,7 @@ s)| over the state signature
 \begin{code}
 data StateF s a  = Get (s -> a) | Put s a
 
-\instance MState s (Free (StateF s)) where
+instance MState s (Free (StateF s)) where
   get    =  Op (Get return)
   put s  =  Op (Put s (return ()))
 \end{code}
@@ -363,6 +363,7 @@ Combining effects with free monads is a bit more involved.
 Firstly, the signatures of the effects are combined with 
 %if False
 \begin{code}
+class (MState s m, MNondet m) => MStateNondet s m | m -> s
 infixr :+:
 instance Functor (StateF s) where
     fmap f (Get s)    = Get (f . s)
@@ -400,6 +401,12 @@ instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
   mzero      = Op $ Inr $ Inl Fail
   mplus x y  = Op $ Inr $ Inl (Or x y)
 \end{code}
+
+%if False
+\begin{code}
+instance (Functor f) => MStateNondet s (Free (StateF s :+: NondetF :+: f))
+\end{code}
+%endif
 
 In order to interpret composite signatures, we use the forwarding approach of
 \citet{Schrijvers2019}. This way the handlers can be modularly composed: they
@@ -442,14 +449,6 @@ assocr (Var x)            = Var x
 assocr (Op (Inl (Inl k))) = Op (Inl (fmap assocr k))
 assocr (Op (Inl (Inr k))) = Op (Inr (Inl (fmap assocr k)))
 assocr (Op (Inr k))       = Op (Inr (Inr (fmap assocr k)))
-
-instance MState s (Free (StateF s)) where
-    get    = Op (Get return)
-    put x  = Op (Put x (return ()))
-
-instance MNondet (Free NondetF) where
-  mzero = Op Fail
-  mplus x y = Op (Or x y)
 \end{code}
 
 \begin{spec}
@@ -539,7 +538,7 @@ and state, and can be simulated using only state.
 The n-queens problem used here is an adapted and simplified version from that of
 Gibbons and Hinze \cite{Gibbons11}.
 The aim of the puzzle is to place $n$ queens on a $n \times n$ chess board such
-that no two queens can attack eachother.
+that no two queens can attack each other.
 Given $n$, we number the rows and columns by |[1..n]|.
 Since all queens should be placed on distinct rows and distinct columns, a
 potential solution can be represented by a permutation |xs| of the list |[0..n-1]|,
@@ -603,7 +602,7 @@ We use a state |(Int, [Int])| that contains the column we are looking at, and
 the current solution with the already placed queens.
 The new implementation of |queens| is as follows:
 \begin{code}
-queens :: MStateNondet (Int, [Int]) m => Int -> m [Int]
+queens :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
 queens n = put (0, []) >> loop
   where
     loop = do  s@(c, sol) <- get
@@ -630,13 +629,11 @@ instance MNondet m => MNondet (StateT s m) where
     mzero      = StateT $ \s -> mzero
     mplus x y  = StateT $ \s -> runStateT x s `mplus` runStateT y s
 
-instance MNondet m => MStateNondet s (StateT s m)
-
 t :: StateT (Int, [Int]) [] [Int]
-t = queens 9
+t = queens 4
 
-test :: [[Int]]
-test = fmap fst $ runStateT t (0,[])
+test :: Int -> [[Int]]
+test n = fmap fst $ runStateT (queens n) (0,[])
 \end{code}
 %endif
 

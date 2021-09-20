@@ -637,8 +637,8 @@ queensModify = hNil . flip hGlobal (0,[]) . queensR
 minus   :: (Int, [Int]) -> Int -> (Int, [Int])
 minus   (c, sol) r = (c-1, tail sol)
 
-tR :: StateT (Int, [Int]) [] [Int]
-tR = queensR 9
+-- tR :: StateT (Int, [Int]) [] [Int]
+-- tR = queensR 9
 
 testR :: [[Int]]
 testR = fmap fst $ runStateT t (0,[])

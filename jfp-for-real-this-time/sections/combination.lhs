@@ -156,6 +156,7 @@ The correctness of the simulation is written out in Appendix \Cref{app:states-st
 \begin{code}
 
 extractqwq x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
+extractSSqwq :: Functor f1 => StateT (SS f2 a1) f1 a2 -> f1 [a1]
 extractSSqwq x = resultsSS . snd <$> runStateT x (SS [] [])
 
 qwq :: (Functor f) => StateT (SS (StateF s :+: f) a) (StateT s (Free f)) () -> (s -> Free f [a])
@@ -167,10 +168,16 @@ qwq' = extractSS
 sar :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
 sar t =
   \s -> fmap (resultsSS . snd . fst) $ (flip runStateT s . hState) $ runStateT (hState t) (SS [] [])
+  -- resultsSS . snd :: ((), SS (StateF s :+: f) a) -> [a]
+  -- hState :: Free (StateF s :+: f) ((), SS (StateF s :+: f) a) -> StateT s (Free f) ((), SS (StateF s :+: f) a)
+  -- runStateT :: StateT s (Free f) ((), SS (StateF s :+: f) a) -> s -> Free f (((), SS (StateF s :+: f) a), s)
 
 sar' :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
 sar' t =
   \s -> fmap fst . (flip runStateT s . hState) $ fmap (resultsSS . snd) $ runStateT (hState t) (SS [] [])
+  -- resultsSS . snd :: ((), SS (StateF s :+: f) a) -> [a]
+  -- hState :: Free (StateF s :+: f) [a] -> StateT s (Free f) [a]
+  -- runStateT :: Free (StateF s :+: f) [a] -> StateT s (Free f) [a]
 
 www :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
 www s = flip runStateT s . hState
@@ -479,5 +486,53 @@ test = runST $ do
     Just z <- popStack stack
     Just q <- popStack stack
     return [x, y, z, q]
+
 \end{code}
 %endif
+
+The function |queensS| constructs a program which uses the operation of stack and nondeterminism to directly solve the n-queens problem.
+
+\begin{code}
+queensS :: Int -> Free (StackF (Int, [Int]) :+: NondetF) [Int]
+queensS n = push (0, []) >> loop
+  where
+    loop = do  s <- pop
+               case s of
+                 Nothing -> mzero
+                 Just (c, sol) ->
+                    if c >= n then return sol
+                    else do  r <- choose [1..n]
+                             filtr valid (r:sol)
+                             push ((c, sol) `plus` r)
+                             loop
+
+push :: Functor g => e -> Free (StackF e :+: g) ()
+push e = Op . Inl $ Push e (return ())
+pop :: Functor g => Free (StackF e :+: g) (Maybe e)
+pop = Op . Inl $ Pop return
+
+instance Functor f => MNondet (Free (f :+: NondetF)) where
+  mzero = Op . Inr $ Fail
+  mplus x y = Op . Inr $ Or x y
+\end{code}
+
+The function |queensStack| runs the |queens| by applyin the handlers of stack and nondeterminism sequentially.
+\begin{code}
+queensStack :: Int -> [[Int]]
+queensStack n = hND $ runSTT (liftST emptyStack >>= ((hStack (queensS n)) $))
+\end{code}
+
+% \begin{code}
+% type CompSK s f a = Free (Stack s :+: f ) a
+% data SK f a = SK (Free (Stack (SK f a) :+: f) [a])
+
+% popST :: Functor f => SK f a
+% popST = SK . Op . Inl $ Pop 
+
+% nondet2stack :: Functor f => Free (NondetF :+: f) a -> Free (StackF s :+: f) [a]
+% nondet2stack = fold gen (alg # fwd)
+%   where
+%     gen = undefined
+%     alg = undefined
+%     fwd = undefined
+% \end{code}
