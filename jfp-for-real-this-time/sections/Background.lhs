@@ -363,7 +363,7 @@ Combining effects with free monads is a bit more involved.
 Firstly, the signatures of the effects are combined with 
 %if False
 \begin{code}
-class (MState s m, MNondet m) => MStateNondet s m | m -> s
+-- class (MState s m, MNondet m) => MStateNondet s m | m -> s
 infixr :+:
 instance Functor (StateF s) where
     fmap f (Get s)    = Get (f . s)
@@ -404,7 +404,7 @@ instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
 
 %if False
 \begin{code}
-instance (Functor f) => MStateNondet s (Free (StateF s :+: NondetF :+: f))
+-- instance (Functor f) => MStateNondet s (Free (StateF s :+: NondetF :+: f))
 \end{code}
 %endif
 

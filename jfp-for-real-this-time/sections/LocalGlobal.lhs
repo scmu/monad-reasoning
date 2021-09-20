@@ -21,7 +21,8 @@ import Control.Applicative (liftA2)
 -- import qualified Control.Monad.Trans.State.Lazy as S
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
-class MStateNondet s m => MSt s m where
+{-
+class (MState s m, MNondet m) => MSt s m where
     alph :: n a -> m a
 
 local :: MSt s n => StateT s m a -> n a
@@ -34,16 +35,17 @@ local x = do
 etan :: Monad n => a -> n a
 etan = return
 
-etals :: MStateNondet s m => a -> StateT s m a
+etals :: (MState s m, MNondet m) => a -> StateT s m a
 etals x = StateT $ \s -> return (x, s)
 
-muls :: MStateNondet s m => StateT s m (StateT s m a) -> StateT s m a
+muls :: (MState s m, MNondet m) => StateT s m (StateT s m a) -> StateT s m a
 muls mx = StateT $ \s -> runStateT mx s >>= \(x, s') -> runStateT x s'
 
 mun :: MSt s n => n (n a) -> n a
 mun nx = alph nx >>= id -- do
     -- x <- alph nx
     -- x
+-}
 
 \end{code}
 %endif
@@ -225,7 +227,7 @@ newtype Global s a = Gl { runGl :: s -> (Maybe (a, Global s a), s) }
 The |Maybe| in this type indicates that a computation might fail to produce a
 result. However, since the |s| is outside of the |Maybe|, a modified state
 might be returned even if the computation failed.
-This |Global s a| type is an instance of the |MStateNondet| monad.
+This |Global s a| type is an instance of the |MState| and |MNondet| monad.
 
 %if False
 \begin{code}
@@ -354,7 +356,7 @@ we can implement backtracking in a global state setting.
 We can go even further by defining a variation on |put|,
 which restores the original state when it is backtracked over.
 \begin{code}
-putR :: MStateNondet s m => s -> m ()
+putR :: (MState s m, MNondet m) => s -> m ()
 putR s = get >>= \t -> put s `mplus` side (put t)
 \end{code}
 \label{eq:state-restoring-put}
@@ -487,8 +489,6 @@ failOp    = (Op . Inr . Inl) Fail
 % Here, we use a continuation-based representation, from which we can always recover the
 % representation of |putR| by setting the continuation to |return|.
 
-\wenhao{As |Free (StateF s :+: NondetF :+: f) a| is just an instance of |MStateNondet s|, I think we can directly use |putR| here instead of defining a new |putROp|.}
-
 The corresponding translation function |local2global| transforms every |Put| into
 a |putR| and leaves the rest of the program untouched.
 \begin{code}
@@ -586,7 +586,7 @@ This approach is especially recommended when the state is represented using
 an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled as follows:
 \begin{code}
-modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
+modifyR :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
 modifyR next prev = modify next `mplus` side (modify prev)
 \end{code}
 
@@ -608,7 +608,7 @@ Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
 Thus, we can compute all the solutions to the puzzle, in a scenario with a
 shared global state as follows:
 \begin{code}
-queensR :: MStateNondet (Int, [Int]) m => Int -> m [Int]
+queensR :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
 queensR n = put (0, []) >> loop
   where
     loop = do  s@(c, sol) <- get

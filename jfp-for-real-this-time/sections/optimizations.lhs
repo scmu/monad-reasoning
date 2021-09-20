@@ -199,7 +199,7 @@ This approach is especially recommended when the state is represented using
 an array or other data structure that is usually not overwritten in its entirety.
 Following a style similar to |putR|, this can be modelled as follows:
 \begin{code}
-modifyR :: MStateNondet s m => (s -> s) -> (s -> s) -> m ()
+modifyR :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
 modifyR next prev = modify next `mplus` side (modify prev)
 \end{code}
 
