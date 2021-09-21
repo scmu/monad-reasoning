@@ -19,7 +19,7 @@ import Data.STRef
 
 import Background
 import LocalGlobal (local2global, hLocal, comm2, queensR)
-import NondetState (runNDf, SS(..), nondet2state, extractSS)
+import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState, queensStateR)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 \end{code}
@@ -518,21 +518,71 @@ instance Functor f => MNondet (Free (f :+: NondetF)) where
 
 The function |queensStack| runs the |queens| by applyin the handlers of stack and nondeterminism sequentially.
 \begin{code}
-queensStack :: Int -> [[Int]]
-queensStack n = hND $ runSTT (liftST emptyStack >>= ((hStack (queensS n)) $))
+queensStackBFS :: Int -> [[Int]]
+queensStackBFS n = hND $ runSTT (liftST emptyStack >>= ((hStack (queensS n)) $))
 \end{code}
+% a little slower than queensLocal, but faster than others
 
-% \begin{code}
-% type CompSK s f a = Free (Stack s :+: f ) a
-% data SK f a = SK (Free (Stack (SK f a) :+: f) [a])
+The code below simulates the nondeterminism with the mutable stack.
+\begin{code}
+type CompSK s f b a = Free (StateF b :+: StackF s :+: f) a
+data SK f a = SK { unSK :: CompSK (SK f a) f [a] () }
 
-% popST :: Functor f => SK f a
-% popST = SK . Op . Inl $ Pop 
+getSK :: Functor f => Free (StateF s :+: f) s
+getSK = Op . Inl $ Get return
 
-% nondet2stack :: Functor f => Free (NondetF :+: f) a -> Free (StackF s :+: f) [a]
-% nondet2stack = fold gen (alg # fwd)
-%   where
-%     gen = undefined
-%     alg = undefined
-%     fwd = undefined
-% \end{code}
+putSK :: Functor f => s -> Free (StateF s :+: f ) ()
+putSK s = Op . Inl $ Put s (return ())
+
+popSK' :: Functor f => CompSK s f b (Maybe s)
+popSK' = Op . Inr . Inl $ Pop return
+
+pushSK' :: Functor f => s -> CompSK s f b ()
+pushSK' s = Op . Inr . Inl $ Push s (return ())
+
+popSK :: Functor f => CompSK (SK f a) f [a] ()
+popSK = do
+  mtop <- popSK'
+  case mtop of
+    Nothing -> return ()
+    Just (SK top) -> top
+
+pushSK :: Functor f => CompSK (SK f a) f [a] () -> CompSK (SK f a) f [a] () -> CompSK (SK f a) f [a] ()
+pushSK q p = do
+  pushSK' (SK q)
+  p
+
+appendSK :: Functor f => a -> CompSK (SK f a) f [a] () -> CompSK (SK f a) f [a] ()
+appendSK x p = do
+  xs <- getSK
+  putSK (xs ++ [x])
+  p
+
+nondet2stack :: Functor f => Free (NondetF :+: f) a -> CompSK (SK f a) f [a] ()
+nondet2stack = fold gen (alg # fwd)
+  where
+    gen :: Functor f => a -> CompSK (SK f a) f [a] ()
+    gen x         = appendSK x popSK
+    alg :: Functor f => NondetF (CompSK (SK f a) f [a] ()) -> CompSK (SK f a) f [a] ()
+    alg Fail      = popSK
+    alg (Or p q)  = pushSK q p
+    fwd :: Functor f => f (CompSK (SK f a) f [a] ()) -> CompSK (SK f a) f [a] ()
+    fwd y = Op (Inr (Inr y))
+
+
+runNDSK :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+runNDSK p = let t = runSTT $ liftST emptyStack >>= ((hStack . flip runStateT [] . hState $ nondet2stack p) $) in fmap snd t
+
+queensStack   :: Int -> [[Int]]
+queensStack   = hNil
+              . fmap fst . flip runStateT (0, []) . hState
+              . runNDSK . comm2
+              . local2global . queens
+
+queensStackR :: Int -> [[Int]]
+queensStackR = hNil
+              . fmap fst . flip runStateT (0, []) . hState
+              . runNDSK . comm2
+              . queensR
+\end{code}
+% slower than queensState and queensStateR; maybe because there is an extra State monad here, we can incorporate it into the stack monad
