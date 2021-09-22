@@ -602,8 +602,9 @@ Recall that, for the puzzle, the operator that alters the state
 % (to check whether a chess placement is safe)
 , is defined by
 < (c, sol) `plus` r = (c+1, r:sol)
-Similarly, we can define |minus| so that | (`minus` x) . (`plus` x) = id|:
+Similarly, we can define |minus|:
 < (c, sol) `minus` r = (c-1, tail sol)
+so that the equation |(`minus` x) . (`plus` x) = id| is satisfied, which is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.
 
 Thus, we can compute all the solutions to the puzzle, in a scenario with a
 shared global state as follows:
