@@ -516,12 +516,17 @@ instance Functor f => MNondet (Free (f :+: NondetF)) where
   mplus x y = Op . Inr $ Or x y
 \end{code}
 
-The function |queensStack| runs the |queens| by applyin the handlers of stack and nondeterminism sequentially.
+The function |queensStackBFS| runs the |queens| by applyin the handlers of stack and nondeterminism sequentially.
 \begin{code}
 queensStackBFS :: Int -> [[Int]]
 queensStackBFS n = hND $ runSTT (liftST emptyStack >>= ((hStack (queensS n)) $))
 \end{code}
 % a little slower than queensLocal, but faster than others
+% queensStackBFS 9: 2.95
+% queensLocal    9: 2.86
+% queensGlocal   9: 4.19
+% local -> global is the most inefficient simulation ?
+
 
 The code below simulates the nondeterminism with the mutable stack.
 \begin{code}
@@ -585,4 +590,9 @@ queensStackR = hNil
               . runNDSK . comm2
               . queensR
 \end{code}
-% slower than queensState and queensStateR; maybe because there is an extra State monad here, we can incorporate it into the stack monad
+% slower than queensState and queensStateR
+
+% queensState  9: 4.31, 4.14
+% queensStateR 9: 3.94
+% queensStack  9: 4.59, 4.8
+% queensStackR 9: 4.64, 5.04
