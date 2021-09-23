@@ -6,6 +6,7 @@ import Background
 import LocalGlobal
 import NondetState
 import Combination
+import qualified Stack2 as SC
 
 import Control.DeepSeq (NFData(rnf))
 import Data.Time
@@ -26,6 +27,8 @@ funlist =
   , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
   , (queensStack, "queensStack")        -- local2global & nondet2stack
   , (queensStackR, "queensStackR")      -- queensR & nondet2stack
+  , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
+  , (SC.queensStackR, "queensStackR2")      -- queensR & nondet2stack
   , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
   ]
 
@@ -64,37 +67,43 @@ main = do
 printList [] = return ()
 printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 
--- queensStackBFS is faster than queensLocal
--- Comparing queensGlobal with queensState, the optimization of nondet2state is obvious
--- queensSim is slower than queensState because of the time used by the simulation function ?
--- queensStack is still a little slower than queensState
+-- queensLocal is the baseline
+-- queensStackBFS is much faster than queensLocal
+-- queensStateR is faster than queensLocal
+-- queensSim is slower than queensState. I think it is because of the time used by the simulation function states2state ?
+-- queensStack[R] is still a little slower than queensState
+-- but queensStack[R]2 is even faster than queensLocal
 
 {- 
 n=9
-queensLocal     0.082013s
-queensGlobal    0.1443322s
-queensModify    0.1519928s
-queensState     0.0904284s
-queensStateR    0.09149s
-queensSim       0.1347476s
-queensSimR      0.107251s
-queensStackBFS  0.0534314s  ⭐️
-queensStack     0.0961846s
-queensStackR    0.0954376s
-queensStateLocal        0.1029294s
+queensLocal     0.0723872s
+queensGlobal    0.128872s
+queensModify    0.139614s
+queensState     0.0741924s
+queensStateR    0.069604s
+queensSim       0.1102444s
+queensSimR      0.1113974s
+queensStackBFS  0.0513904s
+queensStack     0.097275s
+queensStackR    0.0830048s
+queensStack2    0.065528s
+queensStackR2   0.0631138s
+queensStateLocal        0.091166s
 
 n=10
-queensLocal     0.3753108s
-queensGlobal    0.668036s
-queensModify    0.665608s
-queensState     0.388065s
-queensStateR    0.3521012s
-queensSim       0.5711648s
-queensSimR      0.5047398s
-queensStackBFS  0.2361332s  ⭐️
-queensStack     0.4336538s  slower than queensState
-queensStackR    0.4083884s
-queensStateLocal        0.5280488s
+queensLocal     0.3929064s
+queensGlobal    0.665637s
+queensModify    0.6793106s
+queensState     0.3999748s
+queensStateR    0.3650656s
+queensSim       0.5497036s
+queensSimR      0.4962906s
+queensStackBFS  0.268101s
+queensStack     0.4378638s
+queensStackR    0.4368402s
+queensStack2    0.3780008s
+queensStackR2   0.2992244s
+queensStateLocal        0.5565514s
 
 n=11
 

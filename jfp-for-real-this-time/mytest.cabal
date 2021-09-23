@@ -1,0 +1,83 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 18a28f68a671aea1ae963b1462387cdf6425cdc9cd251c14a7d704e83e88c683
+
+name:           mytest
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/mytest#readme>
+homepage:       https://github.com/githubuser/mytest#readme
+bug-reports:    https://github.com/githubuser/mytest/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2021 Author name here
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/mytest
+
+library
+  exposed-modules:
+      Background
+      Combination
+      LocalGlobal
+      NondetState
+      Stack2
+  other-modules:
+      Paths_mytest
+  hs-source-dirs:
+      sections
+  build-depends:
+      STMonadTrans
+    , array
+    , base >=4.7 && <5
+    , deepseq
+    , mtl
+    , time
+    , transformers
+  default-language: Haskell2010
+
+executable mytest-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_mytest
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      STMonadTrans
+    , array
+    , base >=4.7 && <5
+    , deepseq
+    , mtl
+    , mytest
+    , time
+    , transformers
+  default-language: Haskell2010
+
+test-suite mytest-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_mytest
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      STMonadTrans
+    , array
+    , base >=4.7 && <5
+    , deepseq
+    , mtl
+    , mytest
+    , time
+    , transformers
+  default-language: Haskell2010
