@@ -558,6 +558,7 @@ appendSK x p = do
   putSK (xs ++ [x])
   p
 
+-- simulation of nondeterminism with stack
 nondet2stack :: Functor f => Free (NondetF :+: f) a -> CompSK (SK f a) f [a] ()
 nondet2stack = fold gen (alg # fwd)
   where

@@ -632,8 +632,8 @@ instance MNondet m => MNondet (StateT s m) where
 t :: StateT (Int, [Int]) [] [Int]
 t = queens 4
 
-test :: Int -> [[Int]]
-test n = fmap fst $ runStateT (queens n) (0,[])
+queensMT :: Int -> [[Int]]
+queensMT n = fmap fst $ runStateT (queens n) (0,[])
 \end{code}
 %endif
 

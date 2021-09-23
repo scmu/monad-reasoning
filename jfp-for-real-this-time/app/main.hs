@@ -17,7 +17,9 @@ queensStateLocal = hNil . flip local (0, []) . queens
   where local = fmap (fmap (fmap fst) . runNDf) . runStateT . hState
 
 funlist =
-  [ (queensLocal, "queensLocal")        -- local-state semantics, no simulation
+  [ (queensNaive, "queensNaive")
+  , (queensMT, "queensMT")        
+  , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
   , (queensGlobal, "queensGlobal")      -- local2global
   , (queensModify, "queensModify")      -- queensR
   , (queensState, "queensState")        -- local2global & nondet2state
