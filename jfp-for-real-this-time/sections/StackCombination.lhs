@@ -9,7 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Combination where
+module StackCombination where
 
 import Data.Array.ST
 import Control.Monad.ST
