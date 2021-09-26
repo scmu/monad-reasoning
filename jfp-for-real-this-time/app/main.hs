@@ -12,6 +12,8 @@ import Control.DeepSeq (NFData(rnf))
 import Data.Time
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
+import qualified Fusion as F
+
 
 queensStateLocal = hNil . flip local (0, []) . queens
   where local = fmap (fmap (fmap fst) . runNDf) . runStateT . hState
@@ -31,7 +33,9 @@ funlist =
   , (queensStackR, "queensStackR")      -- queensR & nondet2stack
   , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
   , (SC.queensStackR, "queensStackR2")      -- queensR & nondet2stack
-  , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
+  -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
+  , (F.queensLocal, "F.queensLocal")
+  , (F.queensModify, "F.queensModify")
   ]
 
 nlist = [10]

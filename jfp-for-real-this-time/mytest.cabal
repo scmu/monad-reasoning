@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 18a28f68a671aea1ae963b1462387cdf6425cdc9cd251c14a7d704e83e88c683
+-- hash: d8b5859eb71bb9a84d159a637b79ea03080966e899265e781ac9d5342a2f3573
 
 name:           mytest
 version:        0.1.0.0
@@ -28,9 +28,12 @@ library
   exposed-modules:
       Background
       Combination
+      Fusion
+      FusionUtilities
       LocalGlobal
       NondetState
       Stack2
+      Test
   other-modules:
       Paths_mytest
   hs-source-dirs:
@@ -40,6 +43,7 @@ library
     , array
     , base >=4.7 && <5
     , deepseq
+    , fused-effects >=1.1.1.1
     , mtl
     , time
     , transformers
@@ -57,6 +61,7 @@ executable mytest-exe
     , array
     , base >=4.7 && <5
     , deepseq
+    , fused-effects >=1.1.1.1
     , mtl
     , mytest
     , time
@@ -76,6 +81,7 @@ test-suite mytest-test
     , array
     , base >=4.7 && <5
     , deepseq
+    , fused-effects >=1.1.1.1
     , mtl
     , mytest
     , time

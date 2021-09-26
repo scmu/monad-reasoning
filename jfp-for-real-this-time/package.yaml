@@ -27,6 +27,7 @@ dependencies:
 - transformers
 - deepseq
 - time
+- fused-effects >= 1.1.1.1
 
 library:
   source-dirs: sections
