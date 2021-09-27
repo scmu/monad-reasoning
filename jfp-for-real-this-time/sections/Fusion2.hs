@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances, FunctionalDependencies, FlexibleContexts, GADTs, KindSignatures, RankNTypes #-}
 
 
-module Fusion where
+module Fusion2 where
 
 import Control.Algebra
 import Control.Effect.NonDet

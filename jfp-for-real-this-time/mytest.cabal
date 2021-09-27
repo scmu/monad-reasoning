@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 47852a577923afc99186633c0505d9c7c8de7a5e869691af2408faf0a93b8c8a
+-- hash: c9b4becd66256a77ab05cc5451bc3dfbe04d31f8937b1e8eedc3e9c32ac53f03
 
 name:           mytest
 version:        0.1.0.0
@@ -30,7 +30,8 @@ library
       Codensity
       Combination
       Fusion
-      Fusion2
+      Fusion3
+      Fusion4
       FusionUtilities
       LocalGlobal
       NondetState

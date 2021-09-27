@@ -13,6 +13,7 @@ import Data.Time
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
 import qualified Fusion as F
+import qualified Fusion4 as F4
 
 
 queensStateLocal = hNil . flip local (0, []) . queens
@@ -22,20 +23,22 @@ funlist =
   [ (queensNaive, "queensNaive")
   , (queensMT, "queensMT")        
   , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
-  , (queensGlobal, "queensGlobal")      -- local2global
+  -- , (queensGlobal, "queensGlobal")      -- local2global
   , (queensModify, "queensModify")      -- queensR
-  , (queensState, "queensState")        -- local2global & nondet2state
-  , (queensStateR, "queensStateR")      -- queensR & nondet2state
-  , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
-  , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
-  , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
-  , (queensStack, "queensStack")        -- local2global & nondet2stack
-  , (queensStackR, "queensStackR")      -- queensR & nondet2stack
-  , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
-  , (SC.queensStackR, "queensStackR2")      -- queensR & nondet2stack
+  -- , (queensState, "queensState")        -- local2global & nondet2state
+  -- , (queensStateR, "queensStateR")      -- queensR & nondet2state
+  -- , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
+  -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
+  -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
+  -- , (queensStack, "queensStack")        -- local2global & nondet2stack
+  -- , (queensStackR, "queensStackR")      -- queensR & nondet2stack
+  -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
+  -- , (SC.queensStackR, "queensStackR2")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
   , (F.queensLocal, "F.queensLocal")
   , (F.queensModify, "F.queensModify")
+  , (F4.queensLocal, "F4.queensLocal")
+  , (F4.queensModify, "F4.queensModify")
   ]
 
 nlist = [10]

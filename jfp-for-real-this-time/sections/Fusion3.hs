@@ -1,12 +1,36 @@
 {-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances, FunctionalDependencies, FlexibleContexts, GADTs, KindSignatures, RankNTypes, QuantifiedConstraints #-}
 
 
-module Fusion where
+module Fusion3 where
 
 import Prelude hiding (fail, or)
 import Background
 
 import Control.Monad (liftM, ap, liftM2)
+
+
+----------------------------------------------------------------
+
+newtype Cod h a = Cod { unCod :: forall x . (a -> h x) -> h x }
+
+instance Functor (Cod h) where
+  fmap = liftM
+
+instance Applicative (Cod h) where
+  pure = return
+  (<*>) = ap
+
+instance Monad (Cod h) where
+  return x = Cod (\ k -> k x)
+  Cod m >>= f = Cod (\ k -> m (\ a -> unCod (f a) k))
+
+algCod :: Functor f => (forall x . f (h x) -> h x) -> (f (Cod h a) -> Cod h a)
+algCod alg op = Cod (\ k -> alg (fmap (\ m -> unCod m k) op))
+
+runCod :: (a -> f x) -> Cod f a -> f x
+runCod g m = unCod m g
+
+----------------------------------------------------------------
 
 newtype Cont r a = Cont { unCont :: forall x . (a -> r) -> r }
 
@@ -26,6 +50,8 @@ algCont alg op = Cont (\ k -> alg (fmap (\ m -> unCont m k) op))
 
 runCont :: (a -> r) -> Cont r a -> r
 runCont g m = unCont m g
+
+----------------------------------------------------------------
 
 class Functor f => TermAlgebra r f | r -> f where
   con :: f r -> r
