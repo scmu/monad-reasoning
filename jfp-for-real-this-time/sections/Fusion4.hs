@@ -57,18 +57,16 @@ instance Monad m => Monad (MList m) where
   mx >>= f = undefined
 
 instance (TermMonad m f) => TermAlgebra (MList m) (NondetF :+: f) where
-  var x = MList $ return [x]
+  var = return
   con (Inl Fail) = MList $ return []
   con (Inl (Or (MList p) (MList q))) = MList $ do x <- p; y <- q; return (x ++ y)
   con (Inr op) = MList . con . fmap unMList $ op
 
 instance (TermMonad m f) => TermAlgebra (StateT s m) (StateF s :+: f) where
-  var x = StateT $ \s -> return (x, s)
+  var = return
   con (Inl (Get     k))  = StateT $ \s -> runStateT (k s) s
   con (Inl (Put s'  k))  = StateT $ \s -> runStateT k s'
   con (Inr op)           = StateT $ \s -> con $ fmap (\k -> runStateT k s) op
-
--- instance TermAlgebra (StateT )
 
 fhND :: (TermMonad m f, Functor f) => Free (NondetF :+: f) a -> MList m a
 fhND = fold var con
@@ -87,3 +85,77 @@ queensLocal = hNil . flip fhLocal (0, []) . queens
 
 queensModify :: Int -> [[Int]]
 queensModify = hNil . flip fhGlobal (0, []) . queensR
+
+-- >>> queensLocal 4
+-- >>> queensModify 4
+-- [[3,1,4,2],[2,4,1,3]]
+-- [[3,1,4,2],[2,4,1,3]]
+
+------------------------------------------------------------------------------
+
+data SS m a = SS { resultsSS :: [a], stackSS :: [StateT (SS m a) m ()] }
+newtype QwQ m a = QwQ {unQwQ :: StateT (SS m a) m ()}
+
+nondet2state :: (TermMonad m f, Functor f) => Free (NondetF :+: f) a -> QwQ m a
+nondet2state = runCod (\x -> appendQwQ x popQwQ) . fold var con
+
+simND :: (TermMonad m f, Functor f) => Free (NondetF :+: f) a -> MList m a
+simND = extractSS . unQwQ . nondet2state
+
+extractSS :: (TermMonad m f, Functor f) => StateT (SS m a) m () -> MList m a
+extractSS x = MList $ resultsSS . snd <$> runStateT x (SS [] [])
+
+queensStateR :: Int -> [[Int]]
+queensStateR =  hNil . fmap fst . flip runStateT (0::Int, []::[Int])
+              . unMList . simND . comm2 . queensR
+-- >>> queensStateR 4
+-- [[3,1,4,2],[2,4,1,3]]
+
+instance (TermMonad m f) => TermAlgebra (Cod (QwQ m)) (NondetF :+: f) where
+  var = return
+  con = algCod con'
+    where
+      con' :: TermMonad m f => (NondetF :+: f) (QwQ m x) -> QwQ m x
+      con' (Inl Fail) = popQwQ
+      con' (Inl (Or p q)) = pushQwQ q p
+      -- con' (Inr op) = let t = fmap (runStateT . unQwQ) $ op in undefined
+      con' (Inr op) = QwQ . StateT $ \s -> con $ fmap (\k -> runStateT (unQwQ k) s) op
+
+getSS :: Monad f => StateT s f s
+getSS = StateT $ \ s -> return (s, s)
+putSS :: Monad f => s -> StateT s f ()
+putSS s = StateT $ \ _ -> return ((), s)
+
+popQwQ  :: Monad f => QwQ f a
+popQwQ = QwQ $ popSS
+
+pushQwQ :: Monad f => QwQ f a -> QwQ f a -> QwQ f a
+pushQwQ (QwQ q) (QwQ p) = QwQ $ pushSS q p
+
+appendQwQ :: Monad f => a
+          -> QwQ f a
+          -> QwQ f a
+appendQwQ x (QwQ p) = QwQ $ appendSS x p
+
+popSS  :: Monad f => StateT (SS f a) f ()
+popSS = do
+  SS xs stack <- getSS
+  case stack of
+    []       -> return ()
+    op : ps  -> do
+      putSS (SS xs ps); op
+
+pushSS  :: Monad f
+        => StateT (SS f a) f ()
+        -> StateT (SS f a) f ()
+        -> StateT (SS f a) f ()
+pushSS q p = do
+  SS xs stack <- getSS
+  putSS (SS xs (q : stack)); p
+
+appendSS  :: Monad f => a
+          -> StateT (SS f a) f ()
+          -> StateT (SS f a) f ()
+appendSS x p = do
+  SS xs stack <- getSS
+  putSS (SS (xs ++ [x]) stack); p

@@ -39,6 +39,7 @@ funlist =
   , (F.queensModify, "F.queensModify")
   , (F4.queensLocal, "F4.queensLocal")
   , (F4.queensModify, "F4.queensModify")
+  , (F4.queensStateR, "F4.queensStateR")
   ]
 
 nlist = [10]
