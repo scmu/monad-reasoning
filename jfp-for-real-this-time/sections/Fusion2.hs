@@ -1,12 +1,4 @@
-{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances, FunctionalDependencies, FlexibleContexts, GADTs, KindSignatures #-}
-
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances, FunctionalDependencies, FlexibleContexts, GADTs, KindSignatures, RankNTypes #-}
 
 
 module Fusion where
@@ -174,19 +166,20 @@ instance Monad m => Monad (QwQ m) where
 runQwQ :: Monad m => SS m a -> QwQ m a -> m [a]
 runQwQ s (QwQ x) = let t = fmap (resultsSS . fst) $ runState2 s x in t
 
--- 好像实现不了，这个carrier一定是polymorphic的？并且fused-effects实现中没有gen了
-instance (Algebra sig m) => Algebra (NonDet :+: sig) (QwQ m) where
-  alg hdl sig ctx = case sig of
-    -- L (L Empty)  -> popSS' ctx
-    L (L Empty)  -> popQwQ -- return type should be (ctx a)
-    L (R Choose) -> let x = (True <$ ctx)
-                    in let y = (False <$ ctx)
-                    in pushQwQ (return x) (return y)
-    -- R other      -> StateC2 $ \s -> thread (uncurry runState2 ~<~ hdl) other (s, ctx)
-    -- sig n a -> QwQ m (ctx a)
-    -- R other -> alg hdl other ctx -- NOTE: don't know if it is correct
-    -- R other -> let hdl' = unQwQ . hdl in QwQ (alg hdl' other ctx)
-    R other -> undefined
+instance (Algebra sig m) => Algebra (NonDet :+: sig) (Cod (QwQ m)) where
+  alg hdl sig ctx = algCod alg' hdl sig ctx
+
+alg' :: (Algebra sig m, Functor ctx)
+     => Handler ctx n (QwQ m) -> (NonDet :+: sig) n a -> ctx () -> QwQ m (ctx a)
+alg' hdl sig ctx = case sig of
+  -- L (L Empty)  -> popSS' ctx
+  L (L Empty)  -> popQwQ -- return type should be (ctx a)
+  L (R Choose) -> let x = (True <$ ctx)
+                  in let y = (False <$ ctx)
+                  in pushQwQ (return x) (return y)
+  -- R other      -> StateC2 $ \s -> thread (uncurry runState2 ~<~ hdl) other (s, ctx)
+  -- sig n a -> QwQ m (ctx a)
+  R other -> alg' hdl sig ctx -- NOTE: don't know if it is correct
 
 getSS :: Monad f => StateC2 s f s
 getSS = StateC2 $ \ s -> return (s, s)
