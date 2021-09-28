@@ -619,23 +619,6 @@ plus   :: (Int, [Int]) -> Int -> (Int, [Int])
 plus   (c, sol) r = (c+1, r:sol)
 \end{code}
 
-%if False
-\begin{code}
-instance MNondet m => MState s (StateT s m) where
-    get    = StateT $ \s -> return (s, s)
-    put x  = StateT $ \s -> return ((), x)
-
-instance MNondet m => MNondet (StateT s m) where
-    mzero      = StateT $ \s -> mzero
-    mplus x y  = StateT $ \s -> runStateT x s `mplus` runStateT y s
-
-t :: StateT (Int, [Int]) [] [Int]
-t = queens 4
-
-queensMT :: Int -> [[Int]]
-queensMT n = fmap fst $ runStateT (queens n) (0,[])
-\end{code}
-%endif
 
 The function |safe| checks whether the placement of a queen |q| is safe with
 respect to the list of queens that is already present (for which we need its

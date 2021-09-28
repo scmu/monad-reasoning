@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c9b4becd66256a77ab05cc5451bc3dfbe04d31f8937b1e8eedc3e9c32ac53f03
+-- hash: fe032ab721f87256c86b927dd34bfa05a3dd2afa8ac3e01285debb7e80332f23
 
 name:           mytest
 version:        0.1.0.0
@@ -27,15 +27,14 @@ source-repository head
 library
   exposed-modules:
       Background
-      Codensity
       Combination
-      Fusion
-      Fusion3
-      Fusion4
-      FusionUtilities
+      FusionGlobal
+      FusionLocal
       LocalGlobal
       NondetState
+      QueensMT
       Stack2
+      TermAlg
       Test
   other-modules:
       Paths_mytest

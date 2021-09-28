@@ -12,16 +12,18 @@ import Control.DeepSeq (NFData(rnf))
 import Data.Time
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
-import qualified Fusion as F
-import qualified Fusion4 as F4
+import qualified FusionLocal as Fl
+import qualified FusionGlobal as Fg
+import QueensMT (queensMT)
 
 
-queensStateLocal = hNil . flip local (0, []) . queens
-  where local = fmap (fmap (fmap fst) . runNDf) . runStateT . hState
+-- queensStateLocal = hNil . flip local (0, []) . queens
+--   where local = fmap (fmap (fmap fst) . runNDf) . runStateT . hState
 
 funlist =
-  [ (queensNaive, "queensNaive")
-  , (queensMT, "queensMT")        
+  [ 
+  -- , (queensNaive, "queensNaive")
+    (queensMT, "queensMT")        
   , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
   -- , (queensGlobal, "queensGlobal")      -- local2global
   , (queensModify, "queensModify")      -- queensR
@@ -35,11 +37,11 @@ funlist =
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
   -- , (SC.queensStackR, "queensStackR2")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
-  , (F.queensLocal, "F.queensLocal")
-  , (F.queensModify, "F.queensModify")
-  , (F4.queensLocal, "F4.queensLocal")
-  , (F4.queensModify, "F4.queensModify")
-  , (F4.queensStateR, "F4.queensStateR")
+  , (Fl.queensLocal, "F.queensLocal")
+  , (Fg.queensModify, "F.queensModify")
+  -- , (F4.queensLocal, "F4.queensLocal")
+  -- , (F4.queensModify, "F4.queensModify")
+  , (Fg.queensStateR, "F4.queensStateR")
   ]
 
 nlist = [10]

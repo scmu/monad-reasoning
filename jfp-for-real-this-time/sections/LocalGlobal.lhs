@@ -641,7 +641,7 @@ minus   (c, sol) r = (c-1, tail sol)
 -- tR :: StateT (Int, [Int]) [] [Int]
 -- tR = queensR 9
 
-testR :: [[Int]]
-testR = fmap fst $ runStateT t (0,[])
+-- testR :: [[Int]]
+-- testR = fmap fst $ runStateT t (0,[])
 \end{code}
 %endif
