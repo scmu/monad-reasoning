@@ -28,20 +28,19 @@ funlist =
   -- , (queensGlobal, "queensGlobal")      -- local2global
   , (queensModify, "queensModify")      -- queensR
   -- , (queensState, "queensState")        -- local2global & nondet2state
-  -- , (queensStateR, "queensStateR")      -- queensR & nondet2state
+  , (queensStateR, "queensStateR")      -- queensR & nondet2state
   -- , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
   -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
   -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
   -- , (queensStack, "queensStack")        -- local2global & nondet2stack
   -- , (queensStackR, "queensStackR")      -- queensR & nondet2stack
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
-  -- , (SC.queensStackR, "queensStackR2")      -- queensR & nondet2stack
+  , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
   , (Fl.queensLocal, "F.queensLocal")
   , (Fg.queensModify, "F.queensModify")
-  -- , (F4.queensLocal, "F4.queensLocal")
-  -- , (F4.queensModify, "F4.queensModify")
-  , (Fg.queensStateR, "F4.queensStateR")
+  , (Fg.queensStateR, "F.queensStateR")
+  , (Fg.queensStackR, "F.queensStackR")
   ]
 
 nlist = [10]
@@ -78,6 +77,21 @@ main = do
 
 printList [] = return ()
 printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
+
+
+-- queensMT        0.0568556s
+-- queensLocal     0.3644582s
+-- queensModify    0.6895992s
+-- queensStateR    0.3724714s
+-- queensStack2R   0.3088154s
+-- F.queensLocal   0.056406s
+-- F.queensModify  0.144616s
+-- F.queensStateR  0.1333182s
+-- F.queensStackR  0.2128528s
+
+------------------------------------------------------------------------------
+-- OLD:
+
 
 -- queensLocal is the baseline
 -- queensStackBFS is much faster than queensLocal

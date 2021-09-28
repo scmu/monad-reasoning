@@ -6,7 +6,8 @@ import Prelude hiding (fail, or)
 import Background
 import LocalGlobal (queensR)
 -- import Combination (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
-import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
+import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt)
+              , getInfoSt, putInfoSt)
 import TermAlg
 
 import Control.Monad (liftM, ap, liftM2)
@@ -43,14 +44,24 @@ queensModify = run . flip fhGlobal (0, []) . queensR
 
 data SS m a = SS { resultsSS :: [a], stackSS :: [StateT (SS m a) m ()] }
 newtype QwQ m a = QwQ {unQwQ :: StateT (SS m a) m ()}
+genQwQ :: Monad m => a -> QwQ m a
 genQwQ = \x -> appendQwQ x popQwQ
 
-extractSS :: (TermMonad m f, Functor f) => StateT (SS m a) m () -> MList m a
-extractSS x = MList $ resultsSS . snd <$> runStateT x (SS [] [])
+extractSS :: Monad m => StateT (SS m a) m () -> m [a]
+extractSS x = resultsSS . snd <$> runStateT x (SS [] [])
+
+simND :: Monad m => Cod (QwQ (StateT s m)) a -> StateT s m [a]
+simND = extractSS . unQwQ . runCod genQwQ
 
 queensStateR :: Int -> [[Int]]
 queensStateR = run . fmap fst . flip runStateT (0, [])
-             . unMList . extractSS . unQwQ . runCod genQwQ . queensR
+            --  . unMList . extractSS . unQwQ . runCod genQwQ . queensR
+             . simND . queensR
+-- queensStateR  :: Int -> [[Int]]
+-- queensStateR  = hNil
+--               . fmap fst . flip runStateT (0, []) . hState
+--               . (extractSS . hState . nondet2state) . comm2
+--               . queensR
 -- >>> queensStateR 4
 -- [[3,1,4,2],[2,4,1,3]]
 
@@ -61,13 +72,7 @@ instance (TermMonad m f) => TermAlgebra (Cod (QwQ m)) (NondetF :+: f) where
       con' :: TermMonad m f => (NondetF :+: f) (QwQ m x) -> QwQ m x
       con' (Inl Fail) = popQwQ
       con' (Inl (Or p q)) = pushQwQ q p
-      -- con' (Inr op) = let t = fmap (runStateT . unQwQ) $ op in undefined
       con' (Inr op) = QwQ . StateT $ \s -> con $ fmap (\k -> runStateT (unQwQ k) s) op
-
-getSS :: Monad f => StateT s f s
-getSS = StateT $ \ s -> return (s, s)
-putSS :: Monad f => s -> StateT s f ()
-putSS s = StateT $ \ _ -> return ((), s)
 
 popQwQ  :: Monad f => QwQ f a
 popQwQ = QwQ $ popSS
@@ -79,6 +84,11 @@ appendQwQ :: Monad f => a
           -> QwQ f a
           -> QwQ f a
 appendQwQ x (QwQ p) = QwQ $ appendSS x p
+
+getSS :: Monad f => StateT s f s
+getSS = StateT $ \ s -> return (s, s)
+putSS :: Monad f => s -> StateT s f ()
+putSS s = StateT $ \ _ -> return ((), s)
 
 popSS  :: Monad f => StateT (SS f a) f ()
 popSS = do
@@ -108,85 +118,98 @@ appendSS x p = do
 -- using Stack2
 ----------------------------------------------------------------
 
--- newtype StackT s b e m a = StackT { runStackT :: Stack s b e -> STT s m a }
+newtype StackT s b e m a = StackT { runStackT :: Stack s b e -> STT s m (a, b) }
 
--- instance Monad m => Functor (StackT s b e m) where
---   fmap = liftM
--- instance Monad m => Applicative (StackT s b e m) where
---   pure = return
---   (<*>) = ap
--- instance Monad m => Monad (StackT s b e m) where
---   return = StackT . const . return
---   m >>= f = undefined
+instance Monad m => Functor (StackT s b e m) where
+  fmap = liftM
+instance Monad m => Applicative (StackT s b e m) where
+  pure = return
+  (<*>) = ap
+instance Monad m => Monad (StackT s b e m) where
+  -- return = StackT . const . return
+  return x = StackT $ \ stack -> liftST (getInfoSt stack) >>= \b -> return (x, b)
+  (StackT m) >>= f = StackT $ \stack -> let t = do (a, b) <- m stack;
+                                                   (b', b) <- runStackT (f a) stack ;
+                                                   return (b', b) in t
+                                                   -- NOTE: correct?
 
--- instance (TermMonad m f) => TermAlgebra (StackT s b e m) (StackF e :+: f) where
---   var = return
---   con (Inl (Pop k)) = StackT $ \stack -> liftST (popStack stack) >>= \x -> runStackT (k x) stack
---   con (Inl (Push x k)) = StackT $ \stack -> liftST (pushStack x stack)  >> runStackT k stack
---   con (Inr op) = StackT $ \stack -> STT $ \s -> con ((\f -> unSTT (f stack) s) <$> fmap runStackT op)
+instance (TermMonad m f) => TermAlgebra (StackT s b e m) (StackF e b :+: f) where
+  var = return
+  con (Inl (Pop k)) = StackT $ \stack -> liftST (popStack stack) >>= \x -> runStackT (k x) stack
+  con (Inl (Push x k)) = StackT $ \stack -> liftST (pushStack x stack) >> runStackT k stack
+  con (Inr op) = StackT $ \stack -> STT $ \s -> con ((\f -> unSTT (f stack) s) <$> fmap runStackT op)
+  -- con (Inl (Push x k)) = StackT $ \stack -> liftST (pushStack x stack)  >> runStackT k stack
 
--- type CompSK s f b a = Free (StateF b :+: StackF s :+: f) a
--- -- just use StackT b s f a
--- -- data SK s m a = SK { unSK :: StackT (SK s m a) s m () }
--- data TwT m a = TwT {unTwT :: m a}
+newtype SK s m a = SK { unSK :: StackT s [a] (SK s m a) m () }
+genSK :: Monad m => a -> SK s m a
+genSK = \x -> appendTwT x popTwT
 
--- instance Monad m => Functor (TwT m) where
---   fmap = liftM
--- instance Monad m => Applicative (TwT m) where
---   pure = return
---   (<*>) = ap
--- instance Monad m => Monad (TwT m) where
---   return x = TwT $ return x
---   mx >>= f = undefined
 
--- -- simulation of nondeterminism with stack
--- -- nondet2stack :: Functor f => Free (NondetF :+: f) a -> CompSK (SK f a) f [a] ()
--- -- nondet2stack = fold gen (alg # fwd)
--- --   where
--- --     gen :: Functor f => a -> CompSK (SK f a) f [a] ()
--- --     gen x         = appendSK x popSK
--- --     alg :: Functor f => NondetF (CompSK (SK f a) f [a] ()) -> CompSK (SK f a) f [a] ()
--- --     alg Fail      = popSK
--- --     alg (Or p q)  = pushSK q p
--- --     fwd :: Functor f => f (CompSK (SK f a) f [a] ()) -> CompSK (SK f a) f [a] ()
--- --     fwd y = Op (Inr (Inr y))
+-- instance (TermMonad m f) => TermAlgebra (Cod (SK s m)) (NondetF :+: f) where
+instance (TermMonad m f) => TermAlgebra (Cod (SK s m)) (NondetF :+: f) where
+  var = return
+  con = algCod con'
+    where
+      con' (Inl Fail) = popTwT
+      con' (Inl (Or p q)) = pushTwT q p
+      con' (Inr op) = SK . StackT $ \stack -> STT $ \s -> con ((\f -> unSTT (runStackT (unSK f) stack) s) <$> op)
 
--- instance (TermMonad m (StateF b :+: StackF s :+: f), Functor f)
---       => TermAlgebra (TwT m) (NondetF :+: f) where
---   var = return
---   con (Inl Fail) = popTwT
+-- simNDSK :: Monad m => (forall s . Cod (SK s (StateT s' m)) a) -> StateT s' m [a]
+-- simNDSK :: Monad m => Cod (SK s (StateT s' m)) a -> StateT s' m [a]
+-- simNDSK p =
+--   runSTT (fmap snd $ liftST (emptyStack []) >>= \stack -> flip runStackT stack . unSK . runCod genSK $ p)
 
--- -- getSK :: Functor f => Free (StateF s :+: f) s
--- -- getSK = StateT $ \ s -> return (s, s)
+queensStackR :: Int -> [[Int]]
+queensStackR n = run . fmap fst . flip runStateT (0, [])
+              $ (runSTT (fmap snd $ liftST (emptyStack []) >>= \stack -> flip runStackT stack . unSK . runCod genSK $ queensR n))
 
--- -- putSK :: Functor f => s -> Free (StateF s :+: f ) ()
--- -- putSK s = Op . Inl $ Put s (return ())
+-- >>> queensStackR 4
+-- [[3,1,4,2],[2,4,1,3]]
 
--- -- popSK'' :: (TermMonad m (StateF b :+: StackF s :+: f)) => 
+popTwT :: Monad f => SK s f a
+popTwT = SK $ popSK
 
--- -- popSK' :: Functor f => CompSK s f b (Maybe s)
--- -- popSK' = Op . Inr . Inl $ Pop return
+pushTwT :: Monad f => SK s f a -> SK s f a -> SK s f a
+pushTwT (SK q) (SK p) = SK $ pushSK q p
 
--- -- pushSK' :: Functor f => s -> CompSK s f b ()
--- -- pushSK' s = Op . Inr . Inl $ Push s (return ())
+appendTwT :: Monad f => a -> SK s f a -> SK s f a
+appendTwT x (SK p) = SK $ appendSK x p
 
--- popTwT :: TwT m a
--- popTwT = undefined
+dup x = (x, x)
+pw x y = (y, x)
 
--- -- popSK :: Functor f => CompSK (SK f a) f [a] ()
--- -- popSK = do
--- --   mtop <- popSK'
--- --   case mtop of
--- --     Nothing -> return ()
--- --     Just (SK top) -> top
+getSK :: Monad m => StackT s b e m b
+getSK = StackT $ liftST . fmap dup . getInfoSt
 
--- -- pushSK :: Functor f => CompSK (SK f a) f [a] () -> CompSK (SK f a) f [a] () -> CompSK (SK f a) f [a] ()
--- -- pushSK q p = do
--- --   pushSK' (SK q)
--- --   p
+putSK :: Monad m => b -> StackT s b e m ()
+putSK b = StackT $ liftST . fmap (pw b) . putInfoSt b
 
--- -- appendSK :: Functor f => a -> CompSK (SK f a) f [a] () -> CompSK (SK f a) f [a] ()
--- -- appendSK x p = do
--- --   xs <- getSK
--- --   putSK (xs ++ [x])
--- --   p
+popSK' :: Monad m => StackT s b e m (Maybe e)
+popSK' = do b <- getSK; StackT $ liftST . fmap (pw b) . popStack
+
+pushSK' :: Monad m => e -> StackT s b e m ()
+pushSK' e = do b <- getSK; StackT $ liftST . fmap (pw b) . pushStack e
+
+popSK :: Monad m => StackT s [a] (SK s m a) m ()
+popSK = do
+  mtop <- popSK'
+  case mtop of
+    Nothing -> return ()
+    Just (SK top) -> top
+
+pushSK :: Monad m
+       => StackT s [a] (SK s m a) m ()
+       -> StackT s [a] (SK s m a) m ()
+       -> StackT s [a] (SK s m a) m ()
+pushSK q p = do
+  pushSK' (SK q)
+  p
+
+appendSK :: Monad m
+         => a
+         -> StackT s [a] (SK s m a) m ()
+         -> StackT s [a] (SK s m a) m ()
+appendSK x p = do
+  xs <- getSK
+  putSK (xs ++ [x])
+  p
