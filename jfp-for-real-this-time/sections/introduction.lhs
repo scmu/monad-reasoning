@@ -47,13 +47,13 @@ particular the fusion property of handlers~\cite{}.
 
 %In particular, a purely functional programming style lets us reason about our programs equationally.
 %At first glance, it may seem that equational reasoning is made possible by the lack of side effects in functional programming.
-%But work such as \todo{hutton and fulger} and \todo{gibbons and hinze} shows that, when we model our side effects with monads, 
+%But work such as \todo{hutton and fulger} and \todo{gibbons and hinze} shows that, when we model our side effects with monads,
 
 
-\subsection{Contributions}
-\label{sec:contributions}
+% \subsection{Contributions}
+% \label{sec:contributions}
 
-After introducing the reader to the appropriate background material and motivating the problem (Section \ref{sec:background}), 
+After introducing the reader to the appropriate background material and motivating the problem (Section \ref{sec:background}),
 this paper makes the following contributions:
 
 \begin{itemize}
@@ -61,7 +61,7 @@ this paper makes the following contributions:
 		  We define a simulation to model local state using global state (\Cref{sec:local-global}).
 	\item We define undo semantics to allow more efficient backtracking (\Cref{sec:local-global}).
 	\item We simulate nondeterminism using state (\Cref{sec:nondeterminism-state}).
-	\item We combine the previous simulations in a single simulation function where we model nondeterminism and state using 
+	\item We combine the previous simulations in a single simulation function where we model nondeterminism and state using
 		  a single state effect. As an extension, we work out mutable state as a possible optimization (\Cref{sec:combination}).
 	\item We illustrate the simulations and resulting optimizations using the n-queens puzzle as a running example throughout
 		  all sections.
