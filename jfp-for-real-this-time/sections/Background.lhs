@@ -42,8 +42,8 @@ our findings with code.
 
 
 %-------------------------------------------------------------------------------
-\subsection{Free Monads}
-\label{sec:free-monads}
+\subsection{Functors and Monads}
+\label{sec:functors-and-monads}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Functors}
@@ -64,6 +64,7 @@ Furthermore, a functor should satisfy the two functor laws:
 \paragraph{Applicatives}
 \tom{Where do we use applicatives? If only minimally, we should check whether we can skip the
      general introduction and provide a shorter, more targeted explanation.}
+\birthe{We use |<*>| and |<$>|.}
 Applicative functors, introduced by \citet{mcbride08},
 allow sequencing of functorial computations.
 An applicative functor |f :: * -> *| in Haskell has two operations: |pure| for
@@ -115,81 +116,16 @@ For example, |do x <- m; f x| is translated to |m >>= f|.
 Furthermore, it supports a join operator |(>>) :: m a -> m b -> m b| so that
 |m1 >> m2 = m1 >>= \ _ -> m2|.
 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Free Monads and Their Folds}
-
-Free monads are gaining popularity for their use in algebraic effects \cite{Plotkin02}
-and their handlers \cite{Plotkin09, Plotkin13},
-which elegantly separate syntax and semantics of effectful
-operations.
-A free monad, the syntax of an effectful program,
-can be captured generically in Haskell.
-\begin{code}
-data Free f a = Var a | Op (f (Free f a))
-\end{code}
-This data type is a form of abstract syntax tree (AST) consisting of leaves |Var a|
-and internal nodes |Op (f (Free f a))| whose branching structure is
-detetermined by the functor |f|, which is known as the \emph{signature}.
-
-Free monads % arise from the free-forgetful adjunction and
-come equipped with a fold recursion scheme.
-\begin{code}
-fold :: Functor f => (a -> b) -> (f b -> b) -> Free f a -> b
-fold gen alg (Var x)  =  gen x
-fold gen alg (Op op)  =  alg (fmap (fold gen alg) op)
-\end{code}
-This fold interprets an AST structure of type |Free f a| into some
-semantic domain |b|. It does so compositionally using a generator
-|gen :: a -> b| for the leaves and an algebra |alg :: f b -> b| for the internal
-nodes; together these are also konwn as a \emph{handler}.
-
-The monad instance of |Free| can now straightforwardly be implemented using
-this fold.
-%if False
-\begin{code}
-instance Functor f => Functor (Free f) where
-    fmap = liftM
-
-instance Functor f => Applicative (Free f) where
-  pure = return
-  (<*>) = ap
-\end{code}
-%endif
-\begin{code}
-instance Functor f => Monad (Free f) where
-    return   = Var
-    m >>= f  = fold f Op m
-\end{code}
-
-%fmap f (Op op) = Op (fmap (fmap f) op)
-%(Op op) >>= f = Op (fmap (>>= f) op)
-
-Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15}.
-\begin{alignat}{2}
-    &\mbox{\bf fusion-pre}:\quad &
-    |fold gen alg . fmap h| &= |fold (gen . h) alg|\mbox{~~,} \label{eq:fusion-pre}\\
-    &\mbox{\bf fusion-post}:~ &
-    |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~.}
-\end{alignat}
-
-These two fusion laws will turn out to be essential in the further proofs of this paper.
-
-% We can define an empty signature and the run function for it.
-% \begin{code}
-% data Void a deriving Functor
-
-% runVoid :: Free Void a -> a
-% runVoid (Var x) = x
-
-% \end{code}
-
 %-------------------------------------------------------------------------------
-\subsection{Nondeterminism}
+\subsection{Nondeterminism and State}
 \label{sec:nondeterminism}
 
 Following the approach of \citet{Hutton08} and \citet{Gibbons11},
 we introduce effects based on an axiomatic characterisation rather than
 a specific implementation.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{Nondeterminism}
 The first monadic effect we introduce in this way is nondeterminism.
 We define a type class to capture the nondeterministic interface as follows:
 \begin{code}
@@ -235,40 +171,8 @@ This extends the following |Monad| instance for lists.
 <   return x   = [x]
 <   xs >>= f    = concatMap f xs
 
-In this article we do not use a monad like that of lists, which respects the
-non-determinism laws on the nose. Following the algebraic effects approach, we
-use instead a free monad over an appropriate signature, such as |Free NondetF|
-where |NondetF| is the nondeterminism signature,
-\begin{code}
-data NondetF a   = Fail | Or a a
-\end{code}
-which gives rise to a trivial |MNondet| instance
-\begin{code}
-instance MNondet (Free NondetF) where
-  mzero = Op Fail
-  mplus p q = Op (Or p q)
-\end{code}
-
-This does not respect the identity or associativity law on the nose. Indeed,
-|Op (Or Fail p)| is for instance a different abstract syntax tree than |p|.
-Yet, these syntactic differences do not matter as long as their interpretation
-is the same. This is where the handlers come in; the meaning they assign
-should respect the laws.
-
-This is case for the |hND| handler, which interprets the free monad in terms of
-lists.
-\begin{code}
-hND :: Free NondetF a -> [a]
-hND = fold genND algND
-  where
-    genND x         = [x]
-    algND Fail      = []
-    algND (Or p q)  = p ++ q
-\end{code}
-
-%-------------------------------------------------------------------------------
-\subsection{State}
-
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{State}
 The signature for state has two operations:
 a |get| operation that reads and returns the state,
 and a |put| operation that modifies the state, overwriting it with the given
@@ -326,8 +230,115 @@ instance Monad (State s) where
 \end{code}
 %endif
 
-Again we take a more indirect route, through a free monad like |Free (StateF
-s)| over the state signature
+%-------------------------------------------------------------------------------
+\subsection{Free Monads and Their Folds}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{Free Monads}
+Free monads are gaining popularity for their use in algebraic effects \cite{Plotkin02}
+and their handlers \cite{Plotkin09, Plotkin13},
+which elegantly separate syntax and semantics of effectful
+operations.
+A free monad, the syntax of an effectful program,
+can be captured generically in Haskell.
+\begin{code}
+data Free f a = Var a | Op (f (Free f a))
+\end{code}
+This data type is a form of abstract syntax tree (AST) consisting of leaves |Var a|
+and internal nodes |Op (f (Free f a))| whose branching structure is
+detetermined by the functor |f|, which is known as the \emph{signature}.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{A Fold Recursion Scheme}
+Free monads % arise from the free-forgetful adjunction and
+come equipped with a fold recursion scheme.
+\begin{code}
+fold :: Functor f => (a -> b) -> (f b -> b) -> Free f a -> b
+fold gen alg (Var x)  =  gen x
+fold gen alg (Op op)  =  alg (fmap (fold gen alg) op)
+\end{code}
+This fold interprets an AST structure of type |Free f a| into some
+semantic domain |b|. It does so compositionally using a generator
+|gen :: a -> b| for the leaves and an algebra |alg :: f b -> b| for the internal
+nodes; together these are also konwn as a \emph{handler}.
+
+The monad instance of |Free| can now straightforwardly be implemented using
+this fold.
+%if False
+\begin{code}
+instance Functor f => Functor (Free f) where
+    fmap = liftM
+
+instance Functor f => Applicative (Free f) where
+  pure = return
+  (<*>) = ap
+\end{code}
+%endif
+\begin{code}
+instance Functor f => Monad (Free f) where
+    return   = Var
+    m >>= f  = fold f Op m
+\end{code}
+
+%fmap f (Op op) = Op (fmap (fmap f) op)
+%(Op op) >>= f = Op (fmap (>>= f) op)
+
+Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15}.
+\begin{alignat}{2}
+    &\mbox{\bf fusion-pre}:\quad &
+    |fold gen alg . fmap h| &= |fold (gen . h) alg|\mbox{~~,} \label{eq:fusion-pre}\\
+    &\mbox{\bf fusion-post}:~ &
+    |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~.}
+\end{alignat}
+
+These two fusion laws will turn out to be essential in the further proofs of this paper.
+
+% We can define an empty signature and the run function for it.
+% \begin{code}
+% data Void a deriving Functor
+
+% runVoid :: Free Void a -> a
+% runVoid (Var x) = x
+
+% \end{code}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{Nondeterminism}
+For nondeterminism, we do not use a monad like that of lists.
+Following the algebraic effects approach, we
+use instead a free monad over an appropriate signature, such as |Free NondetF|
+where |NondetF| is the nondeterminism signature,
+\begin{code}
+data NondetF a   = Fail | Or a a
+\end{code}
+which gives rise to a trivial |MNondet| instance
+\begin{code}
+instance MNondet (Free NondetF) where
+  mzero = Op Fail
+  mplus p q = Op (Or p q)
+\end{code}
+
+This does not respect the identity or associativity law on the nose. Indeed,
+|Op (Or Fail p)| is for instance a different abstract syntax tree than |p|.
+Yet, these syntactic differences do not matter as long as their interpretation
+is the same. This is where the handlers come in; the meaning they assign
+should respect the laws.
+
+This is case for the |hND| handler, which interprets the free monad in terms of
+lists.
+\begin{code}
+hND :: Free NondetF a -> [a]
+hND = fold genND algND
+  where
+    genND x         = [x]
+    algND Fail      = []
+    algND (Or p q)  = p ++ q
+\end{code}
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{State}
+Also for state we take a more indirect route, through a free monad like |Free (StateF
+s)| over the state signature.
 
 \begin{code}
 data StateF s a  = Get (s -> a) | Put s a
@@ -346,8 +357,9 @@ hState' = fold genS' algS'
     algS' (Get     k)  = State $ \s -> runState (k s) s
     algS' (Put s'  k)  = State $ \s -> runState k s'
 \end{code}
+
 %-------------------------------------------------------------------------------
-\subsection{Combining Effects}
+\subsection{Modularly Combining Effects}
 \label{sec:combining-effects}
 
 Combining multiple effects is relatively easy in the axiomatic approach based
@@ -359,6 +371,8 @@ interactions between the combined effects. We discuss possible interaction
 laws between state and nondeterminism in detail in Section
 \ref{sec:local-global}.
 
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{The Coproduct Operator for Combining Effects}
 Combining effects with free monads is a bit more involved.
 Firstly, the signatures of the effects are combined with
 %if False
@@ -388,7 +402,7 @@ The coproduct also has a neutral element |NilF|, representing the empty effect s
 data NilF a deriving (Functor)
 \end{code}
 
-Consequently, we can compose the state effects with any other
+Consequently, we can compose state effects with any other
 effect functor |f| using |Free (StateF s :+: f) a|.
 It is also easy to see that |Free (StateF s :+: NondetF :+: f)| supports both state and nondeterminism.
 
@@ -408,8 +422,10 @@ instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
 \end{code}
 %endif
 
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{Modularly Combining Effect Handlers}
 In order to interpret composite signatures, we use the forwarding approach of
-\citet{Schrijvers2019}. This way the handlers can be modularly composed: they
+\citet{Schrijvers19}. This way the handlers can be modularly composed: they
 only need to know about the part of the syntax their effect is handling, and
 forward the rest of the syntax to other handlers.
 
@@ -632,18 +648,16 @@ safe _ _ [] = True
 safe q n (q1:qs) = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
 \end{code}
 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Transformations and Optimizations}
+%-------------------------------------------------------------------------------
+\subsection{Overview}
 
 Although the state-based implementation is a noteworthy improvement over the naive
 version, we can also make strong improvements at a lower level of implementation.
 
 For example, we could avoid making an explicit copy of the state at every branching
 point by evolving from local-state semantics to global-state semantics.
-
 Furthermore, we can model nondeterminism with state, which allows for a smoother
 undo semantics.
-
 Mutable state would also improve performance significantly.
 
 In what follows, we define simulations for transforming a high-level effect into
@@ -657,18 +671,18 @@ In particular, we take the following steps:
 state effect.
 
 % https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
-\[\begin{tikzcd}
-  {\text{State + Nondeterminism}} \\
-  {\text{State + State}} \\
-  \text{State}
-  \arrow["{\text{\Cref{sec:local-global}: Local state to global state}}"{pos=0.2}, shift left=2, draw=none, from=1-1, to=2-1]
-  \arrow["{\text{\Cref{sec:multiple-states}}}", shift left=2, draw=none, from=2-1, to=3-1]
-  \arrow["{\text{\Cref{sec:nondeterminism-state}: Nondeterminism to State}}"{pos=0.7}, shift left=2, draw=none, from=1-1, to=2-1]
-  \arrow[from=1-1, to=2-1]
-  \arrow[from=2-1, to=3-1]
-\end{tikzcd}\]
+% \[\begin{tikzcd}
+%   {\text{State + Nondeterminism}} \\
+%   {\text{State + State}} \\
+%   \text{State}
+%   \arrow["{\text{\Cref{sec:local-global}: Local state to global state}}"{pos=0.2}, shift left=2, draw=none, from=1-1, to=2-1]
+%   \arrow["{\text{\Cref{sec:multiple-states}}}", shift left=2, draw=none, from=2-1, to=3-1]
+%   \arrow["{\text{\Cref{sec:nondeterminism-state}: Nondeterminism to State}}"{pos=0.7}, shift left=2, draw=none, from=1-1, to=2-1]
+%   \arrow[from=1-1, to=2-1]
+%   \arrow[from=2-1, to=3-1]
+% \end{tikzcd}\]
 
-\birthe{we could put the names of the new n-queens definitions in this figure, starting with |queensNaive| and |queens|, for example:}
+% \birthe{we could put the names of the new n-queens definitions in this figure, starting with |queensNaive| and |queens|, for example:}
 
 % https://q.uiver.app/?q=WzAsNyxbMSwwLCJ8cXVlZW5zTmFpdmV8Il0sWzEsMiwifHF1ZWVuc3wiXSxbMCw0LCJ8cXVlZW5zTG9jYWx8Il0sWzEsNCwifHF1ZWVuc0dsb2JhbHwiXSxbMiw0LCJ8cXVlZW5zU3RhdGV8Il0sWzMsNCwifHF1ZWVuc1NpbXwiXSxbMywxXSxbMCwxLCJlYXJseSBwcnVuaW5nIl0sWzQsNSwiXFxDcmVme3NlYzp9IiwyXSxbMyw0LCJcXENyZWZ7c2VjOn0iLDJdLFsyLDMsIlxcQ3JlZntzZWM6fSIsMl0sWzEsMl0sWzEsM10sWzEsNF0sWzEsNV1d
 \[\begin{tikzcd}
