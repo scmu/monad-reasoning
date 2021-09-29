@@ -62,7 +62,7 @@ Furthermore, a functor should satisfy the two functor laws:
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Applicatives}
-\tom{Where do we use applicatives? If only minimally, we should check whether we can skip the 
+\tom{Where do we use applicatives? If only minimally, we should check whether we can skip the
      general introduction and provide a shorter, more targeted explanation.}
 Applicative functors, introduced by \citet{mcbride08},
 allow sequencing of functorial computations.
@@ -91,7 +91,7 @@ Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equival
 \paragraph{Monads}
 
 Monadic side effects~\cite{Moggi91}, the main focus of this paper, are those that can dynamically determine what
-happens next. 
+happens next.
 A monad |m :: * -> *| instantiates the monad type class, which has two
 operations: return (|eta|) and bind (|>>=|).
 
@@ -131,7 +131,7 @@ This data type is a form of abstract syntax tree (AST) consisting of leaves |Var
 and internal nodes |Op (f (Free f a))| whose branching structure is
 detetermined by the functor |f|, which is known as the \emph{signature}.
 
-Free monads % arise from the free-forgetful adjunction and 
+Free monads % arise from the free-forgetful adjunction and
 come equipped with a fold recursion scheme.
 \begin{code}
 fold :: Functor f => (a -> b) -> (f b -> b) -> Free f a -> b
@@ -139,9 +139,9 @@ fold gen alg (Var x)  =  gen x
 fold gen alg (Op op)  =  alg (fmap (fold gen alg) op)
 \end{code}
 This fold interprets an AST structure of type |Free f a| into some
-semantic domain |b|. It does so compositionally using a generator 
+semantic domain |b|. It does so compositionally using a generator
 |gen :: a -> b| for the leaves and an algebra |alg :: f b -> b| for the internal
-nodes; together these are also konwn as a \emph{handler}. 
+nodes; together these are also konwn as a \emph{handler}.
 
 The monad instance of |Free| can now straightforwardly be implemented using
 this fold.
@@ -360,7 +360,7 @@ laws between state and nondeterminism in detail in Section
 \ref{sec:local-global}.
 
 Combining effects with free monads is a bit more involved.
-Firstly, the signatures of the effects are combined with 
+Firstly, the signatures of the effects are combined with
 %if False
 \begin{code}
 -- class (MState s m, MNondet m) => MStateNondet s m | m -> s
@@ -477,9 +477,9 @@ hState  =  fold genS (algS # fwdS)
 \end{spec}
 %endif
 
-The handlers for state and nondeterminism we have given earlier require a bit of 
+The handlers for state and nondeterminism we have given earlier require a bit of
 adjustment to be used in the composite setting.
-They now interpret into composite domains, 
+They now interpret into composite domains,
 |StateT (Free f) a| and |Free f [a]| respectively.
 Here |StateT| is the state transformer from the Monad Transformer Library \cite{mtl}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
@@ -518,7 +518,7 @@ to debug, but we miss out on opportunities for optimization that would have
 been available in the low-level style.
 
 Existing systems such as Prolog, the Warren Abstract Machine (WAM) or
-constraint-based systems in general \cite{hassan91} \todo{more citations?} 
+constraint-based systems in general \cite{hassan91} \todo{more citations?}
 use a low-level state-based
 representation that allows them to optimize their programs, e.g. with cut
 semantics or intelligent backtracking.
@@ -558,6 +558,7 @@ queensNaive n = choose (permutations [1..n]) >>= filtr valid
 On a high level, this function generates all permutations of queens, and then
 checks them one by one for validity.
 This version looks into the entire search space to find solutions.
+The program |queensNaive 4 :: [[Int]]| gives as result |[[2,4,1,3],[3,1,4,2]]|.
 
 Here, |permutations| nondeterministically computes a permutation of its input.
 The function |choose| nondeterministically picks an element from a list, and is

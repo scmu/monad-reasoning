@@ -53,7 +53,7 @@ mun nx = alph nx >>= id -- do
 This section illustrates the difference beteween local-state semantics and
 global-state semantics and formally distinguishes the two.
 We argue that local state is a higher-level effect then global state, and thus
-that we can simulate the former using the latter. 
+that we can simulate the former using the latter.
 
 In a program with local state, each nondeterministic branch has its own local
 copy of the state.
@@ -555,7 +555,7 @@ The function |queensLocal| solves the n-queens problem using the handler |hLocal
 queensLocal :: Int -> [[Int]]
 queensLocal = hNil . flip hLocal (0, []) . queens
 \end{code}
-For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
+% For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
 
 Using the simulation function |local2global|, we can also have a function |queensGlobal|
 which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
