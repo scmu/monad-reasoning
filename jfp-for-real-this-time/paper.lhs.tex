@@ -117,17 +117,21 @@
   Just as of programming languages, one can think of some effects as being more
   low-level than others. Indeed, particular effects allow a more fine-grained
   control over program execution and resources, while others offer a higher-level
-  of abstraction. It is usually desirable to 
+  of abstraction. It is usually desirable to
   write programs using higher-level effects, and at the same time still
-  benefit from the optimizations that lower-level effects afford. 
+  benefit from the optimizations that lower-level effects afford.
 
-  This paper studies how higher-level effects can be simulated in trerms of low-level effects.
-  In particular, we look at the possible interactions between state
-  and nondeterminism and model these interactions using a single state 
-  effect. We distinguish between local-state and global-state semantics
+  This paper studies how higher-level effects can be simulated in terms of low-level effects.
+  In particular, our contribution focusses at the possible interactions between
+  state and nondeterminism.
+  We model these interactions using a single state effect and prove all intermediate
+  steps and results correct.
+  These proof techniques use equational reasoning techniques and stand out
+  from other proves because of the presence of algebraic effects.
+  We distinguish between local-state and global-state semantics
   and transform the higher-level nondeterminism to state. We demonstrate
   possible optimizations such as efficient backtracking and mutable state.
-  We illustrate our simulations on the well-known n-queens example and 
+  We illustrate our simulations on the well-known n-queens example and
   prove all simulation functions correct using equational reasoning techniques.
 \end{abstract}
 
@@ -156,7 +160,7 @@
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{effects, effect handlers, modularity, nondeterminism, 
+\keywords{effects, effect handlers, modularity, nondeterminism,
           state, equational reasoning, monads}
 
 \maketitle
