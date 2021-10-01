@@ -9,7 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Combination where
+module MutableState where
 
 import Data.Array.ST
 import Control.Monad.ST
@@ -18,6 +18,7 @@ import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
 
 import Background
+import Overview
 import LocalGlobal (local2global, hLocal, comm2, queensR)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState, queensStateR)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)

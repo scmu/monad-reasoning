@@ -9,6 +9,7 @@ import Debug.Trace
 import Control.Monad.List
 
 import Background
+import Overview
 
 class Functor f => TermAlgebra h f | h -> f where
   var :: forall a . a -> h a

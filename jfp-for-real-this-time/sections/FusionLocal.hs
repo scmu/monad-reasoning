@@ -4,6 +4,7 @@ module FusionLocal where
 
 import Prelude hiding (fail, or)
 import Background
+import Overview
 import TermAlg
 
 import Control.Monad (liftM, ap, liftM2)

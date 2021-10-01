@@ -18,6 +18,7 @@ import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
 
 import Background
+import Overview
 import LocalGlobal (local2global, hLocal, comm2, queensR)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState, queensStateR)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
@@ -227,5 +228,5 @@ queensStackR = hNil
 
 % queensState  9: 4.3, 4.02
 % queensStateR 9: 4.08, 3.96
-% queensStack  9: 4.21, 
+% queensStack  9: 4.21,
 % queensStackR 9: 4.32, 4.17

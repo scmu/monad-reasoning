@@ -4,6 +4,7 @@ module FusionGlobal where
 
 import Prelude hiding (fail, or)
 import Background
+import Overview
 import LocalGlobal (queensR)
 -- import Combination (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
 import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt)
