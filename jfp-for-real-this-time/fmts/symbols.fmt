@@ -73,6 +73,7 @@
 %format genS = "\Varid{gen_{S}}"
 %format genS' = "\Varid{gen_{S}^\prime}"
 %format algS = "\Varid{alg_{S}}"
+%format fwdS = "\Varid{fwd_{S}}"
 %format algS' = "\Varid{alg_{S}^\prime}"
 %format algL' = "\Varid{alg_{L}^\prime}"
 
@@ -93,6 +94,17 @@
 %format pushSS = "\Varid{push_{SS}}"
 %format appendSS = "\Varid{append_{SS}}"
 %format extractSS = "\Varid{extract_{SS}}"
+
+%format CompSK = "\Varid{Comp_{SK}}"
+%format getSK = "\Varid{get_{SK}}"
+%format putSK = "\Varid{put_{SK}}"
+%format popSK = "\Varid{pop_{SK}}"
+%format pushSK = "\Varid{push_{SK}}"
+%format popSK' = "\Varid{pop_{SK}^\prime}"
+%format pushSK' = "\Varid{push_{SK}^\prime}"
+%format appendSK = "\Varid{append_{SK}}"
+%format extractSK = "\Varid{extract_{SK}}"
+%format runNDSK = "\Varid{run_{ND,SK}}"
 
 %format NondetC = "\Varid{Nondet_{C}}"
 %format StateC = "\Varid{State_{C}}"
@@ -136,6 +148,8 @@
 %format putR = "\Varid{put_{R}}"
 %format modifyR = "\Varid{modify_{R}}"
 %format queensR = "\Varid{queens_{R}}"
+%format queensStack = "\Varid{queens_{Stack}}"
+%format queensStackR = "\Varid{queens_{Stack,R}}"
 %format bodyR = "\Varid{body_{R}}"
 
 %format getOp = "\Varid{get}_{Op}"
