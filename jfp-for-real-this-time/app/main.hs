@@ -6,6 +6,7 @@ import Background
 import LocalGlobal
 import NondetState
 import Combination
+import MutableState
 import qualified Stack2 as SC
 
 import Control.DeepSeq (NFData(rnf))
@@ -33,9 +34,9 @@ funlist =
   -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
   -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
   -- , (queensStack, "queensStack")        -- local2global & nondet2stack
-  -- , (queensStackR, "queensStackR")      -- queensR & nondet2stack
+  , (queensStackR, "queensStackR")      -- queensR & nondet2stack -- using stack2 now
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
-  , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
+  -- , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
   , (Fl.queensLocal, "F.queensLocal")
   , (Fg.queensModify, "F.queensModify")
@@ -46,29 +47,34 @@ funlist =
 nlist = [10]
 
 perform f n = do
-  start <- getCurrentTime
-  -- let () = rnf (f n)
-  -- putStrLn ("num: " ++ show (length (f n)))
-  putStr $ show (length (f n)) ++ " "
-  end   <- getCurrentTime
-  return $ diffUTCTime end start
+  -- start <- getCurrentTime
+  -- putStr $ show (length (f n)) ++ " "
+  return $ length (f n)
+  -- end   <- getCurrentTime
+  -- return $ (diffUTCTime end start, len)
 
-averPerform num f n = do
-  t <- multiplePerform num f n
-  return (t / num)
-  where
-    multiplePerform num f n = if num == 0
-      then return 0
-      else do
-        t <- perform f n
-        t' <- multiplePerform (num-1) f n
-        return (t + t')
+-- averPerform num f n = do
+--   (t, len) <- multiplePerform num f n
+--   return (t / num, len)
+--   where
+multiplePerform num f n = if num == 0
+  then return 0
+  else do
+    len <- perform f n
+    len' <- multiplePerform (num-1) f n
+    return (len + len')
+
+
+num = 5
 
 testall n [] = return []
 testall n ((f,name):xs) = do
-  t <- averPerform 5 f n
+  start <- getCurrentTime
+  len <- multiplePerform num f n
+  putStrLn $ show len ++ " "
+  end <- getCurrentTime
   ts <- testall n xs
-  return ((name, t):ts)
+  return ((name, diffUTCTime end start / num):ts)
 
 main = do
   ts <- testall 10 funlist
@@ -79,15 +85,15 @@ printList [] = return ()
 printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 
 
--- queensMT        0.0568556s
--- queensLocal     0.3644582s
--- queensModify    0.6895992s
--- queensStateR    0.3724714s
--- queensStack2R   0.3088154s
--- F.queensLocal   0.056406s
--- F.queensModify  0.144616s
--- F.queensStateR  0.1333182s
--- F.queensStackR  0.2128528s
+-- queensMT        0.056412s
+-- queensLocal     0.3847468s
+-- queensModify    0.7947614s
+-- queensStateR    0.3469178s
+-- queensStack2R   0.3137874s
+-- F.queensLocal   0.0566534s
+-- F.queensModify  0.1447552s
+-- F.queensStateR  0.1354716s
+-- F.queensStackR  0.1941264s
 
 ------------------------------------------------------------------------------
 -- OLD:
