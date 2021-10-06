@@ -60,34 +60,39 @@ Furthermore, a functor should satisfy the two functor laws:
     |fmap (f . g)| &= |fmap f . fmap g| \mbox{~~.} \label{eq:functor-composition}
 \end{alignat}
 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Applicatives}
-\tom{Where do we use applicatives? If only minimally, we should check whether we can skip the
-     general introduction and provide a shorter, more targeted explanation.}
-\birthe{We use |<*>| and |<$>|.}
-Applicative functors, introduced by \citet{mcbride08},
-allow sequencing of functorial computations.
-An applicative functor |f :: * -> *| in Haskell has two operations: |pure| for
-embedding pure data and
-|(<*>)| for sequencing.
-< class Functor f => Applicative f where
-<     pure   :: a -> f a
-<     (<*>)  :: f (a -> b) -> f a -> f b
+We sometimes use the operator |(<$>)| which is an alias for |fmap|.
 
-An applicative functor should satisfy the following four laws:
-\begin{alignat}{2}
-    &\mbox{\bf identity}:\quad &
-    |pure id <*> x| &= |x|\mbox{~~,} \label{eq:functor-identity}\\
-    &\mbox{\bf composition}:~ &
-    |pure (.) <*> x <*> y <*> z| &= |x <*> (y <*> z)| \mbox{~~,} \\
-    &\mbox{\bf homomorphism}:~ &
-    |pure f <*> pure x| &= |pure (f x)| \mbox{~~,} \\
-    &\mbox{\bf interchange}:~ &
-    |x <*> pure y| &= |pure ($ y) <*> x| \mbox{~~.}
-\end{alignat}
+< (<$>) :: Functor f => (a -> b) -> f a -> f b
+< (<$>) = fmap
 
-Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.
-
+% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+% \paragraph{Applicatives}
+% \tom{Where do we use applicatives? If only minimally, we should check whether we can skip the
+%      general introduction and provide a shorter, more targeted explanation.}
+% \birthe{We use |<*>| and |<$>|.}
+% Applicative functors, introduced by \citet{mcbride08},
+% allow sequencing of functorial computations.
+% An applicative functor |f :: * -> *| in Haskell has two operations: |pure| for
+% embedding pure data and
+% |(<*>)| for sequencing.
+% < class Functor f => Applicative f where
+% <     pure   :: a -> f a
+% <     (<*>)  :: f (a -> b) -> f a -> f b
+% 
+% An applicative functor should satisfy the following four laws:
+% \begin{alignat}{2}
+%     &\mbox{\bf identity}:\quad &
+%     |pure id <*> x| &= |x|\mbox{~~,} \label{eq:functor-identity}\\
+%     &\mbox{\bf composition}:~ &
+%     |pure (.) <*> x <*> y <*> z| &= |x <*> (y <*> z)| \mbox{~~,} \\
+%     &\mbox{\bf homomorphism}:~ &
+%     |pure f <*> pure x| &= |pure (f x)| \mbox{~~,} \\
+%     &\mbox{\bf interchange}:~ &
+%     |x <*> pure y| &= |pure ($ y) <*> x| \mbox{~~.}
+% \end{alignat}
+% 
+% Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.
+% 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Monads}
 
@@ -113,16 +118,24 @@ Furthermore, a monad should satisfy the three monad laws:
 
 Haskell supports |do| blocks as syntactic sugar for monadic computations.
 For example, |do x <- m; f x| is translated to |m >>= f|.
-Furthermore, it supports a join operator |(>>) :: m a -> m b -> m b| so that
-|m1 >> m2 = m1 >>= \ _ -> m2|.
+Finally, two convenient derived operators are |(>>)| and |(<*>)|.\footnote{We
+deviate from the type class hierarchy of |Functor|, |Applicative| and |Monad|
+that can be found in Haskell's standard library because its additional complexity
+is not needed in this article.} 
+
+< (>>) :: Monad m => m a -> m b -> m b
+< m1 >> m2 = m1 >>= \ _ -> m2
+<
+< (<*>) :: Monad m => m (a -> b) -> m a -> m b
+< mf <*> mx = mf >>= \ f -> mx >>= \ x -> return (f x)
 
 %-------------------------------------------------------------------------------
 \subsection{Nondeterminism and State}
 \label{sec:nondeterminism}
 
-Following the approach of \citet{Hutton08} and \citet{Gibbons11},
-we introduce effects based on an axiomatic characterisation rather than
-a specific implementation.
+Following the approach of \citet{Hutton08} and \citet{Gibbons11}, we introduce
+effects on top of the |Monad| type class by means of on an axiomatic
+characterisation rather than a specific implementation.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Nondeterminism}
@@ -278,10 +291,10 @@ nondeterministic program:
 queensNaive :: MNondet m => Int -> m [Int]
 queensNaive n = choose (permutations [1..n]) >>= filtr valid
 \end{code}
-On a high level, this function generates all permutations of queens, and then
-checks them one by one for validity.
-This version looks into the entire search space to find solutions.
 The program |queensNaive 4 :: [[Int]]| gives as result |[[2,4,1,3],[3,1,4,2]]|.
+On a high level, the function generates all permutations of queens, and then
+checks them one by one for validity.
+% This version enumerates the entire search space to find solutions.
 
 Here, |permutations| nondeterministically computes a permutation of its input.
 The function |choose| nondeterministically picks an element from a list, and is
@@ -305,7 +318,7 @@ valid (q:qs) = valid qs && safe q 1 qs
 \end{code}
 %endif
 
-Although this solution works and it quite intuitive, it is not very efficient.
+Although this solution works and is quite intuitive, it is not very efficient.
 For example, it is obvious that all solutions that start with |[1,2]| are invalid,
 but the algorithm still generates and tests all of these $(n-2)!$ candidates.
 
@@ -354,3 +367,7 @@ safe :: Int -> Int -> [Int] -> Bool
 safe _ _ [] = True
 safe q n (q1:qs) = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
 \end{code}
+
+The above monadic version is the starting point for this paper.  In the
+remainder, we investigate how low-level optimizations, such as those found in
+Prolog and Constraint Programming systems, can be incorporated and shown correct.

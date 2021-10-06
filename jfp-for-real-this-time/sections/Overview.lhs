@@ -61,7 +61,7 @@ fold gen alg (Op op)  =  alg (fmap (fold gen alg) op)
 This fold interprets an AST structure of type |Free f a| into some
 semantic domain |b|. It does so compositionally using a generator
 |gen :: a -> b| for the leaves and an algebra |alg :: f b -> b| for the internal
-nodes; together these are also konwn as a \emph{handler}.
+nodes; together these are also known as a \emph{handler}.
 
 The monad instance of |Free| can now straightforwardly be implemented using
 this fold.
