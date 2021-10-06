@@ -100,16 +100,17 @@ This section shows how to use a state-based implementation to simulate nondeterm
 
 For this, we use a type |S| that is a essentially a tuple of
 (1) the current solution(s) |[a]| wrapped in the list monad (|results|), and
-(2) the branches with computations to be evaluated, which we will call the |stack|.
-The branches in the stack are represented by the free monad of state.
+(2) the branches with computations to be evaluated, which we will call the
+residual computations or the |residue|.
+The branches in the residue are represented by the free state monad.
 \begin{code}
 type Comp s a = Free (StateF s) a
-data S a = S { results :: [a], stack :: [Comp (S a) ()]}
+data S a = S { results :: [a], residue :: [Comp (S a) ()]}
 \end{code}
 To simulate a nondeterministic computation |Free NondetF a| with this state wrapper,
 we define a helper functions in Figure \ref{fig:pop-push-append}.
-The function |popS| takes the upper element of the stack.
-The function |pushS| adds a branch to the stack.
+The function |popS| takes the upper element of the residue.
+The function |pushS| adds a branch to the residue.
 The function |appendS| adds a solution to the given solutions.
 
 \noindent
@@ -119,13 +120,13 @@ The function |appendS| adds a solution to the given solutions.
 \begin{code}
 popS :: Comp (S a) ()
 popS = do
-  S xs stack <- getS
-  case stack of
+  S xs res <- getS
+  case res of
     []       -> return ()
     op : ps  -> do
       putS (S xs ps); op
 \end{code}
-\caption{Popping from the stack.}
+\caption{Popping from the residue.}
 \label{fig:pop}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
@@ -134,10 +135,10 @@ pushS   :: Comp (S a) ()
         -> Comp (S a) ()
         -> Comp (S a) ()
 pushS q p = do
-  S xs stack <- getS
-  putS (S xs (q : stack)); p
+  S xs res <- getS
+  putS (S xs (q : res)); p
 \end{code}
-\caption{Pushing to the stack.}
+\caption{Pushing to the residue.}
 \label{fig:push}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
@@ -146,8 +147,8 @@ appendS   :: a
           -> Comp (S a) ()
           -> Comp (S a) ()
 appendS x p = do
- S xs stack <- getS
- putS (S (xs ++ [x]) stack); p
+ S xs res <- getS
+ putS (S (xs ++ [x]) res); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append}
@@ -230,11 +231,11 @@ the implementation and proof.
 
 Again, we define a type |SS| that encapsulates a form of state.
 The results are, as before, encapsulated in a list, and
-the computations in the stack can possibly contain
+the residual computations can possibly contain
 other effects, captured by the effect functor |f|.
 \begin{code}
 type CompSS s f a = Free (StateF s :+: f) a
-data SS f a = SS { resultsSS :: [a], stackSS :: [CompSS (SS f a) f ()] }
+data SS f a = SS { resultsSS :: [a], residueSS :: [CompSS (SS f a) f ()] }
 \end{code}
 
 We can define a simulation function |nondet2state| that handles the state effect
@@ -280,13 +281,13 @@ putSS s = Op (Inl (Put s (return ())))
 popSS  :: Functor f
        => CompSS (SS f a) f ()
 popSS = do
-  SS xs stack <- getSS
-  case stack of
+  SS xs res <- getSS
+  case res of
     []       -> return ()
     op : ps  -> do
       putSS (SS xs ps); op
 \end{code}
-\caption{Popping from the stack.}
+\caption{Popping from the residue.}
 \label{fig:pop-ss}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
@@ -296,10 +297,10 @@ pushSS  :: Functor f
         -> CompSS (SS f a) f ()
         -> CompSS (SS f a) f ()
 pushSS q p = do
-  SS xs stack <- getSS
-  putSS (SS xs (q : stack)); p
+  SS xs res <- getSS
+  putSS (SS xs (q : res)); p
 \end{code}
-\caption{Pushing to the stack.}
+\caption{Pushing to the residue.}
 \label{fig:push-ss}
 \end{subfigure}
 \begin{subfigure}[t]{0.35\linewidth}
@@ -308,8 +309,8 @@ appendSS  :: Functor f => a
           -> CompSS (SS f a) f ()
           -> CompSS (SS f a) f ()
 appendSS x p = do
-  SS xs stack <- getSS
-  putSS (SS (xs ++ [x]) stack); p
+  SS xs res <- getSS
+  putSS (SS (xs ++ [x]) res); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append-ss}
