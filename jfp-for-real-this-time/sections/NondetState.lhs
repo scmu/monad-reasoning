@@ -239,7 +239,7 @@ data SS f a = SS { resultsSS :: [a], residueSS :: [CompSS (SS f a) f ()] }
 \end{code}
 
 We can define a simulation function |nondet2state| that handles the state effect
-in a similar way as |nondet2statesS|.
+in a similar way as |nondet2stateS|.
 The other effects are left for other handlers, using a forwarding algebra |fwd|.
 
 \begin{code}
