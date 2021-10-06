@@ -85,7 +85,7 @@
 %format nondet2stateS = "\Varid{nondet2state_S}"
 
 %format resultsSS = "\Varid{results_{SS}}"
-%format stackSS = "\Varid{stack_{SS}}"
+%format residueSS = "\Varid{residue_{SS}}"
 %format CompSS = "\Varid{Comp_{SS}}"
 %format getSS = "\Varid{get_{SS}}"
 %format putSS = "\Varid{put_{SS}}"
