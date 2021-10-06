@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fe032ab721f87256c86b927dd34bfa05a3dd2afa8ac3e01285debb7e80332f23
+-- hash: 2e53832b7003c526f9f671015f66a4fa61d74c5c049646fc107f3d72ada25d98
 
 name:           mytest
 version:        0.1.0.0
@@ -31,7 +31,9 @@ library
       FusionGlobal
       FusionLocal
       LocalGlobal
+      MutableState
       NondetState
+      Overview
       QueensMT
       Stack2
       TermAlg

@@ -65,7 +65,7 @@ this paper makes the following contributions:
 		  a single state effect. As an extension, we work out mutable state as a possible optimization (\Cref{sec:combination}).
 	\item We illustrate the simulations and resulting optimizations using the n-queens puzzle as a running example throughout
 		  all sections.
-	\item We prove all simulations correct using equational reasoning techniques (\Cref{app:universality-nondeterminism}, \Cref{app:app:nondet-state} and \Cref{app:local-global}).
+	\item We prove all simulations correct using equational reasoning techniques (\Cref{app:universality-nondeterminism}, \Cref{app:nondet-state} and \Cref{app:local-global}).
 \end{itemize}
 
 Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:conclusion})

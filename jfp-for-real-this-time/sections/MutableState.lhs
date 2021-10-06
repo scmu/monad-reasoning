@@ -86,8 +86,8 @@ growStack results space elems = do
 \caption{Growing the stack.}
 \label{fig:grow}
 \end{subfigure}
-\label{fig:grow-empty}
 \caption{Helper functions |growStack| and |emptyStack|.}
+\label{fig:grow-empty}
 \end{figure}
 
 Figure \ref{fig:pushstack-popstack} shows how to push to and pop from a stack.
@@ -130,8 +130,8 @@ popStack (Stack stackRef sizeRef _) = do
 \caption{Popping from the stack.}
 \label{fig:popstack}
 \end{subfigure}%
-\label{fig:pushstack-popstack}
 \caption{Helper functions |pushStack| and |popStack|.}
+\label{fig:pushstack-popstack}
 \end{figure}
 
 \subsection{A Stack Handler}
