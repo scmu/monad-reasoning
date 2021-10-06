@@ -101,7 +101,7 @@ This section shows how to use a state-based implementation to simulate nondeterm
 For this, we use a type |S| that is a essentially a tuple of
 (1) the current solution(s) |[a]| wrapped in the list monad (|results|), and
 (2) the branches with computations to be evaluated, which we will call the |stack|.
-The brachens in the stack are represented by the free monad of state.
+The branches in the stack are represented by the free monad of state.
 \begin{code}
 type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], stack :: [Comp (S a) ()]}
