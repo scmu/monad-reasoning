@@ -94,15 +94,16 @@ with state and nondeterminism:
     &\mbox{\bf left-distributivity}:~ &
     |m >>= (\x -> f1 x `mplus` f2 x)| &= |(m >>= f1) `mplus` (m >>= f2)| ~~\mbox{.} \label{eq:left-dist}
 \end{alignat}
-Note that the monad |m| on the lefthand side in the right-identity law
+Note that the computation |m| on the lefthand side in the right-identity law
 (\ref{eq:right-identity})
-may contain some effects that do not happen in the righthand side.
+may contain some effects that do not occur in the righthand side.
 Similarly, in the left-distributivity law (\ref{eq:left-dist}),
-for some implementations of |m|,
-the effect of the monad may happen once on the lefthand side and twice on the
+effects in the computations |m|
+occur once on the lefthand side and twice on the
 righthand side.
-This is a typical property of local state. Effects can be lifted over branches,
-or can be undone for different branches.
+This is a typical property of local state: Effects are distributed into branches
+and  
+annihilated by failure.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Commutativity}
@@ -155,7 +156,7 @@ One implementation satisfying the laws is
 < Local s a = s -> m (a, s)
 where |m| is a nondeterministic monad, the simplest structure of which is a list.
 This implementation is exactly that of |StateT s m a|
-in the Monad Transformer Library \cite{mtl}, or as we introduced in
+in the Monad Transformer Library \cite{mtl}, or as we introduced \tom{Fix reference!} in
 Section \ref{sec:combining-the-simulation-with-other-effects}.
 With effect handling \cite{Kiselyov15, Wu14}, the monad behaves similarly
 (except for the limited commutativity implied by law (\ref{eq:left-dist}))
@@ -348,7 +349,7 @@ Recall from right-distributivity (\ref{eq:mplus-dist}) that
 |(m1 `mplus` m2) >> n = (m1 >> n) `mplus` (m2 >> n)|.
 That is, |mplus| acts as ``insertion points'', where future code followed by
 |(>>)| can be inserted into.
-This is a dangerous feature, which we will replace by a safer prgramming pattern.
+This is a dangerous feature, which we will replace by a safer programming pattern.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{State-Restoring Put}
