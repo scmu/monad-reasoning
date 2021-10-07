@@ -226,9 +226,9 @@ The following implementation has a non-commutative |mplus| operation.
 \begin{code}
 newtype Global s a = Gl { runGl :: s -> (Maybe (a, Global s a), s) }
 \end{code}
-The |Maybe| in this type indicates that a computation might fail to produce a
+The |Maybe| in this type indicates that a computation may fail to produce a
 result. However, since the |s| is outside of the |Maybe|, a modified state
-might be returned even if the computation failed.
+is returned even if the computation fails.
 This |Global s a| type is an instance of the |MState| and |MNondet| monad.
 
 %if False
@@ -447,10 +447,11 @@ differentiated:
 
 Those two programs do not behave in the same way when |s /= t|.
 
-Thus, provided that all occurences of |put| in a program are replaced by |putR|,
-we can simulate local-state semantics.
-However, the unnecessary copying of the state can not be avoided and even
-becomes explicit in the program.
+Hence, only provided that all occurences of |put| in a program are replaced by |putR|
+can we simulate local-state semantics.
+Yet, the unnecessary copying of the state is not avoided this way and even
+becomes explicit in the program. \tom{It's actually a bit too soon to make this remark.
+Should be postponed until we start working on addressing this problem.}
 
 %-------------------------------------------------------------------------------
 \subsection{Proving the |putR| Operation Correct}
@@ -527,6 +528,7 @@ comm2 :: (Functor f1, Functor f2) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1
 comm2 (Var x)             = Var x
 comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
 comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
+comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 \end{code}
 For simplicity, we can implicitly assume
 commutativity and associativity of the coproduct operator |(:+:)|
