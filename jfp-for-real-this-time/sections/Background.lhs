@@ -134,8 +134,7 @@ is not needed in this article.}
 \label{sec:nondeterminism}
 
 Following both the approaches of \citet{Hutton08} and of \citet{Gibbons11}, we introduce
-effects on top of the |Monad| type class by means of on an axiomatic
-characterisation rather than a specific implementation.
+effects on top of the |Monad| type class.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Nondeterminism}
