@@ -102,7 +102,7 @@ effects in the computations |m|
 occur once on the lefthand side and twice on the
 righthand side.
 This is a typical property of local state: Effects are distributed into branches
-and  
+and
 annihilated by failure.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -156,8 +156,8 @@ One implementation satisfying the laws is
 < Local s a = s -> m (a, s)
 where |m| is a nondeterministic monad, the simplest structure of which is a list.
 This implementation is exactly that of |StateT s m a|
-in the Monad Transformer Library \cite{mtl}, or as we introduced \tom{Fix reference!} in
-Section \ref{sec:combining-the-simulation-with-other-effects}.
+in the Monad Transformer Library \cite{mtl}, and as introduced in
+Section \ref{sec:combining-effects}.
 With effect handling \cite{Kiselyov15, Wu14}, the monad behaves similarly
 (except for the limited commutativity implied by law (\ref{eq:left-dist}))
 if we run the handler for state before that for list.
@@ -449,9 +449,6 @@ Those two programs do not behave in the same way when |s /= t|.
 
 Hence, only provided that all occurences of |put| in a program are replaced by |putR|
 can we simulate local-state semantics.
-Yet, the unnecessary copying of the state is not avoided this way and even
-becomes explicit in the program. \tom{It's actually a bit too soon to make this remark.
-Should be postponed until we start working on addressing this problem.}
 
 %-------------------------------------------------------------------------------
 \subsection{Proving the |putR| Operation Correct}
@@ -524,7 +521,7 @@ hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
 \end{code}
 The function |comm2| here swaps the order of two functors connected by |(:+:)| in free monads.
 \begin{code}
-comm2 :: (Functor f1, Functor f2) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
 comm2 (Var x)             = Var x
 comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
 comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
@@ -532,7 +529,7 @@ comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 \end{code}
 For simplicity, we can implicitly assume
 commutativity and associativity of the coproduct operator |(:+:)|
-and ommit the |comm2| in the definition of |hGlobal|.
+and omit the |comm2| in the definition of |hGlobal|.
 
 A correct translation then transforms local state to global state.
 \begin{theorem}\label{thm:local-global}

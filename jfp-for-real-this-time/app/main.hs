@@ -31,7 +31,7 @@ funlist =
   -- , (queensState, "queensState")        -- local2global & nondet2state
    (queensStateR, "queensStateR")      -- queensR & nondet2state
   -- , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
-  -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
+  , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
   -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
   -- , (queensStack, "queensStack")        -- local2global & nondet2stack
   , (queensStackR, "queensStackR")      -- queensR & nondet2stack -- using stack2 now
