@@ -257,8 +257,8 @@ An overview of this simulation is given in Figure \ref{fig:simulation}.
   \arrow["{|simulate|}", shift left=25, color={rgb,255:red,128;green,128;blue,128}, curve={height=-150pt}, dotted, from=1-1, to=6-1]
   \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=7-1, to=8-1]
 \end{tikzcd}\]
-\label{fig:simulation}
 \caption{The simulation explained.}
+\label{fig:simulation}
 \end{figure}
 
 We explain the steps here in detail.

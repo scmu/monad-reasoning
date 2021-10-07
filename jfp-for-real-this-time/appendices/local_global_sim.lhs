@@ -3,7 +3,9 @@
 
 %-------------------------------------------------------------------------------
 
-This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|, where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:local2globalforming-between-local-and-global-state}.
+This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|, where |hGlobal|, |local2global| and |hLocal| are defined in Section
+% \ref{sec:local2globalforming-between-local-and-global-state}.
+\ref{sec:transforming-between-local-and-global-state}.
 
 It is easy to see that |runStateT . hState| can be fused into a single fold defined as follows:
 \begin{code}
@@ -347,7 +349,7 @@ We do this by a case analysis on |t|.
 \begin{proof}
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
 We need to prove it holds for all inputs |t :: (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))|.
-In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:local2globalforming-between-local-and-global-state}.
+In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
 All local2global formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
 \noindent \mbox{\underline{case |t = Inl (Get k)|}}

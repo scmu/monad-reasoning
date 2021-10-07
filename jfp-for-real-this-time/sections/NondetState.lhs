@@ -153,8 +153,8 @@ appendS x p = do
 \caption{Appending a solution.}
 \label{fig:append}
 \end{subfigure}%
-\label{fig:pop-push-append}
 \caption{Helper functions |popS|, |pushS| and |appendS|.}
+\label{fig:pop-push-append}
 \end{figure}
 
 Furthermore, we define smart constructors |getS| and |putS s| for getting
@@ -315,8 +315,8 @@ appendSS x p = do
 \caption{Appending a solution.}
 \label{fig:append-ss}
 \end{subfigure}%
-\label{fig:pop-push-append-SS}
 \caption{Helper functions |popSS|, |pushSS| and |appendSS|.}
+\label{fig:pop-push-append-SS}
 \end{figure}
 
 To extract the final result from the |SS| wrapper, we define an |extractSS|

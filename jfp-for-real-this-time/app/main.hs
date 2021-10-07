@@ -85,15 +85,19 @@ printList [] = return ()
 printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 
 
--- queensMT        0.056412s
--- queensLocal     0.3847468s
--- queensModify    0.7947614s
--- queensStateR    0.3469178s
--- queensStack2R   0.3137874s
--- F.queensLocal   0.0566534s
--- F.queensModify  0.1447552s
--- F.queensStateR  0.1354716s
--- F.queensStackR  0.1941264s
+-- >>> Fg.queensStackR 4
+-- [[3,1,4,2],[2,4,1,3]]
+
+
+-- queensMT        0.0576136s
+-- queensLocal     0.3550708s
+-- queensModify    0.7152768s
+-- queensStateR    0.3575462s
+-- queensStackR    0.2978022s
+-- F.queensLocal   0.0572374s
+-- F.queensModify  0.14407s
+-- F.queensStateR  0.1357452s
+-- F.queensStackR  0.188084s
 
 ------------------------------------------------------------------------------
 -- OLD:

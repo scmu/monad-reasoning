@@ -395,8 +395,8 @@ and the flow of execution for a computation after a state-restoring put.
     \arrow["{|s'|}"', shift right=3, color={rgb,255:red,128;green,128;blue,128}, dotted, from=3-3, to=4-3]
     \arrow["{|s|}"'{pos=0.6}, color={rgb,255:red,128;green,128;blue,128}, curve={height=-30pt}, shorten <=8pt, shorten >=8pt, dotted, from=4-1, to=3-3]
 \end{tikzcd}\]
-\label{fig:state-restoring-put}
 \caption{State-restoring put-operation.}
+\label{fig:state-restoring-put}
 \end{figure}
 
 
