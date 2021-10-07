@@ -44,8 +44,7 @@ struct State {
 };
 
 // local-state semantics
-// void queensLocal(vector<vector<int> > &ans, int n, int c, vector<int> sol) {
-void queensLocal(vector<vector<int> > &ans, int n, State st) {
+void queensLocal(vector<vector<int> > &ans, int n, State st) { // new state for every branch
   if (st.c >= n) ans.push_back(st.sol);
   else for (int r = 1; r <= n; r++) {
     auto cur = st;
@@ -55,19 +54,29 @@ void queensLocal(vector<vector<int> > &ans, int n, State st) {
     }
   }
 }
+void queensLocalW(int n) {
+  ans.clear();
+  queensLocal(ans, n, State(0, vector<int>()));
+}
 
 State stGlobal;
 void queensGlobal(vector<vector<int> > &ans, int n) {
   if (stGlobal.c >= n) ans.push_back(stGlobal.sol);
   else for (int r = 1; r <= n; r++) {
-    auto tmp = stGlobal; // using immutable state
+    auto tmp = stGlobal;
     stGlobal.plus(r);
     if (valid(stGlobal.sol)) {
       queensGlobal(ans, n);
     }
-    stGlobal = tmp;
+    stGlobal = tmp; // immutable state
   }
 }
+void queensGlobalW(int n) {
+    ans.clear();
+    stGlobal = State(0, vector<int>());
+    queensGlobal(ans, n);
+}
+
 
 
 State stModify;
@@ -81,13 +90,17 @@ void queensModify(vector<vector<int> > &ans, int n) {
     stModify.minus(r); // mutable state
   }
 }
+void queensModifyW(int n) {
+    ans.clear();
+    stModify = State(0, vector<int>());
+    queensModify(ans, n);
+}
+
 
 struct State2 {
-  // State *s;
   short r;
-  bool isminus; 
+  bool isminus; // true: minus instruction; false: search rows r...n
   State2(short r, bool b): r(r), isminus(b) {}
-  // State2(State *s, int r, bool b): s(s), r(r), ispop(b) {}
 };
 
 stack<State2> st;
@@ -98,54 +111,97 @@ stack<State2> push(State2 x) {
   st.push(x);
   return st;
 }
+stack<State2> pop() {
+  st.pop();
+  return st;
+}
 
-void queensStateR(vector<vector<int> > &ans, int n) {
+void queensState(vector<vector<int> > &ans, int n) {
   st.push(State2(1, false));
   while (!st.empty()) {
-    State2 cur = st.top(); st.pop();
+    State2 cur = st.top(); st = pop(); // immutable
     if (cur.isminus) {
       stStack.minus(cur.r);
       continue;
     }
     if (stStack.c >= n) ans.push_back(stStack.sol);
     else {
-      if (cur.r < n) st = push(State2(cur.r+1, false));
       short t = cur.r;
+      if (t < n) st = push(State2(t+1, false)); // immutable
+      auto tmp = stStack;
       stStack.plus(t);
-      // cur.r = 1;
       if (valid(stStack.sol)) {
-        st = push(State2(t, true));
-        // st.push(cur);
-        st = push(onefalse);
+        st = push(State2(t, true)); // immutable
+        st = push(onefalse); // immutable
       }
-      else stStack.minus(t); // doesn't matter
+      else stStack = tmp; // immutable
     }
   }
+}
+void queensStateW(int n) {
+    ans.clear();
+    st = stack<State2>();
+    stStack = State(0, vector<int>());
+    queensState(ans, n);
+}
+
+
+void queensStateR(vector<vector<int> > &ans, int n) {
+  st.push(State2(1, false));
+  while (!st.empty()) {
+    State2 cur = st.top(); st = pop(); // immutable
+    if (cur.isminus) {
+      stStack.minus(cur.r);
+      continue;
+    }
+    if (stStack.c >= n) ans.push_back(stStack.sol);
+    else {
+      short t = cur.r;
+      if (t < n) st = push(State2(t+1, false)); // immutable
+      stStack.plus(t);
+      if (valid(stStack.sol)) {
+        st = push(State2(t, true)); // immutable
+        st = push(onefalse); // immutable
+      }
+      else stStack.minus(t); // mutable
+    }
+  }
+}
+void queensStateRW(int n) {
+    ans.clear();
+    st = stack<State2>();
+    stStack = State(0, vector<int>());
+    queensStateR(ans, n);
 }
 
 void queensStackR(vector<vector<int> > &ans, int n) {
   st.push(State2(1, false));
   while (!st.empty()) {
-    State2 cur = st.top(); st.pop();
+    State2 cur = st.top(); st.pop(); // mutable
     if (cur.isminus) {
       stStack.minus(cur.r);
       continue;
     }
     if (stStack.c >= n) ans.push_back(stStack.sol);
     else {
-      if (cur.r < n) st.push(State2(cur.r+1, false));
       short t = cur.r;
+      if (t < n) st.push(State2(t+1, false)); // mutable
       stStack.plus(t);
-      // cur.r = 1;
       if (valid(stStack.sol)) {
-        st.push(State2(t, true));
-        // st.push(cur);
-        st.push(onefalse);
+        st.push(State2(t, true)); // mutable
+        st.push(onefalse); // mutable
       }
-      else stStack.minus(t); // doesn't matter
+      else stStack.minus(t); // mutable
     }
   }
 }
+void queensStackRW(int n) {
+    ans.clear();
+    st = stack<State2>();
+    stStack = State(0, vector<int>());
+    queensStackR(ans, n);
+}
+
 
 /*
 struct State2 {
@@ -188,90 +244,30 @@ void queensStackR(vector<vector<int> > &ans, int n) {
 */
 
 // ------------------------------------------------------------------------------
-int testnum = 1;
 
-void test1(int n) {
+void test (void (*f)(int), string s, int n) {
+  int testnum = 6;
   auto t1 = high_resolution_clock::now();
 
   for (int t = 1; t <= testnum; t ++) {
-    ans.clear();
-    queensLocal(ans, n, State(0, vector<int>()));
+    f(n);
   }
 
   auto t2 = high_resolution_clock::now();
   duration<double, milli> ms_double = t2 - t1;
-  printf("queensLocal %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
+  printf("%s %d %lf\n", s.c_str(), (int) ans.size(), (ms_double.count() / 1000) / testnum);
 }
-
-void test2(int n) {
-  auto t1 = high_resolution_clock::now();
-
-  for (int t = 1; t <= testnum; t ++) {
-    ans.clear();
-    stGlobal = State(0, vector<int>());
-    queensGlobal(ans, n);
-  }
-
-  auto t2 = high_resolution_clock::now();
-  duration<double, milli> ms_double = t2 - t1;
-  printf("queensGlobal %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
-}
-
-void test3(int n) {
-  auto t1 = high_resolution_clock::now();
-
-  for (int t = 1; t <= testnum; t ++) {
-    ans.clear();
-    stModify = State(0, vector<int>());
-    queensModify(ans, n);
-  }
-
-  auto t2 = high_resolution_clock::now();
-  duration<double, milli> ms_double = t2 - t1;
-  printf("queensModify %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
-}
-
-void test4(int n) {
-  auto t1 = high_resolution_clock::now();
-
-  for (int t = 1; t <= testnum; t ++) {
-    ans.clear();
-    st = stack<State2>();
-    stStack = State(0, vector<int>());
-    queensStateR(ans, n);
-  }
-
-  auto t2 = high_resolution_clock::now();
-  duration<double, milli> ms_double = t2 - t1;
-  printf("queensStateR %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
-}
-
-void test5(int n) {
-  auto t1 = high_resolution_clock::now();
-
-  for (int t = 1; t <= testnum; t ++) {
-    ans.clear();
-    st = stack<State2>();
-    stStack = State(0, vector<int>());
-    queensStackR(ans, n);
-  }
-
-  auto t2 = high_resolution_clock::now();
-  duration<double, milli> ms_double = t2 - t1;
-  printf("queensStackR %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
-}
-
-
 
 int main() {
   int n = 11;
   // cin >> n;
 
-  test1(n);
-  test2(n);
-  test3(n);
-  test4(n);
-  test5(n);
+  test(queensLocalW, "queensLocal", n);
+  test(queensGlobalW, "queensGlobal", n);
+  test(queensModifyW, "queensModify", n);
+  test(queensStateW, "queensState", n);
+  test(queensStateRW, "queensStateR", n);
+  test(queensStackRW, "queensStackR", n);
 
   // queensGlobal(ans, 4);
   ans.clear();
@@ -282,12 +278,22 @@ int main() {
 }
 
 /*
+n=10:
+queensLocal 724 1.270870
+queensGlobal 724 1.196739
+queensModify 724 1.141731
+queensState 724 1.327756
+queensStateR 724 1.289978
+queensStackR 724 1.136465 (sometimes slower than queensModify)
+
+
 n=11:
-queensLocal 2680 7.941035
-queensGlobal 2680 7.577763
-queensModify 2680 7.292723
-queensStateR 2680 7.734149
-queensStackR 2680 7.238383
+queensLocal 2680 7.872707
+queensGlobal 2680 7.607353
+queensModify 2680 7.258673
+queensState 2680 8.204634
+queensStateR 2680 7.933977
+queensStackR 2680 7.224523 (sometimes slower than queensModify)
 */
 
 

@@ -521,7 +521,7 @@ hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
 \end{code}
 The function |comm2| here swaps the order of two functors connected by |(:+:)| in free monads.
 \begin{code}
-comm2 :: (Functor f1, Functor f2) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
 comm2 (Var x)             = Var x
 comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
 comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
