@@ -33,17 +33,37 @@ inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on the high-level interaction between the nondeterminism and state
 effects, called \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
-\cite{hassan91}, we show how these can be simulated in terms of the low-level
+\cite{AICPub641:1983,hassan91}, we show how these can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimizations like exploiting mutable state
-for efficient backtracking based on \emph{trailing}~\cite{}.
+for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing
+the state from scratch~\cite{Schulte:ICLP:1999}.
 
-Our approach is based on algebraic effects and handlers~\cite{} to cleanly
-separate the use of effects from their implementation. This way we can replace
-a high-level implementation with an implementation in terms of a low-level
-effect and incorporate optimizations. Moreover, we can prove all of our
-simulations correct using equational reasoning techniques, exploiting in
-particular the fusion property of handlers~\cite{}.
+Our approach is based on algebraic effects and handlers~\cite{Plotkin09} to
+cleanly separate the use of effects from their implementation. This way we can
+replace a high-level implementation with an implementation in terms of a
+low-level effect and incorporate optimizations. 
+
+Of particular interest is the way we reason about the correctness of our
+approach. There has been much debate in the literature on different equational
+reasoning approaches for effectful computations. \citet{Hutton08} break the
+abstraction boundaries and use the actual implementation in their equational
+reasoning approach. \citet{Gibbons11} promote an alternative, law-based
+approach to preserve abstraction boundaries and combine axiomatic with
+equational reasoning. In an earlier version of this work \cite{Pauwels19}, we
+have followed the latter, law-based approach for reasoning about the
+correctness of simulating local state with global state. However, we have found
+that approach to be unsatisfactory because it incorporates elements
+that are usually found in the syntactic approach for reasoning about
+programming languages \cite{Felleisen94}, leading to more boilerplate and
+complication in the proofs: notions of contextual equivalence and explicit
+manipluation of program contexts. Hence, for that reason we return to the
+implementation-based reasoning approach, which we believe works well with 
+algbraic effects and handlers. Indeed, we can prove all of our simulations
+correct using equational reasoning techniques, exploiting in particular the
+fusion property of handlers~\cite{Wu15}. Moreover, in part of our reasoning
+we use initial effect implementations, which we argue do not leak any implementation details
+but merely leverage the common properties of all implementations.
 
 %In particular, a purely functional programming style lets us reason about our programs equationally.
 %At first glance, it may seem that equational reasoning is made possible by the lack of side effects in functional programming.
