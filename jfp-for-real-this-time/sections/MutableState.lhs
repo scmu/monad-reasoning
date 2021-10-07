@@ -56,11 +56,11 @@ We distinguish between the allocated space for the array, obtained by the builti
 Both the |STRef| and the |STArray| datatypes come from Haskell's
 |Control.Monad.ST| library that implements the strict |ST| monad.
 
-Figure \ref{fig:grow-empty} defines helper functions to create an empty stack and to grow a stack.
+Figure \ref{fig:grow-empty} defines a helper function to create an empty stack.
 
 \begin{figure}[h]
 \small
-\begin{subfigure}[t]{0.4\linewidth}
+% \begin{subfigure}[t]{0.4\linewidth}
 \begin{code}
 emptyStack :: b -> ST s (Stack s b a)
 emptyStack results = do
@@ -70,23 +70,25 @@ emptyStack results = do
     resultsRef   <- newSTRef results
     return (Stack stackRef sizeRef resultsRef)
 \end{code}
-\caption{Empty stack.}
-\label{fig:empty}
-\end{subfigure}%
-\begin{subfigure}[t]{0.54\linewidth}
-\begin{code}
-growStack :: b -> Index -> [a] -> ST s (Stack s b a)
-growStack results space elems = do
-    stack        <- newListArray (0, space) elems
-    sizeRef      <- newSTRef (length elems)
-    stackRef     <- newSTRef stack
-    resultsRef   <- newSTRef results
-    return (Stack stackRef sizeRef resultsRef)
-\end{code}
-\caption{Growing the stack.}
-\label{fig:grow}
-\end{subfigure}
-\caption{Helper functions |growStack| and |emptyStack|.}
+
+% \caption{Empty stack.}
+% \label{fig:empty}
+% \end{subfigure}%
+% \begin{subfigure}[t]{0.54\linewidth}
+% \begin{code}
+% growStack :: b -> Index -> [a] -> ST s (Stack s b a)
+% growStack results space elems = do
+%     stack        <- newListArray (0, space) elems
+%     sizeRef      <- newSTRef (length elems)
+%     stackRef     <- newSTRef stack
+%     resultsRef   <- newSTRef results
+%     return (Stack stackRef sizeRef resultsRef)
+% \end{code}
+% \caption{Growing the stack.}
+% \label{fig:grow}
+% \end{subfigure}
+
+\caption{Helper functions |emptyStack|.}
 \label{fig:grow-empty}
 \end{figure}
 
@@ -106,9 +108,8 @@ pushStack x (Stack stackRef sizeRef resRef) = do
     if size < space
     then writeArray stack size x
     else do
-        elems           <- getElems stack
-        Stack ref' _ _  <- growStack res (space * 2) elems
-        stack'          <- readSTRef ref'
+        elems        <- getElems stack
+        stack'       <- newListArray (0, space * 2) elems
         writeArray  stack' size x
         writeSTRef  stackRef stack'
 \end{code}

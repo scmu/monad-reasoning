@@ -9,7 +9,7 @@ import LocalGlobal (queensR)
 -- import Combination (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
 -- import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt)
 --               , getInfoSt, putInfoSt)
-import MutableState (Stack(Stack), Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt))
+import MutableState (Stack(Stack, results, size, stack), Index, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt))
 import TermAlg
 
 import Control.Monad (liftM, ap, liftM2)
@@ -121,15 +121,6 @@ appendSS x p = do
 -- using Stack2
 ----------------------------------------------------------------
 
-getInfoSt :: Stack s b a -> ST s b
-getInfoSt (Stack _ _ infoRef) = do
-    info  <- readSTRef infoRef
-    return info
-
-putInfoSt :: b -> Stack s b a -> ST s ()
-putInfoSt b (Stack _ _ infoRef) = do
-    writeSTRef infoRef b
-
 newtype StackT s b e m a = StackT { runStackT :: Stack s b e -> STT s m (a, b) }
 
 instance Monad m => Functor (StackT s b e m) where
@@ -139,7 +130,8 @@ instance Monad m => Applicative (StackT s b e m) where
   (<*>) = ap
 instance Monad m => Monad (StackT s b e m) where
   -- return = StackT . const . return
-  return x = StackT $ \ stack -> liftST (getInfoSt stack) >>= \b -> return (x, b)
+  -- return x = StackT $ \ stack -> liftST (getInfoSt stack) >>= \b -> return (x, b)
+  return x = StackT $ \ stack -> liftST ((readSTRef . results) stack) >>= \b -> return (x, b)
   (StackT m) >>= f = StackT $ \stack -> do (a , b) <- m stack;
                                            (b', b) <- runStackT (f a) stack;
                                            return (b', b)
@@ -189,11 +181,12 @@ pw x y = (y, x)
 
 getSK :: Monad m => StackT s b e m b
 -- getSK = StackT $ liftST . fmap dup . getInfoSt
-getSK = StackT $ \stack -> liftST (getInfoSt stack) >>= \x -> runStackT (return x) stack
+-- getSK = StackT $ \stack -> liftST (getInfoSt stack) >>= \x -> runStackT (return x) stack
+getSK = StackT $ \stack -> liftST ((readSTRef . results) stack) >>= \x -> runStackT (return x) stack
 
 putSK :: Monad m => b -> StackT s b e m ()
 -- putSK b = StackT $ liftST . fmap (pw b) . putInfoSt b
-putSK b = StackT $ \stack -> liftST (putInfoSt b stack) >>= \x -> runStackT (return ()) stack
+putSK x = StackT $ \stack -> liftST (writeSTRef (results stack) x) >>= \x -> runStackT (return ()) stack
 
 popSK' :: Monad m => StackT s b e m (Maybe e)
 -- popSK' = do b <- getSK; StackT $ liftST . fmap (pw b) . popStack

@@ -24,12 +24,12 @@ import QueensMT (queensMT)
 funlist =
   [ 
   -- , (queensNaive, "queensNaive")
-    (queensMT, "queensMT")        
-  , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
+    -- (queensMT, "queensMT")        
+  -- , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
   -- , (queensGlobal, "queensGlobal")      -- local2global
-  , (queensModify, "queensModify")      -- queensR
+  -- , (queensModify, "queensModify")      -- queensR
   -- , (queensState, "queensState")        -- local2global & nondet2state
-  , (queensStateR, "queensStateR")      -- queensR & nondet2state
+   (queensStateR, "queensStateR")      -- queensR & nondet2state
   -- , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
   -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
   -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
@@ -38,8 +38,8 @@ funlist =
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
   -- , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
-  , (Fl.queensLocal, "F.queensLocal")
-  , (Fg.queensModify, "F.queensModify")
+  -- , (Fl.queensLocal, "F.queensLocal")
+  -- , (Fg.queensModify, "F.queensModify")
   , (Fg.queensStateR, "F.queensStateR")
   , (Fg.queensStackR, "F.queensStackR")
   ]
