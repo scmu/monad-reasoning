@@ -31,6 +31,10 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 Performance-wise, it would be better to have an algorithm with mutable state,
 instead of the built-in |State| monad that keeps track of state in a pure way.
+In all previously defined functions, we make unnecessary copies of the state,
+and keep track of them explicitly in the program.
+This section shows how to avoid this by using a stack-based implementation
+that has the functionality of a mutable state.
 
 \subsection{Implementing Mutable State}
 \label{sec:implementing-mutable-state}
