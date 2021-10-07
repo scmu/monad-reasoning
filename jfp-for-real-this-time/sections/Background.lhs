@@ -31,7 +31,7 @@ choose = foldr (mplus . return) mzero
 
 This section summarizes the main concepts for equational reasoning with
 effects.
-For a more extensive treatment we refer to the work of \citep{Gibbons11}.
+% For a more extensive treatment we refer to the work of \citep{Gibbons11}.
 We discuss the two paramount effects of this paper: state and nondeterminism.
 Furthermore, this section explains how to arbitrarily combine effects using
 free monads and the coproduct operator.
@@ -133,7 +133,7 @@ is not needed in this article.}
 \subsection{Nondeterminism and State}
 \label{sec:nondeterminism}
 
-Following the approach of \citet{Hutton08} and \citet{Gibbons11}, we introduce
+Following both the approaches of \citet{Hutton08} and of \citet{Gibbons11}, we introduce
 effects on top of the |Monad| type class by means of on an axiomatic
 characterisation rather than a specific implementation.
 
@@ -168,9 +168,13 @@ We choose to present a minimal setting for nondeterminism here.}
 The first two laws state that |mplus| and |mzero| should form a monoid,
 i.e., |mplus| should be associative with |mzero| as its neutral element.
 The last two laws show that |>>=| is right-distributive
-over |mplus| and that |mzero| cancels bind on the left.
+over |mplus| and that |mzero| cancels bind on the left. The approach of
+\citet{Gibbons11} is to reason about programs by using these laws and
+not to rely on the specific implementation of any particular instance
+of |MNondet|.
 
-The quintessential Haskell instance of nondeterminism is that of lists.
+In contrast, \citet{Hutton08} reason directly in terms of a particular
+instance.  In the case of |MNondet|, the quintessential is that of lists.
 
 \begin{code}
 instance MNondet [] where
@@ -206,7 +210,7 @@ class Monad m => MState s m | m -> s where
       return x
 \end{code}
 %endif
-These operations are related by four laws:
+These operations are regulated by four laws:
 \begin{alignat}{2}
     &\mbox{\bf put-put}:\quad &
     |put s >> put s'| &= |put s'|~~\mbox{,} \label{eq:put-put}\\
@@ -219,7 +223,7 @@ These operations are related by four laws:
     ~~\mbox{.} \label{eq:get-get}
 \end{alignat}
 
-Haskell's standard instance of |MState| is that of |State s|.
+The standard instance of |MState| is that of |State s|.
 
 \begin{code}
 newtype State s a = State { runState :: s -> (a, s) }
@@ -253,20 +257,27 @@ Often, we choose the high-level alternative which is easier to understand and
 to debug, but we miss out on opportunities for optimization that would have
 been available in the low-level style.
 
-Existing systems such as Prolog, the Warren Abstract Machine (WAM) or
+Existing systems such the Warren Abstract Machine (WAM) for Prolog or
 constraint-based systems in general \cite{hassan91} \todo{more citations?}
+offer a high-level programming interface to programmers, but
 use a low-level state-based
-representation that allows them to optimize their programs, e.g. with cut
-semantics or intelligent backtracking.
+representation under the hood that allow clever system-level optimizations.
 
-In this paper, we argue that we can model high-level effects using state, which
-will allow us to optimize in a way that is similar to well-known state-based
-systems.
-We transform high-level effects into lower-level effects, and prove these
-tranformations correct using equational reasoning techniques.
-These transformations allow optimizations of our programs.
-As a running example, we will use the n-queens puzzle, which has nondeterminism
-and state, and can be simulated using only state.
+In this paper, we provide: 
+\begin{enumerate}
+\item
+a purely functional, monadic model of the high-level effects that those
+systems expose to their users,
+\item 
+successive transformation steps from those high-level effects into the
+low-level state effect in order to incorporate typical optimizations found in
+those systems, and
+\item
+proofs based on equational reasoning to establish the correctness of those
+transformations.
+\end{enumerate}
+As a running example, we will use the n-queens puzzle, which has
+nondeterminism and state, and can be simulated using only state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{The n-queens Puzzle}
@@ -370,4 +381,4 @@ safe q n (q1:qs) = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
 
 The above monadic version is the starting point for this paper.  In the
 remainder, we investigate how low-level optimizations, such as those found in
-Prolog and Constraint Programming systems, can be incorporated and shown correct.
+Prolog implementations and Constraint Programming systems, can be incorporated and shown correct.
