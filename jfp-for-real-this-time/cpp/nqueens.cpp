@@ -60,7 +60,7 @@ State stGlobal;
 void queensGlobal(vector<vector<int> > &ans, int n) {
   if (stGlobal.c >= n) ans.push_back(stGlobal.sol);
   else for (int r = 1; r <= n; r++) {
-    auto tmp = stGlobal;
+    auto tmp = stGlobal; // using immutable state
     stGlobal.plus(r);
     if (valid(stGlobal.sol)) {
       queensGlobal(ans, n);
@@ -78,7 +78,7 @@ void queensModify(vector<vector<int> > &ans, int n) {
     if (valid(stModify.sol)) {
       queensModify(ans, n);
     }
-    stModify.minus(r);
+    stModify.minus(r); // mutable state
   }
 }
 
@@ -93,6 +93,35 @@ struct State2 {
 stack<State2> st;
 State stStack = State(0, vector<int>());
 const State2 onefalse = State2(1, false);
+
+stack<State2> push(State2 x) {
+  st.push(x);
+  return st;
+}
+
+void queensStateR(vector<vector<int> > &ans, int n) {
+  st.push(State2(1, false));
+  while (!st.empty()) {
+    State2 cur = st.top(); st.pop();
+    if (cur.isminus) {
+      stStack.minus(cur.r);
+      continue;
+    }
+    if (stStack.c >= n) ans.push_back(stStack.sol);
+    else {
+      if (cur.r < n) st = push(State2(cur.r+1, false));
+      short t = cur.r;
+      stStack.plus(t);
+      // cur.r = 1;
+      if (valid(stStack.sol)) {
+        st = push(State2(t, true));
+        // st.push(cur);
+        st = push(onefalse);
+      }
+      else stStack.minus(t); // doesn't matter
+    }
+  }
+}
 
 void queensStackR(vector<vector<int> > &ans, int n) {
   st.push(State2(1, false));
@@ -159,7 +188,7 @@ void queensStackR(vector<vector<int> > &ans, int n) {
 */
 
 // ------------------------------------------------------------------------------
-int testnum = 5;
+int testnum = 1;
 
 void test1(int n) {
   auto t1 = high_resolution_clock::now();
@@ -202,6 +231,21 @@ void test3(int n) {
   printf("queensModify %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
 }
 
+void test4(int n) {
+  auto t1 = high_resolution_clock::now();
+
+  for (int t = 1; t <= testnum; t ++) {
+    ans.clear();
+    st = stack<State2>();
+    stStack = State(0, vector<int>());
+    queensStateR(ans, n);
+  }
+
+  auto t2 = high_resolution_clock::now();
+  duration<double, milli> ms_double = t2 - t1;
+  printf("queensStateR %d %lf\n", (int) ans.size(), (ms_double.count() / 1000) / testnum);
+}
+
 void test5(int n) {
   auto t1 = high_resolution_clock::now();
 
@@ -226,6 +270,7 @@ int main() {
   test1(n);
   test2(n);
   test3(n);
+  test4(n);
   test5(n);
 
   // queensGlobal(ans, 4);
@@ -238,10 +283,11 @@ int main() {
 
 /*
 n=11:
-queensLocal 2680 7.897911
-queensGlobal 2680 7.518075
-queensModify 2680 7.259107
-queensStackR 2680 7.214259
+queensLocal 2680 7.941035
+queensGlobal 2680 7.577763
+queensModify 2680 7.292723
+queensStateR 2680 7.734149
+queensStackR 2680 7.238383
 */
 
 
