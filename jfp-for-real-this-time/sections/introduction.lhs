@@ -6,7 +6,7 @@
 
 The trade-off between ``high-level'' and ``low-level'' styles of programming is almost as old as the field of computer sciences itself.
 In a high-level style of programming, we lean on abstractions to make our
-programs easier to read and write, and less error prone.  We pay for this
+programs easier to read and write, and less error-prone.  We pay for this
 comfort by giving up precise control over the underlying machinery; we forego
 optimization opportunities or have to trust a (usually opaque) compiler to
 optimize for us. Hence, for performance-sensitive applications, we often
@@ -21,12 +21,12 @@ similar pattern for side-effects within programming languages: some effects can
 be described as ``lower-level'' than others.  We say that an effect is
 lower-level than another effect when the lower-level effect can simulate the
 higher-level effect. In other words, it is always possible to write a
-program using lower-leel effects that has identical semantics to the same program with
+program using lower-level effects that has identical semantics to the same program with
 higher-level effects.
 Yet, due to the lack of abstraction of low-level effects, writing a faithful
 simulation requires careful discipline and is quite error-prone.
 
-This article investigates how how we can construct programs that are most
+This article investigates how we can construct programs that are most
 naturally expressed with a high-level effect, but where we still want access to
 the optimization opportunities of a lower-level effect.  In particular,
 inspired by Prolog and Constraint Programming systems, we investigate programs
@@ -37,9 +37,9 @@ techniques for these systems, like the Warren Abstract Machine (WAM)
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimizations like exploiting mutable state
 for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing
-the state from scratch~\cite{Schulte:ICLP:1999}.
+the state from scratch ~\cite{Schulte:ICLP:1999}.
 
-Our approach is based on algebraic effects and handlers~\cite{Plotkin09} to
+Our approach is based on algebraic effects and handlers ~\cite{Plotkin09} to
 cleanly separate the use of effects from their implementation. This way we can
 replace a high-level implementation with an implementation in terms of a
 low-level effect and incorporate optimizations. 
@@ -57,11 +57,11 @@ that approach to be unsatisfactory because it incorporates elements
 that are usually found in the syntactic approach for reasoning about
 programming languages \cite{Felleisen94}, leading to more boilerplate and
 complication in the proofs: notions of contextual equivalence and explicit
-manipluation of program contexts. Hence, for that reason we return to the
+manipulation of program contexts. Hence, for that reason we return to the
 implementation-based reasoning approach, which we believe works well with 
-algbraic effects and handlers. Indeed, we can prove all of our simulations
+algebraic effects and handlers. Indeed, we can prove all of our simulations
 correct using equational reasoning techniques, exploiting in particular the
-fusion property of handlers~\cite{Wu15}. Moreover, in part of our reasoning
+fusion property of handlers ~\cite{Wu15}. Moreover, in part of our reasoning
 we use initial effect implementations, which we argue do not leak any implementation details
 but merely leverage the common properties of all implementations.
 

@@ -246,7 +246,7 @@ void queensStackR(vector<vector<int> > &ans, int n) {
 // ------------------------------------------------------------------------------
 
 void test (void (*f)(int), string s, int n) {
-  int testnum = 6;
+  int testnum = 1;
   auto t1 = high_resolution_clock::now();
 
   for (int t = 1; t <= testnum; t ++) {
@@ -259,7 +259,7 @@ void test (void (*f)(int), string s, int n) {
 }
 
 int main() {
-  int n = 11;
+  int n = 12;
   // cin >> n;
 
   test(queensLocalW, "queensLocal", n);
@@ -279,12 +279,12 @@ int main() {
 
 /*
 n=10:
-queensLocal 724 1.270870
-queensGlobal 724 1.196739
-queensModify 724 1.141731
-queensState 724 1.327756
-queensStateR 724 1.289978
-queensStackR 724 1.136465 (sometimes slower than queensModify)
+queensLocal 1.270870
+queensGlobal 1.196739
+queensModify 1.141731
+queensState 1.327756
+queensStateR 1.289978
+queensStackR 1.136465 (sometimes slower than queensModify)
 
 
 n=11:
@@ -294,6 +294,14 @@ queensModify 2680 7.258673
 queensState 2680 8.204634
 queensStateR 2680 7.933977
 queensStackR 2680 7.224523 (sometimes slower than queensModify)
+
+n=12:
+queensLocal 55.846256
+queensGlobal 52.583887
+queensModify 50.485807
+queensState 55.084559
+queensStateR 53.382511
+queensStackR 49.512634
 */
 
 
