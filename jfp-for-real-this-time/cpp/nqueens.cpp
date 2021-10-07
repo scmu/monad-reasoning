@@ -31,6 +31,8 @@ vector<vector<int> > ans;
 struct State {
   int c;
   vector<int> sol;
+  State () {}
+  State(int c, const vector<int> &sol): c(c), sol(sol) {}
   void plus(int r) {
     c++;
     sol.push_back(r);
@@ -80,22 +82,81 @@ void queensModify(vector<vector<int> > &ans, int n) {
   }
 }
 
-stack<State> st;
+struct State2 {
+  // State *s;
+  short r;
+  bool isminus; 
+  State2(short r, bool b): r(r), isminus(b) {}
+  // State2(State *s, int r, bool b): s(s), r(r), ispop(b) {}
+};
+
+stack<State2> st;
+State stStack = State(0, vector<int>());
+const State2 onefalse = State2(1, false);
+
 void queensStackR(vector<vector<int> > &ans, int n) {
-  st.push((State) {0, vector<int>()});
+  st.push(State2(1, false));
   while (!st.empty()) {
-    State cur = st.top(); st.pop();
-    if (cur.c >= n) ans.push_back(cur.sol);
-    // else for (int r = 1; r <= n; r++) {
-    else for (int r = n; r >= 1; r--) {
-      cur.plus(r);
-      if (valid(cur.sol)) {
-        st.push(cur);
+    State2 cur = st.top(); st.pop();
+    if (cur.isminus) {
+      stStack.minus(cur.r);
+      continue;
+    }
+    if (stStack.c >= n) ans.push_back(stStack.sol);
+    else {
+      if (cur.r < n) st.push(State2(cur.r+1, false));
+      short t = cur.r;
+      stStack.plus(t);
+      // cur.r = 1;
+      if (valid(stStack.sol)) {
+        st.push(State2(t, true));
+        // st.push(cur);
+        st.push(onefalse);
       }
-      cur.minus(r);
+      else stStack.minus(t); // doesn't matter
     }
   }
 }
+
+/*
+struct State2 {
+  int c, r;
+  vector<int> sol;
+  State2 () {}
+  State2(const int &c, const int &r, const vector<int> &sol): c(c), r(r), sol(sol) {}
+  void plus(int r) {
+    c++;
+    sol.push_back(r);
+  }
+  void minus(int r) {
+    c--;
+    sol.pop_back();
+  }
+};
+
+stack<State2> st;
+void queensStackR(vector<vector<int> > &ans, int n) {
+  st.push(State2(0, 1, vector<int>()));
+  while (!st.empty()) {
+    // if (st.size() > 9) printf("hi");
+    State2 cur = st.top(); st.pop();
+    if (cur.c >= n) ans.push_back(cur.sol);
+    else {
+      if (cur.r < n) {
+        cur.r ++;
+        st.push(cur);
+        cur.r --;
+      }
+      // int t = cur.r;
+      cur.plus(cur.r);
+      cur.r = 1;
+      if (valid(cur.sol)) {
+        st.push(cur);
+      }
+    }
+  }
+}
+*/
 
 // ------------------------------------------------------------------------------
 int testnum = 5;
@@ -105,7 +166,7 @@ void test1(int n) {
 
   for (int t = 1; t <= testnum; t ++) {
     ans.clear();
-    queensLocal(ans, n, (State){0, vector<int>()});
+    queensLocal(ans, n, State(0, vector<int>()));
   }
 
   auto t2 = high_resolution_clock::now();
@@ -118,7 +179,7 @@ void test2(int n) {
 
   for (int t = 1; t <= testnum; t ++) {
     ans.clear();
-    stGlobal = (State){0, vector<int>()};
+    stGlobal = State(0, vector<int>());
     queensGlobal(ans, n);
   }
 
@@ -132,7 +193,7 @@ void test3(int n) {
 
   for (int t = 1; t <= testnum; t ++) {
     ans.clear();
-    stModify = (State){0, vector<int>()};
+    stModify = State(0, vector<int>());
     queensModify(ans, n);
   }
 
@@ -146,7 +207,8 @@ void test5(int n) {
 
   for (int t = 1; t <= testnum; t ++) {
     ans.clear();
-    st = stack<State>();
+    st = stack<State2>();
+    stStack = State(0, vector<int>());
     queensStackR(ans, n);
   }
 
@@ -158,20 +220,28 @@ void test5(int n) {
 
 
 int main() {
-  int n = 10;
+  int n = 11;
   // cin >> n;
+
   test1(n);
   test2(n);
   test3(n);
   test5(n);
-  // for (auto v : ans) print(v);
+
+  // queensGlobal(ans, 4);
+  ans.clear();
+  queensStackR(ans, 4);
+  st = stack<State2>();
+  stStack = State(0, vector<int>());
+  for (auto v : ans) print(v);
 }
 
 /*
-queensLocal 724 1.274214
-queensGlobal 724 1.191334
-queensModify 724 1.150410
-queensStackR 724 1.152278
+n=11:
+queensLocal 2680 7.897911
+queensGlobal 2680 7.518075
+queensModify 2680 7.259107
+queensStackR 2680 7.214259
 */
 
 
