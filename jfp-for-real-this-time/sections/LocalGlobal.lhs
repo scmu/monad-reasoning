@@ -86,68 +86,94 @@ We refer to these semantics as \emph{local-state semantics}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Interaction Laws}
+
 The following laws characterize the local state semantics for a monad |m|
 with state and nondeterminism:
 \begin{alignat}{2}
-    &\mbox{\bf right-identity}:\quad &
-    |m >> mzero| &= |mzero|~~\mbox{,} \label{eq:right-identity}\\
-    &\mbox{\bf left-distributivity}:~ &
-    |m >>= (\x -> f1 x `mplus` f2 x)| &= |(m >>= f1) `mplus` (m >>= f2)| ~~\mbox{.} \label{eq:left-dist}
+    &\mbox{\bf get-right-identity}:\quad &
+    |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
+    &\mbox{\bf put-right-identity}:\quad &
+    |put s >> mzero| &= |mzero|~~\mbox{,} \label{eq:put-right-identity}\\
+    &\mbox{\bf get-left-distributivity}:~ &
+    |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
+    &\mbox{\bf put-left-distributivity}:~ &
+    |put s >= (m1 `mplus` m2)| &= |(put >= m1) `mplus` (put s >= m2)| ~~\mbox{.} \label{eq:put-left-dist}
 \end{alignat}
-Note that the computation |m| on the lefthand side in the right-identity law
-(\ref{eq:right-identity})
-may contain some effects that do not occur in the righthand side.
-Similarly, in the left-distributivity law (\ref{eq:left-dist}),
-effects in the computations |m|
-occur once on the lefthand side and twice on the
-righthand side.
-This is a typical property of local state: Effects are distributed into branches
-and
-annihilated by failure.
+The first two laws express that |mzero| is the right identity of
+|get| and |put|; it annihilates the state effect.
+The other two laws express that |get| and |put| distribute
+from the left in |`mplus`|.
 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Commutativity}
-Having (\ref{eq:right-identity}) and (\ref{eq:left-dist}) leads to profound
-consequences on the semantics and implementation of monadic programs.
-To begin with, (\ref{eq:left-dist}) implies that for |mplus| we have some limited
-notion of commutativity.
-For instance, both the left and right distributivity rules can be applied to the
-term |(return x `mplus` return y) >>= \z -> return z `mplus` return z|.
-It is then easy to show that this term must be equal to both
-|return x `mplus` return x `mplus` return y `mplus` return y|
-and
-|return x `mplus` return y `mplus` return x `mplus` return y|
-\footnote{Gibbons and Hinze \cite{Gibbons11} were mistaken in their claim that the type
-|s -> [(a, s)]| constitutes a model of their backtrackable state laws.
-It is not a model because its |`mplus`| does not commute with itself.
-One could consider a relaxed semantics that admits |s ->[(a, s)]|,
-but that is not the focus of this paper.}.
-In fact, having (\ref{eq:right-identity}) and (\ref{eq:left-dist}) gives us very
-strong and useful commutative properties.
+If we take these four laws together with the left-identity and right-distributivity 
+laws of nondeterminism, we can say that
+that nondeterminism and state ``commute''; 
+if a |get| or |put| precedes a |mzero| or |`mplus`|, we
+can change their order (and vice versa).
 
-\begin{definition}[Commutativity]
-Let |m| and |n| be two monadic programs such that |x| does not occur free in |m|,
-and |y| does not occur free in |n|. We say |m| and |n| commute if
-\begin{alignat}{2}
-    &\mbox{\bf commutativity}:\quad &
-    |m >>= \x -> n >>= \y -> f x y| &= |n >>= \y -> m >>= \x -> f x y|~~\mbox{.} \label{eq:commutativity}
-\end{alignat}
-We say that effects |eps| and |delta| commute if any |m| and |n| commute
-as long as their only effects are |eps| and |delta|.
-\end{definition}
-
-One important result is that, in local-state semantics, nondeterminism commutes
-with any effect.
-
-\begin{theorem} \label{thm:nondet-comm}
-If right-identity (\ref{eq:right-identity})
-and left-distributivity (\ref{eq:left-dist}) hold in addition to the other laws,
-nondeterminism commutes with any effect.
-\end{theorem}
-
+% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+% \paragraph{Interaction Laws}
+% The following laws characterize the local state semantics for a monad |m|
+% with state and nondeterminism:
+% \begin{alignat}{2}
+%     &\mbox{\bf right-identity}:\quad &
+%     |m >> mzero| &= |mzero|~~\mbox{,} \label{eq:right-identity}\\
+%     &\mbox{\bf left-distributivity}:~ &
+%     |m >>= (\x -> f1 x `mplus` f2 x)| &= |(m >>= f1) `mplus` (m >>= f2)| ~~\mbox{.} \label{eq:left-dist}
+% \end{alignat}
+% Note that the computation |m| on the lefthand side in the right-identity law
+% (\ref{eq:right-identity})
+% may contain some effects that do not occur in the righthand side.
+% Similarly, in the left-distributivity law (\ref{eq:left-dist}),
+% effects in the computation |m|
+% occur once on the lefthand side and twice on the
+% righthand side.
+% This is a typical property of local state: Effects are distributed into branches
+% and
+% annihilated by failure.
+% 
+% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+% \paragraph{Commutativity}
+% Having (\ref{eq:right-identity}) and (\ref{eq:left-dist}) leads to profound
+% consequences on the semantics and implementation of monadic programs.
+% To begin with, (\ref{eq:left-dist}) implies that for |mplus| we have some limited
+% notion of commutativity.
+% For instance, both the left and right distributivity rules can be applied to the
+% term |(return x `mplus` return y) >>= \z -> return z `mplus` return z|.
+% It is then easy to show that this term must be equal to both
+% |return x `mplus` return x `mplus` return y `mplus` return y|
+% and
+% |return x `mplus` return y `mplus` return x `mplus` return y|
+% \footnote{Gibbons and Hinze \cite{Gibbons11} were mistaken in their claim that the type
+% |s -> [(a, s)]| constitutes a model of their backtrackable state laws.
+% It is not a model because its |`mplus`| does not commute with itself.
+% One could consider a relaxed semantics that admits |s ->[(a, s)]|,
+% but that is not the focus of this paper.}.
+% In fact, having (\ref{eq:right-identity}) and (\ref{eq:left-dist}) gives us very
+% strong and useful commutative properties.
+% 
+% \begin{definition}[Commutativity]
+% Let |m| and |n| be two monadic programs such that |x| does not occur free in |m|,
+% and |y| does not occur free in |n|. We say |m| and |n| commute if
+% \begin{alignat}{2}
+%     &\mbox{\bf commutativity}:\quad &
+%     |m >>= \x -> n >>= \y -> f x y| &= |n >>= \y -> m >>= \x -> f x y|~~\mbox{.} \label{eq:commutativity}
+% \end{alignat}
+% We say that effects |eps| and |delta| commute if any |m| and |n| commute
+% as long as their only effects are |eps| and |delta|.
+% \end{definition}
+% 
+% One important result is that, in local-state semantics, nondeterminism commutes
+% with any effect.
+% 
+% \begin{theorem} \label{thm:nondet-comm}
+% If right-identity (\ref{eq:right-identity})
+% and left-distributivity (\ref{eq:left-dist}) hold in addition to the other laws,
+% nondeterminism commutes with any effect.
+% \end{theorem}
+% 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Implementation}
-Implementation-wise, (\ref{eq:right-identity}) and (\ref{eq:left-dist})
+Implementation-wise, the laws
 imply that each nondeterministic branch has its own copy of the state.
 To see that, let |m = put 1|, |f1 () = put 2| and |f2 () = get| in
 (\ref{eq:left-dist}). The state we |get| in the second branch does not change,
@@ -542,29 +568,29 @@ fold.
 Third, the universality of fold tells us that this equality holds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
 
-%-------------------------------------------------------------------------------
-\subsection{The N-Queens Puzzle with Local or Global State}
-\label{sec:n-queens-global}
-\wenhao{paragraph or subsubsection?}
-
-Recall the backtracking algorithm |queens| for the n-queens example in
-Section~\ref{sec:motivation-and-challenges}.
-It runs in the local-state semantics because every branch maintains its own copy
-of the state and has no influence on other branches.
-The function |queensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
-\begin{code}
-queensLocal :: Int -> [[Int]]
-queensLocal = hNil . flip hLocal (0, []) . queens
-\end{code}
-% For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
-
-Using the simulation function |local2global|, we can also have a function |queensGlobal|
-which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
-\begin{code}
-queensGlobal :: Int -> [[Int]]
-queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
-\end{code}
-These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
+% %-------------------------------------------------------------------------------
+% \subsection{The N-Queens Puzzle with Local or Global State}
+% \label{sec:n-queens-global}
+% \wenhao{paragraph or subsubsection?}
+% 
+% Recall the backtracking algorithm |queens| for the n-queens example in
+% Section~\ref{sec:motivation-and-challenges}.
+% It runs in the local-state semantics because every branch maintains its own copy
+% of the state and has no influence on other branches.
+% The function |queensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
+% \begin{code}
+% queensLocal :: Int -> [[Int]]
+% queensLocal = hNil . flip hLocal (0, []) . queens
+% \end{code}
+% % For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
+% 
+% Using the simulation function |local2global|, we can also have a function |queensGlobal|
+% which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
+% \begin{code}
+% queensGlobal :: Int -> [[Int]]
+% queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
+% \end{code}
+% These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
 
 %-------------------------------------------------------------------------------
 \subsection{Undo Semantics}
