@@ -29,13 +29,13 @@ choose = foldr (mplus . return) mzero
 \section{Background and Motivation}
 \label{sec:background}
 
-This section summarizes the main concepts for equational reasoning with
+This section summarizes the main prerequisites for equational reasoning with
 effects.
 % For a more extensive treatment we refer to the work of \citep{Gibbons11}.
 We discuss the two paramount effects of this paper: state and nondeterminism.
-Furthermore, this section explains how to arbitrarily combine effects using
-free monads and the coproduct operator.
-Finally, we motivate the problem statement with an example and discuss the
+% Furthermore, this section explains how to arbitrarily combine effects using
+% free monads and the coproduct operator.
+Furthermore, we motivate the problem statement with an example and discuss the
 main challenges.
 Throughout the paper, we will use Haskell as a means to illustrate
 our findings with code.
@@ -78,7 +78,7 @@ We sometimes use the operator |(<$>)| which is an alias for |fmap|.
 % < class Functor f => Applicative f where
 % <     pure   :: a -> f a
 % <     (<*>)  :: f (a -> b) -> f a -> f b
-% 
+%
 % An applicative functor should satisfy the following four laws:
 % \begin{alignat}{2}
 %     &\mbox{\bf identity}:\quad &
@@ -90,13 +90,13 @@ We sometimes use the operator |(<$>)| which is an alias for |fmap|.
 %     &\mbox{\bf interchange}:~ &
 %     |x <*> pure y| &= |pure ($ y) <*> x| \mbox{~~.}
 % \end{alignat}
-% 
+%
 % Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.
-% 
+%
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Monads}
 
-Monadic side effects~\cite{Moggi91}, the main focus of this paper, are those that can dynamically determine what
+Monadic side-effects~\cite{Moggi91}, the main focus of this paper, are those that can dynamically determine what
 happens next.
 A monad |m :: * -> *| instantiates the monad type class, which has two
 operations: return (|eta|) and bind (|>>=|).
@@ -121,7 +121,7 @@ For example, |do x <- m; f x| is translated to |m >>= f|.
 Finally, two convenient derived operators are |(>>)| and |(<*>)|.\footnote{We
 deviate from the type class hierarchy of |Functor|, |Applicative| and |Monad|
 that can be found in Haskell's standard library because its additional complexity
-is not needed in this article.} 
+is not needed in this article.}
 
 < (>>) :: Monad m => m a -> m b -> m b
 < m1 >> m2 = m1 >>= \ _ -> m2
@@ -166,26 +166,28 @@ We choose to present a minimal setting for nondeterminism here.}
 \end{alignat}
 The first two laws state that |mplus| and |mzero| should form a monoid,
 i.e., |mplus| should be associative with |mzero| as its neutral element.
-The last two laws show that |>>=| is right-distributive
+The last two laws show that |(>>=)| is right-distributive
 over |mplus| and that |mzero| cancels bind on the left. The approach of
 \citet{Gibbons11} is to reason about programs by using these laws and
 not to rely on the specific implementation of any particular instance
 of |MNondet|.
 
 In contrast, \citet{Hutton08} reason directly in terms of a particular
-instance.  In the case of |MNondet|, the quintessential is that of lists.
+instance.  In the case of |MNondet|, the quintessential is that of lists,
+which extends the following |Monad| instance for lists.
 
+\begin{minipage}{0.5\textwidth}
 \begin{code}
 instance MNondet [] where
   mzero  =  []
   mplus  =  (++)
 \end{code}
-
-This extends the following |Monad| instance for lists.
-
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
 < instance Monad [] where
 <   return x   = [x]
 <   xs >>= f    = concatMap f xs
+\end{minipage}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{State}
@@ -257,17 +259,17 @@ to debug, but we miss out on opportunities for optimization that would have
 been available in the low-level style.
 
 Existing systems such the Warren Abstract Machine (WAM) for Prolog or
-constraint-based systems in general \cite{hassan91} \todo{more citations?}
+constraint-based systems in general \cite{AICPub641:1983,hassan91}
 offer a high-level programming interface to programmers, but
 use a low-level state-based
 representation under the hood that allow clever system-level optimizations.
 
-In this paper, we provide: 
+In this paper, we provide:
 \begin{enumerate}
 \item
 a purely functional, monadic model of the high-level effects that those
 systems expose to their users,
-\item 
+\item
 successive transformation steps from those high-level effects into the
 low-level state effect in order to incorporate typical optimizations found in
 those systems, and
@@ -278,6 +280,9 @@ transformations.
 As a running example, we will use the n-queens puzzle, which has
 nondeterminism and state, and can be simulated using only state.
 
+\birthe{Proposal: Move this part above to the intro of S2, make a new section
+"S2.3 The n-queens Puzzle"}
+
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{The n-queens Puzzle}
 
@@ -287,7 +292,7 @@ The aim of the puzzle is to place $n$ queens on a $n \times n$ chess board such
 that no two queens can attack each other.
 Given $n$, we number the rows and columns by |[1..n]|.
 Since all queens should be placed on distinct rows and distinct columns, a
-potential solution can be represented by a permutation |xs| of the list |[0..n-1]|,
+potential solution can be represented by a permutation |xs| of the list |[1..n]|,
 such that |xs !! i = j| denotes that the queen on the |i|th column is placed on
 the |j|th row.
 Using this representation, queens cannot be put on the same row or column.
@@ -336,7 +341,7 @@ but the algorithm still generates and tests all of these $(n-2)!$ candidates.
 \paragraph{A More Performant Backtracking Algorithm}
 
 We wish to fuse the two phases of the algorithm to produce a faster implementation.
-In fact, we want to improve the implementation on a high-level so that
+In fact, we want to improve the implementation on a high level so that
 generating candidates and checking for validity happens in a single pass.
 We can do this by moving to a state-based implementation that allows early
 pruning of branches that are unsafe.
@@ -367,7 +372,7 @@ plus   (c, sol) r = (c+1, r:sol)
 \end{code}
 
 
-The function |safe| checks whether the placement of a queen |q| is safe with
+The function |safe| checks whether the placement of a queen is safe with
 respect to the list of queens that is already present (for which we need its
 distance from the queen in the list). We only have to check that the queens are
 in different diagonals.
@@ -378,6 +383,6 @@ safe _ _ [] = True
 safe q n (q1:qs) = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
 \end{code}
 
-The above monadic version is the starting point for this paper.  In the
+The above monadic version of |queens| is the starting point for this paper.  In the
 remainder, we investigate how low-level optimizations, such as those found in
 Prolog implementations and Constraint Programming systems, can be incorporated and shown correct.

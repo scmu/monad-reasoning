@@ -42,7 +42,7 @@ the state from scratch ~\cite{Schulte:ICLP:1999}.
 Our approach is based on algebraic effects and handlers ~\cite{Plotkin09} to
 cleanly separate the use of effects from their implementation. This way we can
 replace a high-level implementation with an implementation in terms of a
-low-level effect and incorporate optimizations. 
+low-level effect and incorporate optimizations.
 
 Of particular interest is the way we reason about the correctness of our
 approach. There has been much debate in the literature on different equational
@@ -58,7 +58,7 @@ that are usually found in the syntactic approach for reasoning about
 programming languages \cite{Felleisen94}, leading to more boilerplate and
 complication in the proofs: notions of contextual equivalence and explicit
 manipulation of program contexts. Hence, for that reason we return to the
-implementation-based reasoning approach, which we believe works well with 
+implementation-based reasoning approach, which we believe works well with
 algebraic effects and handlers. Indeed, we can prove all of our simulations
 correct using equational reasoning techniques, exploiting in particular the
 fusion property of handlers ~\cite{Wu15}. Moreover, in part of our reasoning
@@ -85,7 +85,7 @@ this paper makes the following contributions:
 		  a single state effect. As an extension, we work out mutable state as a possible optimization (\Cref{sec:combination}).
 	\item We illustrate the simulations and resulting optimizations using the n-queens puzzle as a running example throughout
 		  all sections.
-	\item We prove all simulations correct using equational reasoning techniques (\Cref{app:universality-nondeterminism}, \Cref{app:nondet-state} and \Cref{app:local-global}).
+	\item We prove all simulations correct using equational reasoning techniques and the fusion law in particular (\Cref{app:universality-nondeterminism}, \Cref{app:nondet-state} and \Cref{app:local-global}).
 \end{itemize}
-
-Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:conclusion})
+\birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
+Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:discussion})

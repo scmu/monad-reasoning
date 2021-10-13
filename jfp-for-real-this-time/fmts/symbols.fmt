@@ -27,8 +27,8 @@
 %format minus = "(\mathbin{\ominus})"
 %format queensNaive = "\Varid{queens_{naive}}"
 
-%format * = "\mathbin{^\star}"
-%format -* = "\mathbin{-^\star}"
+%format * = "\mathbin{\ast}"
+%format -* = "\mathbin{-^\ast}"
 %format dot = "\mathbin{\cdot}"
 
 %format :+: = "\mathrel{{:}{+}{:}}"

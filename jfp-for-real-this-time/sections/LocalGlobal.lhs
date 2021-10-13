@@ -97,7 +97,7 @@ with state and nondeterminism:
     &\mbox{\bf get-left-distributivity}:~ &
     |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
     &\mbox{\bf put-left-distributivity}:~ &
-    |put s >= (m1 `mplus` m2)| &= |(put >= m1) `mplus` (put s >= m2)| ~~\mbox{.} \label{eq:put-left-dist}
+    |put s >> (m1 `mplus` m2)| &= |(put >> m1) `mplus` (put s >> m2)| ~~\mbox{.} \label{eq:put-left-dist}
 \end{alignat}
 The first two laws express that |mzero| is the right identity of
 |get| and |put|; it annihilates the state effect.
@@ -175,8 +175,8 @@ can change their order (and vice versa).
 \paragraph{Implementation}
 Implementation-wise, the laws
 imply that each nondeterministic branch has its own copy of the state.
-To see that, let |m = put 1|, |f1 () = put 2| and |f2 () = get| in
-(\ref{eq:left-dist}). The state we |get| in the second branch does not change,
+To see that, let |s = 1|, |m1 = put 2| and |m2 = get| in
+(\ref{eq:put-left-dist}). The state we |get| in the second branch does not change,
 despite the |put 2| in the first branch.
 One implementation satisfying the laws is
 < Local s a = s -> m (a, s)
