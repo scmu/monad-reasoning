@@ -88,21 +88,33 @@ We refer to these semantics as \emph{local-state semantics}.
 The following laws characterize the local state semantics for a monad |m|
 with state and nondeterminism:
 \begin{alignat}{2}
-    &\mbox{\bf get-right-identity}:\quad &
-    |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
+    % &\mbox{\bf get-right-identity}:\quad &
+    % |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
     &\mbox{\bf put-right-identity}:\quad &
     |put s >> mzero| &= |mzero|~~\mbox{,} \label{eq:put-right-identity}\\
-    &\mbox{\bf get-left-distributivity}:~ &
-    |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
+    % &\mbox{\bf get-left-distributivity}:~ &
+    % |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
     &\mbox{\bf put-left-distributivity}:~ &
     |put s >> (m1 `mplus` m2)| &= |(put >> m1) `mplus` (put s >> m2)| ~~\mbox{.} \label{eq:put-left-dist}
 \end{alignat}
-The first two laws express that |mzero| is the right identity of
+
+From these two laws, we can derive the following equations:
+
+\begin{alignat}{2}
+    &\mbox{\bf get-right-identity}:\quad &
+    |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
+    &\mbox{\bf get-left-distributivity}:~ &
+    |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
+\end{alignat}
+
+The proof is shown in Appendix \ref{app:local-law}.
+
+The equation (\ref{eq:put-right-identity}) and (\ref{eq:get-right-identity}) express that |mzero| is the right identity of
 |get| and |put|; it annihilates the state effect.
-The other two laws express that |get| and |put| distribute
+The other two equations express that |get| and |put| distribute
 from the left in |`mplus`|.
 
-If we take these four laws together with the left-identity and right-distributivity 
+If we take these four equations together with the left-identity and right-distributivity 
 laws of nondeterminism, we can say that
 that nondeterminism and state ``commute''; 
 if a |get| or |put| precedes a |mzero| or |`mplus`|, we

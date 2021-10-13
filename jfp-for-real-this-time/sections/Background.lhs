@@ -133,6 +133,7 @@ operations: return (|eta|) and bind (|>>=|).
 <   eta     :: a -> m a
 <   (>>=)   :: m a -> (a -> m b) -> m b
 
+%NOTE: tag1
 Furthermore, a monad should satisfy the three monad laws:
 \begin{alignat}{2}
     &\mbox{\bf return-bind}:\quad &
@@ -179,6 +180,7 @@ One might expect additional laws such as idempotence or commutativity.
 As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on where the
 monad is used and their interactions with other effects.
 We choose to present a minimal setting for nondeterminism here.}
+%NOTE: tag2
 \begin{alignat}{2}
     &\mbox{\bf identity}:\quad &
       |mzero `mplus` m| ~=~ & |m| ~=~ |m `mplus` mzero|\mbox{~~,}
@@ -239,14 +241,15 @@ class Monad m => MState s m | m -> s where
       return x
 \end{code}
 %endif
+%NOTE: tag3
 These operations are regulated by four laws:
 \begin{alignat}{2}
     &\mbox{\bf put-put}:\quad &
     |put s >> put s'| &= |put s'|~~\mbox{,} \label{eq:put-put}\\
     &\mbox{\bf put-get}:~ &
-    |put s >> get| &= |put s >> return s| ~~\mbox{,} \label{eq:get-put}\\
+    |put s >> get| &= |put s >> return s| ~~\mbox{,} \label{eq:put-get}\\
     &\mbox{\bf get-put}:~ &
-    |get >>= put| &= |return ()| ~~\mbox{,} \label{eq:put-get}\\
+    |get >>= put| &= |return ()| ~~\mbox{,} \label{eq:get-put}\\
     &\mbox{\bf get-get}:\quad &
     |get >>= (\s -> get >>= k s)| &= |get >>= (\s -> k s s)|
     ~~\mbox{.} \label{eq:get-get}
