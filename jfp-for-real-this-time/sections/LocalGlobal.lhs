@@ -51,18 +51,16 @@ mun nx = alph nx >>= id -- do
 \end{code}
 %endif
 
-This section illustrates the difference beteween local-state semantics and
-global-state semantics and formally distinguishes the two.
-We argue that local state is a higher-level effect then global state, and thus
-that we can simulate the former using the latter.
+This section studies two flavors of effect interaction between state and
+nondeterminism: local-state and global-state semantics.  We argue that local
+state is a higher-level effect than globale state, and we show that we can
+simulate the former using the latter.
 
 In a program with local state, each nondeterministic branch has its own local
-copy of the state.
-This is a convenient effect interaction which is provided by many systems that
-solve search problems, e.g. Prolog.
-
-On the other hand, in a program with global state a single state is sequentially
-threaded through the nondeterministic branches.
+copy of the state.  This is a convenient effect interaction which is provided
+by many systems that solve search problems, e.g. Prolog.  In contrast, global
+state sequentially threads a single state through the nondeterministic
+branches.
 
 The appearance of local state is obtained by the well-known backtracking
 technique, undoing changes to the state when going to the next branch.
@@ -185,7 +183,7 @@ This implementation is exactly that of |StateT s m a|
 in the Monad Transformer Library \cite{mtl}, and as introduced in
 Section \ref{sec:combining-effects}.
 With effect handling \cite{Kiselyov15, Wu14}, the monad behaves similarly
-(except for the limited commutativity implied by law (\ref{eq:left-dist}))
+% (except for the limited commutativity implied by law (\ref{eq:left-dist}))
 if we run the handler for state before that for list.
 
 
@@ -217,7 +215,7 @@ This law allows lifting a |put| operation from the left branch of a
 nondeterministic choice.
 For instance, if |m = mzero| in the left-hand side of the equation,
 then under local-state semantics
-(laws (\ref{eq:mzero}) and (\ref{eq:right-identity}))
+(laws (\ref{eq:mzero}) and (\ref{eq:put-right-identity}))
 the lefthand side becomes equal to |n|,
 whereas under global-state semantics
 (laws (\ref{eq:mzero}) and (\ref{eq:put-or}))
@@ -248,7 +246,7 @@ More careful implementations of |ListT|\footnote{Often referred to as |ListT| do
 Effect handlers \cite{Kiselyov15, Wu14} produce implementations that match our intuition of
 non-backtrackable computations if we run the handler for nondeterminism before
 that for state.
-The following implementation has a non-commutative |mplus| operation.
+The following implementation is essentially that of Gale.
 \begin{code}
 newtype Global s a = Gl { runGl :: s -> (Maybe (a, Global s a), s) }
 \end{code}
@@ -335,7 +333,7 @@ in which they
 A monadic program that implements this pattern, looks like
 < modify next >> search >>= modReturn prev
 Here, |next| advances the state and |prev| undoes the modification so that
-|prev . next = id = next . prev|.
+|prev . next = id| (and sometimes, but not usually, also |next . prev = id|).
 The functions |modify| and |modReturn| are defined as follows:
 \begin{code}
 modify     f    = get >>= put . f
@@ -443,7 +441,7 @@ state-restoring put.
 \end{table}
 
 We wish that |putR|, when run with a global state, satisfies laws
-(\ref{eq:put-put}) to (\ref{eq:left-dist}) --- the state laws and the local
+(\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and the local
 state laws.
 If so, one could take a program written for a local state monad, replace
 all occurrences of |put| by |putR|, and run the program with a global state.
@@ -553,9 +551,9 @@ comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
 comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
 comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 \end{code}
-For simplicity, we can implicitly assume
-commutativity and associativity of the coproduct operator |(:+:)|
-and omit the |comm2| in the definition of |hGlobal|.
+% For simplicity, we can implicitly assume
+% commutativity and associativity of the coproduct operator |(:+:)|
+% and omit the |comm2| in the definition of |hGlobal|.
 
 A correct translation then transforms local state to global state.
 \begin{theorem}\label{thm:local-global}
