@@ -28,12 +28,12 @@ import Debug.Trace as DT
 
 This section gives an overview of our approach to simulate state and
 nondeterminism in terms of only state and of how to prove that approach
-correct. 
+correct.
 
 %-------------------------------------------------------------------------------
 \subsection{Approach}
 
-While the second implementation of the queens problems is a noteworthy
+Although the second implementation of the n-queens problems is a noteworthy
 improvement over the naive version by cleverly interleaving enumeration and
 validation, it requires problem-specific knowledge. We can also make
 application-agnostic improvements at the more generic level of the effect
@@ -46,14 +46,16 @@ undo semantics.
 Mutable state would also improve performance significantly.
 
 In the remainder of the paper, we define simulations for transforming
-high-level effects into a lower-level effects that enable the above optimizations and
+high-level effects into lower-level effects that enable the above optimizations and
 establish the correctness of this approach.
 
 In particular, we take the following steps:
 \Cref{sec:local-global} simulates local state with global state;
 \Cref{sec:nondeterminism-state} explains how to simulate nondeterminism with state; and
-\Cref{sec:multiple-states} shows how we can group multiple states into a single
+\Cref{sec:combination} shows how we can group multiple states into a single
 state effect.
+
+The figure below shows how this influences the n-queens example in the different sections.
 
 % https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
 % \[\begin{tikzcd}
@@ -86,16 +88,17 @@ state effect.
 	\arrow[from=3-2, to=5-4]
 \end{tikzcd}\]
 
+%-------------------------------------------------------------------------------
+\subsection{Free Monads and Their Folds}
+
 Before taking the first step, we first revise our key ingredients for
 simulating one effect in terms of another and establishing correctness: free
 monads, their folds and their fusion properties.
-%-------------------------------------------------------------------------------
-\subsection{Free Monads and Their Folds}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Free Monads}
 Free monads are gaining popularity for their use in algebraic effects \cite{Plotkin02}
-and their handlers \cite{Plotkin09, Plotkin13},
+and handlers \cite{Plotkin09, Plotkin13},
 which elegantly separate syntax and semantics of effectful
 operations.
 A free monad, the syntax of an effectful program,
@@ -103,9 +106,10 @@ can be captured generically in Haskell.
 \begin{code}
 data Free f a = Var a | Op (f (Free f a))
 \end{code}
-This data type is a form of abstract syntax tree (AST) consisting of leaves |Var a|
-and internal nodes |Op (f (Free f a))| whose branching structure is
-detetermined by the functor |f|, which is known as the \emph{signature}.
+This data type is a form of abstract syntax tree (AST) consisting of leaves (|Var a|)
+and internal nodes (|Op (f (Free f a))|), whose branching structure is
+determined by the functor |f|.
+This functor is also known as the \emph{signature}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{A Fold Recursion Scheme}
@@ -143,6 +147,7 @@ instance Functor f => Monad (Free f) where
 %(Op op) >>= f = Op (fmap (>>= f) op)
 
 Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15}.
+This gives rise to the following laws:
 \begin{alignat}{2}
     &\mbox{\bf fusion-pre}:\quad &
     |fold gen alg . fmap h| &= |fold (gen . h) alg|\mbox{~~,} \label{eq:fusion-pre}\\
@@ -166,11 +171,11 @@ These two fusion laws will turn out to be essential in the further proofs of thi
 For nondeterminism, we do not use a monad like that of lists.
 Following the algebraic effects approach, we
 use instead a free monad over an appropriate signature, such as |Free NondetF|
-where |NondetF| is the nondeterminism signature,
+where |NondetF| is the nondeterminism signature.
 \begin{code}
 data NondetF a   = Fail | Or a a
 \end{code}
-which gives rise to a trivial |MNondet| instance
+This signatures gives rise to a trivial |MNondet| instance:
 \begin{code}
 instance MNondet (Free NondetF) where
   mzero = Op Fail
@@ -201,7 +206,9 @@ s)| over the state signature.
 
 \begin{code}
 data StateF s a  = Get (s -> a) | Put s a
-
+\end{code}
+This state signature gives the following |MState s| instance:
+\begin{code}
 instance MState s (Free (StateF s)) where
   get    =  Op (Get return)
   put s  =  Op (Put s (return ()))
@@ -224,7 +231,7 @@ hState' = fold genS' algS'
 Combining multiple effects is relatively easy in the axiomatic approach based
 on type classes. By imposing multiple constraints on the monad |m|, e.g.,
 |(MState s m, MNondet m)|, we can express that |m| should support both state
-and nondeterminism and respect their associated laws.  In practice, this is
+and nondeterminism and respect their associated laws. In practice, this is
 often insufficient: we usually require additional laws that govern the
 interactions between the combined effects. We discuss possible interaction
 laws between state and nondeterminism in detail in Section
@@ -257,9 +264,11 @@ For instance, we can encode programs with both state and nondeterminism as
 effects using the data type
 |Free (StateF :+: NondetF) a|.
 The coproduct also has a neutral element |NilF|, representing the empty effect set.
+%if False
 \begin{code}
 data NilF a deriving (Functor)
 \end{code}
+%endif
 
 Consequently, we can compose state effects with any other
 effect functor |f| using |Free (StateF s :+: f) a|.
@@ -267,8 +276,8 @@ It is also easy to see that |Free (StateF s :+: NondetF :+: f)| supports both st
 
 \begin{code}
 instance (Functor f) => MState s (Free (StateF s :+: f)) where
-    get    = Op $ Inl $ Get return
-    put x  = Op $ Inl $ Put x (return ())
+    get      = Op $ Inl $ Get return
+    put x    = Op $ Inl $ Put x (return ())
 
 instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
   mzero      = Op $ Inr $ Inl Fail
@@ -292,8 +301,8 @@ A mediator |(#)| is used to separate the algebra |alg| for the handled effects a
 the forwarding algebra |fwd| for the unhandled effects.
 \begin{code}
 (#) :: (f a -> b) -> (g a -> b) -> (f :+: g) a -> b
-(alg # fwd) (Inl op) = alg op
-(alg # fwd) (Inr op) = fwd op
+(alg # fwd)  (Inl op)  =  alg op
+(alg # fwd)  (Inr op)  =  fwd op
 \end{code}
 %if False
 \begin{code}
@@ -356,7 +365,7 @@ The handlers for state and nondeterminism we have given earlier require a bit of
 adjustment to be used in the composite setting.
 They now interpret into composite domains,
 |StateT (Free f) a| and |Free f [a]| respectively.
-Here |StateT| is the state transformer from the Monad Transformer Library \cite{mtl}.
+Here, |StateT| is the state transformer from the Monad Transformer Library \cite{mtl}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
 The handlers are defined as follows:
 \begin{code}
@@ -381,4 +390,3 @@ Also, the empty signature |NilF| has a trivial associated handler.
 hNil :: Free NilF a -> a
 hNil (Var x) = x
 \end{code}
-
