@@ -35,10 +35,38 @@ effects.
 We discuss the two paramount effects of this paper: state and nondeterminism.
 % Furthermore, this section explains how to arbitrarily combine effects using
 % free monads and the coproduct operator.
-Furthermore, we motivate the problem statement with an example and discuss the
-main challenges.
 Throughout the paper, we will use Haskell as a means to illustrate
 our findings with code.
+
+
+The main challenges addressed in this paper relate to the tension between writing
+programs with high-level effects or with low-level effects.
+Often, we choose the high-level alternative which is easier to understand and
+to debug, but we miss out on opportunities for optimization that would have
+been available in the low-level style.
+
+Existing systems such the Warren Abstract Machine (WAM) for Prolog or
+constraint-based systems in general \cite{AICPub641:1983,hassan91}
+offer a high-level programming interface to programmers, but
+use a low-level state-based
+representation under the hood that allow clever system-level optimizations.
+
+In this paper, we provide:
+\begin{enumerate}
+\item
+a purely functional, monadic model of the high-level effects that those
+systems expose to their users,
+\item
+successive transformation steps from those high-level effects into the
+low-level state effect in order to incorporate typical optimizations found in
+those systems, and
+\item
+proofs based on equational reasoning to establish the correctness of those
+transformations.
+\end{enumerate}
+
+As a running example, we will use the n-queens puzzle, which has
+nondeterminism and state, and can be simulated using only state.
 
 
 %-------------------------------------------------------------------------------
@@ -249,42 +277,13 @@ instance Monad (State s) where
 %endif
 
 %-------------------------------------------------------------------------------
-\subsection{Motivation and Challenges}
+\subsection{The n-queens Puzzle}
 \label{sec:motivation-and-challenges}
 
-The challenges we address in this paper relate to the tension between writing
-programs with high-level effects or with low-level effects.
-Often, we choose the high-level alternative which is easier to understand and
-to debug, but we miss out on opportunities for optimization that would have
-been available in the low-level style.
 
-Existing systems such the Warren Abstract Machine (WAM) for Prolog or
-constraint-based systems in general \cite{AICPub641:1983,hassan91}
-offer a high-level programming interface to programmers, but
-use a low-level state-based
-representation under the hood that allow clever system-level optimizations.
 
-In this paper, we provide:
-\begin{enumerate}
-\item
-a purely functional, monadic model of the high-level effects that those
-systems expose to their users,
-\item
-successive transformation steps from those high-level effects into the
-low-level state effect in order to incorporate typical optimizations found in
-those systems, and
-\item
-proofs based on equational reasoning to establish the correctness of those
-transformations.
-\end{enumerate}
-As a running example, we will use the n-queens puzzle, which has
-nondeterminism and state, and can be simulated using only state.
-
-\birthe{Proposal: Move this part above to the intro of S2, make a new section
-"S2.3 The n-queens Puzzle"}
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{The n-queens Puzzle}
+% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+% \paragraph{The n-queens Puzzle}
 
 The n-queens problem used here is an adapted and simplified version from that of
 Gibbons and Hinze \cite{Gibbons11}.
