@@ -593,7 +593,7 @@ The full proof of this simulation is included in Appendix \ref{app:local-global}
 % These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
 
 %-------------------------------------------------------------------------------
-\subsection{Undo Semantics}
+\subsection{Undo Optimization }
 \label{sec:undo-semantics}
 
 % backtracking in local state

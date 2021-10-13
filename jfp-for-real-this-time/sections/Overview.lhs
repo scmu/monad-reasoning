@@ -26,11 +26,69 @@ import Debug.Trace as DT
 \section{Overview}
 \label{sec:overview}
 
-This section explains how to arbitrarily combine effects using
-free monads and the coproduct operator.
-We discuss our approach to simulate state and nondeterminism with only state
-and how to prove it correct.
+This section gives an overview of our approach to simulate state and
+nondeterminism in terms of only state and of how to prove that approach
+correct. 
 
+%-------------------------------------------------------------------------------
+\subsection{Approach}
+
+While the second implementation of the queens problems is a noteworthy
+improvement over the naive version by cleverly interleaving enumeration and
+validation, it requires problem-specific knowledge. We can also make
+application-agnostic improvements at the more generic level of the effect
+implementation.
+
+For example, we could avoid making an explicit copy of the state at every branching
+point by evolving from local-state semantics to global-state semantics.
+Furthermore, we can model nondeterminism with state, which allows for a smoother
+undo semantics.
+Mutable state would also improve performance significantly.
+
+In the remainder of the paper, we define simulations for transforming
+high-level effects into a lower-level effects that enable the above optimizations and
+establish the correctness of this approach.
+
+In particular, we take the following steps:
+\Cref{sec:local-global} simulates local state with global state;
+\Cref{sec:nondeterminism-state} explains how to simulate nondeterminism with state; and
+\Cref{sec:multiple-states} shows how we can group multiple states into a single
+state effect.
+
+% https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
+% \[\begin{tikzcd}
+%   {\text{State + Nondeterminism}} \\
+%   {\text{State + State}} \\
+%   \text{State}
+%   \arrow["{\text{\Cref{sec:local-global}: Local state to global state}}"{pos=0.2}, shift left=2, draw=none, from=1-1, to=2-1]
+%   \arrow["{\text{\Cref{sec:multiple-states}}}", shift left=2, draw=none, from=2-1, to=3-1]
+%   \arrow["{\text{\Cref{sec:nondeterminism-state}: Nondeterminism to State}}"{pos=0.7}, shift left=2, draw=none, from=1-1, to=2-1]
+%   \arrow[from=1-1, to=2-1]
+%   \arrow[from=2-1, to=3-1]
+% \end{tikzcd}\]
+
+% \birthe{we could put the names of the new n-queens definitions in this figure, starting with |queensNaive| and |queens|, for example:}
+
+% https://q.uiver.app/?q=WzAsNyxbMSwwLCJ8cXVlZW5zTmFpdmV8Il0sWzEsMiwifHF1ZWVuc3wiXSxbMCw0LCJ8cXVlZW5zTG9jYWx8Il0sWzEsNCwifHF1ZWVuc0dsb2JhbHwiXSxbMiw0LCJ8cXVlZW5zU3RhdGV8Il0sWzMsNCwifHF1ZWVuc1NpbXwiXSxbMywxXSxbMCwxLCJlYXJseSBwcnVuaW5nIl0sWzQsNSwiXFxDcmVme3NlYzp9IiwyXSxbMyw0LCJcXENyZWZ7c2VjOn0iLDJdLFsyLDMsIlxcQ3JlZntzZWM6fSIsMl0sWzEsMl0sWzEsM10sWzEsNF0sWzEsNV1d
+\[\begin{tikzcd}
+	& {|queensNaive|} \\
+	&&& {} \\
+	& {|queens|} \\
+	\\
+	{|queensLocal|} & {|queensGlobal|} & {|queensState|} & {|queensSim|}
+	\arrow["{\text{early pruning}}", from=1-2, to=3-2]
+	\arrow["{S\ref{sec:combination}}"', from=5-3, to=5-4]
+	\arrow["{S\ref{sec:nondeterminism-state}}"', from=5-2, to=5-3]
+	\arrow["{S\ref{sec:local-global}}"', from=5-1, to=5-2]
+	\arrow[from=3-2, to=5-1]
+	\arrow[from=3-2, to=5-2]
+	\arrow[from=3-2, to=5-3]
+	\arrow[from=3-2, to=5-4]
+\end{tikzcd}\]
+
+Before taking the first step, we first revise our key ingredients for
+simulating one effect in terms of another and establishing correctness: free
+monads, their folds and their fusion properties.
 %-------------------------------------------------------------------------------
 \subsection{Free Monads and Their Folds}
 
@@ -324,55 +382,3 @@ hNil :: Free NilF a -> a
 hNil (Var x) = x
 \end{code}
 
-%-------------------------------------------------------------------------------
-\subsection{Approach}
-
-Although the state-based implementation is a noteworthy improvement over the naive
-version, we can also make strong improvements at a lower level of implementation.
-
-For example, we could avoid making an explicit copy of the state at every branching
-point by evolving from local-state semantics to global-state semantics.
-Furthermore, we can model nondeterminism with state, which allows for a smoother
-undo semantics.
-Mutable state would also improve performance significantly.
-
-In what follows, we define simulations for transforming a high-level effect into
-a lower-level effect and show how these transformations lead to the optimizations
-discussed above.
-
-In particular, we take the following steps:
-\Cref{sec:local-global} simulates local state with global state;
-\Cref{sec:nondeterminism-state} explains how to simulate nondeterminism with state; and
-\Cref{sec:multiple-states} shows how we can group multiple states into a single
-state effect.
-
-% https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
-% \[\begin{tikzcd}
-%   {\text{State + Nondeterminism}} \\
-%   {\text{State + State}} \\
-%   \text{State}
-%   \arrow["{\text{\Cref{sec:local-global}: Local state to global state}}"{pos=0.2}, shift left=2, draw=none, from=1-1, to=2-1]
-%   \arrow["{\text{\Cref{sec:multiple-states}}}", shift left=2, draw=none, from=2-1, to=3-1]
-%   \arrow["{\text{\Cref{sec:nondeterminism-state}: Nondeterminism to State}}"{pos=0.7}, shift left=2, draw=none, from=1-1, to=2-1]
-%   \arrow[from=1-1, to=2-1]
-%   \arrow[from=2-1, to=3-1]
-% \end{tikzcd}\]
-
-% \birthe{we could put the names of the new n-queens definitions in this figure, starting with |queensNaive| and |queens|, for example:}
-
-% https://q.uiver.app/?q=WzAsNyxbMSwwLCJ8cXVlZW5zTmFpdmV8Il0sWzEsMiwifHF1ZWVuc3wiXSxbMCw0LCJ8cXVlZW5zTG9jYWx8Il0sWzEsNCwifHF1ZWVuc0dsb2JhbHwiXSxbMiw0LCJ8cXVlZW5zU3RhdGV8Il0sWzMsNCwifHF1ZWVuc1NpbXwiXSxbMywxXSxbMCwxLCJlYXJseSBwcnVuaW5nIl0sWzQsNSwiXFxDcmVme3NlYzp9IiwyXSxbMyw0LCJcXENyZWZ7c2VjOn0iLDJdLFsyLDMsIlxcQ3JlZntzZWM6fSIsMl0sWzEsMl0sWzEsM10sWzEsNF0sWzEsNV1d
-\[\begin{tikzcd}
-	& {|queensNaive|} \\
-	&&& {} \\
-	& {|queens|} \\
-	\\
-	{|queensLocal|} & {|queensGlobal|} & {|queensState|} & {|queensSim|}
-	\arrow["{\text{early pruning}}", from=1-2, to=3-2]
-	\arrow["{S\ref{sec:combination}}"', from=5-3, to=5-4]
-	\arrow["{S\ref{sec:nondeterminism-state}}"', from=5-2, to=5-3]
-	\arrow["{S\ref{sec:local-global}}"', from=5-1, to=5-2]
-	\arrow[from=3-2, to=5-1]
-	\arrow[from=3-2, to=5-2]
-	\arrow[from=3-2, to=5-3]
-	\arrow[from=3-2, to=5-4]
-\end{tikzcd}\]
