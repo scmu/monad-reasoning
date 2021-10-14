@@ -21,6 +21,28 @@ In this section we prove two equations relevant to the interaction of nondetermi
 <    return () >> mzero
 < = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
 <    mzero
+
+Another proof withous using law \ref{eq:put-right-identity}.
+
+<    get >> mzero
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+<    return () >> (get >> mzero)
+< = {-~  Law (\ref{eq:monad-assoc})  -}
+<    (return () >> get) >> mzero
+< = {-~  Law (\ref{eq:get-put})  -}
+<    ((get >>= put) >> get) >> mzero
+< = {-~  Law (\ref{eq:monad-assoc})  -}
+<    (get >>= (\ s -> put s >> get)) >> mzero
+< = {-~  Law (\ref{eq:put-get})  -}
+<    (get >>= (\ s -> put s >> return s)) >> mzero
+< = {-~  Law (\ref{eq:monad-assoc})  -}
+<    ((get >>= put) >> return s) >> mzero
+< = {-~  Law (\ref{eq:get-put})  -}
+<    (return () >> return s) >> mzero
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+<    return s >> mzero
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+<    mzero
 \end{proof}
 
 \begin{theorem}
