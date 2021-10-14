@@ -280,8 +280,8 @@ instance (Functor f) => MState s (Free (StateF s :+: f)) where
     put x    = Op $ Inl $ Put x (return ())
 
 instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
-  mzero      = Op $ Inr $ Inl Fail
-  mplus x y  = Op $ Inr $ Inl (Or x y)
+  mzero        = Op $ Inr $ Inl Fail
+  x `mplus` y  = Op $ Inr $ Inl (Or x y)
 \end{code}
 
 %if False

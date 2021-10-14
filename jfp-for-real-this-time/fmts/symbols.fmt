@@ -19,6 +19,9 @@
 %format s1'
 %format s2'
 
+%format k1
+%format k2
+
 %format `times` = "\mathbin{\times}"
 %format times = "(\mathbin{\times})"
 %format `plus` = "\mathbin{\oplus}"
