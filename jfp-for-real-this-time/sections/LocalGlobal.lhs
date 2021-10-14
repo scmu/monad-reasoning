@@ -571,11 +571,12 @@ A correct translation then transforms local state to global state.
 \begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal
 \end{theorem}
-We use equational reasoning techniques to prove this equality.
-First, we use fold fusion to transfrom |hLocal| to a single fold.
-Second, we do the same to |hGlobal . local2global|: use fold fusion to make it a single
-fold.
-Third, the universality of fold tells us that this equality holds.
+Thanks to the use of algebraic effects and handlers, we can 
+use straightforward equational reasoning to prove this equality.
+In particular, we use fold fusion on both the left-hand side
+and the right-hand side, turning each into a single fold.
+Then, we can prove the equality of those two folds through
+the universality property of folds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
 
 % %-------------------------------------------------------------------------------
@@ -608,40 +609,38 @@ The full proof of this simulation is included in Appendix \ref{app:local-global}
 
 % backtracking in local state
 
-In \Cref{sec:local-global} we have discussed how to simulate local state using
-a global state.
-But, using |putR|, we clearly make the implicit copying of the local-state
+We have just established how to simulate local state with global state 
+by replacing |put| by |putR|.
+The |putR| operation makes the implicit copying of the local-state
 semantics explicit in the global-state semantics.
-This is problematic if the state is big, e.g. a long array.
-Instead, we would want to keep track of the modifications made to the state,
-and possibly undo them when necessary.
+This copying is rather costly if the state is big (e.g., a long array),
+and especially wasteful if the modifications made to that state are rather small
+(e.g., a single entry in the array). To improve upon this situation
+we can, instead of copying the state, keep track of the modifications made to it,
+and undo them when necessary.
 As mentioned in \Cref{sec:transforming-between-local-and-global-state}, rather
 than using |put|, some algorithms typically use a pair of commands |modify next|
 and |modify prev| to update and roll back the state, respectively.
-Here, |next| and |prev| represent the modifications to the state, with |next . prev = id|.
-This approach is especially recommended when the state is represented using
-an array or other data structure that is usually not overwritten in its entirety.
+Here, |next| and |prev| represent the modifications to the state, with |prev . next = id|.
 Following a style similar to |putR|, this can be modelled as follows:
 \begin{code}
 modifyR :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
 modifyR next prev = modify next `mplus` side (modify prev)
 \end{code}
 
-Unlike |putR|, |modifyR| does not keep any copies of the old state alive, as it does
-not introduce a branching point where the right branch refers to a variable
-introduced outside the branching point.
+Observe that, unlike |putR|, |modifyR| does not hold onto a copy of the old state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{N-queens with |modifyR|}
 
-We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
+Let us revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
 Recall that, for the puzzle, the operator that alters the state
 % (to check whether a chess placement is safe)
-, is defined by
+is defined by
 < (c, sol) `plus` r = (c+1, r:sol)
-Similarly, we can define |minus|:
+We can define its left inverse |minus|:
 < (c, sol) `minus` r = (c-1, tail sol)
-so that the equation |(`minus` x) . (`plus` x) = id| is satisfied, which is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.
+so that the equation |(`minus` x) . (`plus` x) = id| is satisfied.\footnote{This is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.}
 
 Thus, we can compute all the solutions to the puzzle, in a scenario with a
 shared global state as follows:
@@ -656,15 +655,16 @@ queensR n = put (0, []) >> loop
                         modifyR (`plus` r) (`minus` r)
                         loop
 \end{code}
-This function is similar to the original implementation, but has replaced the
-|put| operation by a |modifyR|.
-Note that there is no more |put| in the |loop|, so handling the function body
-with |hLocal| or |hGlobal| results in the same behaviour.
-Using |modifyR|, we do not keep any copies of the state alive.
-The |put (0, [])| in the initialization of |queensR| does not influence this
-behaviour as the final state is dropped.
+This function has replaced the |put| operation in the original implementation's
+|loop| by a call to |modifyR|. Still, it behaves the same as before under
+|modifyR| as under that semantics |modifyR next prev| behaves as |modify next|i
+because the |side| branch fails without side-effects. It also behaves the same
+under global state semantics (which is applied in |queensModify| below) where the |side| branch takes care of backtracking
+the state. The advantage of the latter is that it does not keep any copies of
+the state alive. 
+% The |put (0, [])| in the initialization of |queensR| does not
+% influence this behaviour as the final state is dropped.
 
-The function |queensModify| solves the n-queens problem using the function |queensR|.
 \begin{code}
 queensModify :: Int -> [[Int]]
 queensModify = hNil . flip hGlobal (0,[]) . queensR
