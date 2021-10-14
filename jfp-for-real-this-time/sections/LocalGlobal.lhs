@@ -85,7 +85,7 @@ We refer to these semantics as \emph{local-state semantics}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Interaction Laws}
 
-The following laws characterize the local state semantics for a monad |m|
+The following two laws characterize the local state semantics for a monad |m|
 with state and nondeterminism:
 \begin{alignat}{2}
     % &\mbox{\bf get-right-identity}:\quad &
@@ -98,21 +98,20 @@ with state and nondeterminism:
     |put s >> (m1 `mplus` m2)| &= |(put >> m1) `mplus` (put s >> m2)| ~~\mbox{.} \label{eq:put-left-dist}
 \end{alignat}
 
-From these two laws, we can derive the following equations:
+The equation (\ref{eq:put-right-identity}) expresses that |mzero| is the right
+identity of |put|; it annihilates state updates.  The other law expresses that
+|put| distributes from the left in |`mplus`|.
 
+These two laws focus on |put|, and one may wonder whether similar laws are needed
+for |get|. It turns out that in fact they are not needed because
+the two |get| properties can simplify be derived from the other laws: 
 \begin{alignat}{2}
     &\mbox{\bf get-right-identity}:\quad &
     |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
     &\mbox{\bf get-left-distributivity}:~ &
     |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}
 \end{alignat}
-
-The proof is shown in Appendix \ref{app:local-law}.
-
-The equation (\ref{eq:put-right-identity}) and (\ref{eq:get-right-identity}) express that |mzero| is the right identity of
-|get| and |put|; it annihilates the state effect.
-The other two equations express that |get| and |put| distribute
-from the left in |`mplus`|.
+Appendix \ref{app:local-law} provides their derivation.
 
 If we take these four equations together with the left-identity and right-distributivity 
 laws of nondeterminism, we can say that
@@ -239,7 +238,8 @@ For example, in any given implementation, the programs
 |return x `mplus` return y| and |return y `mplus` return x| can be considered
 either semantically identical or distinct.
 The same goes for the programs |return x `mplus` return x| and |return x|
-or other examples.
+or other examples. Also, there is no law that regulates |put s >> fail|, which
+means that it may be distinguished from |fail|.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Implementation}
