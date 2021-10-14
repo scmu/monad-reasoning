@@ -19,7 +19,29 @@ In this section we prove two equations relevant to the interaction of nondetermi
 <    (get >>= put) >> mzero
 < = {-~  Law (\ref{eq:get-put})  -}
 <    return () >> mzero
-< = {-~  definition of |return| and |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+<    mzero
+
+Another proof withous using law \ref{eq:put-right-identity}.
+
+<    get >> mzero
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+<    return () >> (get >> mzero)
+< = {-~  Law (\ref{eq:monad-assoc})  -}
+<    (return () >> get) >> mzero
+< = {-~  Law (\ref{eq:get-put})  -}
+<    ((get >>= put) >> get) >> mzero
+< = {-~  Law (\ref{eq:monad-assoc})  -}
+<    (get >>= (\ s -> put s >> get)) >> mzero
+< = {-~  Law (\ref{eq:put-get})  -}
+<    (get >>= (\ s -> put s >> return s)) >> mzero
+< = {-~  Law (\ref{eq:monad-assoc})  -}
+<    ((get >>= put) >> return s) >> mzero
+< = {-~  Law (\ref{eq:get-put})  -}
+<    (return () >> return s) >> mzero
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+<    return s >> mzero
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
 <    mzero
 \end{proof}
 
@@ -30,7 +52,7 @@ In this section we prove two equations relevant to the interaction of nondetermi
 \begin{proof}~
 
 <    get >>= (\x -> k1 x `mplus` k2 x)
-< = {-~  definition of |return|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
 <    return () >> (get >>= (\x -> k1 x `mplus` k2 x))
 < = {-~  Law (\ref{eq:monad-assoc})  -}
 <    (return () >> get) >>= (\x -> k1 x `mplus` k2 x)
@@ -46,11 +68,11 @@ In this section we prove two equations relevant to the interaction of nondetermi
 <    get >>= (\ s -> (put s >> return s) >>= (\x -> k1 x `mplus` k2 x))
 < = {-~  Law (\ref{eq:monad-assoc})  -}
 <    get >>= (\ s -> put s >> (return s >>= (\x -> k1 x `mplus` k2 x)))
-< = {-~  definition of |return| and |>>=|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}) and function application  -}
 <    get >>= (\ s -> put s >> (k1 s `mplus` k2 s))
 < = {-~  Law (\ref{eq:put-left-dist})  -}
 <    get >>= (\ s -> (put s >> k1 s) `mplus` (put s >> k2 s))
-< = {-~  definition of |return| and |>>=|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}) -}
 <    get >>= (\ s -> (put s >> (return s >>= k1)) `mplus` (put s >> (return s >>= k2)))
 < = {-~  Law (\ref{eq:monad-assoc})  -}
 <    get >>= (\ s -> ((put s >> return s) >>= k1) `mplus` ((put s >> return s) >>= k2))
@@ -64,6 +86,6 @@ In this section we prove two equations relevant to the interaction of nondetermi
 <    (get >>= put) >> ((get >>= k1) `mplus` (get >>= k2))
 < = {-~  Law (\ref{eq:get-put})  -}
 <    return () >> ((get >>= k1) `mplus` (get >>= k2))
-< = {-~  definition of |return| and |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
 <    (get >>= k1) `mplus` (get >>= k2)
 \end{proof}

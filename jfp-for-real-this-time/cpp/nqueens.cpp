@@ -246,7 +246,7 @@ void queensStackR(vector<vector<int> > &ans, int n) {
 // ------------------------------------------------------------------------------
 
 void test (void (*f)(int), string s, int n) {
-  int testnum = 1;
+  int testnum = 1; // run each function testnum times
   auto t1 = high_resolution_clock::now();
 
   for (int t = 1; t <= testnum; t ++) {
@@ -302,6 +302,13 @@ queensModify 50.485807
 queensState 55.084559
 queensStateR 53.382511
 queensStackR 49.512634
+
+queensLocal 14200 55.008757
+queensGlobal 14200 52.604383
+queensModify 14200 51.018232
+queensState 14200 55.289013
+queensStateR 14200 53.319381
+queensStackR 14200 48.923891
 */
 
 
