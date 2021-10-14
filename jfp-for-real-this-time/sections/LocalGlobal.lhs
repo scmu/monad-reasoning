@@ -104,7 +104,7 @@ From these two laws, we can derive the following equations:
     &\mbox{\bf get-right-identity}:\quad &
     |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
     &\mbox{\bf get-left-distributivity}:~ &
-    |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
+    |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}
 \end{alignat}
 
 The proof is shown in Appendix \ref{app:local-law}.
