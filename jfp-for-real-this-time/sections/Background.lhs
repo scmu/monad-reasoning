@@ -378,7 +378,7 @@ The function |safe| checks whether the placement of a queen is safe with
 respect to the list of queens that is already present (for which we need its
 distance from the queen in the list). We only have to check that the queens are
 in different diagonals.
-
+%format q1
 \begin{code}
 safe :: Int -> Int -> [Int] -> Bool
 safe _ _ [] = True
