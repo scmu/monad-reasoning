@@ -64,7 +64,8 @@ branches.
 
 The appearance of local state is obtained by the well-known backtracking
 technique, undoing changes to the state when going to the next branch.
-Therefore, local state is what Gibbons and Hinze call ``backtrackable state''.
+Therefore, local state is what Gibbons and Hinze call ``backtrackable state''
+\birthe{need citation?}.
 Backtracking is relatively efficient: remembering what to undo often requires
 less memory than creating multiple copies of the state, and undoing changes
 often takes less time than recomputing the state from scratch.
@@ -85,7 +86,7 @@ We refer to these semantics as \emph{local-state semantics}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Interaction Laws}
 
-The following two laws characterize the local state semantics for a monad |m|
+The following two laws characterize the local-state semantics for a monad |m|
 with state and nondeterminism:
 \begin{alignat}{2}
     % &\mbox{\bf get-right-identity}:\quad &
@@ -100,11 +101,11 @@ with state and nondeterminism:
 
 The equation (\ref{eq:put-right-identity}) expresses that |mzero| is the right
 identity of |put|; it annihilates state updates.  The other law expresses that
-|put| distributes from the left in |`mplus`|.
+|put| distributes from the left in |mplus|.
 
 These two laws focus on |put|, and one may wonder whether similar laws are needed
-for |get|. It turns out that in fact they are not needed because
-the two |get| properties can simplify be derived from the other laws: 
+for |get|. It turns out that in fact they are not needed as
+the two |get| properties can be derived from the other laws:
 \begin{alignat}{2}
     &\mbox{\bf get-right-identity}:\quad &
     |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
@@ -113,9 +114,9 @@ the two |get| properties can simplify be derived from the other laws:
 \end{alignat}
 Appendix \ref{app:local-law} provides their derivation.
 
-If we take these four equations together with the left-identity and right-distributivity 
+If we take these four equations together with the left-identity and right-distributivity
 laws of nondeterminism, we can say that
-that nondeterminism and state ``commute''; 
+that nondeterminism and state ``commute'';
 if a |get| or |put| precedes a |mzero| or |`mplus`|, we
 can change their order (and vice versa).
 
@@ -139,7 +140,7 @@ can change their order (and vice versa).
 % This is a typical property of local state: Effects are distributed into branches
 % and
 % annihilated by failure.
-% 
+%
 % %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 % \paragraph{Commutativity}
 % Having (\ref{eq:right-identity}) and (\ref{eq:left-dist}) leads to profound
@@ -159,7 +160,7 @@ can change their order (and vice versa).
 % but that is not the focus of this paper.}.
 % In fact, having (\ref{eq:right-identity}) and (\ref{eq:left-dist}) gives us very
 % strong and useful commutative properties.
-% 
+%
 % \begin{definition}[Commutativity]
 % Let |m| and |n| be two monadic programs such that |x| does not occur free in |m|,
 % and |y| does not occur free in |n|. We say |m| and |n| commute if
@@ -170,16 +171,16 @@ can change their order (and vice versa).
 % We say that effects |eps| and |delta| commute if any |m| and |n| commute
 % as long as their only effects are |eps| and |delta|.
 % \end{definition}
-% 
+%
 % One important result is that, in local-state semantics, nondeterminism commutes
 % with any effect.
-% 
+%
 % \begin{theorem} \label{thm:nondet-comm}
 % If right-identity (\ref{eq:right-identity})
 % and left-distributivity (\ref{eq:left-dist}) hold in addition to the other laws,
 % nondeterminism commutes with any effect.
 % \end{theorem}
-% 
+%
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{Implementation}
 Implementation-wise, the laws
@@ -214,8 +215,8 @@ The global-state law sets apart
 non-backtrackable state from backtrackable state.
 
 In addition to the general laws for nondeterminism
-((\ref{eq:mzero}) to (\ref{eq:mzero-zero})) and state
-((\ref{eq:put-put}) to (\ref{eq:get-get})), we provide a \emph{global-state law}
+((\ref{eq:mzero}) -- (\ref{eq:mzero-zero})) and state
+((\ref{eq:put-put}) -- (\ref{eq:get-get})), we provide a \emph{global-state law}
 to govern the interaction between nondeterminism and state.
 \begin{alignat}{2}
     &\mbox{\bf put-or}:\quad &
@@ -232,17 +233,19 @@ whereas under global-state semantics
 (laws (\ref{eq:mzero}) and (\ref{eq:put-or}))
 the equation simplifies to |put s >> n|.
 
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph{Implementation}
+
 This law leaves us free to choose from a large space of
 implementations with different properties.
 For example, in any given implementation, the programs
 |return x `mplus` return y| and |return y `mplus` return x| can be considered
 either semantically identical or distinct.
 The same goes for the programs |return x `mplus` return x| and |return x|
-or other examples. Also, there is no law that regulates |put s >> fail|, which
-means that it may be distinguished from |fail|.
+or other examples. Also, there is no law that regulates |put s >> mzero|, which
+means that it may be distinguished from |mzero|.
 
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Implementation}
+
 Figuring out a correct implementation for the global-state monad is tricky.
 One might believe that |Global s m a = s -> (m a, s)|
 is a natural implementation of such a monad.
@@ -253,8 +256,8 @@ The type |ListT (State s)| from the Monad Transformer Library \cite{mtl}
 expands to essentially the same implementation with
 monad |m| instantiated by the list monad.
 This implementation has the same flaws.
-More careful implementations of |ListT|\footnote{Often referred to as |ListT| done right.}, that do satisfy right-distributivity
-(\ref{eq:mplus-dist}) and the monad laws have been proposed by \cite{Volkov14, Gale}.
+More careful implementations of |ListT|\footnote{Often referred to as |ListT| done right.} that do satisfy right-distributivity
+(\ref{eq:mplus-dist}) and the monad laws have been proposed by \citet{Volkov14} and \citet{Gale}.
 Effect handlers \cite{Kiselyov15, Wu14} produce implementations that match our intuition of
 non-backtrackable computations if we run the handler for nondeterminism before
 that for state.
@@ -285,17 +288,24 @@ instance Monad (Global s) where
 \end{code}
 %endif
 
+\begin{minipage}{0.5\textwidth}
 \begin{code}
 instance MNondet (Global s) where
     mzero        = Gl (\s ->  (Nothing, s))
     p `mplus` q  = Gl (\s ->  case runGl p s of
         (Nothing,      t)   ->   runGl q t
         (Just (x, r),  t)   ->   (Just (x, r `mplus` q), t))
-
+\end{code}
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
+\begin{code}
 instance MState s (Global s) where
     get    =  Gl  (\s  ->  (Just (s,   mzero),   s))
     put s  =  Gl  (\ _  ->  (Just ((),  mzero),   s))
+
+
 \end{code}
+\end{minipage}
 
 Failure, of course, returns an empty continuation and an unmodified state.
 Branching first exhausts the left branch before switching to the right branch.
@@ -309,7 +319,7 @@ Also, both interpretations of nondeterminism with state have their own
 (dis)advantages.
 
 Local-state semantics imply that each nondeterministic branch has its own state.
-This may be costly if the state is represented by data structures, e.g. arrays,
+This may be expensive if the state is represented by data structures, e.g. arrays,
 that are costly to duplicate.
 For example, when each new state is only slightly different from the previous,
 we have a wasteful duplication of information.
@@ -342,10 +352,10 @@ in which they
     \item roll back the state to the previous step (regardless of whether
     a solution was found).
 \end{enumerate}
-A monadic program that implements this pattern, looks like
+A monadic program that implements this pattern has the following structure.
 < modify next >> search >>= modReturn prev
 Here, |next| advances the state and |prev| undoes the modification so that
-|prev . next = id| (and sometimes, but not usually, also |next . prev = id|).
+|prev . next = id|\footnote{Sometimes, but not usually, also |next . prev = id|}.
 The functions |modify| and |modReturn| are defined as follows:
 \begin{code}
 modify     f    = get >>= put . f
@@ -466,9 +476,7 @@ An example of such a problematic context is |(>> put t)|, where the get-put law
 (\ref{eq:get-put}) breaks and programs |get >> putR| and |return ()| can be
 differentiated:
 
-<    return () >> put t
-< =  put t
-<
+\begin{minipage}{0.7\textwidth}
 <    (get >> putR) >> put t
 < = {-~  definition of |putR|  -}
 <    (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
@@ -480,10 +488,15 @@ differentiated:
 <    (get >>= \s -> (put s >> put t) `mplus` side (put s))
 < = {-~  put-put (\ref{eq:put-put})  -}
 <    (get >>= \s -> put t `mplus` side (put s))
+\end{minipage}%
+\begin{minipage}{0.3\textwidth}
+<    return () >> put t
+< =  put t
+\end{minipage}
 
 Those two programs do not behave in the same way when |s /= t|.
 
-Hence, only provided that all occurences of |put| in a program are replaced by |putR|
+Hence, only provided that \textbf{all} occurences of |put| in a program are replaced by |putR|
 can we simulate local-state semantics.
 
 %-------------------------------------------------------------------------------
@@ -571,7 +584,7 @@ A correct translation then transforms local state to global state.
 \begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal
 \end{theorem}
-Thanks to the use of algebraic effects and handlers, we can 
+Thanks to the use of algebraic effects and handlers, we can
 use straightforward equational reasoning to prove this equality.
 In particular, we use fold fusion on both the left-hand side
 and the right-hand side, turning each into a single fold.
@@ -583,7 +596,7 @@ The full proof of this simulation is included in Appendix \ref{app:local-global}
 % \subsection{The N-Queens Puzzle with Local or Global State}
 % \label{sec:n-queens-global}
 % \wenhao{paragraph or subsubsection?}
-% 
+%
 % Recall the backtracking algorithm |queens| for the n-queens example in
 % Section~\ref{sec:motivation-and-challenges}.
 % It runs in the local-state semantics because every branch maintains its own copy
@@ -594,7 +607,7 @@ The full proof of this simulation is included in Appendix \ref{app:local-global}
 % queensLocal = hNil . flip hLocal (0, []) . queens
 % \end{code}
 % % For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
-% 
+%
 % Using the simulation function |local2global|, we can also have a function |queensGlobal|
 % which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
 % \begin{code}
@@ -609,7 +622,7 @@ The full proof of this simulation is included in Appendix \ref{app:local-global}
 
 % backtracking in local state
 
-We have just established how to simulate local state with global state 
+We have just established how to simulate local state with global state
 by replacing |put| by |putR|.
 The |putR| operation makes the implicit copying of the local-state
 semantics explicit in the global-state semantics.
@@ -642,7 +655,7 @@ We can define its left inverse |minus|:
 < (c, sol) `minus` r = (c-1, tail sol)
 so that the equation |(`minus` x) . (`plus` x) = id| is satisfied.\footnote{This is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.}
 
-Thus, we can compute all the solutions to the puzzle, in a scenario with a
+Thus, we can compute all the solutions to the puzzle in a scenario with a
 shared global state as follows:
 \begin{code}
 queensR :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
@@ -656,14 +669,17 @@ queensR n = put (0, []) >> loop
                         loop
 \end{code}
 This function has replaced the |put| operation in the original implementation's
-|loop| by a call to |modifyR|. Still, it behaves the same as before under
-|modifyR| as under that semantics |modifyR next prev| behaves as |modify next|i
+|loop| by a call to |modifyR|.
+\birthe{Still, it behaves the same as before under
+|modifyR| as under that semantics ???}
+Furthermore, |modifyR next prev| behaves as |modify next|
 because the |side| branch fails without side-effects. It also behaves the same
-under global state semantics (which is applied in |queensModify| below) where the |side| branch takes care of backtracking
+under global-state semantics where the |side| branch takes care of backtracking
 the state. The advantage of the latter is that it does not keep any copies of
-the state alive. 
+the state alive.
 % The |put (0, [])| in the initialization of |queensR| does not
 % influence this behaviour as the final state is dropped.
+The function |queensModify| implements global state with undo semantics.
 
 \begin{code}
 queensModify :: Int -> [[Int]]
