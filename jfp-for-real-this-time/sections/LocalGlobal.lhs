@@ -592,6 +592,12 @@ Then, we can prove the equality of those two folds through
 the universality property of folds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
 
+Observe that, because the local-state semantics discards the 
+side-effects of |m| in |side m|, we also have that 
+\begin{equation*}
+|hLocal . local2global = hLocal|
+\end{equation*}
+
 % %-------------------------------------------------------------------------------
 % \subsection{The N-Queens Puzzle with Local or Global State}
 % \label{sec:n-queens-global}
@@ -659,7 +665,7 @@ Thus, we can compute all the solutions to the puzzle in a scenario with a
 shared global state as follows:
 \begin{code}
 queensR :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
-queensR n = put (0, []) >> loop
+queensR n = loop
   where
     loop = do  s@(c, sol) <- get
                if c >= n then return sol
@@ -669,13 +675,20 @@ queensR n = put (0, []) >> loop
                         loop
 \end{code}
 This function has replaced the |put| operation in the original implementation's
-|loop| by a call to |modifyR|.
-\birthe{Still, it behaves the same as before under
-|modifyR| as under that semantics ???}
-Furthermore, |modifyR next prev| behaves as |modify next|
-because the |side| branch fails without side-effects. It also behaves the same
+|loop| by a call to |modifyR (`plus` r) (`minus` r)|. 
+Taking into account that the local-state semantics
+discards the side-effects in the |side| branch, it is not difficult
+to see that 
+\begin{equation*}
+hLocal . queensR = hLocal . queens
+\end{equation*}
+Moreover, following Theorem~\ref{}, we can conclude that |queensR| also behaves the same
 under global-state semantics where the |side| branch takes care of backtracking
-the state. The advantage of the latter is that it does not keep any copies of
+the state. 
+\begin{equation*}
+hGlobal . queensR = hLocal . queens
+\end{equation*}
+The advantage of the latter is that it does not keep any copies of
 the state alive.
 % The |put (0, [])| in the initialization of |queensR| does not
 % influence this behaviour as the final state is dropped.
