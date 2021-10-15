@@ -24,22 +24,22 @@ import QueensMT (queensMT)
 funlist =
   [ 
   -- , (queensNaive, "queensNaive")
-    -- (queensMT, "queensMT")        
+    (queensMT, "queensMT")        
   -- , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
   -- , (queensGlobal, "queensGlobal")      -- local2global
   -- , (queensModify, "queensModify")      -- queensR
   -- , (queensState, "queensState")        -- local2global & nondet2state
-   (queensStateR, "queensStateR")      -- queensR & nondet2state
+  --  (queensStateR, "queensStateR")      -- queensR & nondet2state
   -- , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
-  , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
+  -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
   -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
   -- , (queensStack, "queensStack")        -- local2global & nondet2stack
-  , (queensStackR, "queensStackR")      -- queensR & nondet2stack -- using stack2 now
+  -- , (queensStackR, "queensStackR")      -- queensR & nondet2stack -- using stack2 now
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
   -- , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
-  -- , (Fl.queensLocal, "F.queensLocal")
-  -- , (Fg.queensModify, "F.queensModify")
+  , (Fl.queensLocal, "F.queensLocal")
+  , (Fg.queensModify, "F.queensModify")
   , (Fg.queensStateR, "F.queensStateR")
   , (Fg.queensStackR, "F.queensStackR")
   ]
@@ -77,7 +77,7 @@ testall n ((f,name):xs) = do
   return ((name, diffUTCTime end start / num):ts)
 
 main = do
-  ts <- testall 10 funlist
+  ts <- testall 11 funlist
   putStrLn ""
   printList ts
 
@@ -98,6 +98,28 @@ printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 -- F.queensModify  0.14407s
 -- F.queensStateR  0.1357452s
 -- F.queensStackR  0.188084s
+
+
+-- n = 10
+-- queensMT        0.0588188s
+-- F.queensLocal   0.0589982s
+-- F.queensModify  0.1444444s
+-- F.queensStateR  0.13299s
+-- F.queensStackR  0.207929s
+
+-- n = 11
+-- queensMT        0.38883s
+-- F.queensLocal   0.3763862s
+-- F.queensModify  0.7751438s
+-- F.queensStateR  0.7801738s
+-- F.queensStackR  1.2131182s
+
+-- n = 12
+-- queensMT        2.1754152s
+-- F.queensLocal   2.1582584s
+-- F.queensModify  4.6744528s
+-- F.queensStateR  8.632547s
+-- F.queensStackR  11.2373052s
 
 ------------------------------------------------------------------------------
 -- OLD:
