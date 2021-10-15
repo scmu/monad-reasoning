@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2e53832b7003c526f9f671015f66a4fa61d74c5c049646fc107f3d72ada25d98
+-- hash: aacbadb3e61dc2cca7e49c34a7a1c1eff9840243f444659feaadf727869a06aa
 
 name:           mytest
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 library
   exposed-modules:
       Background
+      BenchmarkTable
       Combination
       FusionGlobal
       FusionLocal

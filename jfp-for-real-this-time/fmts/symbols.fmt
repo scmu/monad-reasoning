@@ -153,6 +153,7 @@
 %format queensR = "\Varid{queens_{R}}"
 %format queensStack = "\Varid{queens_{Stack}}"
 %format queensStackR = "\Varid{queens_{Stack,R}}"
+%format queensMT = "\Varid{queens_{MT}}"
 %format bodyR = "\Varid{body_{R}}"
 
 %format getOp = "\Varid{get}_{Op}"
