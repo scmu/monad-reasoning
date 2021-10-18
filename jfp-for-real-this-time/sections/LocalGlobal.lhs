@@ -69,6 +69,7 @@ Therefore, local state is what Gibbons and Hinze call ``backtrackable state''
 Backtracking is relatively efficient: remembering what to undo often requires
 less memory than creating multiple copies of the state, and undoing changes
 often takes less time than recomputing the state from scratch.
+\wenhao{I think the implementation of local state we give in 4.1 doesn't use the backtracking technique.}
 Global state is sometimes called non-backtrackable state.
 Let's first focus on local-state and global-state semantics in order to
 define a formal translation between the two.
@@ -256,7 +257,7 @@ The type |ListT (State s)| from the Monad Transformer Library \cite{mtl}
 expands to essentially the same implementation with
 monad |m| instantiated by the list monad.
 This implementation has the same flaws.
-More careful implementations of |ListT|\footnote{Often referred to as |ListT| done right.} that do satisfy right-distributivity
+More careful implementations of |ListT|\footnote{Often referred to as ``|ListT| done right''.} that do satisfy right-distributivity
 (\ref{eq:mplus-dist}) and the monad laws have been proposed by \citet{Volkov14} and \citet{Gale}.
 Effect handlers \cite{Kiselyov15, Wu14} produce implementations that match our intuition of
 non-backtrackable computations if we run the handler for nondeterminism before
@@ -679,15 +680,15 @@ This function has replaced the |put| operation in the original implementation's
 Taking into account that the local-state semantics
 discards the side-effects in the |side| branch, it is not difficult
 to see that 
-\begin{equation*}
-hLocal . queensR = hLocal . queens
-\end{equation*}
+% \begin{equation*}
+< hLocal . queensR = hLocal . queens
+% \end{equation*}
 Moreover, following Theorem~\ref{}, we can conclude that |queensR| also behaves the same
 under global-state semantics where the |side| branch takes care of backtracking
 the state. 
-\begin{equation*}
-hGlobal . queensR = hLocal . queens
-\end{equation*}
+% \begin{equation*}
+< hGlobal . queensR = hLocal . queens
+% \end{equation*}
 The advantage of the latter is that it does not keep any copies of
 the state alive.
 % The |put (0, [])| in the initialization of |queensR| does not
