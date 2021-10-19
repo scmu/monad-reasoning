@@ -104,10 +104,11 @@ can be found in Appendix \ref{app:universality-nondeterminism}.
 This section shows how to use a state-based implementation to simulate nondeterminism.
 
 For this, we use a type of state |S a| that is a essentially a tuple of
-(1) the current solution(s) |[a]| (i.e., the |results|), and
-(2) the branches with computations to be evaluated, which we will call the
+(1) the |results| found so far |[a]|, and
+(2) a stack the branches with computations yet to be explored, which we will call the
 residual computations or the |residue|.
-The branches in the residue are represented by the free state monad.
+The branches in the residue are represented by computations in the monad over the
+state signature.
 \begin{code}
 type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], residue :: [Comp (S a) ()]}
@@ -116,7 +117,7 @@ To simulate a nondeterministic computation |Free NondetF a| with this state wrap
 we define a helper functions in Figure \ref{fig:pop-push-append}.
 The function |popS| takes the upper element of the residue.
 The function |pushS| adds a branch to the residue.
-The function |appendS| adds a solution to the given solutions.
+The function |appendS| adds a result o the given results.
 
 \noindent
 \begin{figure}[t]
@@ -155,7 +156,7 @@ appendS x p = do
  S xs res <- getS
  putS (S (xs ++ [x]) res); p
 \end{code}
-\caption{Appending a solution.}
+\caption{Appending a result.}
 \label{fig:append}
 \end{subfigure}%
 \caption{Helper functions |popS|, |pushS| and |appendS|.}
@@ -188,15 +189,18 @@ nondet2stateS = fold gen alg
     alg Fail      = popS
     alg (Or p q)  = pushS q p
 \end{code}
+The generator of this handler records a new result and then pops the next
+branch from the residue stack and proceeds with it. Likewise, failure
+simply pops and proceeds with the next branch. Lastly, a choice pushes
+the second branch on the stack and proceeds with the first branch.
+
 To extract the final result from the |S| wrapper, we define the |extractS| function.
 \begin{code}
 extractS :: State (S a) () -> [a]
 extractS x = results . snd $ runState x (S [] [])
 \end{code}
-This way, |runND| is a trivial extension of
-the simulate function. It transforms
-every nondeterministic computation to a result that is encapsulated in a
-nondeterminism monad.
+At last, |runND| wraps everything up to handle a nondeterministic
+computation to a list of results.
 \begin{code}
 runND :: Free NondetF a -> [a]
 runND = extractS . hState' . nondet2stateS
@@ -209,15 +213,14 @@ To prove this simulation correct, we show that the
 |runND = hND|
 \end{theorem}
 
-We start with expanding the definition of |runND|:
-< extractS . hState' . nondet2stateS = hND
-Both |nondet2stateS| and |hND| are written as a fold.
-We can use the universal property of fold to show that the two sides of the equation
+For the proof it is convenient to expand the definition of |runND| again,
+and to add parentheses for grouping:
+< (extractS . hState') . nondet2stateS = hND
+As both |nondet2stateS| and |hND| are folds, 
+we can use the fold fusion law for postcomposition as defined in
+Equation \ref{eq:fusion-post} to show that the two sides of the equation
 are equal.
-For this, we use the fold fusion law for postcomposition as defined in
-Equation \ref{eq:fusion-post}.
-
-We have to prove the following two equations.
+Hence, we have to prove the following two equations.
 \begin{enumerate}
     % \item |extractS . gen = genND|
     % \item |extractS . alg = algND . fmap extractS|
@@ -230,22 +233,19 @@ The full proof of this theorem is added in Appendix \ref{app:runnd-hnd}.
 \subsection{Combining the Simulation with Other Effects}
 \label{sec:combining-the-simulation-with-other-effects}
 
-We can generalize this simulation to work with arbitrary other effects.
+We can generalize the above simulation to work in combination with other effects.
 Adding this \emph{modularity} has an impact on several definitions, as well as on
 the implementation and proof.
 
-Again, we define a type |SS| that encapsulates a form of state.
-The results are, as before, encapsulated in a list, and
-the residual computations can possibly contain
-other effects, captured by the effect functor |f|.
+Firstly, we augment the signature in the computation type
+with an additional component |f| for the additional effects.
 \begin{code}
 type CompSS s f a = Free (StateF s :+: f) a
 data SS f a = SS { resultsSS :: [a], residueSS :: [CompSS (SS f a) f ()] }
 \end{code}
 
-We can define a simulation function |nondet2state| that handles the state effect
-in a similar way as |nondet2stateS|.
-The other effects are left for other handlers, using a forwarding algebra |fwd|.
+As a consequence, the |nondet2state| handler requires a forwarding
+algebra |fwd| to deal with |f|.
 
 \begin{code}
 nondet2state  :: Functor f => Free (NondetF :+: f) a -> CompSS (SS f a) f ()
@@ -324,26 +324,20 @@ appendSS x p = do
 \label{fig:pop-push-append-SS}
 \end{figure}
 
-To extract the final result from the |SS| wrapper, we define an |extractSS|
-function.
-Compared to |extractS|, this function deals with the state transformer |StateT|
-instead of |State|.
+Finally, |runNDf| puts everything together:
+it transforms the non-determinism effect into the state effect and forwards
+|f|. Then it uses the, now modular, state handler to interpret the
+state effect. Lastly, it extracts the results from the state.
 \begin{code}
+runNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+runNDf = extractSS . hState . nondet2state
+
 extractSS :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
 extractSS x = resultsSS . snd <$> runStateT x (SS [] [])
 \end{code}
 
-Finally, |runNDf| is again a trivial extension of the simulation.
-It transforms every monad with nondeterminism and other effects |f| into
-a free monad where the result is wrapped in the nondeterminisc list monad.
-Other effects |f| are to be dealt with by their appropriate handlers.
-\begin{code}
-runNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-runNDf = extractSS . hState . nondet2state
-\end{code}
-
-To prove this approach correct, we show that this |runNDf| function
-is equivalent to the nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
+We can again show that this modular |runNDf| function is equivalent to the
+modular nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
 % For that, we compare with the version of the nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
 % \begin{code}
 % hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
@@ -358,61 +352,54 @@ is equivalent to the nondeterminism handler |hNDf| defined in \ref{sec:combining
 \begin{theorem}\label{thm:nondet-state}
 |runNDf = hNDf|
 \end{theorem}
-As before, we first expand the definition of |runNDf|,
-which is written in terms of |nondet2state|, a fold.
-We use fold fusion to incorporate |extractSS . hState| in this fold.
-The universal property of fold then teaches us that |runNDf| and
-|hNDf| are equal.
-More concretely, we have to prove the following two things:
-\begin{enumerate}
-    % \item |extractSS . gen = genNDf|
-    % \item |extractSS . (alg # fwd) = (algNDf # fwdNDf) . fmap extractSS|
-    \item |(extractSS . hState) . gen = genNDf|
-    \item |(extractSS . hState) . (alg # fwd) = (algNDf # fwdNDf) . fmap (extractSS . hState)|
-\end{enumerate}
-Due to the modularity, we need to include a different case for the forwarding algebra.
-The full proof of this theorem, using equational reasoning techniques,
+The proof proceeds essentially in the same way as in the non-modular setting.
+The main difference, due to the modularity, is an additional proof case for the forwarding
+algebra.
+\begin{equation*}
+|(extractSS . hState) . fwd = fwdNDf . fmap (extractSS . hState)|
+\end{equation*}
+The full proof 
 is included in \Cref{app:in-combination-with-other-effects}.
 
-%-------------------------------------------------------------------------------
-\subsection{Using State to Simulate Nondeterminism in N-queens}
-
-We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
-We can apply the simulation function |nondet2state| to the n-queens problem
-after the simulation |local2global|.
-We start with the definition of |queensGlobal| and reason as follows:
-< {-~ definition of |queensGlobal| -}
-< hNil . flip hGlobal (0, []) . local2global . queens
-< {-~ definition of |hGlobal| -}
-< hNil
-<    . flip (fmap (fmap fst) . runStateT . hState . hNDf . comm2) (0, [])
-<    . local2global . queens
-< {-~ reorder -}
-< hNil
-<    . fmap fst . flip runStateT (0, []) . hState . hNDf . comm2
-<    . local2global . queens
-< {-~ simulation function for |hNDf| -}
-< hNil
-<    . fmap fst . flip runStateT (0, []) . hState
-<    . (extractSS . hState . nondet2state) . comm2
-<    . local2global . queens
-
-Thus, the function |queensState| uses the two simulation functions in sequence.
-\begin{code}
-queensState   :: Int -> [[Int]]
-queensState   = hNil
-              . fmap fst . flip runStateT (0, []) . hState
-              . (extractSS . hState . nondet2state) . comm2
-              . local2global . queens
-\end{code}
-Similarly, we can develop a version of |queensStateR| based on |queensModify|,
-which uses the undo semantics.
-\begin{code}
-queensStateR  :: Int -> [[Int]]
-queensStateR  = hNil
-              . fmap fst . flip runStateT (0, []) . hState
-              . (extractSS . hState . nondet2state) . comm2
-              . queensR
-\end{code}
-\birthe{Don't know what this sentence says.}
-It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
+% %-------------------------------------------------------------------------------
+% \subsection{Using State to Simulate Nondeterminism in N-queens}
+% 
+% We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
+% We can apply the simulation function |nondet2state| to the n-queens problem
+% after the simulation |local2global|.
+% We start with the definition of |queensGlobal| and reason as follows:
+% < {-~ definition of |queensGlobal| -}
+% < hNil . flip hGlobal (0, []) . local2global . queens
+% < {-~ definition of |hGlobal| -}
+% < hNil
+% <    . flip (fmap (fmap fst) . runStateT . hState . hNDf . comm2) (0, [])
+% <    . local2global . queens
+% < {-~ reorder -}
+% < hNil
+% <    . fmap fst . flip runStateT (0, []) . hState . hNDf . comm2
+% <    . local2global . queens
+% < {-~ simulation function for |hNDf| -}
+% < hNil
+% <    . fmap fst . flip runStateT (0, []) . hState
+% <    . (extractSS . hState . nondet2state) . comm2
+% <    . local2global . queens
+% 
+% Thus, the function |queensState| uses the two simulation functions in sequence.
+% \begin{code}
+% queensState   :: Int -> [[Int]]
+% queensState   = hNil
+%               . fmap fst . flip runStateT (0, []) . hState
+%               . (extractSS . hState . nondet2state) . comm2
+%               . local2global . queens
+% \end{code}
+% Similarly, we can develop a version of |queensStateR| based on |queensModify|,
+% which uses the undo semantics.
+% \begin{code}
+% queensStateR  :: Int -> [[Int]]
+% queensStateR  = hNil
+%               . fmap fst . flip runStateT (0, []) . hState
+%               . (extractSS . hState . nondet2state) . comm2
+%               . queensR
+% \end{code}
+% \birthe{Don't know what this sentence says.}
+% It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
