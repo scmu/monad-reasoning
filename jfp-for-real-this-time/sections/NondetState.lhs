@@ -25,13 +25,18 @@ import LocalGlobal
 \end{code}
 %endif
 
-Two of the most well-known and well-investigated side-effects are nondeterminism
-and state.
-Typically, nondeterminism is modelled using the |List| monad.
-However, many efficient nondeterministic systems, such as Prolog,
-use a lower-level state-based implementation to simulate this effect.
-This section shows how this simulation works, and proves it correct using
-equational reasoning techniques and initiality of the |List| monad.
+In the previous section, we have mapped the local-state semantics, which is a
+high-level combination of state and nondeterminism, onto the global-state
+semantics, which is a more low-level combination of state and nondeterminism.
+This section takes on the resulting nondeterminism component, which is itself a
+relatively high-level effect that can be mapped onto a more low-level
+implementation in terms of state. Indeed, while nondeterminism typically
+modelled using the |List| monad, many efficient nondeterministic systems, such
+as Prolog, use a lower-level state-based implementation to simulate this
+effect.
+
+This section shows how the simulation works, and proves it correct using
+equational reasoning techniques.
 
 %-------------------------------------------------------------------------------
 \subsection{Interpreting Nondeterministic Programs with List}
@@ -98,8 +103,8 @@ can be found in Appendix \ref{app:universality-nondeterminism}.
 
 This section shows how to use a state-based implementation to simulate nondeterminism.
 
-For this, we use a type |S| that is a essentially a tuple of
-(1) the current solution(s) |[a]| wrapped in the list monad (|results|), and
+For this, we use a type of state |S a| that is a essentially a tuple of
+(1) the current solution(s) |[a]| (i.e., the |results|), and
 (2) the branches with computations to be evaluated, which we will call the
 residual computations or the |residue|.
 The branches in the residue are represented by the free state monad.
