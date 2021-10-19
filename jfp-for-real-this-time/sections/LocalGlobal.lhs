@@ -592,9 +592,9 @@ and the right-hand side, turning each into a single fold.
 Then, we can prove the equality of those two folds through
 the universality property of folds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
-
-Observe that, because the local-state semantics discards the 
-side-effects of |m| in |side m|, we also have that 
+%
+Observe that, because the local-state semantics discards the
+side-effects of |m| in |side m|, we also have the following:
 \begin{equation*}
 |hLocal . local2global = hLocal|
 \end{equation*}
@@ -676,16 +676,16 @@ queensR n = loop
                         loop
 \end{code}
 This function has replaced the |put| operation in the original implementation's
-|loop| by a call to |modifyR (`plus` r) (`minus` r)|. 
+|loop| by a call to |modifyR (`plus` r) (`minus` r)|.
 Taking into account that the local-state semantics
 discards the side-effects in the |side| branch, it is not difficult
-to see that 
+to see that
 % \begin{equation*}
 < hLocal . queensR = hLocal . queens
 % \end{equation*}
-Moreover, following Theorem~\ref{}, we can conclude that |queensR| also behaves the same
+Moreover, following Theorem~\ref{thm:local-global}, we can conclude that |queensR| also behaves the same
 under global-state semantics where the |side| branch takes care of backtracking
-the state. 
+the state.
 % \begin{equation*}
 < hGlobal . queensR = hLocal . queens
 % \end{equation*}
