@@ -686,11 +686,13 @@ to see that
 Moreover, following Theorem~\ref{thm:local-global}, we can conclude that |queensR| also behaves the same
 under global-state semantics where the |side| branch takes care of backtracking
 the state.
+\wenhao{Is a new theorem needed?}
 % \begin{equation*}
 < hGlobal . queensR = hLocal . queens
 % \end{equation*}
 The advantage of the latter is that it does not keep any copies of
 the state alive.
+\wenhao{I don't know what does ``the latter'' refer to here.}
 % The |put (0, [])| in the initialization of |queensR| does not
 % influence this behaviour as the final state is dropped.
 The function |queensModify| implements global state with undo semantics.
