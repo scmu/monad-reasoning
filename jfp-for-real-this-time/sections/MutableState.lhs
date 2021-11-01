@@ -325,6 +325,8 @@ queensStackR  = hNil
               . queensR
 \end{code}
 
+%include TrailStack.lhs
+
 % The function |queensStackBFS| runs the |queens| by applyin the handlers of stack and nondeterminism sequentially.
 % \begin{code}
 % queensStackBFS :: Int -> [[Int]]

@@ -361,45 +361,47 @@ algebra.
 The full proof 
 is included in \Cref{app:in-combination-with-other-effects}.
 
-% %-------------------------------------------------------------------------------
-% \subsection{Using State to Simulate Nondeterminism in N-queens}
-% 
-% We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
-% We can apply the simulation function |nondet2state| to the n-queens problem
-% after the simulation |local2global|.
-% We start with the definition of |queensGlobal| and reason as follows:
-% < {-~ definition of |queensGlobal| -}
-% < hNil . flip hGlobal (0, []) . local2global . queens
-% < {-~ definition of |hGlobal| -}
-% < hNil
-% <    . flip (fmap (fmap fst) . runStateT . hState . hNDf . comm2) (0, [])
-% <    . local2global . queens
-% < {-~ reorder -}
-% < hNil
-% <    . fmap fst . flip runStateT (0, []) . hState . hNDf . comm2
-% <    . local2global . queens
-% < {-~ simulation function for |hNDf| -}
-% < hNil
-% <    . fmap fst . flip runStateT (0, []) . hState
-% <    . (extractSS . hState . nondet2state) . comm2
-% <    . local2global . queens
-% 
-% Thus, the function |queensState| uses the two simulation functions in sequence.
-% \begin{code}
-% queensState   :: Int -> [[Int]]
-% queensState   = hNil
-%               . fmap fst . flip runStateT (0, []) . hState
-%               . (extractSS . hState . nondet2state) . comm2
-%               . local2global . queens
-% \end{code}
-% Similarly, we can develop a version of |queensStateR| based on |queensModify|,
-% which uses the undo semantics.
-% \begin{code}
-% queensStateR  :: Int -> [[Int]]
-% queensStateR  = hNil
-%               . fmap fst . flip runStateT (0, []) . hState
-%               . (extractSS . hState . nondet2state) . comm2
-%               . queensR
-% \end{code}
-% \birthe{Don't know what this sentence says.}
-% It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
+%-------------------------------------------------------------------------------
+%if False
+\subsection{Using State to Simulate Nondeterminism in N-queens}
+
+We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
+We can apply the simulation function |nondet2state| to the n-queens problem
+after the simulation |local2global|.
+We start with the definition of |queensGlobal| and reason as follows:
+< {-~ definition of |queensGlobal| -}
+< hNil . flip hGlobal (0, []) . local2global . queens
+< {-~ definition of |hGlobal| -}
+< hNil
+<    . flip (fmap (fmap fst) . runStateT . hState . hNDf . comm2) (0, [])
+<    . local2global . queens
+< {-~ reorder -}
+< hNil
+<    . fmap fst . flip runStateT (0, []) . hState . hNDf . comm2
+<    . local2global . queens
+< {-~ simulation function for |hNDf| -}
+< hNil
+<    . fmap fst . flip runStateT (0, []) . hState
+<    . (extractSS . hState . nondet2state) . comm2
+<    . local2global . queens
+
+Thus, the function |queensState| uses the two simulation functions in sequence.
+\begin{code}
+queensState   :: Int -> [[Int]]
+queensState   = hNil
+              . fmap fst . flip runStateT (0, []) . hState
+              . (extractSS . hState . nondet2state) . comm2
+              . local2global . queens
+\end{code}
+Similarly, we can develop a version of |queensStateR| based on |queensModify|,
+which uses the undo semantics.
+\begin{code}
+queensStateR  :: Int -> [[Int]]
+queensStateR  = hNil
+              . fmap fst . flip runStateT (0, []) . hState
+              . (extractSS . hState . nondet2state) . comm2
+              . queensR
+\end{code}
+\birthe{Don't know what this sentence says.}
+It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
+%endif
