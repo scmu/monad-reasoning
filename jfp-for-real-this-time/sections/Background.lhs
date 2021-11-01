@@ -357,7 +357,7 @@ the current solution with the already placed queens.
 The new implementation of |queens| is as follows:
 \begin{code}
 queens :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
-queens n = put (0, []) >> loop
+queens n = loop
   where
     loop = do  s@(c, sol) <- get
                if c >= n then return sol

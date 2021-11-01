@@ -390,6 +390,11 @@ Since nondeterministic branches are executed sequentially, the program
 executes |modify next| and |modReturn prev| once, even if the nondeterministic
 branches fail.
 
+\wenhao{
+  I think it is more natural to use |modify next >> m1 `mplus` m2 `mplus` m3 `mplus` side(modify prev)|.
+  Also, this section is used to discuss the technique of "chaining using |`mplus`|", right?
+  But it seems a little convoluted to discuss |modify| here and then discuss |putR| in 4.4 and then come back to |modify| in 4.5.}
+
 The attentive reader may have noticed that we are using |mplus| as a kind of
 sequencing operator now.
 Recall from right-distributivity (\ref{eq:mplus-dist}) that
