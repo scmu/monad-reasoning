@@ -86,7 +86,7 @@ class Undo s r where
   plus :: s -> r -> s
   minus :: s -> r -> s
 
-data ModifyF s r a = GetM (s -> a) | PlusM r a | MinusM r a deriving Functor
+data ModifyF s r a = GetM (s -> a) | PlusM r a deriving Functor
 -- instance MState s (Free (ModifyF s r)) where
 --   get    =  Op (GetM return)
 --   put s  =  Op (ModifyM (const s) (return ()))
@@ -97,27 +97,25 @@ hModify = fold gen (alg # fwd)
     gen x              s  = return (x, s)
     alg (GetM k)       s  = k s s
     alg (PlusM r k)    s  = k (s `plus` r)
-    alg (MinusM r k)   s  = k (s `minus` r)
     fwd y              s  = Op (fmap ($s) y)
 
 getM :: Functor f => Free (ModifyF s r :+: f) s
 getM = Op . Inl $ GetM return
 plusM :: Functor f => r -> Free (ModifyF s r :+: f) ()
 plusM r = Op . Inl $ PlusM r (return ())
-minusM :: Functor f => r -> Free (ModifyF s r :+: f) ()
-minusM r = Op . Inl $ MinusM r (return ())
 \end{code}
 
 
 \begin{code}
 local2trailM :: (Functor f, Undo s r)
              => Free (ModifyF s r :+: NondetF :+: f) a -- local state
-             -> Free (ModifyF s r :+: NondetF :+: StackF (Either r ()) () :+: f) a -- global state and stack
+             -> Free (StateF s :+: NondetF :+: StackF (Either r ()) () :+: f) a -- global state and stack
 local2trailM = fold gen (alg1 # alg2 # fwd)
   where
     gen               = return
-    alg1 (PlusM r k)  = do push (Left r); plusM r; k
-    alg1 oth          = Op . Inl $ oth
+    -- alg1 (PlusM r k)  = do push (Left r); plusM r; k
+    alg1 (GetM k)     = Op . Inl $ Get k
+    alg1 (PlusM r k)  = do push (Left r); s <- get; Op . Inl $ Put (s `plus` r) k
     alg2 (Or p q)     = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
     alg2 oth          = Op . Inr . Inl $ oth
     fwd op            = Op . Inr . Inr . Inr $ op
@@ -125,7 +123,7 @@ local2trailM = fold gen (alg1 # alg2 # fwd)
                     case top of
                       Nothing -> return ()
                       Just (Right ()) -> return ()
-                      Just (Left r) -> do minusM r; undoTrail
+                      Just (Left r) -> do s <- get; put (s `minus` r); undoTrail
 
     push :: (Functor f1, Functor f2, Functor g) => e -> Free (f1 :+: (f2 :+: (StackF e b :+: g))) ()
     push e = Op . Inr . Inr . Inl $ Push e (return ())
@@ -142,7 +140,7 @@ hGlobalM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s
 hGlobalM = fmap (fmap fst) . hModify . hNDf . comm2
 
 tM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
-tM = fmap (\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x)) . hGlobalM . local2trailM
+tM = fmap (\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x)) . hGlobal . local2trailM
 \end{code}
 
 The n-queens example using the trail stack:
