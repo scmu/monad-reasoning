@@ -40,10 +40,10 @@ Another option is to store the |`minus` r| in the trail stack.
 local2trail :: (Functor f)
             => Free (StateF s :+: NondetF :+: f) a -- local state
             -> Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a -- global state and stack
-local2trail = fold gen (alg1 # alg2 # fwd)
+local2trail = fold Var (alg1 # alg2 # fwd)
   where
-    gen             = return
-    alg1 (Put s k)  = do t <- get; push (Left t); put s; k
+    -- alg1 (Put s k)  = do t <- get; push (Left t); put s; k
+    alg1 (Put s k)  = do t <- get; push (Left t); Op (Inl (Put s k))
     alg1 oth        = Op . Inl $ oth
     alg2 (Or p q)   = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
     alg2 oth        = Op . Inr . Inl $ oth
@@ -67,7 +67,27 @@ t1 :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
 t1 = hLocal
 
 t2 :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-t2 = fmap (\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x)) . hGlobal . local2trail
+t2 = fmap (\ x -> fmap fst (runhStack () x)) . hGlobal . local2trail
+\end{code}
+
+
+% NOTE: for proof
+\begin{code}
+-- h1 . aaf = alg' . fmap h1
+h1 :: Functor f => Free (StateF s :+: NondetF :+: StackF e () :+: f) a -> s -> Free f [a]
+h1 = fmap (\ x -> fmap fst (runhStack () x)) . hGlobal
+
+aaf :: Functor f => (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a) -> Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a
+aaf = undefined
+
+alg' :: Functor f => (StateF s :+: NondetF :+: f) (s -> Free f [a]) -> (s -> Free f [a])
+alg' = alg1' # alg2' # fwd'
+  where
+    alg1' (Get k)    = \ s -> k s s
+    alg1' (Put s k)  = \ _ -> k s
+    alg2' Fail       = \ s -> Var []
+    alg2' (Or p q)   = \ s -> liftA2 (++) (p s) (q s)
+    fwd' y           = \ s -> Op (fmap ($s) y)
 \end{code}
 
 The n-queens example using the trail stack:

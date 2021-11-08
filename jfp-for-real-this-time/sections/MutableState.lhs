@@ -298,7 +298,11 @@ so that only the other effects |f| remain.
 
 \begin{code}
 runNDSK :: Functor f => Free (NondetF :+: f) a -> Free f [a]
-runNDSK p = fmap snd (runSTT $ liftST (emptyStack []) >>= hStack (unSK $ nondet2stack p))
+-- runNDSK p = fmap snd (runSTT $ liftST (emptyStack []) >>= hStack (unSK $ nondet2stack p))
+runNDSK p = fmap snd (runhStack [] (unSK $ nondet2stack p))
+
+runhStack :: Functor f => b -> Free (StackF e b :+: f) a -> Free f (a, b)
+runhStack b x = runSTT $ liftST (emptyStack b) >>= hStack x
 \end{code}
 
 \subsection{Using Mutable State to Simulate Nondeterminism in N-queens}

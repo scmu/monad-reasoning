@@ -350,7 +350,7 @@ We do this by a case analysis on |t|.
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
 We need to prove it holds for all inputs |t :: (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
-All local2global formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
+All |local2global| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
 \noindent \mbox{\underline{case |t = Inl (Get k)|}}
 
@@ -464,6 +464,7 @@ For the right-hand side, we have:
 
 \noindent \mbox{\underline{case |t = Inr (Inl (Or p q))|}}
 
+\wenhao{The following old proof is wrong:}
 For the left-hand side, we have:
 <    (hGlobal . alg) (Inr (Inl (Or p q)))
 < = {-~  definition of |alg|  -}
@@ -485,6 +486,33 @@ For the left-hand side, we have:
 <    \ s -> do  x <- (fmap (fmap fst) . hState1) (hNDf p) s;
 <               y <- (fmap (fmap fst) . hState1) (hNDf q) s;
 <               return (x ++ y)}
+
+\wenhao{New proof:}
+For the left-hand side, we have:
+<    (hGlobal . alg) (Inr (Inl (Or p q)))
+< = {-~  definition of |alg|  -}
+<    hGlobal (Op (Inr (Inl (Or p q))))
+< = {-~  definition of |hGlobal|  -}
+<    (fmap (fmap fst) . hState1 . hNDf) (Op (Inr (Inl (Or p q))))
+< = {-~  evaluation of |hNDf|  -}
+<    (fmap (fmap fst) . hState1) (algND (Inl (Or (hNDf p) (hNDf q))))
+< = {-~  evaluation of |algND|  -}
+<    (fmap (fmap fst) . hState1) (liftA2 (++) (hNDf p) (hNDf q))
+< = {-~  definition of |liftA2|  -}
+<    (fmap (fmap fst) . hState1) (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
+< = {-~  definition of |hState1| -}
+<    fmap (fmap fst) $ \ s -> do {  (x, s') <- hState' (hNDf p) s;
+<                                   (y, s'') <- hState' (hNDf q) s';
+<                                   return (x ++ y, s'')}
+< = {-~  \todo{induction: |s = s' = s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
+<    fmap (fmap fst) $ \ s -> do {  (x, _) <- hState' (hNDf p) s;
+<                                   (y, _) <- hState' (hNDf q) s;
+<                                   return (x ++ y, s)}
+< = {-~  definition of |fmap| -}
+<    \ s -> do  x <- (fmap (fmap fst) . hState1) (hNDf p) s;
+<               y <- (fmap (fmap fst) . hState1) (hNDf q) s;
+<               return (x ++ y)}
+
 
 For the right-hand side, we have:
 <    (alg' . fmap hGlobal) (Inr (Inl (Or p q)))
