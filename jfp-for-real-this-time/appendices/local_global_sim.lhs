@@ -500,11 +500,11 @@ For the left-hand side, we have:
 <    (fmap (fmap fst) . hState1) (liftA2 (++) (hNDf p) (hNDf q))
 < = {-~  definition of |liftA2|  -}
 <    (fmap (fmap fst) . hState1) (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
-< = {-~  definition of |hState1| -}
+< = {-~  evaluation of |hState1| -}
 <    fmap (fmap fst) $ \ s -> do {  (x, s') <- hState' (hNDf p) s;
 <                                   (y, s'') <- hState' (hNDf q) s';
 <                                   return (x ++ y, s'')}
-< = {-~  \todo{induction: |s = s' = s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
+< = {-~  \todo{induction: |s == s' == s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
 <    fmap (fmap fst) $ \ s -> do {  (x, _) <- hState' (hNDf p) s;
 <                                   (y, _) <- hState' (hNDf q) s;
 <                                   return (x ++ y, s)}

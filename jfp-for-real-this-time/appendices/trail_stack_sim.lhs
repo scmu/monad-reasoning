@@ -224,20 +224,31 @@ For the left-hand side, we have:
 < = {-~  definition of |do|  -}
 <    (fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1)
 <      (do push (Right ()); x <- hNDf p; undoTrail; y <- hNDf q; return (x ++ y))
-
-< = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
-<    h2 (do push (Right ()); x <- hNDf p; undoTrail; y <- hNDf q; return (x ++ y))
-
-< = {-~  property of fold: propagate fold to subtrees of free monad -}
-<    fmap (fmap fst) $ \s -> do  h2 (push (Right ())) s;
-<                                x <- h2 (hNDf p) s;
-<                                h2 undoTrail s;
-<                                y <- h2 (hNDf q) s;
-<                                return (x ++ y)
-
-<    \s -> do h1 (push (Right ())) s; x <- h1 p s; h1 undoTrail s; y <- h1 q s; return (x ++ y)
-
-< = {-~  \todo{not finished}  -}
+< = {-~  definition of |fmap|, define |h2 = fmap (\ x -> fmap fst (runhStack () x)) . hState1|  -}
+<    (fmap (fmap fst) . h2) (do push (Right ()); x <- hNDf p; undoTrail; y <- hNDf q; return (x ++ y))
+< = {-~  evaluation of |h2|  -}
+<    fmap (fmap fst) $ \s -> do  (_, s1) <- h2 (push (Right ())) s;
+<                                (x, s2) <- h2 (hNDf p) s1;
+<                                (_, s3) <- h2 undoTrail s2;
+<                                (y, s4) <- h2 (hNDf q) s3;
+<                                return (x ++ y, s4)
+< = {-~  \todo{induction: |s == s1 == s3|; |p,q| is in the range of |local2global|; need a new lemma}  -}
+<    fmap (fmap fst) $ \s -> do  (_, s) <- h2 (push (Right ())) s;
+<                                (x, s2) <- h2 (hNDf p) s;
+<                                (_, s) <- h2 undoTrail s2;
+<                                (y, s4) <- h2 (hNDf q) s;
+<                                return (x ++ y, s4)
+< = {-~  definition of |fmap|  -}
+<    \s -> do  (_, s) <- h2 (push (Right ())) s;
+<              (x, s2) <- h2 (hNDf p) s;
+<              (_, s) <- h2 undoTrail s2;
+<              (y, s4) <- h2 (hNDf q) s;
+<              return (x ++ y)
+< = {-~  |push (Right ()), undoTrail| does not make any difference   -}
+<    \s -> do  (x, _) <- h2 (hNDf p) s;
+<              (y, _) <- h2 (hNDf q) s;
+<              return (x ++ y)
+< = {-~  definition of |h2| and |hGlobal|  -}
 <    \ s -> do  x <- fmap fst (runhStack () (hGlobal p s));
 <               y <- fmap fst (runhStack () (hGlobal q s)); return (x ++ y)
 < = {-~  definition of |fmap|  -}
