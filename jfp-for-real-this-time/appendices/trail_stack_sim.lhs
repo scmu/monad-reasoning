@@ -210,7 +210,7 @@ For the left-hand side, we have:
 <    (h1 . (alg1 # alg2 # fwd)) (Inr (Inl (Or p q)))
 < = {-~  definition of |#|  -}
 <    (h1 . alg2) (Or p q)
-< = {-~  definition of |alg2|  -}
+< = {-~  definition of |alg2|, define |or x y = Op . Inr . Inl $ Or x y|  -}
 <    h1 (or (do push (Right ()); p) (do undoTrail; q))
 < = {-~  definition of |h1|  -}
 <    (fmap (\ x -> fmap fst (runhStack () x)) . hGlobal) (or (do push (Right ()); p) (do undoTrail; q))
@@ -219,20 +219,24 @@ For the left-hand side, we have:
 <      (or (do push (Right ()); p) (do undoTrail; q))
 < = {-~  definition of |hNDf|  -}
 <    (fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1)
-% <      (liftA2 (++) (do push (Right ()); hNDf p) (do undoTrail; hNDf q))
+<      (liftA2 (++) (do push (Right ()); hNDf p) (do undoTrail; hNDf q))
+< = {-~  definition of |liftA2|  -}
+<    (fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1)
 <      (do x <- (do push (Right ()); hNDf p); y <- (do undoTrail; hNDf q); return (x ++ y))
 < = {-~  definition of |do|  -}
 <    (fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1)
 <      (do push (Right ()); x <- hNDf p; undoTrail; y <- hNDf q; return (x ++ y))
-< = {-~  definition of |fmap|, define |h2 = fmap (\ x -> fmap fst (runhStack () x)) . hState1|  -}
+< = {-~  move |fmap (fmap fst)| to the first (parametricity), define |h2 = fmap (\ x -> fmap fst (runhStack () x)) . hState1|  -} % a lemma needed?
 <    (fmap (fmap fst) . h2) (do push (Right ()); x <- hNDf p; undoTrail; y <- hNDf q; return (x ++ y))
-< = {-~  evaluation of |h2|  -}
+< = {-~  evaluation of |h2|  -} % omit many steps
+% NOTE: 这一步错误，至少应该把 |h2| 里创建stack的东西拿出来，然后加上一个传递stack。有点麻烦呜呜呜。
 <    fmap (fmap fst) $ \s -> do  (_, s1) <- h2 (push (Right ())) s;
 <                                (x, s2) <- h2 (hNDf p) s1;
 <                                (_, s3) <- h2 undoTrail s2;
 <                                (y, s4) <- h2 (hNDf q) s3;
 <                                return (x ++ y, s4)
 < = {-~  \todo{induction: |s == s1 == s3|; |p,q| is in the range of |local2global|; need a new lemma}  -}
+% NOTE: 这里需要进一步说明，首先是归纳证明p中第一个or之下的部分不会影响，然后再证明undoTrail会把p中第一个or之上的部分都抵消掉
 <    fmap (fmap fst) $ \s -> do  (_, s) <- h2 (push (Right ())) s;
 <                                (x, s2) <- h2 (hNDf p) s;
 <                                (_, s) <- h2 undoTrail s2;

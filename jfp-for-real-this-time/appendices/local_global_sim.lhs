@@ -26,11 +26,11 @@ For simplicity, we will use |hState1| to replace |runStateT . hState| in the fol
 \begin{proof}
 We start with applying fold fusion to both sides of the equation.
 We rewrite |hLocal| as |hL . hState1|, where |hL| is defined as follows:
-\begin{code}
+\begin{spec}
 hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
 hL = fmap hL'
   where hL' = fmap (fmap fst) . hNDf
-\end{code}
+\end{spec}
 We can expand the definition of |hState1| and use the fold fusion law for postcomposition as defined in Equation \ref{eq:fusion-post}:
 <    hL . hState1
 < = {-~  definition of |hState1|  -}
@@ -46,6 +46,8 @@ For the left hand side, we can also expand the definition of |local2global| and 
 <    fold (hGlobal . Var) alg' {-" \text{with } "-} hGlobal . alg = alg' . fmap hGlobal
 
 The algebras |alg'| and |algS'| will be constructed later.
+Note that we only need the equation |hGlobal . alg = alg' . fmap hGlobal| to hold for inputs |t :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: NondetF :+: f) a)| in the range of |fmap local2global|.
+\wenhao{We need to augment the fold-fusion law.}
 
 Therefore, we can use the universal property of fold to show that |hLocal = fold (hL . genS) algS'| and |hGlobal . local2global = fold (hGlobal . Var) alg'| are equal.
 To do this, we have to prove that
@@ -348,7 +350,7 @@ We do this by a case analysis on |t|.
 \end{lemma}
 \begin{proof}
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
-We need to prove it holds for all inputs |t :: (StateF s :+: (NondetF :+: f)) (s -> Free (NondetF :+: f) (a, s))|.
+We need to prove it holds for all inputs |t :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: NondetF :+: f) a)|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
 All |local2global| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
@@ -501,10 +503,11 @@ For the left-hand side, we have:
 < = {-~  definition of |liftA2|  -}
 <    (fmap (fmap fst) . hState1) (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
 < = {-~  evaluation of |hState1| -}
-<    fmap (fmap fst) $ \ s -> do {  (x, s') <- hState' (hNDf p) s;
-<                                   (y, s'') <- hState' (hNDf q) s';
+<    fmap (fmap fst) $ \ s -> do {  (x, s') <- hState1 (hNDf p) s;
+<                                   (y, s'') <- hState1 (hNDf q) s';
 <                                   return (x ++ y, s'')}
 < = {-~  \todo{induction: |s == s' == s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
+< = {-~  apply Lemma \ref{lemma:state-restore} to |p| and |q|  -}
 <    fmap (fmap fst) $ \ s -> do {  (x, _) <- hState' (hNDf p) s;
 <                                   (y, _) <- hState' (hNDf q) s;
 <                                   return (x ++ y, s)}
@@ -537,15 +540,18 @@ For the right-hand side, we have:
 % < = {-~  definition of |liftA2|  -}
 % <    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState1 (hNDf p) s) (hState1 (hNDf q) s)
 
-In the above proof, we fuse |fmap (fmap fst) . hState1| into a single handler |hState'| by dropping the second component of the result (the state).
-\begin{code}
-hState' :: Functor f => Free (StateF s :+: f) a -> (s -> Free f a)
-hState'  =  fold (\ x s -> return x) algS
-  where
-    algS (Inl (Get k))    s  = k s s
-    algS (Inl (Put s k))  _  = k s
-    algS (Inr y)          s  = Op (fmap ($s) y)
-\end{code}
+
+In the above proof we apply lemma \ref{lemma:state-restore} to |p| and |q|.
+Although we use the theorem \ref{eq:local-global} to prove the lemma \ref{lemma:state-restore}, we can still have the theorem \ref{eq:local-global} for |p| and |q| by induction.
+% In the above proof, we fuse |fmap (fmap fst) . hState1| into a single handler |hState'| by dropping the second component of the result (the state).
+% \begin{code}
+% hState' :: Functor f => Free (StateF s :+: f) a -> (s -> Free f a)
+% hState'  =  fold (\ x s -> return x) algS
+%   where
+%     algS (Inl (Get k))    s  = k s s
+%     algS (Inl (Put s k))  _  = k s
+%     algS (Inr y)          s  = Op (fmap ($s) y)
+% \end{code}
 
 \noindent \mbox{\underline{case |t = Inr (Inr y)|}}
 
@@ -577,4 +583,20 @@ For the right-hand side, we have:
 < = {-~  reformulation  -}
 <    \ s -> Op (fmap ((\ k -> k s) . hGlobal) y)
 
+\end{proof}
+
+
+\begin{lemma}[State is Restored] \label{lemma:state-restore}
+For |p :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| in the range of |fmap local2global|, |p' = hState (hNDf p) :: s -> Free f ([a], s)| does not change the state.
+In other words, the expression |do s' <- p s| always satisfies the equation that |s' == s|.
+\footnote{In fact, |do s' <- p s| is not a valid expression. We actually mean for any |t|, |do s' <- p s; t| is equivalent to |let s' = s in t|.}
+\end{lemma}
+
+\begin{proof}
+Let |s'| be the state of the result of |p'|.
+We construct the program |q = Op . Inr . Inl $ Or (p; get) get|.
+Because |p| is in the range of |fmap local2global|, |q| is in the range of |local2global|.
+Thus, by theorem \ref{eq:local-global}, we have the equation that |hGlobal q = hLocal q|.
+For the two expression |do ss <- hGlobal q s| and |do ss' <- hLocal q s|, we have |ss == [s', s']| and |ss' == [s', s]| by the definition of |hGlobal| and |hLocal|.
+From |hGlobal q = hLocal q| we get |s' == s|.
 \end{proof}
