@@ -155,20 +155,24 @@ For the left-hand side, we have:
 <    fmap (\ x -> fmap fst (runhStack () x)) (\ s -> Op (fmap ((\ k -> k s) . hGlobal) (Inr y)))
 < = {-~  definition of |fmap|  -}
 <    \ s -> fmap fst (runhStack () (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
+
 < = {-~  definition of |runhStack|  -}
 <    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
 <      hStack (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
-< = {-~  definition of |hStack|  -}
+< = {-~  definition of |hStack|  -} % using the |fwd| case
 <    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
-<      \ stack -> STT $ \s -> Op (fmap ((\f -> unSTT (f stack) s) . hStack) (fmap ((\ k -> k s) . hGlobal) (Inr y)))
+<      \ stack -> STT $ \s' -> Op (fmap ((\f -> unSTT (f stack) s') . hStack) (fmap ((\ k -> k s) . hGlobal) (Inr y))))
 < = {-~  |fmap| fusion  -}
 <    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
-<      \ stack -> STT $ \s -> Op (fmap ((\f -> unSTT (f stack) s) . hStack . (\ k -> k s) . hGlobal) (Inr y)))
+<      \ stack -> STT $ \s' -> Op (fmap ((\f -> unSTT (f stack) s') . hStack . (\ k -> k s) . hGlobal) (Inr y)))
+
 < = {-~  \todo{not finished}  -}
+
+< = {-~  definition of |hStack|  -}
+<    \ s -> Op (fmap ((\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x)) . (\ k -> k s) . hGlobal) y)
+< = {-~  definition of |runhStack|  -}
 <    \ s -> Op (fmap ((\ x -> fmap fst (runhStack () x)) . (\ k -> k s) . hGlobal) y)
 < = {-~  Lemma \ref{eq:dollar-fmap-comm} with |f = (\ x -> fmap fst (runhStack () x))|  -}
-<    \ s -> Op (fmap ((\ k -> k s) . fmap (\ x -> fmap fst (runhStack () x)) . hGlobal) y)
-< = {-~  definition of |runhStack|  -}
 <    \ s -> Op (fmap ((\ k -> k s) . fmap (\ x -> fmap fst (runhStack () x)) . hGlobal) y)
 < = {-~  definition of |h1|  -}
 <    \ s -> Op (fmap ((\ k -> k s) . h1) y)

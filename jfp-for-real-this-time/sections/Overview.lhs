@@ -146,14 +146,17 @@ instance Functor f => Monad (Free f) where
 %fmap f (Op op) = Op (fmap (fmap f) op)
 %(Op op) >>= f = Op (fmap (>>= f) op)
 
-Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15}.
+Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15, DBLP:conf/acmmpc/2000}.
 This gives rise to the following laws:
 \begin{alignat}{2}
-    &\mbox{\bf fusion-pre}:\quad &
-    |fold gen alg . fmap h| &= |fold (gen . h) alg|\mbox{~~,} \label{eq:fusion-pre}\\
-    &\mbox{\bf fusion-post}:~ &
-    |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~.}
+    &\mbox{\bf fusion-pre}: &
+    |fold (gen . h) alg| &= |fold gen alg . fmap h|\mbox{~~,} \label{eq:fusion-pre}\\
+    &\mbox{\bf fusion-post}: &
+    |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg = alg' . fmap h| \label{eq:fusion-post}\mbox{~~,}\\
+    &\mbox{\bf fusion-post'}: &
+    |h . fold gen alg| &= |fold (h . gen) alg'| \text{ with } |h . alg . fmap f = alg' . fmap h . fmap f| \label{eq:fusion-post-strong}\mbox{~~.}
 \end{alignat}
+where |f = fold gen alg|.
 
 These two fusion laws will turn out to be essential in the further proofs of this paper.
 

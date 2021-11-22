@@ -42,14 +42,13 @@ For the left hand side, we can also expand the definition of |local2global| and 
 <    hGlobal . local2global
 < = {-~  definition of |local2global|  -}
 <    hGlobal . fold Var alg
-< = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
-<    fold (hGlobal . Var) alg' {-" \text{with } "-} hGlobal . alg = alg' . fmap hGlobal
+< = {-~  fold fusion-post' (Equation \ref{eq:fusion-post-strong})  -}
+<    fold (hGlobal . Var) alg' 
+<      {-" \text{with } "-} hGlobal . alg . fmap local2global = alg' . fmap hGlobal . fmap local2global
 
 The algebras |alg'| and |algS'| will be constructed later.
-Note that we only need the equation |hGlobal . alg = alg' . fmap hGlobal| to hold for inputs |t :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: NondetF :+: f) a)| in the range of |fmap local2global|.
-\wenhao{We need to augment the fold-fusion law.}
-
-Therefore, we can use the universal property of fold to show that |hLocal = fold (hL . genS) algS'| and |hGlobal . local2global = fold (hGlobal . Var) alg'| are equal.
+% Note that we only need the equation |hGlobal . alg = alg' . fmap hGlobal| to hold for inputs |t :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: NondetF :+: f) a)| in the range of |fmap local2global|.
+Then, we can use the universal property of fold to show that |hLocal = fold (hL . genS) algS'| and |hGlobal . local2global = fold (hGlobal . Var) alg'| are equal.
 To do this, we have to prove that
 \begin{enumerate}
     \item |hL . genS = hGlobal . Var|
@@ -88,7 +87,7 @@ For the second item, instead of constructing |alg'| and |algS'| individually, we
 
 \begin{enumerate}
     \item |hL . algS = alg' . fmap hL|
-    \item |hGlobal . alg = alg' . fmap hGlobal|
+    \item |hGlobal . alg . fmap local2global = alg' . fmap hGlobal . fmap local2global|
 \end{enumerate}
 
 The |alg'| is defined as follows:
@@ -345,12 +344,12 @@ We do this by a case analysis on |t|.
 \end{proof}
 
 \begin{lemma}[Fusion Condition 2] \label{eq:fusion-cond-2}
-|hGlobal . alg = alg' . fmap hGlobal|
+|hGlobal . alg . fmap local2global = alg' . fmap hGlobal . fmap local2global|
 \footnote{Note that the |alg| here refers to the |alg| in the definition of |local2global|.}
 \end{lemma}
 \begin{proof}
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
-We need to prove it holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| that is in the range of |fmap local2global|.
+We need to prove |hGlobal (alg t) = alg' (fmap hGlobal t)| holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| that is in the range of |fmap local2global|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
 All |local2global| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
@@ -643,6 +642,8 @@ We assume the smart constructors |getOp, putOp, orOp, failOp| which are wrappers
 <    do (x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)
 < = {-~  induction hypothesis  -}
 <    do (x, _) <- do {(x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)}; return (x, s)
+
+<    do (x, _) <- do {}; return (x, s)
 < = {-~  definition of |local2global, hNDf, hState1|  -}
 <    do (x, _) <- hState1 (hNDf (local2global (putOp t k))) s; return (x, s)
 

@@ -88,6 +88,18 @@ alg' = alg1' # alg2' # fwd'
     alg2' Fail       = \ s -> Var []
     alg2' (Or p q)   = \ s -> liftA2 (++) (p s) (q s)
     fwd' y           = \ s -> Op (fmap ($s) y)
+
+
+t :: Functor f => (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a)
+t = undefined
+
+qwq :: Functor f => (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a) -> Int
+qwq t = case t of
+      (Inr (Inr y)) -> 
+        let tmp     = \ s -> Op (fmap ((\ x -> fmap fst (runhStack () x)) . (\ k -> k s) . hGlobal) y)
+        in let tmp' = \ s -> fmap fst (runhStack () (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
+        in 1
+      _ -> 2
 \end{code}
 
 The n-queens example using the trail stack:
@@ -137,7 +149,7 @@ local2trailM = fold gen (alg1 # alg2 # fwd)
     alg1 (GetM k)     = Op . Inl $ Get k
     alg1 (PlusM r k)  = do push (Left r); s <- get; Op . Inl $ Put (s `plus` r) k
     alg2 (Or p q)     = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
-    alg2 oth          = Op . Inr . Inl $ oth
+    alg2 Fail          = Op . Inr . Inl $ Fail
     fwd op            = Op . Inr . Inr . Inr $ op
     undoTrail = do  top <- pop;
                     case top of
