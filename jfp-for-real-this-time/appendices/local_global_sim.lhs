@@ -350,7 +350,7 @@ We do this by a case analysis on |t|.
 \end{lemma}
 \begin{proof}
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
-We need to prove it holds for all inputs |t :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: NondetF :+: f) a)|.
+We need to prove it holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| that is in the range of |fmap local2global|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
 All |local2global| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
@@ -466,30 +466,6 @@ For the right-hand side, we have:
 
 \noindent \mbox{\underline{case |t = Inr (Inl (Or p q))|}}
 
-\wenhao{The following old proof is wrong:}
-For the left-hand side, we have:
-<    (hGlobal . alg) (Inr (Inl (Or p q)))
-< = {-~  definition of |alg|  -}
-<    hGlobal (Op (Inr (Inl (Or p q))))
-< = {-~  definition of |hGlobal|  -}
-<    (fmap (fmap fst) . hState1 . hNDf) (Op (Inr (Inl (Or p q))))
-< = {-~  evaluation of |hNDf|  -}
-<    (fmap (fmap fst) . hState1) (algND (Inl (Or (hNDf p) (hNDf q))))
-< = {-~  evaluation of |algND|  -}
-<    (fmap (fmap fst) . hState1) (liftA2 (++) (hNDf p) (hNDf q))
-< = {-~  definition of |liftA2|  -}
-<    (fmap (fmap fst) . hState1) (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
-< = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
-<    hState' (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
-% < = {-~  property of handlers \wenhao{add more?}\birthe{Say something like: propagate fold to the subtrees?} -}
-< = {-~  property of fold: propagate fold to subtrees of free monad -}
-<    \ s -> do {x <- hState' (hNDf p) s; y <- hState' (hNDf q) s; return (x ++ y)})
-< = {-~  definition of |hState'|  -}
-<    \ s -> do  x <- (fmap (fmap fst) . hState1) (hNDf p) s;
-<               y <- (fmap (fmap fst) . hState1) (hNDf q) s;
-<               return (x ++ y)}
-
-\wenhao{New proof:}
 For the left-hand side, we have:
 <    (hGlobal . alg) (Inr (Inl (Or p q)))
 < = {-~  definition of |alg|  -}
@@ -503,11 +479,15 @@ For the left-hand side, we have:
 < = {-~  definition of |liftA2|  -}
 <    (fmap (fmap fst) . hState1) (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
 < = {-~  evaluation of |hState1| -}
-<    fmap (fmap fst) $ \ s -> do {  (x, s') <- hState1 (hNDf p) s;
-<                                   (y, s'') <- hState1 (hNDf q) s';
-<                                   return (x ++ y, s'')}
-< = {-~  \todo{induction: |s == s' == s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
-< = {-~  apply Lemma \ref{lemma:state-restore} to |p| and |q|  -}
+<    fmap (fmap fst) $ \ s -> do {  (x, s1) <- hState1 (hNDf p) s;
+<                                   (y, s2) <- hState1 (hNDf q) s1;
+<                                   return (x ++ y, s2) }
+% < = {-~  \todo{induction: |s == s' == s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
+< = {-~  apply Lemma \ref{lemma:state-restore} to |p| and |q| (use the assumption: |p,q| is in the range of |local2global|)  -}
+<    fmap (fmap fst) $ \ s -> do {  (x, s1) <- do {(x, _) <- hState' (hNDf p) s; return (x, s)}
+<                                   (y, s2) <- do {(x, _) <- hState' (hNDf q) s1; return (x, s1)}
+<                                   return (x ++ y, s2)}
+< = {-~  definition of |do|  -}
 <    fmap (fmap fst) $ \ s -> do {  (x, _) <- hState' (hNDf p) s;
 <                                   (y, _) <- hState' (hNDf q) s;
 <                                   return (x ++ y, s)}
@@ -533,25 +513,7 @@ For the right-hand side, we have:
 <    \ s -> do  x <- fmap fst (hState1 (hNDf p) s);
 <               y <- fmap fst (hState1 (hNDf p) s);
 <               return (x ++ y)
-% < = {-~  property of |monad|  -}
-% <    \ s -> do  x <- hState1 (hNDf p) s;
-% <               y <- hState1 (hNDf q) s;
-% <               return (fst x ++ fst y)
-% < = {-~  definition of |liftA2|  -}
-% <    \ s -> liftA2 (\ x y -> fst x ++ fst y) (hState1 (hNDf p) s) (hState1 (hNDf q) s)
 
-
-In the above proof we apply lemma \ref{lemma:state-restore} to |p| and |q|.
-Although we use the theorem \ref{eq:local-global} to prove the lemma \ref{lemma:state-restore}, we can still have the theorem \ref{eq:local-global} for |p| and |q| by induction.
-% In the above proof, we fuse |fmap (fmap fst) . hState1| into a single handler |hState'| by dropping the second component of the result (the state).
-% \begin{code}
-% hState' :: Functor f => Free (StateF s :+: f) a -> (s -> Free f a)
-% hState'  =  fold (\ x s -> return x) algS
-%   where
-%     algS (Inl (Get k))    s  = k s s
-%     algS (Inl (Put s k))  _  = k s
-%     algS (Inr y)          s  = Op (fmap ($s) y)
-% \end{code}
 
 \noindent \mbox{\underline{case |t = Inr (Inr y)|}}
 
@@ -585,18 +547,118 @@ For the right-hand side, we have:
 
 \end{proof}
 
-
-\begin{lemma}[State is Restored] \label{lemma:state-restore}
-For |p :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| in the range of |fmap local2global|, |p' = hState (hNDf p) :: s -> Free f ([a], s)| does not change the state.
-In other words, the expression |do s' <- p s| always satisfies the equation that |s' == s|.
-\footnote{In fact, |do s' <- p s| is not a valid expression. We actually mean for any |t|, |do s' <- p s; t| is equivalent to |let s' = s in t|.}
+%if False
+\begin{lemma} \label{lemma:local-local}
+|hLocal . local2global = hLocal|
 \end{lemma}
 
 \begin{proof}
-Let |s'| be the state of the result of |p'|.
-We construct the program |q = Op . Inr . Inl $ Or (p; get) get|.
-Because |p| is in the range of |fmap local2global|, |q| is in the range of |local2global|.
-Thus, by theorem \ref{eq:local-global}, we have the equation that |hGlobal q = hLocal q|.
-For the two expression |do ss <- hGlobal q s| and |do ss' <- hLocal q s|, we have |ss == [s', s']| and |ss' == [s', s]| by the definition of |hGlobal| and |hLocal|.
-From |hGlobal q = hLocal q| we get |s' == s|.
+The function |local2global| replace all |put t| with |putR t|.
+The definition of |putR| is |putR s = get >>= \t -> put s `mplus` side (put t)|, and the definition of |side| is |side m = m >> mzero|.
+For |hLocal|, we have the law \ref{eq:put-right-identity}, so |side (put t) = (put t) >> zero = zero|, which means |put t| is also equal to |putR t|.
+Thus, |hLocal . local2global = hLocal . identity = hLocal|.
+\end{proof}
+%endif
+
+\begin{lemma}[State is Restored] \label{lemma:state-restore}
+For |t :: Free (NondetF :+: StateF s :+: f) a|, |hState (hNDf (local2global t)) :: s -> Free f ([a], s)| does not change the state in the global-state semantics.
+Formally, |hState1 (hNDf t') s == do (x, _) <- hState1 (hNDf t') s; return (x, s)|, where |t' = local2global t|.
+\end{lemma}
+
+%if False
+% This proof is wrong because of circular argument
+\begin{proof}
+  We construct the program |q = Op . Inr . Inl $ Or (p >> get) get|.
+  Because |p| is in the range of |local2global|, |q| is also in the range of |local2global|.
+  By theorem \ref{eq:local-local} and the assumption |hGlobal (local2global p') = hLocal p'|, we have the equation that |hGlobal p = hGlobal (local2global p') = hLocal p' = hLocal (local2global p') = hLocal p|.
+  We construct |q' = Op . Inr . Inl $ Or (p' >> get) get|.
+  It is easy to verify that |q = local2global q'| and |hGlobal (local2global q') = hLocal q'|.
+  Similarly, we also have |hGlobal q = hLocal q|. \wenhao{Wrong!Circular argument.}
+  From the definition of |hGlobal| and |hLocal|, we have:
+  < hGlobal q s = do [s1,s2] <- hGlobal q s; return [s1, s2] = do s1 <- hGlobal p s; return [s1, s1]
+  < hLocal q s = do [s1,s2] <- hLocal q s; return [s1, s2] = do s1 <- hLocal p s; return [s1, s]
+  % For the two expression |do ss <- hGlobal q s| and |do ss' <- hLocal q s|, we have |ss == [s', s']| and |ss' == [s', s]| by the definition of |hGlobal| and |hLocal|.
+  From |hGlobal q s = hLocal q s| we have |s1 = s|, which means |hGlobal p s = do _ <- hGlobal p s; return s|.
+  Because |hGlobal| is defined as |fmap (fmap fst) . runStateT . hState . hNDf|, we have the equation |hState1 (hNDf p) s == do (x, _) <- hState1 (hNDf p) s; return (x, s)|.
+\end{proof}
+%endif
+
+\begin{proof}
+The proof proceeds by structural induction on the free monad |t|.
+In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
+We assume the smart constructors |getOp, putOp, orOp, failOp| which are wrappers of constructors |Get, Put, Or, Fail| respectively will automatically insert correct |Op, Inl, Inr| constructors based on the context to make the term well-typed in the following proof.
+
+\noindent \mbox{\underline{case |t = Var a|}}
+<    hState1 (hNDf (local2global (Var a))) s
+< = {-~  definition of |local2global, hNDf, hState1|  -}
+<    \ s -> return ([a], s)
+< = {-~  definition of |local2global, hNDf, hState1, do|  -}
+<    do (x, _) <- hState1 (hNDf (local2global (Var a))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = getOp k|}}
+<    hState1 (hNDf (local2global (getOp k))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (getOp (local2global . k))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (getOp (hNDf . loca2global . k)) s
+< = {-~  definition of |hState1|  -}
+<    (hState1 . hNDf . loca2global . k) s s
+< = {-~  function application  -}
+<    hState1 (hNDf (loca2global (k s))) s
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- hState1 (hNDf (local2global (k s))) s; return (x, s)
+< = {-~  definition of |.|  -}
+<    do (x, _) <- (hNDf . loca2global . k) s s; return (x, s)
+< = {-~  definition of |local2global, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (local2global (getOp k))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = failOp|}}
+<    hState1 (hNDf (local2global (failOp))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf failOp) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (return []) s
+< = {-~  definition of |hState1|  -}
+<    \ s -> return ([], s)
+< = {-~  definition of |do|  -}
+<    do (x, _) <- return ([], s); return (x, s)
+< = {-~  definition of |local2global, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (local2global failOp)) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = putOp t k|}}
+<    hState1 (hNDf (local2global (putOp t k))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (putR t >> local2global k)) s
+< = {-~  definition of |putR|  -}
+<    hState1 (hNDf ((get >>= \t' -> put t `mplus` side (put t')) >> local2global k)) s
+< = {-~  definition of |do| and |orOp|  -}
+<    hState1 (hNDf (do t' <- get; orOp (put t) (side (put t')); local2global k)) s
+< = {-~  definition of |side| and |failOp|  -}
+<    hState1 (hNDf (do t' <- get; orOp (put t) ((put t') >> failOp); local2global k)) s
+< = {-~  definition of |hNDf| and |<$>, <*>|  -}
+<    hState1 (do t' <- get; x <- hNDf (put t >> local2global k); y <- hNDf (put t' >> failOp >> local2global k); return (x ++ y)) s
+< = {-~  property of |hNDf| and |failOp|  -}
+<    hState1 (do t' <- get; x <- hNDf (put t >> local2global k); put t'; return x) s
+< = {-~  definition of |hState1|  -} % important
+<    do (x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- do {(x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)}; return (x, s)
+< = {-~  definition of |local2global, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (local2global (putOp t k))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = orOp p q|}}
+<    hState1 (hNDf (local2global (orOp p q))) s
+< = {-~  definition of |local2global|; let |p' = local2global p, q' = local2global q|  -}
+<    hState1 (hNDf (orOp p' q')) s
+< = {-~  definition of |hNDf|; let |p'' = hNDf p', q'' = hNDf q'|  -}
+<    hState1 (liftA2 (++) p'' q'') s
+< = {-~  definition of |liftA2|  -}
+<    hState1 (do x <- p''; y <- q''; return (x ++ y)) s
+< = {-~  definition of |hState1|  -} % important
+<    do (x, s1) <- hState1 p'' s; (y, s2) <- hState1 q'' s1; return (x++y, s2)
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- hState1 p'' s; (y, _) <- hState1 q'' s; return (x++y, s)
+< = {-~  definition of |local2global, hNDf, hState1, p'', q''|  -}
+<    do (x, _) <- hState1 (hNDf (local2global (orOp p q))) s; return (x, s)
+
 \end{proof}
