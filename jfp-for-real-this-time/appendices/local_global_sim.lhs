@@ -483,12 +483,12 @@ For the left-hand side, we have:
 <                                   return (x ++ y, s2) }
 % < = {-~  \todo{induction: |s == s' == s''|; |p,q| is in the range of |local2global|; need a new lemma} -}
 < = {-~  apply Lemma \ref{lemma:state-restore} to |p| and |q| (use the assumption: |p,q| is in the range of |local2global|)  -}
-<    fmap (fmap fst) $ \ s -> do {  (x, s1) <- do {(x, _) <- hState' (hNDf p) s; return (x, s)}
-<                                   (y, s2) <- do {(x, _) <- hState' (hNDf q) s1; return (x, s1)}
+<    fmap (fmap fst) $ \ s -> do {  (x, s1) <- do {(x, _) <- hState1 (hNDf p) s; return (x, s)}
+<                                   (y, s2) <- do {(x, _) <- hState1 (hNDf q) s1; return (x, s1)}
 <                                   return (x ++ y, s2)}
 < = {-~  definition of |do|  -}
-<    fmap (fmap fst) $ \ s -> do {  (x, _) <- hState' (hNDf p) s;
-<                                   (y, _) <- hState' (hNDf q) s;
+<    fmap (fmap fst) $ \ s -> do {  (x, _) <- hState1 (hNDf p) s;
+<                                   (y, _) <- hState1 (hNDf q) s;
 <                                   return (x ++ y, s)}
 < = {-~  definition of |fmap| -}
 <    \ s -> do  x <- (fmap (fmap fst) . hState1) (hNDf p) s;
@@ -642,8 +642,6 @@ We assume the smart constructors |getOp, putOp, orOp, failOp| which are wrappers
 <    do (x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)
 < = {-~  induction hypothesis  -}
 <    do (x, _) <- do {(x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)}; return (x, s)
-
-<    do (x, _) <- do {}; return (x, s)
 < = {-~  definition of |local2global, hNDf, hState1|  -}
 <    do (x, _) <- hState1 (hNDf (local2global (putOp t k))) s; return (x, s)
 
@@ -662,4 +660,5 @@ We assume the smart constructors |getOp, putOp, orOp, failOp| which are wrappers
 < = {-~  definition of |local2global, hNDf, hState1, p'', q''|  -}
 <    do (x, _) <- hState1 (hNDf (local2global (orOp p q))) s; return (x, s)
 
+\noindent \mbox{\underline{case |t = oth|}} TODO:
 \end{proof}
