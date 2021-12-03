@@ -97,9 +97,9 @@ Thus, we have our original equation |hLocal = fold (hL . genS) alg' = fold (h1 .
 \end{lemma}
 
 \begin{proof}
-We need to prove |h1 (alg t) = alg' (fmap h1 t)| holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a)| that is in the range of |fmap local2trail|.
+We need to prove |h1 (alg t) = alg' (fmap h1 t)| holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a)| that are in the range of |fmap local2trail|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
-All |local2trail| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
+% All |local2trail| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
 \noindent \mbox{\underline{case |t = Inl (Get k)|}}
 
@@ -267,7 +267,7 @@ For the left-hand side, we have:
 < = {-~  definition of |do|  -}
 <    fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1 $
 <      (do push (Right ()); x <- hNDf p; hNDf undoTrail; y <- hNDf q; return (x ++ y))
-< = {-~  move |fmap (fmap fst)| to the left-most position (parametricity)  -} % a lemma needed?
+< = {-~  move |fmap (fmap fst)| to the left-most position (parametricity)  -}
 <    fmap (fmap fst) . fmap (\ x -> fmap fst (runhStack () x)) . hState1 $
 <      (do push (Right ()); x <- hNDf p; hNDf undoTrail; y <- hNDf q; return (x ++ y))
 < = {-~  evaluation of |hState1|  -} % omit many steps

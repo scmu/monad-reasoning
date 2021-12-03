@@ -349,9 +349,9 @@ We do this by a case analysis on |t|.
 \end{lemma}
 \begin{proof}
 We prove this equation in a similar way to Lemma \ref{eq:fusion-cond-1}.
-We need to prove |hGlobal (alg t) = alg' (fmap hGlobal t)| holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| that is in the range of |fmap local2global|.
+We need to prove |hGlobal (alg t) = alg' (fmap hGlobal t)| holds for all inputs |t :: (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f) a)| that are in the range of |fmap local2global|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
-All |local2global| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
+% All |local2global| formations relevant to commutativity and associativity are implicit and not shown in the following proofs.
 
 \noindent \mbox{\underline{case |t = Inl (Get k)|}}
 
@@ -410,7 +410,8 @@ For the left-hand side, we have:
 < = {-~  evaluation of |hNDf|  -}
 <    (fmap (fmap fst) . hState1) (getOp (\ s' -> liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var []))))
 < = {-~  evaluation of |hState1|  -}
-<    fmap (fmap fst) (\ s' -> (hState1 . (\ s' -> liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var [])))) s' s')
+<    fmap (fmap fst) (\ s' -> (hState1 .
+<      (\ s' -> liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var [])))) s' s')
 < = {-~  function application  -}
 <    fmap (fmap fst) (\ s' -> hState1 (liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var []))) s')
 < = {-~  definition of |fmap|  -}
@@ -429,9 +430,18 @@ For the left-hand side, we have:
 <    \ s' -> fmap fst (hState1 (f (hNDf k)) s)
 < = {-~  reformulation, definition of |fmap|  -}
 <    \ s' -> (fmap (fmap fst) . hState1 . f . hNDf) k s
-< = {-~  because we drop the state in the end using |fmap (fmap fst)|, |f| won't make any changes  -}
-<    \ s' -> (fmap (fmap fst) . hState1 . hNDf) k s
-< = {-~  definition of |hGlobal|, replace |s'| with |_|  -}
+< = {-~  definition of |f|, function application  -}
+<    \ s' -> fmap (fmap fst) $ hState1 (hNDf k >>= \ x -> putOp s' (Var []) >> return x) s
+< = {-~  definition of |do|  -}
+<    \ s' -> fmap (fmap fst) $ hState1 (
+<      do  x <- hNDf k
+<          putOp s' (Var [])
+<          return x) s
+< = {-~  evaluation of |hState1|  -}
+<    \ s' -> fmap (fmap fst) $
+<      do  (x, _) <- hState1 (hNDf k) s
+<          return (x, s')
+< = {-~  definition of |hGlobal|  -}
 <    \ _ -> hGlobal k s
 
 For the right-hand side, we have:
@@ -491,10 +501,13 @@ For the left-hand side, we have:
 <                                   (y, _) <- hState1 (hNDf q) s;
 <                                   return (x ++ y, s)}
 < = {-~  definition of |fmap| -}
-<    \ s -> do  x <- (fmap (fmap fst) . hState1) (hNDf p) s;
-<               y <- (fmap (fmap fst) . hState1) (hNDf q) s;
-<               return (x ++ y)}
-
+<    \ s -> do {  (x, _) <- hState1 (hNDf p) s;
+<                 (y, _) <- hState1 (hNDf q) s;
+<                 return (x ++ y)}
+< = {-~  definition of |fmap fst|, drop unused states -}
+<    \ s -> do {  x <- fmap fst (hState1 (hNDf p) s);
+<                 y <- fmap fst (hState1 (hNDf q) s);
+<                 return (x ++ y)}
 
 For the right-hand side, we have:
 <    (alg' . fmap hGlobal) (Inr (Inl (Or p q)))
@@ -510,7 +523,7 @@ For the right-hand side, we have:
 <               return (x ++ y)
 < = {-~  reformulation  -}
 <    \ s -> do  x <- fmap fst (hState1 (hNDf p) s);
-<               y <- fmap fst (hState1 (hNDf p) s);
+<               y <- fmap fst (hState1 (hNDf q) s);
 <               return (x ++ y)
 
 
