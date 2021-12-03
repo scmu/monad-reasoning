@@ -157,21 +157,56 @@ For the left-hand side, we have:
 <    fmap (\ x -> fmap fst (runhStack () x)) (\ s -> Op (fmap ((\ k -> k s) . hGlobal) (Inr y)))
 < = {-~  definition of |fmap|  -}
 <    \ s -> fmap fst (runhStack () (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
-
 < = {-~  definition of |runhStack|  -}
 <    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
 <      hStack (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
-< = {-~  definition of |hStack|  -} % using the |fwd| case
-<    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
-<      \ stack -> STT $ \s' -> Op (fmap ((\f -> unSTT (f stack) s') . hStack) (fmap ((\ k -> k s) . hGlobal) (Inr y))))
-< = {-~  |fmap| fusion  -}
-<    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
-<      \ stack -> STT $ \s' -> Op (fmap ((\f -> unSTT (f stack) s') . hStack . (\ k -> k s) . hGlobal) (Inr y)))
-
-< = {-~  \todo{TODO: not finished}  -}
-
+< = {-~  definition of |do|  -}
+<    \ s -> fmap fst (runSTT $
+<      do  st <- liftST (emptyStack ())
+<          hStack (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))) st)
 < = {-~  definition of |hStack|  -}
-<    \ s -> Op (fmap ((\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x)) . (\ k -> k s) . hGlobal) y)
+<    \ s -> fmap fst (runSTT $
+<      do  st <- liftST (emptyStack ())
+<          hStack (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))) st)
+< = {-~  definition of |fmap|  -}
+<    \ s -> fmap fst . runSTT $
+<      do  st <- liftST (emptyStack ())
+<          hStack (Op . Inr $ fmap ((\ k -> k s) . hGlobal) y) st
+< = {-~  definition of |hStack|, functiona application  -}
+<    \ s -> fmap fst . runSTT $
+<      do  st <- liftST (emptyStack ())
+<          STT $ \ s' -> Op (fmap (\ f -> unSTT (f st) s') (fmap (hStack . (\ k -> k s) . hGlobal) y))
+< = {-~  |fmap| fusion  -}
+<    \ s -> fmap fst . runSTT $
+<      do  st <- liftST (emptyStack ())
+<          STT $ \ s' -> Op (fmap ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
+< = {-~  property of |runSTT|  -} % NOTE: find some literature later ?
+<    \ s -> fmap fst $ Op (fmap ((\ f -> runSTT $ 
+<      do  st <- liftST (emptyStack ())
+<          STT $ \ s' -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
+< = {-~  property of |unSTT| and |STT|  -}
+<    \ s -> fmap fst $ Op (fmap ((\ f -> runSTT $
+<      do  st <- liftST (emptyStack ())
+<          f st) . hStack . (\ k -> k s) . hGlobal) y)
+< = {-~  definition of |.|  -}
+<    \ s -> fmap fst $ Op (fmap ((\ x -> runSTT $
+<      do  st <- liftST (emptyStack ())
+<          hStack x st) . (\ k -> k s) . hGlobal) y)
+< = {-~  definition of |.| and |$|  -}
+<    \ s -> fmap fst . Op $ fmap ((\ x -> runSTT $
+<      do  st <- liftST (emptyStack ())
+<          hStack x st) . (\ k -> k s) . hGlobal) y
+< = {-~  definition of |Op| and |fmap fst|  -} % NOTE: more explanation
+<    \ s -> Op $ fmap ((\ x -> fmap fst (runSTT $
+<      do  st <- liftST (emptyStack ())
+<          hStack x st)) . (\ k -> k s) . hGlobal) y
+< = {-~  definition of |.| and |$|  -}
+<    \ s -> Op (fmap ((\ x -> fmap fst (runSTT $ do  st <- liftST (emptyStack ())
+<                                                    hStack x st))
+<      . (\ k -> k s) . hGlobal) y)
+< = {-~  definition of |do|  -}
+<    \ s -> Op (fmap ((\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x))
+<      . (\ k -> k s) . hGlobal) y)
 < = {-~  definition of |runhStack|  -}
 <    \ s -> Op (fmap ((\ x -> fmap fst (runhStack () x)) . (\ k -> k s) . hGlobal) y)
 < = {-~  Lemma \ref{eq:dollar-fmap-comm} with |f = (\ x -> fmap fst (runhStack () x))|  -}
@@ -268,7 +303,7 @@ For the left-hand side, we have:
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st;
 <            (y, s3) <- hStack (hState1 (hNDf q) s2) st;
 <            return (x ++ y, s3)
-< = {-~  apply Lemma \ref{lemma:stack-state-restore}  -} NOTE: do we need more steps here?
+< = {-~  apply Lemma \ref{lemma:stack-state-restore}  -} % NOTE: do we need more steps here?
 <    fmap (fmap fst) $ \ s -> fmap fst . runSTT $
 <        do  st <- liftST (emptyStack ())
 <            (x, _) <- hStack (hState1 (hNDf p) s) st;
