@@ -651,7 +651,7 @@ We assume the smart constructors |getOp, putOp, orOp, failOp| which are wrappers
 <    hState1 (do t' <- get; x <- hNDf (put t >> local2global k); y <- hNDf (put t' >> failOp >> local2global k); return (x ++ y)) s
 < = {-~  property of |hNDf| and |failOp|  -}
 <    hState1 (do t' <- get; x <- hNDf (put t >> local2global k); put t'; return x) s
-< = {-~  definition of |hState1|  -} % important
+< = {-~  definition of |hState1|  -}
 <    do (x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)
 < = {-~  induction hypothesis  -}
 <    do (x, _) <- do {(x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)}; return (x, s)
@@ -666,12 +666,34 @@ We assume the smart constructors |getOp, putOp, orOp, failOp| which are wrappers
 <    hState1 (liftA2 (++) p'' q'') s
 < = {-~  definition of |liftA2|  -}
 <    hState1 (do x <- p''; y <- q''; return (x ++ y)) s
-< = {-~  definition of |hState1|  -} % important
+< = {-~  definition of |hState1|  -}
 <    do (x, s1) <- hState1 p'' s; (y, s2) <- hState1 q'' s1; return (x++y, s2)
 < = {-~  induction hypothesis  -}
 <    do (x, _) <- hState1 p'' s; (y, _) <- hState1 q'' s; return (x++y, s)
 < = {-~  definition of |local2global, hNDf, hState1, p'', q''|  -}
 <    do (x, _) <- hState1 (hNDf (local2global (orOp p q))) s; return (x, s)
 
-\noindent \mbox{\underline{case |t = oth|}} TODO:
+\noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
+<    hState1 (hNDf . local2global $ Op (Inr (Inr y))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf $ Op (Inr (Inr (fmap local2global y)))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Op (Inr (fmap (hNDf . local2global) y))) s
+< = {-~  definition of |hState1|  -}
+<    (\ s -> Op (fmap ($s) (fmap (hState1 . hNDf . local2global) y))) s
+< = {-~  function application  -}
+<    Op (fmap ($s) (fmap (hState1 . hNDf . local2global) y))
+< = {-~  |fmap| fusion  -}
+<    Op (fmap (($s) . hState1 . hNDf . local2global) y)
+< = {-~  induction hypothesis  -} % important
+<    Op (fmap ((>>= \ (x, _) -> return (x, s)) . ($s) . hState1 . hNDf . local2global) y)
+< = {-~  |fmap| fusion  -}
+<    Op (fmap (>>= \ (x, _) -> return (x, s)) $ (fmap (($s) . hState1 . hNDf . local2global) y))
+< = {-~  definition of |>>=|  -}
+<    Op (fmap (($s) . hState1 . hNDf . local2global) y) >>= \ (x, _) -> return (x, s)
+< = {-~  definition of |do|  -}
+<    do (x, _) <- Op (fmap (($s) . hState1 . hNDf . local2global) y); return (x, s)
+< = {-~  definition of |local2global, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf . local2global $ Op (Inr (Inr y))) s; return (x, s)
+
 \end{proof}

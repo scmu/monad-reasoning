@@ -303,8 +303,27 @@ For the left-hand side, we have:
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st;
 <            (y, s3) <- hStack (hState1 (hNDf q) s2) st;
 <            return (x ++ y, s3)
-< = {-~  apply Lemma \ref{lemma:stack-state-restore}  -} % NOTE: do we need more steps here?
+< = {-~  apply Lemma \ref{lemma:stack-state-restore}  -}
 <    fmap (fmap fst) $ \ s -> fmap fst . runSTT $
+<        do  st <- liftST (emptyStack ())
+<            let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (x, s1) <- hStack (hState1 (hNDf p) s) st;
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st;
+<            (y, s3) <- hStack (hState1 (hNDf q) (head ([] ++ [s]))) st';
+<            return (x ++ y, s3)
+< = {-~  definition of |++|  -}
+<    fmap (fmap fst) $ \ s -> fmap fst . runSTT $
+<        do  st <- liftST (emptyStack ())
+<            let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (x, s1) <- hStack (hState1 (hNDf p) s) st;
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st;
+<            (y, s3) <- hStack (hState1 (hNDf q) s) st';
+<            return (x ++ y, s3)
+< = {-~  property of ST monad and |copy| (remove useless state operations)  -}
 <        do  st <- liftST (emptyStack ())
 <            (x, _) <- hStack (hState1 (hNDf p) s) st;
 <            st <- liftST (emptyStack ())
@@ -365,13 +384,25 @@ For the left-hand side, we have:
 % For |t :: Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a|, if |t| is in the range of |local2trail|, the following equation holds.
 For |t :: Free (StateF s :+: NondetF :+: f) a|, the following equation holds for any |as :: [s]|, |st :: Stack s' () (Either s ())| and |u :: Free (StateF s :+: StackF (Either s ()) () :+: f) a|.
 Again, because the stack infomation is simply a |()|, we omit it in the results of |hStack|.
+% <    do  liftST (pushStack (Right ()) st)
+% <        pushList as st
+% <        (_, s1) <- hStack (hState1 (hNDf . local2trail $ t) s) st
+% <        (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+% <        return (s2, st)
+% < =
+% <    return (head (as ++ [s]), st)
 <    do  liftST (pushStack (Right ()) st)
 <        pushList as st
 <        (_, s1) <- hStack (hState1 (hNDf . local2trail $ t) s) st
 <        (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <        return (s2, st)
 < =
-<    return (head (as ++ [s]), st)
+<    do  let st' = copy st % NOTE: is there a function to do that?
+<        liftST (pushStack (Right ()) st)
+<        pushList as st
+<        (_, s1) <- hStack (hState1 (hNDf . local2trail $ t) s) st
+<        (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<        return (head (as ++ [s]), st')
 where the |pushList| is defined as
 < pushList as st = case as of
 <   [] -> return ()
@@ -380,7 +411,6 @@ where the |pushList| is defined as
 \begin{spec}
 
 \end{spec}
-Note that the size of |st| is |0| means |st| is just an empty stack.
 So this lemma states that after the evaluation of |pushStack, p, undoTrail|, the state is restored to the original state |s| and the stack is restored to the original empty stack.
 \end{lemma}
 
@@ -395,23 +425,33 @@ The left-hand side is
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ Var a) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |local2trail|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf $ Var a) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |hState1, hNDf, hStack|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |undoTrail, pushList, hState1, hNDf, hStack|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            liftST (popStack st)
 <            return (head (as ++ [s]), st)
 < = {-~  definition of |pushStack, popStack|  -}
+<            return (head (as ++ [s]), st)
+< = {-~  property of |copy|  -}
+<        do  let st' = copy st
+<            return (head (as ++ [s]), st)
+< = {-~  inverse of the first few steps of this case  -}
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ Var a) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            return (head (as ++ [s]), st)
 
 \noindent \mbox{\underline{case |t = failOp|}}
@@ -419,23 +459,33 @@ The left-hand side is
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ failOp) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |local2trail|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf $ failOp)) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |hState1, hNDf, hStack, failOp|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |undoTrail, pushList, hState1, hNDf, hStack|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            liftST (popStack st)
 <            return (head (as ++ [s]), st)
 < = {-~  definition of |pushStack, popStack|  -}
+<            return (head (as ++ [s]), st)
+< = {-~  property of |copy|  -}
+<        do  let st' = copy st
+<            return (head (as ++ [s]), st)
+< = {-~  inverse of the first few steps of this case  -}
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ failOp) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            return (head (as ++ [s]), st)
 
 
@@ -444,21 +494,33 @@ The left-hand side is
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ getOp k) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |local2trail|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf $ getOp (local2trail k)) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  definition of |hState1, hNDf, hStack, getOp|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ k) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, size st)
+<            return (s2, st)
 < = {-~  induction hypothesis  -}
-<        return (head (as ++ [s]), st)
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ k) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (head (as ++ [s]), st')
+< = {-~  definition of |getOp|  -}
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ getOp k) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (head (as ++ [s]), st')
 
 \noindent \mbox{\underline{case |t = putOp s' k|}}
 <        do  liftST (pushStack (Right ()) st)
@@ -486,8 +548,25 @@ The left-hand side is
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            return (s2, st)
 < = {-~  induction hypothesis  -}
-<            return (head (as ++ [s] ++ [s']), st)
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList (as ++ [s]) st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ k) s') st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (head (as ++ [s] ++ [s']), st')
 < = {-~  definition of |head|  -}
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList (as ++ [s]) st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ k) s') st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (head (as ++ [s]), st)
+< = {-~  inverse of the first few steps of this case -}
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ putOp s' k) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            return (head (as ++ [s]), st)
 
 \noindent \mbox{\underline{case |t = orOp p q|}}
@@ -543,16 +622,149 @@ The left-hand side is
 < = {-~  induction hypothesis of |p|  -} 
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
-<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) (head ([] ++ [s]))) st
-<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<            return (s2, st)
+<            let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) (head ([] ++ [s]))) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            return (s2, st')
 < = {-~  definition of |++|  -} 
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
-<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st
+<            let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            return (s2, st')
+< = {-~  property of ST monad (swap the order of original state operations)  -} 
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            let st' = copy st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            return (s2, st')
+< = {-~  property of |copy|  -} 
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            liftST (pushStack (Right ()) st')
+<            pushList as st'
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            return (s2, st')
+< = {-~  induction hypothesis of |q|  -} 
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            let st'' = copy st'
+<            liftST (pushStack (Right ()) st')
+<            pushList as st'
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            return (head (as ++ [s]), st'')
+< = {-~  property of |ST monad| and |copy|  -} 
+<        do  let st'' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            let st' = copy st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            return (head (as ++ [s]), st'')
+< = {-~  inverse of the first few steps of this case  -}
+<        do  let st'' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ orOp p q) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (head (as ++ [s]), st'')
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ Op (Inr (Inr y))) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            return (s2, st)
-< = {-~  induction hypothesis of |q|  -} 
-<        return (head (as ++ [s]), st)
+< = {-~  definition of |local2trail|  -}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf $ Op . Inr . Inr . Inr $ fmap local2trail y) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (s2, st)
+< = {-~  definition of |hNDf|  -}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (Op . Inr . Inr $ fmap (hNDf . local2trail) y) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (s2, st)
+< = {-~  definition of |hState1|  -}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (Op (fmap ($s) $ (Inr $ fmap (hState1 . hNDf . local2trail) y))) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (s2, st)
+< = {-~  definition of |Inr|; |fmap| fusion  -}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (Op . Inr $ fmap (($s) . hState1 . hNDf . local2trail) y) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (s2, st)
+< = {-~  definition of |hStack|  -}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- STT $ \s' -> Op (fmap (\f -> unSTT (f st) s')
+<              (fmap (($s) . hState1 . hNDf . local2trail) y))
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (s2, st)
+< = {-~  |fmap| fusion  -}
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- STT $ \s' -> Op (fmap ((\f -> unSTT (f st) s') . ($s) . hState1 . hNDf . local2trail) y)
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (s2, st)
+< = {-~  property of ST monad  -} % NOTE: literature?
+<        Op $ fmap ( \t ->
+<          do  liftST (pushStack (Right ()) st)
+<              pushList as st
+<              (_, s1) <- STT $ \s' -> (\f -> unSTT (f st) s') . ($s) . hState1 . hNDf . local2trail $ t
+<              (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<              return (s2, st)
+<        ) y
+< = {-~  induction hypothesis  -} % NOTE: I expect the |st| is not shared, is it right?
+<        Op $ fmap ( \t ->
+<          do  let st' = copy st
+<              liftST (pushStack (Right ()) st)
+<              pushList as st
+<              (_, s1) <- STT $ \s' -> (\f -> unSTT (f st) s') . ($s) . hState1 . hNDf . local2trail $ t
+<              (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<              return (head (as ++ [s]), st')
+<        ) y
+< = {-~  inverse of the first few steps of this case  -}
+<        do  let st' = copy st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ Op (Inr (Inr y))) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            return (head (as ++ [s]), st')
 
 \end{proof}
