@@ -573,7 +573,7 @@ Thus, |hLocal . local2global = hLocal . identity = hLocal|.
 %endif
 
 \begin{lemma}[State is Restored] \label{lemma:state-restore}
-For |t :: Free (NondetF :+: StateF s :+: f) a|, |hState (hNDf (local2global t)) :: s -> Free f ([a], s)| does not change the state in the global-state semantics.
+For |t :: Free (NondetF :+: StateF s :+: f) a|, |hState1 (hNDf (local2global t)) :: s -> Free f ([a], s)| does not change the state in the global-state semantics.
 Formally, |hState1 (hNDf t') s == do (x, _) <- hState1 (hNDf t') s; return (x, s)|, where |t' = local2global t|.
 \end{lemma}
 
