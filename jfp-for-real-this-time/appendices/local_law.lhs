@@ -11,37 +11,37 @@ In this section we prove two equations relevant to the interaction of nondetermi
 \begin{proof}~
 
 <    get >> mzero
-< = {-~  definition of |>>|  -}
+< = {-~  definition of |(>>)|  -}
 <    get >>= (\ s -> mzero)
-< = {-~  Law (\ref{eq:put-right-identity})  -}
+< = {-~  Law (\ref{eq:put-right-identity}): put-right-identity  -}
 <    get >>= (\ s -> put s >> mzero)
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
 <    (get >>= put) >> mzero
-< = {-~  Law (\ref{eq:get-put})  -}
+< = {-~  Law (\ref{eq:get-put}): get-put  -}
 <    return () >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    mzero
 
-Another proof withous using law \ref{eq:put-right-identity}.
+Another proof withous using law \ref{eq:put-right-identity} for local-state semantics.
 
 <    get >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    return () >> (get >> mzero)
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
 <    (return () >> get) >> mzero
-< = {-~  Law (\ref{eq:get-put})  -}
+< = {-~  Law (\ref{eq:get-put}): get-put  -}
 <    ((get >>= put) >> get) >> mzero
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
 <    (get >>= (\ s -> put s >> get)) >> mzero
-< = {-~  Law (\ref{eq:put-get})  -}
+< = {-~  Law (\ref{eq:put-get}): put-get  -}
 <    (get >>= (\ s -> put s >> return s)) >> mzero
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
 <    ((get >>= put) >> return s) >> mzero
-< = {-~  Law (\ref{eq:get-put})  -}
+< = {-~  Law (\ref{eq:get-put}): get-put  -}
 <    (return () >> return s) >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    return s >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    mzero
 \end{proof}
 
@@ -52,40 +52,42 @@ Another proof withous using law \ref{eq:put-right-identity}.
 \begin{proof}~
 
 <    get >>= (\x -> k1 x `mplus` k2 x)
-< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    return () >> (get >>= (\x -> k1 x `mplus` k2 x))
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
 <    (return () >> get) >>= (\x -> k1 x `mplus` k2 x)
-< = {-~  Law (\ref{eq:get-put})  -}
+< = {-~  Law (\ref{eq:get-put}): get-put  -}
 <    ((get >>= put) >> get) >>= (\x -> k1 x `mplus` k2 x)
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
 <    (get >>= (\ s -> put s >> get)) >>= (\x -> k1 x `mplus` k2 x)
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
 <    get >>= (\ s -> (\ s -> put s >> get) s >>= (\x -> k1 x `mplus` k2 x))
 < = {-~  function application  -}
 <    get >>= (\ s -> (put s >> get) >>= (\x -> k1 x `mplus` k2 x))
-< = {-~  Law (\ref{eq:put-get})  -}
+< = {-~  Law (\ref{eq:put-get}): put-get  -}
 <    get >>= (\ s -> (put s >> return s) >>= (\x -> k1 x `mplus` k2 x))
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
 <    get >>= (\ s -> put s >> (return s >>= (\x -> k1 x `mplus` k2 x)))
-< = {-~  Law (\ref{eq:monad-ret-bind}) and function application  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and function application  -}
 <    get >>= (\ s -> put s >> (k1 s `mplus` k2 s))
-< = {-~  Law (\ref{eq:put-left-dist})  -}
+< = {-~  Law (\ref{eq:put-left-dist}): put-left-distributivity  -}
 <    get >>= (\ s -> (put s >> k1 s) `mplus` (put s >> k2 s))
-< = {-~  Law (\ref{eq:monad-ret-bind}) -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind (twice) -}
 <    get >>= (\ s -> (put s >> (return s >>= k1)) `mplus` (put s >> (return s >>= k2)))
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
 <    get >>= (\ s -> ((put s >> return s) >>= k1) `mplus` ((put s >> return s) >>= k2))
-< = {-~  Law (\ref{eq:put-get})  -}
+< = {-~  Law (\ref{eq:put-get}): put-get  -}
 <    get >>= (\ s -> ((put s >> get) >>= k1) `mplus` ((put s >> get) >>= k2))
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
 <    get >>= (\ s -> (put s >> (get >>= k1)) `mplus` (put s >> (get >>= k2)))
-< = {-~  Law (\ref{eq:put-left-dist})  -}
+< = {-~  Law (\ref{eq:put-left-dist}): put-left-distributivity  -}
 <    get >>= (\ s -> put s >> ((get >>= k1) `mplus` (get >>= k2)))
-< = {-~  Law (\ref{eq:monad-assoc})  -}
+< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
 <    (get >>= put) >> ((get >>= k1) `mplus` (get >>= k2))
-< = {-~  Law (\ref{eq:get-put})  -}
+< = {-~  Law (\ref{eq:get-put}): get-put -}
 <    return () >> ((get >>= k1) `mplus` (get >>= k2))
-< = {-~  Law (\ref{eq:monad-ret-bind}) and definition of |>>|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    (get >>= k1) `mplus` (get >>= k2)
 \end{proof}
+
+\birthe{do we want to make this proof without law (\ref{eq:put-left-dist})?}
