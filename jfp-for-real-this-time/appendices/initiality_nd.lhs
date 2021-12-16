@@ -2,7 +2,7 @@
 \label{app:universality-nondeterminism}
 
 This section shows, with a proof using equational reasoning techniques,
-that the |List| monad is the inital lawful instance of |MNondet|. 
+that the |List| monad is the inital lawful instance of |MNondet|.
 
 Therefore, there must be a unique morphism |g :: MNondet m => [a] -> m a| from the |List| monad
 to every other lawful instance of nondeterminism which preserves the five equations in Figure \ref{fig:5eqs}.
@@ -45,7 +45,7 @@ We prove the four equations in sequence.
 <    choose []
 < = {-~  definition of |choose|  -}
 <    foldr (mplus . etand) mzero []
-< = {-~  definition of |fold|  -}
+< = {-~  definition of |foldr|  -}
 <    mzero
 \end{proof}
 
@@ -62,7 +62,7 @@ The proof proceeds by structural induction on the list |xs|.
 <    choose ([] ++ ys)
 < = {-~  definition of |(++)|  -}
 <    choose ys
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
+< = {-~  Law (\ref{eq:mzero}): identity of |mzero|   -}
 <    mzero `mplus` choose ys
 < = {-~  definition of |choose|  -}
 <    choose [] `mplus` choose ys
@@ -74,7 +74,7 @@ The proof proceeds by structural induction on the list |xs|.
 % <    choose ([x] ++ ys)
 % < = {-~  definition of |(++)|  -}
 % <    choose (x : ys)
-% < = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+% < = {-~  definition of |choose|  -}
 % <    (mplus . etand) x (choose ys)
 % < = {-~  reformulation  -}
 % <    etand x `mplus` choose ys
@@ -95,7 +95,7 @@ The proof proceeds by structural induction on the list |xs|.
 <    (mplus . etand) x (choose xs `mplus` choose ys)
 < = {-~  reformulation  -}
 <    etand x `mplus` (choose xs `mplus` choose ys)
-< = {-~  associativity of |mplus| (\ref{eq:mplus-assoc})  -}
+< = {-~  Law (\ref{eq:mplus-assoc}): associativity of |mplus|  -}
 <    (etand x `mplus` choose xs) `mplus` choose ys
 < = {-~  definition of |choose|  -}
 <    (etand x `mplus` foldr (mplus . etand) mzero xs) `mplus` choose ys
@@ -134,7 +134,7 @@ The proof proceeds by structural induction on the list |xs|.
 <    (mplus . etand) x mzero
 < = {-~  reformulation  -}
 <    etand x `mplus` mzero
-< = {-~  identity of |mzero| (\ref{eq:mzero})  -}
+< = {-~  Law (\ref{eq:mzero}): identity of |mzero|  -}
 <    etand x
 \vspace{-6mm}
 \end{proof}
@@ -143,11 +143,11 @@ The proof proceeds by structural induction on the list |xs|.
 
 For the last two equations, it suffices to prove one of the following two equations:
 < choose . mul = mund . choose . fmap choose
-< choose . mul = mund . fmap choose . choose 
+< choose . mul = mund . fmap choose . choose
 Both properties are equivalent due to the naturality of the natural transformation |choose|.
 We do a case analysis on the list argument.
-We use the laws of Section \ref{sec:background}, utilizing the fact that 
-|mu f = f >>= id|.
+We use the laws of Section \ref{sec:background}, utilizing the fact that per definition
+|mu f = f >>= id|\footnote{|mu| is also referred to as the |join| operator.}.
 
 % \fbox{|choose . mul = mund . choose . fmap choose|}
 \begin{theorem}
@@ -162,15 +162,15 @@ The proof proceeds by structural induction on the list |xs|.
 \mbox{\underline{case |xs = []|}}
 
 <    choose (mul [])
-< = {-~  definition of |mul = foldr (++) []|  -}
+< = {-~  definition of |mul|  -}
 <    choose []
-< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+< = {-~  definition of |choose|  -}
 <    mzero
-< = {-~  left-identity (\ref{eq:mzero-zero}) with |f = id|  -}
+< = {-~  Law (\ref{eq:mzero-zero}): left-identity  -}
 <    mzero >>= id
-< = {-~  equation |mu f = f >>= id|  -}
+< = {-~  definition of |mu|  -}
 <    mund mzero
-< = {-~  definition of |choose|, base case  -}
+< = {-~  definition of |choose|  -}
 <    mund (choose [])
 < = {-~  definition of |fmap|  -}
 <    mund (choose (fmap choose []))
@@ -179,19 +179,19 @@ The proof proceeds by structural induction on the list |xs|.
 \mbox{\underline{case |xs = (x:xs)|}}
 
 <    choose (mul (x:xs))
-< = {-~  definition of |mul = foldr (++) []|  -}
+< = {-~  definition of |mul|  -}
 <    choose (x ++ mul xs)
 < = {-~  Theorem \ref{eq:A2}  -}
 <    choose x `mplus` choose (mul xs)
 < = {-~  induction hypothesis  -}
 <    choose x `mplus` mund (choose (fmap choose xs))
-< = {-~  monad law return-bind (\ref{eq:monad-ret-bind}) with |(>>=)| represented by |mu|  -}
+< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind with |mu = >>= id|  -}
 <    mund (etand (choose x)) `mplus` mund (choose (fmap choose xs))
-< = {-~  distributivity of |mund| and |mplus| (\ref{eq:mplus-dist}) with |f = id|  -}
+< = {-~  (\ref{eq:mplus-dist}): right-distributivity  -}
 <    mund (etand (choose x) `mplus` choose (fmap choose xs))
 < = {-~  reformulation  -}
 <    mund (mplus . etand) (choose x) (choose (fmap choose xs)))
-< = {-~  definition of |choose = foldr (mplus . etand) mzero|  -}
+< = {-~  definition of |choose|  -}
 <    mund (choose (choose x : fmap choose xs))
 < = {-~  definition of |fmap|  -}
 <    mund (choose (fmap choose (x:xs)))
@@ -201,10 +201,12 @@ The proof proceeds by structural induction on the list |xs|.
 
 To prove that |choose| is unique, we use the universality of |foldr|.
 \begin{theorem}[Universal Property of |fold|] \label{thm:univ-fold}
+For finite lists, the function |g = foldr f v| is unique with the following
+equations holding.
 \begin{align*}
 |g []| &= |v| &  & \\
 & &\Longleftrightarrow \hspace{10ex} |g| &= |foldr f v| \\
-|g (x:xs)| &= |f x (g xs)| & & 
+|g (x:xs)| &= |f x (g xs)| & &
 \end{align*}
 \end{theorem}
 
@@ -215,11 +217,13 @@ For any other morphism |g :: MNondet m => [a] -> m a| which satisfies the five e
 \begin{proof}
 Because |choose = foldr (mplus . etand) mzero|, by the universal property of |foldr|, we only need to prove the following two equations:
 \begin{enumerate}
-\item[1] |g [] = mzero|
+\item |g [] = mzero|
+\item |g (x:xs) = (mplus . etand) x (g xs)|
+\end{enumerate}
 
-It follows directly from the equation (1) in Figure \ref{fig:5eqs}.
+The first equation follows directly from Equation (1) in Figure \ref{fig:5eqs}.
+For the second equation, we reason as follows:
 
-\item[2] |g (x:xs) = (mplus . etand) x (g xs)|
 <    g (x:xs)
 < = {-~  definition of |(++)|  -}
 <    g ([x] ++ xs)
@@ -233,20 +237,5 @@ It follows directly from the equation (1) in Figure \ref{fig:5eqs}.
 <    etand x `mplus` g xs
 < = {-~  reformulation  -}
 <    (mplus . etand) x (g xs)
-\end{enumerate}
 
 \end{proof}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
