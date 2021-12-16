@@ -45,7 +45,7 @@ Often, we choose the high-level alternative which is easier to understand and
 to debug, but we miss out on opportunities for optimization that would have
 been available in the low-level style.
 
-Existing systems such the Warren Abstract Machine (WAM) for Prolog or
+Existing systems such as the Warren Abstract Machine (WAM) for Prolog or
 constraint-based systems in general \cite{AICPub641:1983,hassan91}
 offer a high-level programming interface to programmers, but
 use a low-level state-based

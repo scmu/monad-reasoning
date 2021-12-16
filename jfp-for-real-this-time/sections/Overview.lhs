@@ -90,6 +90,7 @@ The figure below shows how this influences the n-queens example in the different
 
 %-------------------------------------------------------------------------------
 \subsection{Free Monads and Their Folds}
+\label{sec:free-monads-and-their-folds}
 
 Before taking the first step, we first revise our key ingredients for
 simulating one effect in terms of another and establishing correctness: free
@@ -384,7 +385,7 @@ hNDf  =  fold genNDf (algNDf # fwdNDf)
   where
     genNDf           = Var . return
     algNDf Fail      = Var []
-    algNDf (Or p q)  = (++) <$> p <*> q
+    algNDf (Or p q)  = liftA2 (++) p q
     fwdNDf op        = Op op
 \end{code}
 

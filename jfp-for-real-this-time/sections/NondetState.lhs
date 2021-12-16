@@ -106,17 +106,17 @@ This section shows how to use a state-based implementation to simulate nondeterm
 For this, we use a type of state |S a| that is a essentially a tuple of
 (1) the |results| found so far |[a]|, and
 (2) a stack the branches with computations yet to be explored, which we will call the
-residual computations or the |residue|.
-The branches in the residue are represented by computations in the monad over the
+residual computations or the |stack|.
+The branches in the stack are represented by computations in the monad over the
 state signature.
 \begin{code}
 type Comp s a = Free (StateF s) a
-data S a = S { results :: [a], residue :: [Comp (S a) ()]}
+data S a = S { results :: [a], stack :: [Comp (S a) ()]}
 \end{code}
 To simulate a nondeterministic computation |Free NondetF a| with this state wrapper,
 we define a helper functions in Figure \ref{fig:pop-push-append}.
-The function |popS| takes the upper element of the residue.
-The function |pushS| adds a branch to the residue.
+The function |popS| takes the upper element of the stack.
+The function |pushS| adds a branch to the stack.
 The function |appendS| adds a result o the given results.
 
 \noindent
@@ -126,13 +126,13 @@ The function |appendS| adds a result o the given results.
 \begin{code}
 popS :: Comp (S a) ()
 popS = do
-  S xs res <- getS
-  case res of
+  S xs stack <- getS
+  case stack of
     []       -> return ()
     op : ps  -> do
       putS (S xs ps); op
 \end{code}
-\caption{Popping from the residue.}
+\caption{Popping from the stack.}
 \label{fig:pop}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
@@ -141,10 +141,10 @@ pushS   :: Comp (S a) ()
         -> Comp (S a) ()
         -> Comp (S a) ()
 pushS q p = do
-  S xs res <- getS
-  putS (S xs (q : res)); p
+  S xs stack <- getS
+  putS (S xs (q : stack)); p
 \end{code}
-\caption{Pushing to the residue.}
+\caption{Pushing to the stack.}
 \label{fig:push}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
@@ -153,8 +153,8 @@ appendS   :: a
           -> Comp (S a) ()
           -> Comp (S a) ()
 appendS x p = do
- S xs res <- getS
- putS (S (xs ++ [x]) res); p
+ S xs stack <- getS
+ putS (S (xs ++ [x]) stack); p
 \end{code}
 \caption{Appending a result.}
 \label{fig:append}
@@ -190,7 +190,7 @@ nondet2stateS = fold gen alg
     alg (Or p q)  = pushS q p
 \end{code}
 The generator of this handler records a new result and then pops the next
-branch from the residue stack and proceeds with it. Likewise, failure
+branch from the stack stack and proceeds with it. Likewise, failure
 simply pops and proceeds with the next branch. Lastly, a choice pushes
 the second branch on the stack and proceeds with the first branch.
 
@@ -207,7 +207,7 @@ runND = extractS . hState' . nondet2stateS
 \end{code}
 
 To prove this simulation correct, we show that the
-|runND| function is equivalent to the nondeterminism handler |hND| defined in Section \ref{sec:combining-effects}.
+|runND| function is equivalent to the nondeterminism handler |hND| defined in Section \ref{sec:free-monads-and-their-folds}.
 
 \begin{theorem}
 |runND = hND|
@@ -216,7 +216,7 @@ To prove this simulation correct, we show that the
 For the proof it is convenient to expand the definition of |runND| again,
 and to add parentheses for grouping:
 < (extractS . hState') . nondet2stateS = hND
-As both |nondet2stateS| and |hND| are folds, 
+As both |nondet2stateS| and |hND| are folds,
 we can use the fold fusion law for postcomposition as defined in
 Equation \ref{eq:fusion-post} to show that the two sides of the equation
 are equal.
@@ -241,7 +241,7 @@ Firstly, we augment the signature in the computation type
 with an additional component |f| for the additional effects.
 \begin{code}
 type CompSS s f a = Free (StateF s :+: f) a
-data SS f a = SS { resultsSS :: [a], residueSS :: [CompSS (SS f a) f ()] }
+data SS f a = SS { resultsSS :: [a], stackSS :: [CompSS (SS f a) f ()] }
 \end{code}
 
 As a consequence, the |nondet2state| handler requires a forwarding
@@ -286,13 +286,13 @@ putSS s = Op (Inl (Put s (return ())))
 popSS  :: Functor f
        => CompSS (SS f a) f ()
 popSS = do
-  SS xs res <- getSS
-  case res of
+  SS xs stack <- getSS
+  case stack of
     []       -> return ()
     op : ps  -> do
       putSS (SS xs ps); op
 \end{code}
-\caption{Popping from the residue.}
+\caption{Popping from the stack.}
 \label{fig:pop-ss}
 \end{subfigure}%
 \begin{subfigure}[t]{0.3\linewidth}
@@ -302,10 +302,10 @@ pushSS  :: Functor f
         -> CompSS (SS f a) f ()
         -> CompSS (SS f a) f ()
 pushSS q p = do
-  SS xs res <- getSS
-  putSS (SS xs (q : res)); p
+  SS xs stack <- getSS
+  putSS (SS xs (q : stack)); p
 \end{code}
-\caption{Pushing to the residue.}
+\caption{Pushing to the stack.}
 \label{fig:push-ss}
 \end{subfigure}
 \begin{subfigure}[t]{0.35\linewidth}
@@ -314,8 +314,8 @@ appendSS  :: Functor f => a
           -> CompSS (SS f a) f ()
           -> CompSS (SS f a) f ()
 appendSS x p = do
-  SS xs res <- getSS
-  putSS (SS (xs ++ [x]) res); p
+  SS xs stack <- getSS
+  putSS (SS (xs ++ [x]) stack); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append-ss}
@@ -358,7 +358,7 @@ algebra.
 \begin{equation*}
 |(extractSS . hState) . fwd = fwdNDf . fmap (extractSS . hState)|
 \end{equation*}
-The full proof 
+The full proof
 is included in \Cref{app:in-combination-with-other-effects}.
 
 %-------------------------------------------------------------------------------

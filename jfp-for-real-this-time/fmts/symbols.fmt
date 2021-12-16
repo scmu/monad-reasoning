@@ -9,6 +9,8 @@
 
 %format p1
 %format p2
+%format p1'
+%format p2'
 
 %format f1
 %format f2
@@ -50,6 +52,8 @@
 %format muls = "\Varid{\mu}_{LS}"
 %format etast = "\Varid{\eta}_{S+ND}"
 %format must = "\Varid{\mu}_{S+ND}"
+
+%format liftA2 = "\Varid{liftM2}"
 
 %format getls = "\Varid{get}_{LS}"
 %format getn = "\Varid{get}_{N}"
