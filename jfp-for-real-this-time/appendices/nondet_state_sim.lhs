@@ -514,6 +514,8 @@ As |nondet2state| is a fold, we only need to show the following two equations:
 < =  do { p' <- extractSS (hState (fwd x)); runStateT (hState popSS) (SS (xs++p') stack) }
 \end{enumerate}
 
+\todo{prove third item}
+
 First, we use equational reasoning to prove the first item.
 % <    runStateT (hState (gen x)) (SS xs stack)
 % < =  do { p' <- extractSS (hState (gen x)); runStateT (hState popSS) (SS (xs++p') stack) }
