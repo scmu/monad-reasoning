@@ -476,7 +476,7 @@ The left-hand side is
 <            f (head (as ++ [s])) st
 < = {-~  definition of |pushStack, popStack|  -}
 <            f (head (as ++ [s])) st
-< = {-~  property of |copy|  -}
+< = {-~  Lemma \ref{eq:copystack}  -}
 <        do  st' <- copyStack st
 <            f (head (as ++ [s])) st'
 < = {-~  inverse of the first few steps of this case  -}
@@ -510,7 +510,7 @@ The left-hand side is
 <            f (head (as ++ [s])) st
 < = {-~  definition of |pushStack, popStack|  -}
 <            f (head (as ++ [s])) st
-< = {-~  property of |copy|  -}
+< = {-~  Lemma \ref{eq:copystack}  -}
 <        do  st' <- copyStack st
 <            f (head (as ++ [s])) st
 < = {-~  inverse of the first few steps of this case  -}
@@ -674,10 +674,11 @@ The left-hand side is
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
 <            f s2 st'
-< = {-~  property of ST monad (swap the order of original state operations)  -} 
+< = {-~  Lemma \ref{eq:copystack-reorder}, definition of |pushList|  -} 
 <        do  liftST (pushStack (Right ()) st)
-<            pushList as st
 <            st' <- copyStack st
+<            pushList as st
+<            pushList as st'
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
 <            liftST (pushStack (Right ()) st)
@@ -685,7 +686,20 @@ The left-hand side is
 <            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
 <            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
 <            f s2 st'
-< = {-~  property of |copy|  -} 
+< = {-~  Lemma \ref{eq:copystack-reorder}  -} 
+<        do  st' <- copyStack st
+<            liftST (pushStack (Right ()) st)
+<            liftST (pushStack (Right ()) st')
+<            pushList as st
+<            pushList as st'
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
+<            liftST (pushStack (Right ()) st)
+<            pushList [] st
+<            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
+<            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
+<            f s2 st'
+< = {-~  reorder |pushStack|  -}
 <        do  st' <- copyStack st
 <            liftST (pushStack (Right ()) st)
 <            pushList as st
@@ -819,7 +833,7 @@ The left-hand side is
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 <      ) y
-< = {-~  definition of |STT| and |unSTT|  -} % NOTE: right ?
+< = {-~  definition of |STT| and |unSTT|  -}
 <      Op $ fmap ( \t -> runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st

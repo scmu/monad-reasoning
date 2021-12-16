@@ -16,5 +16,14 @@ In this section, we list the additional equations and properties we use in the p
 \end{lemma}
 
 
+\subsection{Equations about |copyStack|}
 
-% copy
+\begin{lemma} \label{eq:copystack} ~
+< f st == do st' <- copyStack st; f st'
+\end{lemma}
+
+\begin{lemma} \label{eq:copystack-reorder} ~
+<  do liftST (pushStack a st); st' <- copyStack st; f st st'
+< =
+<  do st' <- copyStack st; liftST (pushStack a st); liftST (pushStack a st'); f st st'
+\end{lemma}
