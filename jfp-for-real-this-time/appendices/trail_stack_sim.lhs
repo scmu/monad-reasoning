@@ -180,23 +180,35 @@ For the left-hand side, we have:
 <    \ s -> fmap fst . runSTT $
 <      do  st <- liftST (emptyStack ())
 <          STT $ \ s' -> Op (fmap ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
-< = {-~  property of |runSTT|  -} % NOTE: find some literature later ?
-<    \ s -> fmap fst $ Op (fmap ((\ f -> runSTT $ 
+< = {-~  Lemma \ref{eq:runst-homomorphism}  -} % NOTE: properties of st monad
+<    \ s -> fmap fst $
+<      do  st <- runSTT $ liftST (emptyStack ())
+<          runSTT . STT $ \ s' -> Op (fmap ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
+< = {-~  Lemma \ref{eq:st-into-op}  -} 
+<    \ s -> fmap fst $
+<      do  st <- runSTT $ liftST (emptyStack ())
+<          Op $ fmap (\t -> runSTT . STT $ \s' -> ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) t) y
+< = {-~  definition of |do|  -}
+<    \ s -> fmap fst . Op $ fmap (\t ->
+<      do  st <- runSTT $ liftST (emptyStack ())
+<          runSTT . STT $ \s' -> ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) t) y
+< = {-~  Lemma \ref{eq:runst-homomorphism}  -}
+<    \ s -> fmap fst . Op $ fmap (\t -> runSTT $
 <      do  st <- liftST (emptyStack ())
-<          STT $ \ s' -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
+<          STT $ \s' -> ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) t) y
+< = {-~  reformulation  -}
+<    \ s -> fmap fst . Op $ fmap ((\ f -> runSTT $ 
+<      do  st <- liftST (emptyStack ())
+<          STT $ \ s' -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y
 < = {-~  property of |unSTT| and |STT|  -}
-<    \ s -> fmap fst $ Op (fmap ((\ f -> runSTT $
+<    \ s -> fmap fst . Op $ fmap ((\ f -> runSTT $
 <      do  st <- liftST (emptyStack ())
-<          f st) . hStack . (\ k -> k s) . hGlobal) y)
+<          f st) . hStack . (\ k -> k s) . hGlobal) y
 < = {-~  definition of |.|  -}
-<    \ s -> fmap fst $ Op (fmap ((\ x -> runSTT $
-<      do  st <- liftST (emptyStack ())
-<          hStack x st) . (\ k -> k s) . hGlobal) y)
-< = {-~  definition of |.| and |$|  -}
 <    \ s -> fmap fst . Op $ fmap ((\ x -> runSTT $
 <      do  st <- liftST (emptyStack ())
 <          hStack x st) . (\ k -> k s) . hGlobal) y
-< = {-~  definition of |Op| and |fmap fst|  -} % NOTE: more explanation
+< = {-~  definition of |Op| and |fmap fst|  -}
 <    \ s -> Op $ fmap ((\ x -> fmap fst (runSTT $
 <      do  st <- liftST (emptyStack ())
 <          hStack x st)) . (\ k -> k s) . hGlobal) y
@@ -349,7 +361,7 @@ For the left-hand side, we have:
 <                                   st <- liftST (emptyStack ())
 <                                   y <- hStack (hGlobal q s) st;
 <                                   return (x ++ y)
-< = {-~  definition of |runSTT|  -} % NOTE: find some literature later
+< = {-~  Lemma \ref{eq:runst-homomorphism}  -} % NOTE: property of ST monad
 <    \ s -> do  x <- fmap fst . runSTT $ do  st <- liftST (emptyStack ());
 <                                            hStack (hGlobal p s) st;
 <               y <- fmap fst . runSTT $ do  st <- liftST (emptyStack ());
@@ -391,6 +403,7 @@ Again, because the stack infomation is simply a |()|, we omit it in the results 
 % <        f s2 st
 % < =
 % <    f (head (as ++ [s])) st
+<    runSTT $
 <    do  liftST (pushStack (Right ()) st)
 <        pushList as st
 <        (_, s1) <- hStack (hState1 (hNDf . local2trail $ t) s) st
@@ -398,6 +411,7 @@ Again, because the stack infomation is simply a |()|, we omit it in the results 
 <        f s2 st
 % <        f s2 st
 < =
+<    runSTT $
 <    do  st' <- copyStack st
 <        liftST (pushStack (Right ()) st)
 <        pushList as st
@@ -435,6 +449,8 @@ So this lemma states that after the evaluation of |pushStack, p, undoTrail|, the
 The proof proceeds by structural induction on the free monad |t|.
 In the following proofs, we assume implicit commutativity and associativity of the coproduct operator |(:+:)| as we have mentioned in Section \ref{sec:transforming-between-local-and-global-state}.
 We assume the smart constructors |getOp, putOp, orOp, failOp, pushOp, popOp| which are wrappers of constructors |Get, Put, Or, Fail, Push, Pop| respectively will automatically insert correct |Op, Inl, Inr| constructors based on the context to make the term well-typed in the following proof.
+
+We ommit the |runSTT| on both sides of the equations and prove a stronger version of the lemma in most of the following cases but the last one.
 
 \noindent \mbox{\underline{case |t = Var a|}}
 The left-hand side is
@@ -717,66 +733,111 @@ The left-hand side is
 <            f (head (as ++ [s])) st''
 
 \noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
+
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ Op (Inr (Inr y))) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 < = {-~  definition of |local2trail|  -}
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (hNDf $ Op . Inr . Inr . Inr $ fmap local2trail y) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 < = {-~  definition of |hNDf|  -}
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (hState1 (Op . Inr . Inr $ fmap (hNDf . local2trail) y) s) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 < = {-~  definition of |hState1|  -}
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (Op (fmap ($s) $ (Inr $ fmap (hState1 . hNDf . local2trail) y))) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 < = {-~  definition of |Inr|; |fmap| fusion  -}
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- hStack (Op . Inr $ fmap (($s) . hState1 . hNDf . local2trail) y) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 < = {-~  definition of |hStack|  -}
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            (_, s1) <- STT $ \s' -> Op (fmap (\f -> unSTT (f st) s')
-<              (fmap (($s) . hState1 . hNDf . local2trail) y))
+<              (fmap (hStack . ($s) . hState1 . hNDf . local2trail) y))
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
 < = {-~  |fmap| fusion  -}
+<    runSTT $
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
-<            (_, s1) <- STT $ \s' -> Op (fmap ((\f -> unSTT (f st) s') . ($s) . hState1 . hNDf . local2trail) y)
+<            (_, s1) <- STT $ \s' -> Op (fmap ((\f -> unSTT (f st) s') . hStack . ($s) . hState1 . hNDf . local2trail) y)
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
-< = {-~  property of ST monad  -} % NOTE: literature?
-<        Op $ fmap ( \t ->
-<          do  liftST (pushStack (Right ()) st)
-<              pushList as st
-<              (_, s1) <- STT $ \s' -> (\f -> unSTT (f st) s') . ($s) . hState1 . hNDf . local2trail $ t
-<              (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<              f s2 st
-<        ) y
-< = {-~  induction hypothesis  -} % NOTE: I expect the |st| is not shared, is it right?
-<        Op $ fmap ( \t ->
-<          do  st' <- copyStack st
-<              liftST (pushStack (Right ()) st)
-<              pushList as st
-<              (_, s1) <- STT $ \s' -> (\f -> unSTT (f st) s') . ($s) . hState1 . hNDf . local2trail $ t
-<              (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
-<              f (head (as ++ [s])) st'
-<        ) y
+< = {-~  Lemma \ref{eq:runst-homomorphism}  -}
+<        do  runSTT $ liftST (pushStack (Right ()) st)
+<            runSTT $ pushList as st
+<            (_, s1) <- runSTT . STT $ \s' -> Op (fmap ((\f -> unSTT (f st) s') . hStack . ($s) . hState1 . hNDf . local2trail) y)
+<            (_, s2) <- runSTT $ hStack (hState1 (hNDf undoTrail) s1) st
+<            runSTT $ f s2 st
+< = {-~  Lemma \ref{eq:st-into-op}  -}
+<        do  runSTT $ liftST (pushStack (Right ()) st)
+<            runSTT $ pushList as st
+<            (_, s1) <- Op $ fmap (\t -> runSTT . STT $ \s' -> ((\f -> unSTT (f st) s') . hStack . ($s) . hState1 . hNDf . local2trail) t) y
+<            (_, s2) <- runSTT $ hStack (hState1 (hNDf undoTrail) s1) st
+<            runSTT $ f s2 st
+< = {-~  definition of |do|  -}
+<      Op $ fmap ( \t ->
+<        do  runSTT $ liftST (pushStack (Right ()) st)
+<            runSTT $ pushList as st
+<            (_, s1) <- runSTT . STT $ \s' -> (\f -> unSTT (f st) s') . hStack . ($s) . hState1 . hNDf . local2trail $ t
+<            (_, s2) <- runSTT $ hStack (hState1 (hNDf undoTrail) s1) st
+<            runSTT $ f s2 st
+<      ) y
+< = {-~  Lemma \ref{eq:runst-homomorphism}  -}
+<      Op $ fmap ( \t -> runSTT $
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- STT $ \s' -> (\f -> unSTT (f st) s') . hStack . ($s) . hState1 . hNDf . local2trail $ t
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            f s2 st
+<      ) y
+< = {-~  functiona application  -}
+<      Op $ fmap ( \t -> runSTT $
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- STT $ \s' -> unSTT (hStack (hState1 (hNDf . local2trail $ t) s) st) s'
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            f s2 st
+<      ) y
+< = {-~  definition of |STT| and |unSTT|  -} % NOTE: right ?
+<      Op $ fmap ( \t -> runSTT $
+<        do  liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ t) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            f s2 st
+<      ) y
+< = {-~  induction hypothesis  -}
+<      Op $ fmap ( \t -> runSTT $ 
+<        do  st' <- copyStack st
+<            liftST (pushStack (Right ()) st)
+<            pushList as st
+<            (_, s1) <- hStack (hState1 (hNDf . local2trail $ t) s) st
+<            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
+<            f (head (as ++ [s])) st'
+<      ) y
 < = {-~  inverse of the first few steps of this case  -}
+<    runSTT $
 <        do  st' <- copyStack st
 <            liftST (pushStack (Right ()) st)
 <            pushList as st
