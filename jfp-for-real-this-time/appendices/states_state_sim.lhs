@@ -152,7 +152,7 @@ We do structural induction on |t|.
 <    hStates' (Var x)
 
 There are five inductive cases of |t|, for each case the induction hypothesis states that the continuation |t'| in |t| satisfies the equation |hStates' t' = (hState . states2state) t'|.
-We will show the induction hypothesis in detail at the beginning of each case.
+We show the induction hypothesis in detail at the beginning of each case.
 
 \noindent \mbox{\underline{case |t = Op (Inl (Get k))|}}
 
