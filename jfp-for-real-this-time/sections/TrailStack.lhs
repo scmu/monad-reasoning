@@ -15,8 +15,7 @@ module TrailStack where
 
 import Background hiding (plus)
 import Overview
-import Control.Monad (ap, liftM)
-import Control.Applicative (liftA2)
+import Control.Monad (ap, liftM, liftM2)
 -- import qualified Control.Monad.Trans.State.Lazy as S
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Control.Monad.ST.Trans (STT, runSTT)
@@ -86,7 +85,7 @@ alg' = alg1' # alg2' # fwd'
     alg1' (Get k)    = \ s -> k s s
     alg1' (Put s k)  = \ _ -> k s
     alg2' Fail       = \ s -> Var []
-    alg2' (Or p q)   = \ s -> liftA2 (++) (p s) (q s)
+    alg2' (Or p q)   = \ s -> liftM2 (++) (p s) (q s)
     fwd' y           = \ s -> Op (fmap ($s) y)
 
 
@@ -95,7 +94,7 @@ t = undefined
 
 qwq :: Functor f => (StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: StackF (Either s ()) () :+: f) a) -> Int
 qwq t = case t of
-      (Inr (Inr y)) -> 
+      (Inr (Inr y)) ->
         let tmp     = \ s -> Op (fmap ((\ x -> fmap fst (runhStack () x)) . (\ k -> k s) . hGlobal) y)
         in let tmp' = \ s -> fmap fst (runhStack () (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
         in 1

@@ -14,8 +14,7 @@
 module Overview where
 
 import Background
-import Control.Monad (ap, liftM, join)
-import Control.Applicative (liftA2)
+import Control.Monad (ap, liftM, join, liftM2)
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Data.List
 
@@ -386,7 +385,7 @@ hNDf  =  fold genNDf (algNDf # fwdNDf)
   where
     genNDf           = Var . return
     algNDf Fail      = Var []
-    algNDf (Or p q)  = liftA2 (++) p q
+    algNDf (Or p q)  = liftM2 (++) p q
     fwdNDf op        = Op op
 \end{code}
 

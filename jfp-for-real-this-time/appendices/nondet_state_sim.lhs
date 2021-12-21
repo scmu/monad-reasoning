@@ -439,8 +439,8 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 <    do { p' <- extractSS (hState p); q' <- extractSS (hState q); return (p'++q') }
 % < = {-~  definition of |(.)|  -}
 % <    do { p' <- ((extractSS . hState) p); q' <- ((extractSS . hState) q); return (p' ++ q')}
-< = {-~  definition of |liftA2|  -}
-<    liftA2 (++) ((extractSS . hState) p) ((extractSS . hState) q)
+< = {-~  definition of |liftM2|  -}
+<    liftM2 (++) ((extractSS . hState) p) ((extractSS . hState) q)
 < = {-~  definition of |algNDf|  -}
 <    algNDf (Or ((extractSS . hState) p) ((extractSS . hState) q))
 < = {-~  definition of |fmap|  -}
@@ -448,7 +448,7 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 < = {-~  definition of |(#)|  -}
 <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl (Or p q))
 
-The property that |extractSS (hState (alg (Or p q))) = liftA2 (++) (extractSS (hState p)) (extractSS (hState q))|
+The property that |extractSS (hState (alg (Or p q))) = liftM2 (++) (extractSS (hState p)) (extractSS (hState q))|
 is called \emph{extract-alg2-ext}\label{eq:extract-alg-2-f}.
 
 \noindent \mbox{\underline{case |Inr y|}}
@@ -570,8 +570,8 @@ Assume by induction that |p1| and |p2| satisfy this theorem.
 % < = {-~  definition of |let|  -}
 % <    do { p2' <- extractSS (hState p2); p1' <- extractSS (hState p1);
 % <      let p' = (p1' ++ p2') in runStateT (hState popSS) (SS (xs++p') stack) }
-< = {-~  definition of |liftA2|  -}
-<    do { p' <- liftA2 (++) (extractSS (hState p2)) (extractSS (hState p1));
+< = {-~  definition of |liftM2|  -}
+<    do { p' <- liftM2 (++) (extractSS (hState p2)) (extractSS (hState p1));
 <      runStateT (hState popSS) (SS (xs++p') stack) }
 < = {-~  Theorem \ref{eq:runndf-hndf}: extract-alg2-ext  -}
 <    do { p' <- extractSS (hState (alg (Or p1 p2))); runStateT (hState popSS) (SS (xs++p') stack) }

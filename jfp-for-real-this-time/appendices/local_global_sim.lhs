@@ -105,7 +105,7 @@ alg' = alg1 # alg2 # fwd1
   where alg1 (Get k)    = \ s -> k s s
         alg1 (Put s k)  = \ _ -> k s
         alg2 Fail       = \ s -> Var []
-        alg2 (Or p q)   = \ s -> liftA2 (++) (p s) (q s)
+        alg2 (Or p q)   = \ s -> liftM2 (++) (p s) (q s)
         fwd1 y          = \ s -> Op (fmap ($s) y)
 \end{code}
 These two equations (1) and (2) are proved in Lemma \ref{eq:fusion-cond-1} and Lemma \ref{eq:fusion-cond-2} respectively.
@@ -194,19 +194,19 @@ We do a case analysis on |t|.
 < = {-~  evaluation of |fmap hL|  -}
 <    alg' (Inr (Inl (Or (hL p) (hL q))))
 < = {-~  definition of |alg'|  -}
-<    \ s -> liftA2 (++) (hL p s) (hL q s)
+<    \ s -> liftM2 (++) (hL p s) (hL q s)
 < = {-~  |eta|-expansion (twice)  -}
-<    \ s -> liftA2 (++) (hL (\ s' -> p s') s) (hL (\ s' -> q s') s)
+<    \ s -> liftM2 (++) (hL (\ s' -> p s') s) (hL (\ s' -> q s') s)
 < = {-~  definition of |hL|  -}
-<    \ s -> liftA2 (++) ((fmap hL') (\ s' -> p s') s) ((fmap hL') (\ s' -> q s') s)
+<    \ s -> liftM2 (++) ((fmap hL') (\ s' -> p s') s) ((fmap hL') (\ s' -> q s') s)
 < = {-~  definition of |fmap|  -}
-<    \ s -> liftA2 (++) ((\ s' -> hL' (p s')) s) ((\ s' -> hL' (q s')) s)
+<    \ s -> liftM2 (++) ((\ s' -> hL' (p s')) s) ((\ s' -> hL' (q s')) s)
 < = {-~  function application  -}
-<    \ s -> liftA2 (++) (hL' (p s)) (hL' (q s))
+<    \ s -> liftM2 (++) (hL' (p s)) (hL' (q s))
 < = {-~  definition of |hL'|  -}
-<    \ s -> liftA2 (++) (fmap (fmap fst) (hNDf (p s))) (fmap (fmap fst) (hNDf (q s)))
-< = {-~  Lemma \ref{eq:liftA2-fst-comm}  -}
-<    \ s -> fmap (fmap fst) (liftA2 (++) (hNDf (p s)) (hNDf (q s)))
+<    \ s -> liftM2 (++) (fmap (fmap fst) (hNDf (p s))) (fmap (fmap fst) (hNDf (q s)))
+< = {-~  Lemma \ref{eq:liftM2-fst-comm}  -}
+<    \ s -> fmap (fmap fst) (liftM2 (++) (hNDf (p s)) (hNDf (q s)))
 < = {-~  definition of |hNDf|  -}
 <    \ s -> (fmap (fmap fst) . hNDf) (Op (Inl (Or (p s) (q s))))
 < = {-~  definition of |hL'|  -}
@@ -276,13 +276,13 @@ We do a case analysis on |t|.
 % <    (f . (\ k -> k s)) t
 % \end{proof}
 
-\begin{lemma} \label{eq:liftA2-fst-comm}~
-< fmap (fmap fst) (liftA2 (++) p q) = liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
+\begin{lemma} \label{eq:liftM2-fst-comm}~
+< fmap (fmap fst) (liftM2 (++) p q) = liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 \end{lemma}
 \begin{proof}~
 
-<    fmap (fmap fst) (liftA2 (++) p q)
-< = {-~  definition of |liftA2| -}
+<    fmap (fmap fst) (liftM2 (++) p q)
+< = {-~  definition of |liftM2| -}
 <    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
 < = {-~  derived property for monad: |fmap f (m >>= k) = m >>= fmap f . k| -}
 <    do {x <- p; y <- q; fmap (fmap fst) (return (x ++ y))}
@@ -290,8 +290,8 @@ We do a case analysis on |t|.
 <    do {x <- p; y <- q; return ((fmap fst x) ++ (fmap fst y))}
 < = {-~  reformulation -}
 <    do {x <- fmap (fmap fst) p; y <- fmap (fmap fst) q; return (x ++ y)}
-< = {-~  definition of |liftA2| -}
-<    liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
+< = {-~  definition of |liftM2| -}
+<    liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 \end{proof}
 
 % no longer necessary
@@ -301,7 +301,7 @@ We do a case analysis on |t|.
 % where |algL'| is defined as follows:
 % <     algL' :: Functor f => (NondetF :+: f) (Free f [a]) -> Free f [a]
 % <     algL' (Inl Fail) = Var []
-% <     algL' (Inl (Or p q)) = liftA2 (++) p q
+% <     algL' (Inl (Or p q)) = liftM2 (++) p q
 % <     algL' (Inr y) = Op y
 % \end{lemma}
 %
@@ -331,9 +331,9 @@ We do a case analysis on |t|.
 % \noindent \mbox{\underline{case |t = Inl (Or p q)|}}
 % <    (fmap (fmap fst) . algND) (Inl (Or p q))
 % < = {-~  definition of |algND|  -}
-% <    fmap (fmap fst) (liftA2 (++) p q)
-% < = {-~  Lemma \ref{eq:liftA2-fst-comm}  -}
-% <    liftA2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
+% <    fmap (fmap fst) (liftM2 (++) p q)
+% < = {-~  Lemma \ref{eq:liftM2-fst-comm}  -}
+% <    liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
 % < = {-~  definition of |algL'|  -}
 % <    algL' (Inl (Or (fmap (fmap fst) p) (fmap (fmap fst) q)))
 % < = {-~  definition of |fmap|  -}
@@ -413,15 +413,15 @@ In this way, we avoid the tedious details of dealing with these constructors man
 < = {-~  definition of |hGlobal|  -}
 <    (fmap (fmap fst) . hState1 . hNDf) (getOp (\ s' -> orOp (putOp s k) (putOp s' failOp)))
 < = {-~  definition of |hNDf| (twice)  -}
-<    (fmap (fmap fst) . hState1) (getOp (\ s' -> liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var []))))
+<    (fmap (fmap fst) . hState1) (getOp (\ s' -> liftM2 (++) (putOp s (hNDf k)) (putOp s' (Var []))))
 < = {-~  definition of |hState1|  -}
 <    fmap (fmap fst) (\ s' -> (hState1 .
-<      (\ s' -> liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var [])))) s' s')
+<      (\ s' -> liftM2 (++) (putOp s (hNDf k)) (putOp s' (Var [])))) s' s')
 < = {-~  function application  -}
-<    fmap (fmap fst) (\ s' -> hState1 (liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var []))) s')
+<    fmap (fmap fst) (\ s' -> hState1 (liftM2 (++) (putOp s (hNDf k)) (putOp s' (Var []))) s')
 < = {-~  definition of |fmap|  -}
-<    \ s' -> fmap fst (hState1 (liftA2 (++) (putOp s (hNDf k)) (putOp s' (Var []))) s')
-< = {-~  definition of |liftA2|  -}
+<    \ s' -> fmap fst (hState1 (liftM2 (++) (putOp s (hNDf k)) (putOp s' (Var []))) s')
+< = {-~  definition of |liftM2|  -}
 <    \ s' -> fmap fst (hState1 (do {x <- putOp s (hNDf k); y <- putOp s' (Var []); return (x++y)}) s')
 < = {-~  |y = []| (property of free monad)  -}
 <    \ s' -> fmap fst (hState1 (do {x <- putOp s (hNDf k); putOp s' (Var []); return x}) s')
@@ -480,8 +480,8 @@ In this way, we avoid the tedious details of dealing with these constructors man
 < = {-~  definition of |hGlobal|  -}
 <    (fmap (fmap fst) . hState1 . hNDf) (Op (Inr (Inl (Or p q))))
 < = {-~  definition of |hNDf|  -}
-<    (fmap (fmap fst) . hState1) (liftA2 (++) (hNDf p) (hNDf q))
-< = {-~  definition of |liftA2|  -}
+<    (fmap (fmap fst) . hState1) (liftM2 (++) (hNDf p) (hNDf q))
+< = {-~  definition of |liftM2|  -}
 <    (fmap (fmap fst) . hState1) (do {x <- hNDf p; y <- hNDf q; return (x ++ y)})
 < = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
 <    fmap (fmap fst) $ \ s -> do {  (x, s1) <- hState1 (hNDf p) s;
@@ -511,8 +511,8 @@ In this way, we avoid the tedious details of dealing with these constructors man
 <    \ s -> do {  x <- hGlobal p s;
 <                 y <- hGlobal q s;
 <                 return (x ++ y)}
-< = {-~  definition of |liftA2|  -}
-<    \ s -> liftA2 (++) (hGlobal p s) (hGlobal q s)
+< = {-~  definition of |liftM2|  -}
+<    \ s -> liftM2 (++) (hGlobal p s) (hGlobal q s)
 < = {-~  definition of |alg'|  -}
 <    alg' (Inr (Inl Or (hGlobal p) (hGlobal q)))
 < = {-~  definition of |fmap|  -}
@@ -691,8 +691,8 @@ constructors based on the context to make the term well-typed in the following p
 < = {-~  definition of |local2global|; let |p' = local2global p, q' = local2global q|  -}
 <    hState1 (hNDf (orOp p' q')) s
 < = {-~  definition of |hNDf|  -}
-<    hState1 (liftA2 (++) (hNDf p') (hNDf q')) s
-< = {-~  definition of |liftA2|  -}
+<    hState1 (liftM2 (++) (hNDf p') (hNDf q')) s
+< = {-~  definition of |liftM2|  -}
 <    hState1 (do x <- hNDf p'; y <- hNDf q'; return (x ++ y)) s
 < = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
 <    do (x, s1) <- hState1 (hNDf p') s; (y, s2) <- hState1 (hNDf q') s1; return (x++y, s2)

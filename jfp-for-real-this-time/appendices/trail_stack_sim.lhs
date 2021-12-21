@@ -62,12 +62,12 @@ Thus, we only need to prove |h1 . Var = hGlobal . Var| for all inputs |x :: a|.
 <    (\ s -> Var [x])
 < = {-~  definition of |hGlobal|  -}
 <    hGlobal (Var x)
-< = {-~  reformulation  -} 
+< = {-~  reformulation  -}
 <    (hGlobal . Var) x
 
 So we have |hL . genS = hGlobal . Var = h1 . Var|.
 
-For the second item, instead of constructing |alg'| and |algS'| individually, we only construct |alg'| and then verify that the following two equations hold: 
+For the second item, instead of constructing |alg'| and |algS'| individually, we only construct |alg'| and then verify that the following two equations hold:
 
 \begin{enumerate}
     \item |hL . algS = alg' . fmap hL|
@@ -82,7 +82,7 @@ alg' = alg1' # alg2' # fwd'
     alg1' (Get k)    = \ s -> k s s
     alg1' (Put s k)  = \ _ -> k s
     alg2' Fail       = \ s -> Var []
-    alg2' (Or p q)   = \ s -> liftA2 (++) (p s) (q s)
+    alg2' (Or p q)   = \ s -> liftM2 (++) (p s) (q s)
     fwd' y           = \ s -> Op (fmap ($s) y)
 \end{spec}
 The equation (1) is already proved in Lemma \ref{eq:fusion-cond-1}.
@@ -158,7 +158,7 @@ For the left-hand side, we have:
 < = {-~  definition of |fmap|  -}
 <    \ s -> fmap fst (runhStack () (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
 < = {-~  definition of |runhStack|  -}
-<    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>= 
+<    \ s -> fmap fst (runSTT $ liftST (emptyStack ()) >>=
 <      hStack (Op (fmap ((\ k -> k s) . hGlobal) (Inr y))))
 < = {-~  definition of |do|  -}
 <    \ s -> fmap fst (runSTT $
@@ -184,7 +184,7 @@ For the left-hand side, we have:
 <    \ s -> fmap fst $
 <      do  st <- runSTT $ liftST (emptyStack ())
 <          runSTT . STT $ \ s' -> Op (fmap ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
-< = {-~  Lemma \ref{eq:st-into-op}  -} 
+< = {-~  Lemma \ref{eq:st-into-op}  -}
 <    \ s -> fmap fst $
 <      do  st <- runSTT $ liftST (emptyStack ())
 <          Op $ fmap (\t -> runSTT . STT $ \s' -> ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) t) y
@@ -197,7 +197,7 @@ For the left-hand side, we have:
 <      do  st <- liftST (emptyStack ())
 <          STT $ \s' -> ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) t) y
 < = {-~  reformulation  -}
-<    \ s -> fmap fst . Op $ fmap ((\ f -> runSTT $ 
+<    \ s -> fmap fst . Op $ fmap ((\ f -> runSTT $
 <      do  st <- liftST (emptyStack ())
 <          STT $ \ s' -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y
 < = {-~  property of |unSTT| and |STT|  -}
@@ -240,7 +240,7 @@ For the left-hand side, we have:
 < = {-~  definition of |alg1|  -}
 <    h1 (do t <- get; push (Left t); put s; k)
 < = {-~  definition of |h1|  -}
-<    (fmap (\ x -> fmap fst (runhStack () x)) . hGlobal) (do t <- get; push (Left t); put s; k) 
+<    (fmap (\ x -> fmap fst (runhStack () x)) . hGlobal) (do t <- get; push (Left t); put s; k)
 < = {-~  definition of |hGlobal|  -} % omit some steps
 <    fmap (\ x -> fmap fst (runhStack () x)) (\ t -> do push (Left t); hGlobal k s)
 < = {-~  definition of |fmap|  -}
@@ -272,8 +272,8 @@ For the left-hand side, we have:
 <      (or (do push (Right ()); p) (do undoTrail; q))
 < = {-~  definition of |hNDf|  -}
 <    fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1 $
-<      (liftA2 (++) (do push (Right ()); hNDf p) (do hNDf undoTrail; hNDf q))
-< = {-~  definition of |liftA2|  -}
+<      (liftM2 (++) (do push (Right ()); hNDf p) (do hNDf undoTrail; hNDf q))
+< = {-~  definition of |liftM2|  -}
 <    fmap (\ x -> fmap fst (runhStack () x)) . fmap (fmap fst) . hState1 $
 <      (do x <- (do push (Right ()); hNDf p); y <- (do hNDf undoTrail; hNDf q); return (x ++ y))
 < = {-~  definition of |do|  -}
@@ -381,8 +381,8 @@ For the left-hand side, we have:
 <               return (x ++ y)
 < = {-~  definition of |h1|  -}
 <    \ s -> do x <- h1 p s; y <- h1 q s; return (x ++ y)
-< = {-~  definition of |liftA2|  -}
-<    \ s -> liftA2 (++) (h1 p s) (h1 q s)
+< = {-~  definition of |liftM2|  -}
+<    \ s -> liftM2 (++) (h1 p s) (h1 q s)
 < = {-~  definition of |alg2'|  -}
 <    alg2' (Or (h1 p) (h1 q))
 < = {-~  definition of |#|  -}
@@ -652,7 +652,7 @@ The left-hand side is
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) t2) st
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st
 <            f s2 st
-< = {-~  induction hypothesis of |p|  -} 
+< = {-~  induction hypothesis of |p|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            st' <- copyStack st
@@ -663,7 +663,7 @@ The left-hand side is
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) (head ([] ++ [s]))) st'
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
 <            f s2 st'
-< = {-~  definition of |++|  -} 
+< = {-~  definition of |++|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            pushList as st
 <            st' <- copyStack st
@@ -674,7 +674,7 @@ The left-hand side is
 <            (_, s1) <- hStack (hState1 (hNDf . local2trail $ q) s) st'
 <            (_, s2) <- hStack (hState1 (hNDf undoTrail) s1) st'
 <            f s2 st'
-< = {-~  Lemma \ref{eq:copystack-reorder}, definition of |pushList|  -} 
+< = {-~  Lemma \ref{eq:copystack-reorder}, definition of |pushList|  -}
 <        do  liftST (pushStack (Right ()) st)
 <            st' <- copyStack st
 <            pushList as st
@@ -686,7 +686,7 @@ The left-hand side is
 <            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
 <            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
 <            f s2 st'
-< = {-~  Lemma \ref{eq:copystack-reorder}  -} 
+< = {-~  Lemma \ref{eq:copystack-reorder}  -}
 <        do  st' <- copyStack st
 <            liftST (pushStack (Right ()) st)
 <            liftST (pushStack (Right ()) st')
@@ -712,7 +712,7 @@ The left-hand side is
 <            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
 <            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
 <            f s2 st'
-< = {-~  induction hypothesis of |q|  -} 
+< = {-~  induction hypothesis of |q|  -}
 <        do  st' <- copyStack st
 <            liftST (pushStack (Right ()) st)
 <            pushList as st
@@ -726,7 +726,7 @@ The left-hand side is
 <            (_, t1) <- hStack (hState1 (hNDf . local2trail $ p) s) st
 <            (_, t2) <- hStack (hState1 (hNDf undoTrail) t1) st
 <            f (head (as ++ [s])) st''
-< = {-~  property of |ST monad| and |copy|  -} 
+< = {-~  property of |ST monad| and |copy|  -}
 <        do  st'' <- copyStack st
 <            liftST (pushStack (Right ()) st)
 <            pushList as st
@@ -842,7 +842,7 @@ The left-hand side is
 <            f s2 st
 <      ) y
 < = {-~  induction hypothesis  -}
-<      Op $ fmap ( \t -> runSTT $ 
+<      Op $ fmap ( \t -> runSTT $
 <        do  st' <- copyStack st
 <            liftST (pushStack (Right ()) st)
 <            pushList as st

@@ -53,7 +53,7 @@
 %format etast = "\Varid{\eta}_{S+ND}"
 %format must = "\Varid{\mu}_{S+ND}"
 
-%format liftA2 = "\Varid{liftM2}"
+%format liftM2 = "\Varid{liftM2}"
 
 %format getls = "\Varid{get}_{LS}"
 %format getn = "\Varid{get}_{N}"

@@ -17,8 +17,7 @@ module LocalGlobal where
 
 import Background
 import Overview
-import Control.Monad (ap, liftM)
-import Control.Applicative (liftA2)
+import Control.Monad (ap, liftM, liftM2)
 -- import qualified Control.Monad.Trans.State.Lazy as S
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
