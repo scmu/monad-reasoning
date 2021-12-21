@@ -47,6 +47,8 @@ For the left hand side, we can also expand the definition of |local2global| and 
 <    fold (hGlobal . Var) alg'
 <      {-" \text{with } "-} hGlobal . alg . fmap local2global = alg' . fmap hGlobal . fmap local2global
 
+\birthe{I believe that we don't need the strong fusion post law}
+
 The algebras |alg'| and |algS'| are constructed later.
 % Note that we only need the equation |hGlobal . alg = alg' . fmap hGlobal| to hold for inputs |t :: (StateF s :+: (NondetF :+: f)) (Free (StateF s :+: NondetF :+: f) a)| in the range of |fmap local2global|.
 Then, we can use the universal property of fold to show that |hLocal = fold (hL . genS) algS'| and |hGlobal . local2global = fold (hGlobal . Var) alg'| are equal.
