@@ -41,7 +41,7 @@ that has the functionality of a mutable state.
 
 It is easy to show that a mutable state handler can be defined in
 Haskell.
-We will use a stack to implement mutable state.
+We use a stack to implement mutable state.
 \begin{code}
 data Stack s b a = Stack {   stack     ::  STRef s   (STArray s Index a),
                              size      ::  STRef s   Index,

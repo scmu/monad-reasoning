@@ -401,7 +401,7 @@ Recall from right-distributivity (\ref{eq:mplus-dist}) that
 |(m1 `mplus` m2) >> n = (m1 >> n) `mplus` (m2 >> n)|.
 That is, |mplus| acts as ``insertion points'', where future code followed by
 |(>>)| can be inserted into.
-This is a dangerous feature, which we will replace by a safer programming pattern.
+This is a dangerous feature, which we replace by a safer programming pattern.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph{State-Restoring Put}
@@ -507,6 +507,7 @@ can we simulate local-state semantics.
 
 %-------------------------------------------------------------------------------
 \subsection{Proving the |putR| Operation Correct}
+\label{sec:putr}
 It is time to give a more formal definition for the translation between
 global-state and local-state semantics using the free monad representation.
 % We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten

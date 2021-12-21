@@ -105,7 +105,7 @@ This section shows how to use a state-based implementation to simulate nondeterm
 
 For this, we use a type of state |S a| that is a essentially a tuple of
 (1) the |results| found so far |[a]|, and
-(2) a stack the branches with computations yet to be explored, which we will call the
+(2) a stack the branches with computations yet to be explored, which we call the
 residual computations or the |stack|.
 The branches in the stack are represented by computations in the monad over the
 state signature.

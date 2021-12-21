@@ -35,7 +35,7 @@ effects.
 We discuss the two paramount effects of this paper: state and nondeterminism.
 % Furthermore, this section explains how to arbitrarily combine effects using
 % free monads and the coproduct operator.
-Throughout the paper, we will use Haskell as a means to illustrate
+Throughout the paper, we use Haskell as a means to illustrate
 our findings with code.
 
 
@@ -65,7 +65,7 @@ proofs based on equational reasoning to establish the correctness of those
 transformations.
 \end{enumerate}
 
-As a running example, we will use the n-queens puzzle, which has
+As a running example, we use the n-queens puzzle, which has
 nondeterminism and state, and can be simulated using only state.
 
 

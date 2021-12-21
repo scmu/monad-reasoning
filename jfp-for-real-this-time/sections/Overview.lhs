@@ -15,6 +15,7 @@ module Overview where
 
 import Background
 import Control.Monad (ap, liftM, join)
+import Control.Applicative (liftA2)
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Data.List
 
@@ -159,7 +160,7 @@ This gives rise to the following laws:
 \end{alignat}
 where |f = fold gen alg|.
 
-These two fusion laws will turn out to be essential in the further proofs of this paper.
+These two fusion laws turn out to be essential in the further proofs of this paper.
 
 % We can define an empty signature and the run function for it.
 % \begin{code}
