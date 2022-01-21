@@ -514,8 +514,6 @@ As |nondet2state| is a fold, we only need to show the following two equations:
 < =  do { p' <- extractSS (hState (fwd x)); runStateT (hState popSS) (SS (xs++p') stack) }
 \end{enumerate}
 
-\todo{prove third item}
-
 First, we use equational reasoning to prove the first item.
 % <    runStateT (hState (gen x)) (SS xs stack)
 % < =  do { p' <- extractSS (hState (gen x)); runStateT (hState popSS) (SS (xs++p') stack) }
@@ -575,6 +573,18 @@ Assume by induction that |p1| and |p2| satisfy this theorem.
 <      runStateT (hState popSS) (SS (xs++p') stack) }
 < = {-~  Theorem \ref{eq:runndf-hndf}: extract-alg2-ext  -}
 <    do { p' <- extractSS (hState (alg (Or p1 p2))); runStateT (hState popSS) (SS (xs++p') stack) }
+
+Finally, we use equational reasoning techniques to prove the third item.
+<    runStateT (hState (fwd x)) (SS xs stack)
+< = {-~  definition of |fwd|  -}
+<    runStateT (hState (Op (Inr x))) (SS xs stack)
+< = {-~  definition of |hState|  -}
+\todo{}
+
+
+
+
+< =  do { p' <- extractSS (hState (fwd x)); runStateT (hState popSS) (SS (xs++p') stack) }
 
 Note that the above two proofs of theorems \ref{eq:runndf-hndf} and \ref{eq:pop-extract-f} are mutually recursive. However, only the
 second proof uses induction. As we work inductively on (smaller) subterms,

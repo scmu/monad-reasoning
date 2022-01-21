@@ -21,29 +21,29 @@ In this section we prove two equations relevant to the interaction of nondetermi
 <    return () >> mzero
 < = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    mzero
-
-Another proof withous using law \ref{eq:put-right-identity} for local-state semantics.
-
-<    get >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
-<    return () >> (get >> mzero)
-< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
-<    (return () >> get) >> mzero
-< = {-~  Law (\ref{eq:get-put}): get-put  -}
-<    ((get >>= put) >> get) >> mzero
-< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
-<    (get >>= (\ s -> put s >> get)) >> mzero
-< = {-~  Law (\ref{eq:put-get}): put-get  -}
-<    (get >>= (\ s -> put s >> return s)) >> mzero
-< = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
-<    ((get >>= put) >> return s) >> mzero
-< = {-~  Law (\ref{eq:get-put}): get-put  -}
-<    (return () >> return s) >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
-<    return s >> mzero
-< = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
-<    mzero
 \end{proof}
+
+% Another proof without using law \ref{eq:put-right-identity} for local-state semantics.
+%
+% <    get >> mzero
+% < = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
+% <    return () >> (get >> mzero)
+% < = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>)|  -}
+% <    (return () >> get) >> mzero
+% < = {-~  Law (\ref{eq:get-put}): get-put  -}
+% <    ((get >>= put) >> get) >> mzero
+% < = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
+% <    (get >>= (\ s -> put s >> get)) >> mzero
+% < = {-~  Law (\ref{eq:put-get}): put-get  -}
+% <    (get >>= (\ s -> put s >> return s)) >> mzero
+% < = {-~  Law (\ref{eq:monad-assoc}): associativity of |(>>=)|  -}
+% <    ((get >>= put) >> return s) >> mzero
+% < = {-~  Law (\ref{eq:get-put}): get-put  -}
+% <    (return () >> return s) >> mzero
+% < = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
+% <    return s >> mzero
+% < = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
+% <    mzero
 
 \begin{theorem}
 |get >>= (\x -> k1 x `mplus` k2 x) = (get >>= k1) `mplus` (get >>= k2)|
@@ -89,5 +89,3 @@ Another proof withous using law \ref{eq:put-right-identity} for local-state sema
 < = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 <    (get >>= k1) `mplus` (get >>= k2)
 \end{proof}
-
-\birthe{do we want to make this proof without law (\ref{eq:put-left-dist})?}

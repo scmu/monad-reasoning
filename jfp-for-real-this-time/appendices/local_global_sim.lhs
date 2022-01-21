@@ -498,12 +498,28 @@ In this way, we avoid the tedious details of dealing with these constructors man
 < = {-~  definition of |fmap| -}
 <    \ s -> fmap fst $ do {  (x, _) <- hState1 (hNDf p) s;
 <                            (y, _) <- hState1 (hNDf q) s;
-<                            return (x ++ y)}
+<                            return (x ++ y, s)}
 < = {-~  derived property for monad: |fmap f (m >>= k) = m >>= fmap f . k|  -}
 <    \ s -> do {  (x, _) <- hState1 (hNDf p) s;
 <                 (y, _) <- hState1 (hNDf q) s;
-<                 fmap fst $ return (x ++ y)}
-< = {-~  reformulation \todo{I don't understand this step}  -}
+<                 fmap fst $ return (x ++ y, s)}
+< = {-~  definition of |fmap fst|  -}
+<    \ s -> do {  x <- fmap fst (hState1 (hNDf p) s);
+<                 y <- fmap fst (hState1 (hNDf q) s);
+<                 fmap fst $ return (x ++ y, s)}
+< = {-~  reformulation  -}
+<    \ s -> do {  x <- (fmap fst . (hState1 . hNDf) p) s;
+<                 y <- (fmap fst . (hState1 . hNDf) q) s;
+<                 fmap fst $ return (x ++ y, s)}
+< = {-~  definition of |fmap| for |(r ->)|: |fmap f g = f . g|  -}
+<    \ s -> do {  x <- (fmap (fmap fst) ((hState1 . hNDf) p)) s;
+<                 y <- (fmap (fmap fst) ((hState1 . hNDf) q)) s;
+<                 fmap fst $ return (x ++ y, s)}
+< = {-~  definition of |fmap fst|  -}
+<    \ s -> do {  x <- (fmap (fmap fst) ((hState1 . hNDf) p)) s;
+<                 y <- (fmap (fmap fst) ((hState1 . hNDf) q)) s;
+<                 return (x ++ y)}
+< = {-~  reformulation  -}
 <    \ s -> do {  x <- (fmap (fmap fst) . hState1 . hNDf) p s;
 <                 y <- (fmap (fmap fst) . hState1 . hNDf) q s;
 <                 return (x ++ y)}
@@ -567,11 +583,72 @@ Thus, |hLocal . local2global = hLocal . identity = hLocal|.
 %endif
 
 \begin{lemma}[Distributivity of |hState1|] \label{lemma:dist-hState1}
-< hState1 (p >>= k) = hState1 p >>= hState1 . k
+< hState1 (p >>= k) s = hState1 p s >>= hState1 . k
 \end{lemma}
 
 \begin{proof}
-\todo{}
+\noindent \mbox{\underline{case |p = Var x|}}
+
+<    hState1 (Var x >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (k x) s
+< = {-~  \todo{}  -}
+<    hState1 (k (x, s))
+< = {-~  reformulation  -}
+<    Var (x, s) >>= hState1 . k
+< = {-~  definition of |hState1|  -}
+<    hState1 (Var x) s >>= hState1 . k
+
+\noindent \mbox{\underline{case |p = Op (Inl (Get p))|}}
+
+<    hState1 (Op (Inl (Get p)) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (Op (fmap (>>= k) (Inl (Get p)))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hState1 (Op (Inl (fmap (>>= k) (Get p)))) s
+< = {-~  definition of |fmap| for |Get|  -}
+<    hState1 (Op (Inl (Get (>>= k . p)))) s
+< = {-~  definition of |hState1|  -}
+<    hState1 (p s >>= k) s
+< = {-~  induction hypothesis  -}
+<    hState1 (p s) s >>= hState1 . k
+< = {-~  definition of |hState1|  -}
+<    hState1 (Op (Inl (Get p))) s >>= hState1 . k
+
+\noindent \mbox{\underline{case |p = Op (Inl (Put t p))|}}
+
+<    hState1 (Op (Inl (Put t p)) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (Op (fmap (>>= k) (Inl (Put t p)))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hState1 (Op (Inl (fmap (>>= k) (Put t p)))) s
+< = {-~  definition of |fmap| for |Put|  -}
+<    hState1 (Op (Inl (Put t (p >>= k)))) s
+< = {-~  definition of |hState1|  -}
+<    hState1 (p >>= k) t
+< = {-~  induction hypothesis  -}
+<    hState1 p t >>= hState1 . k
+< = {-~  definition of |hState1|  -}
+<    hState1 (Op (Inl (Put t p))) s >>= hState1 . k
+
+\noindent \mbox{\underline{case |p = Op (Inr y)|}}
+
+<    hState1 (Op (Inr y) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (Op (fmap (>>= k) (Inr y))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hState1 (Op (Inr (fmap (>>= k) y))) s
+< = {-~  definition of |hState1|  -}
+<    Op (fmap (\x -> hState1 x s) (fmap (>>= k) y))
+< = {-~  Law (\ref{eq:functor-composition}): functor composition  -}
+<    Op (fmap ((\x -> hState1 (x >>= k) s)) y)
+< = {-~  induction hypothesis  -}
+<    Op (fmap (\x -> hState1 x s >>= hState1 . k) y)
+< = {-~  \todo{}  -}
+<    Op (fmap (\x -> hState1 x s) y) >>= hState1 . k
+< = {-~  definition of |hState1|  -}
+<    hState1 (Op (Inr y)) s >>= hState1 . k
+
 \end{proof}
 
 \begin{lemma}[State is Restored] \label{lemma:state-restore}
@@ -654,37 +731,55 @@ constructors based on the context to make the term well-typed in the following p
 <    hState1 (hNDf (putR t >> local2global k)) s
 < = {-~  definition of |putR|  -}
 <    hState1 (hNDf ((get >>= \t' -> put t `mplus` side (put t')) >> local2global k)) s
-< = {-~  definition of |do| and |orOp|  -}
+< = {-~  definition of |orOp|  -}
 <    hState1 (hNDf (do t' <- get; orOp (put t) (side (put t')); local2global k)) s
 < = {-~  definition of |side| and |failOp|  -}
 <    hState1 (hNDf (do t' <- get; orOp (put t) ((put t') >> failOp); local2global k)) s
-< = {-~  Lemma \ref{lemma:dist-hNDf}: distributivity of |hNDf|  -}
+< = {-~  reformulation  -}
+<    hState1 (hNDf (getOp (\t' -> orOp (putOp t (local2global k)) (putOp t' (failOp >> local2global k)))) s
+< = {-~  Law (\ref{eq:mzero-zero}): left identity of |mzero| or |failOp|  -}
+<    hState1 (hNDf (getOp (\t' -> orOp (putOp t (local2global k)) (putOp t' failOp))) s
+< = {-~  definition of |hNDf|  -}
 <    hState1 (do  t'  <- get;
-<                 x   <- hNDf (put t >> local2global k);
-<                 y   <- hNDf (put t' >> failOp >> local2global k);
+<                 x   <- hNDf (putOp t (local2global k));
+<                 y   <- hNDf (putOp t' failOp);
 <                 return (x ++ y)) s
-< = {-~  Law (\ref{eq:mzero-zero}): left identity of |mzero|  -}
+< = {-~  definition of |hNDf|  -}
 <    hState1 (do  t'  <- get;
-<                 x   <- hNDf (put t >> local2global k);
-<                 y   <- hNDf (put t' >> failOp);
+<                 put t;
+<                 x   <- hNDf (local2global k);
+<                 put t';
+<                 y   <- hNDf failOp;
 <                 return (x ++ y)) s
-< = {-~  \todo{I don't understand this step}  -}
-<    hState1 (do  t' <- get;
-<                 x  <- hNDf (put t >> local2global k);
+< = {-~  definition of |hNDf|  -}
+<    hState1 (do  t'  <- get;
+<                 put t;
+<                 x   <- hNDf (local2global k);
 <                 put t';
 <                 return x) s
 < = {-~  Law (\ref{eq:get-put}): get-put  -}
-<    hState1 (do  x  <- hNDf (put t >> local2global k);
+<    hState1 (do  put t;
+<                 x   <- hNDf (local2global k);
 <                 return x) s
 < = {-~  reformulation  -}
-<    hState1 (hNDf (put t >> local2global k)) s
-< = {-~  \todo{I don't understand this step, can we do induction here?}  -}
+<    hState1 (do  put t;
+<                 hNDf (local2global k)) s
+< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
+<    do  hState1 (put t) s;
+<        hState1 (hNDf (local2global k)) s
 < = {-~  induction hypothesis  -}
-% <    do (x, _) <- do {(x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)}; return (x, s)
-% < = {-~  reformulation  -}
-<    do (x, _) <- hState1 (hNDf (put t >> local2global k)) s; return (x, s)
-< = {-~  definition of |putOp|  -}
-<    do (x, _) <- hState1 (hNDf (local2global (putOp t k))) s; return (x, s)
+<    do  hState1 (put t) s;
+<        (x, _) <- hState1 (hNDf (local2global k)) s;
+<        return (x, s)
+< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
+<    do  (x, _) -> hState1 (put t >> hNDf (local2global k)) s
+<        return (x, s)
+< = {-~  definition of |hNDf|  -}
+<    do  (x, _) -> hState1 (hNDf (putOp t (local2global k))) s
+<        return (x, s)
+< = {-~  definition of |local2global|  -}
+<    do  (x, _) -> hState1 (hNDf (local2global (putOp t k))) s
+<        return (x, s)
 
 \noindent \mbox{\underline{case |t = orOp p q|}}
 <    hState1 (hNDf (local2global (orOp p q))) s
