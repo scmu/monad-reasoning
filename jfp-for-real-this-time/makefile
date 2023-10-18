@@ -2,6 +2,7 @@ SRC := .
 SCT := $(SRC)/sections $(SRC)/appendices
 
 LATEXMK = latexmk -r $(SRC)/latexmkrc
+# LATEXMK = latexmk
 
 SOURCES := $(wildcard $(SCT)/*.lhs)
 FMTS := $(wildcard $(SRC)/fmts/*.fmt)

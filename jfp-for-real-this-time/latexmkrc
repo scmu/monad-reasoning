@@ -7,4 +7,3 @@ $bibtex_use = 2;
 $ENV{'BIBINPUTS'}='../';
 
 $pdf_mode = 1;
-$pdflatex = "texfot xelatex %O -interaction=nonstopmode -synctex=1 -shell-escape \"$tex_src\"";

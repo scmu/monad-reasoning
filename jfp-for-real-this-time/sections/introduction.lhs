@@ -9,8 +9,9 @@ In a high-level style of programming, we lean on abstractions to make our
 programs easier to read and write, and less error-prone.  We pay for this
 comfort by giving up precise control over the underlying machinery; we forego
 optimization opportunities or have to trust a (usually opaque) compiler to
-optimize for us. Hence, for performance-sensitive applications, we often
-have to resort to lower-level programming techniques.  Although they allow a
+perform low-level optimizations for us. For performance-sensitive applications, compiler optimizations
+are not reliable enough; instead we often resort to lower-level programming
+techniques ourselves.  Although they allow a
 fine-grained control over program execution and the implementation of
 optimization techniques, they tend to be harder to write and not compose very well.  This is an
 important trade-off to take into account when choosing an appropriate programming language
@@ -20,7 +21,7 @@ Maybe surprisingly, as they are rarely described in this way, there is a
 similar pattern for side-effects within programming languages: some effects can
 be described as ``lower-level'' than others.  We say that an effect is
 lower-level than another effect when the lower-level effect can simulate the
-higher-level effect. In other words, it is always possible to write a
+higher-level effect. In other words, it is possible to write a
 program using lower-level effects that has identical semantics to the same program with
 higher-level effects.
 Yet, due to the lack of abstraction of low-level effects, writing a faithful
@@ -28,18 +29,18 @@ simulation requires careful discipline and is quite error-prone.
 
 This article investigates how we can construct programs that are most
 naturally expressed with a high-level effect, but where we still want access to
-the optimization opportunities of a lower-level effect.  In particular,
+the optimization opportunities of a lower-level effect. In particular,
 inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on the high-level interaction between the nondeterminism and state
 effects, called \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
-\cite{AICPub641:1983,hassan91}, we show how these can be simulated in terms of the low-level
+\citep{AICPub641:1983,hassan91}, we show how these can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimizations like exploiting mutable state
 for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing
-the state from scratch ~\cite{Schulte:ICLP:1999}.
+the state from scratch ~\citep{Schulte:ICLP:1999}.
 
-Our approach is based on algebraic effects and handlers ~\cite{Plotkin09} to
+Our approach is based on algebraic effects and handlers ~\citep{Plotkin09} to
 cleanly separate the use of effects from their implementation. This way we can
 replace a high-level implementation with an implementation in terms of a
 low-level effect and incorporate optimizations.
@@ -50,18 +51,18 @@ reasoning approaches for effectful computations. \citet{Hutton08} break the
 abstraction boundaries and use the actual implementation in their equational
 reasoning approach. \citet{Gibbons11} promote an alternative, law-based
 approach to preserve abstraction boundaries and combine axiomatic with
-equational reasoning. In an earlier version of this work \cite{Pauwels19}, we
+equational reasoning. In an earlier version of this work \citep{Pauwels19}, we
 have followed the latter, law-based approach for reasoning about the
 correctness of simulating local state with global state. However, we have found
 that approach to be unsatisfactory because it incorporates elements
 that are usually found in the syntactic approach for reasoning about
-programming languages \cite{Felleisen94}, leading to more boilerplate and
+programming languages \citep{Felleisen94}, leading to more boilerplate and
 complication in the proofs: notions of contextual equivalence and explicit
 manipulation of program contexts. Hence, for that reason we return to the
 implementation-based reasoning approach, which we believe works well with
 algebraic effects and handlers. Indeed, we can prove all of our simulations
 correct using equational reasoning techniques, exploiting in particular the
-fusion property of handlers ~\cite{Wu15}. Moreover, in part of our reasoning
+fusion property of handlers ~\citep{Wu15}. Moreover, in part of our reasoning
 we use initial effect implementations, which we argue do not leak any implementation details
 but merely leverage the common properties of all implementations.
 
