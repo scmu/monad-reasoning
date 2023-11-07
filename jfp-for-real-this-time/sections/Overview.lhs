@@ -97,9 +97,9 @@ simulating one effect in terms of another and establishing correctness: free
 monads, their folds and their fusion properties.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Free Monads}
-Free monads are gaining popularity for their use in algebraic effects \cite{Plotkin02}
-and handlers \cite{Plotkin09, Plotkin13},
+\paragraph*{Free Monads}
+Free monads are gaining popularity for their use in algebraic effects \citep{Plotkin02}
+and handlers \citep{Plotkin09, Plotkin13},
 which elegantly separate syntax and semantics of effectful
 operations.
 A free monad, the syntax of an effectful program,
@@ -113,7 +113,7 @@ determined by the functor |f|.
 This functor is also known as the \emph{signature}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{A Fold Recursion Scheme}
+\paragraph*{A Fold Recursion Scheme}
 Free monads % arise from the free-forgetful adjunction and
 come equipped with a fold recursion scheme.
 \begin{code}
@@ -147,7 +147,7 @@ instance Functor f => Monad (Free f) where
 %fmap f (Op op) = Op (fmap (fmap f) op)
 %(Op op) >>= f = Op (fmap (>>= f) op)
 
-Under certain conditions a fold can be fused with a function that is applied right before or after it~\cite{Wu15, DBLP:conf/acmmpc/2000}.
+Under certain conditions a fold can be fused with a function that is applied right before or after it~\citep{Wu15, DBLP:conf/acmmpc/2000}.
 This gives rise to the following laws:
 \begin{alignat}{2}
     &\mbox{\bf fusion-pre}: &
@@ -171,7 +171,7 @@ These two fusion laws turn out to be essential in the further proofs of this pap
 % \end{code}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Nondeterminism}
+\paragraph*{Nondeterminism}
 For nondeterminism, we do not use a monad like that of lists.
 Following the algebraic effects approach, we
 use instead a free monad over an appropriate signature, such as |Free NondetF|
@@ -204,7 +204,7 @@ hND = fold genND algND
 \end{code}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{State}
+\paragraph*{State}
 Also for state we take a more indirect route, through a free monad like |Free (StateF
 s)| over the state signature.
 
@@ -242,7 +242,7 @@ laws between state and nondeterminism in detail in Section
 \ref{sec:local-global}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{The Coproduct Operator for Combining Effects}
+\paragraph*{The Coproduct Operator for Combining Effects}
 Combining effects with free monads is a bit more involved.
 Firstly, the signatures of the effects are combined with
 %if False
@@ -262,7 +262,7 @@ the coproduct operator |(:+:)| for functors.
 \begin{code}
 data (f :+: g) a = Inl (f a) | Inr (g a)
 \end{code}
-This coproduct functor allows a
+This coproduct operator allows a
 modular definition of the signature of effects.
 For instance, we can encode programs with both state and nondeterminism as
 effects using the data type
@@ -295,7 +295,7 @@ instance (Functor f, Functor g) => MNondet (Free (g :+: NondetF :+: f)) where
 %endif
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Modularly Combining Effect Handlers}
+\paragraph*{Modularly Combining Effect Handlers}
 In order to interpret composite signatures, we use the forwarding approach of
 \citet{Schrijvers19}. This way the handlers can be modularly composed: they
 only need to know about the part of the syntax their effect is handling, and
@@ -369,7 +369,7 @@ The handlers for state and nondeterminism we have given earlier require a bit of
 adjustment to be used in the composite setting.
 They now interpret into composite domains,
 |StateT (Free f) a| and |Free f [a]| respectively.
-Here, |StateT| is the state transformer from the Monad Transformer Library \cite{mtl}.
+Here, |StateT| is the state transformer from the Monad Transformer Library \citep{mtl}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
 The handlers are defined as follows:
 \begin{code}

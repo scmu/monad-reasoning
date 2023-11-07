@@ -32,7 +32,7 @@ naturally expressed with a high-level effect, but where we still want access to
 the optimization opportunities of a lower-level effect. In particular,
 inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on the high-level interaction between the nondeterminism and state
-effects, called \emph{local state}. Following low-level implementation
+effects which we call \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
 \citep{AICPub641:1983,hassan91}, we show how these can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
@@ -90,3 +90,6 @@ this paper makes the following contributions:
 \end{itemize}
 \birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
 Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:discussion})
+p
+Throughout the paper, we use Haskell as a means to illustrate
+our findings with code.

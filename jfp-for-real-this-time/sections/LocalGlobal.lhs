@@ -84,7 +84,7 @@ the continuation.
 We refer to these semantics as \emph{local-state semantics}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Interaction Laws}
+\paragraph*{Interaction Laws}
 
 The following two laws characterize the local-state semantics for a monad |m|
 with state and nondeterminism:
@@ -118,7 +118,7 @@ If we take these four equations together with the left-identity and right-distri
 laws of nondeterminism, we can say that
 that nondeterminism and state ``commute'';
 if a |get| or |put| precedes a |mzero| or |`mplus`|, we
-can change their order (and vice versa).
+can exchange their order (and vice versa).
 
 % %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 % \paragraph{Interaction Laws}
@@ -182,19 +182,19 @@ can change their order (and vice versa).
 % \end{theorem}
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Implementation}
+\paragraph*{Implementation}
 Implementation-wise, the laws
 imply that each nondeterministic branch has its own copy of the state.
 To see that, let |s = 1|, |m1 = put 2| and |m2 = get| in
 (\ref{eq:put-left-dist}). The state we |get| in the second branch does not change,
 despite the |put 2| in the first branch.
 One implementation satisfying the laws is
-< Local s a = s -> m (a, s)
+< type Local s m a = s -> m (a, s)
 where |m| is a nondeterministic monad, the simplest structure of which is a list.
 This implementation is exactly that of |StateT s m a|
-in the Monad Transformer Library \cite{mtl}, and as introduced in
+in the Monad Transformer Library \citet{mtl}, and as introduced in
 Section \ref{sec:combining-effects}.
-With effect handling \cite{Kiselyov15, Wu14}, the monad behaves similarly
+With effect handling \citet{Kiselyov15, Wu14}, the monad behaves similarly
 % (except for the limited commutativity implied by law (\ref{eq:left-dist}))
 if we run the handler for state before that for list.
 
@@ -210,7 +210,7 @@ nondeterministic computation, we call this state the \emph{global-state
 semantics}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{The Global-State Law}
+\paragraph*{The Global-State Law}
 The global-state law sets apart
 non-backtrackable state from backtrackable state.
 
@@ -234,7 +234,7 @@ whereas under global-state semantics
 the equation simplifies to |put s >> n|.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Implementation}
+\paragraph*{Implementation}
 
 This law leaves us free to choose from a large space of
 implementations with different properties.
@@ -252,7 +252,7 @@ is a natural implementation of such a monad.
 However, the usual, naive implementation of |(>>=)| does not satisfy
 right-distributivity (\ref{eq:mplus-dist}),
 violates monad laws and is therefore not even a monad.
-The type |ListT (State s)| from the Monad Transformer Library \cite{mtl}
+The type |ListT (State s)| from the Monad Transformer Library \citep{mtl}
 expands to essentially the same implementation with
 monad |m| instantiated by the list monad.
 This implementation has the same flaws.

@@ -35,38 +35,36 @@ effects.
 We discuss the two paramount effects of this paper: state and nondeterminism.
 % Furthermore, this section explains how to arbitrarily combine effects using
 % free monads and the coproduct operator.
-Throughout the paper, we use Haskell as a means to illustrate
-our findings with code.
 
 
-The main challenges addressed in this paper relate to the tension between writing
-programs with high-level effects or with low-level effects.
-Often, we choose the high-level alternative which is easier to understand and
-to debug, but we miss out on opportunities for optimization that would have
-been available in the low-level style.
-
-Existing systems such as the Warren Abstract Machine (WAM) for Prolog or
-constraint-based systems in general \cite{AICPub641:1983,hassan91}
-offer a high-level programming interface to programmers, but
-use a low-level state-based
-representation under the hood that allow clever system-level optimizations.
-
-In this paper, we provide:
-\begin{enumerate}
-\item
-a purely functional, monadic model of the high-level effects that those
-systems expose to their users,
-\item
-successive transformation steps from those high-level effects into the
-low-level state effect in order to incorporate typical optimizations found in
-those systems, and
-\item
-proofs based on equational reasoning to establish the correctness of those
-transformations.
-\end{enumerate}
-
-As a running example, we use the n-queens puzzle, which has
-nondeterminism and state, and can be simulated using only state.
+% The main challenges addressed in this paper relate to the tension between writing
+% programs with high-level effects or with low-level effects.
+% Often, we choose the high-level alternative which is easier to understand and
+% to debug, but we miss out on opportunities for optimization that would have
+% been available in the low-level style.
+% 
+% Existing systems such as the Warren Abstract Machine (WAM) for Prolog or
+% constraint-based systems in general \cite{AICPub641:1983,hassan91}
+% offer a high-level programming interface to programmers, but
+% use a low-level state-based
+% representation under the hood that allow clever system-level optimizations.
+% 
+% In this paper, we provide:
+% \begin{enumerate}
+% \item
+% a purely functional, monadic model of the high-level effects that those
+% systems expose to their users,
+% \item
+% successive transformation steps from those high-level effects into the
+% low-level state effect in order to incorporate typical optimizations found in
+% those systems, and
+% \item
+% proofs based on equational reasoning to establish the correctness of those
+% transformations.
+% \end{enumerate}
+% 
+% As a running example, we use the n-queens puzzle, which has
+% nondeterminism and state, and can be simulated using only state.
 
 
 %-------------------------------------------------------------------------------
@@ -74,7 +72,7 @@ nondeterminism and state, and can be simulated using only state.
 \label{sec:functors-and-monads}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Functors}
+\paragraph*{Functors}
 In Haskell, a functor |f :: * -> *| instantiates the functor type class, which has a single
 functor mapping operation.
 < class Functor f where
@@ -88,7 +86,7 @@ Furthermore, a functor should satisfy the two functor laws:
     |fmap (f . g)| &= |fmap f . fmap g| \mbox{~~.} \label{eq:functor-composition}
 \end{alignat}
 
-We sometimes use the operator |(<$>)| which is an alias for |fmap|.
+We sometimes use the operator |(<$>)| as an alias for |fmap|.
 
 < (<$>) :: Functor f => (a -> b) -> f a -> f b
 < (<$>) = fmap
@@ -122,14 +120,14 @@ We sometimes use the operator |(<$>)| which is an alias for |fmap|.
 % Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Monads}
+\paragraph*{Monads}
 
 Monadic side-effects~\cite{Moggi91}, the main focus of this paper, are those that can dynamically determine what
 happens next.
-A monad |m :: * -> *| instantiates the monad type class, which has two
+A monad |m :: * -> *| is a functor instantiates the monad type class, which has two
 operations: return (|eta|) and bind (|>>=|).
 
-< class Monad m where
+< class Functor m => Monad m where
 <   eta     :: a -> m a
 <   (>>=)   :: m a -> (a -> m b) -> m b
 
@@ -163,10 +161,10 @@ is not needed in this article.}
 \label{sec:nondeterminism}
 
 Following both the approaches of \citet{Hutton08} and of \citet{Gibbons11}, we introduce
-effects on top of the |Monad| type class.
+effects as subclasses of the |Monad| type class.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Nondeterminism}
+\paragraph*{Nondeterminism}
 The first monadic effect we introduce in this way is nondeterminism.
 We define a type class to capture the nondeterministic interface as follows:
 \begin{code}
@@ -177,8 +175,8 @@ class Monad m => MNondet m where
 Here, |mzero| denotes failure and |mplus| denotes nondeterministic choice.
 Instances of the |MNondet| interface should satisfy four laws:\footnote{
 One might expect additional laws such as idempotence or commutativity.
-As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on where the
-monad is used and their interactions with other effects.
+As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on how the
+monad is used and how it should interact with other effects.
 We choose to present a minimal setting for nondeterminism here.}
 %NOTE: tag2
 \begin{alignat}{2}
@@ -203,7 +201,7 @@ not to rely on the specific implementation of any particular instance
 of |MNondet|.
 
 In contrast, \citet{Hutton08} reason directly in terms of a particular
-instance.  In the case of |MNondet|, the quintessential is that of lists,
+instance.  In the case of |MNondet|, the quintessential instance is that of lists,
 which extends the following |Monad| instance for lists.
 
 \begin{minipage}{0.5\textwidth}
@@ -220,8 +218,8 @@ instance MNondet [] where
 \end{minipage}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{State}
-The signature for state has two operations:
+\paragraph*{State}
+The signature for the state effect has two operations:
 a |get| operation that reads and returns the state,
 and a |put| operation that modifies the state, overwriting it with the given
 value, and returns nothing.
@@ -289,7 +287,7 @@ instance Monad (State s) where
 % \paragraph{The n-queens Puzzle}
 
 The n-queens problem used here is an adapted and simplified version from that of
-Gibbons and Hinze \cite{Gibbons11}.
+\cite{Gibbons11}.
 The aim of the puzzle is to place $n$ queens on a $n \times n$ chess board such
 that no two queens can attack each other.
 Given $n$, we number the rows and columns by |[1..n]|.
@@ -300,7 +298,7 @@ the |j|th row.
 Using this representation, queens cannot be put on the same row or column.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{A Naive Algorithm}
+\paragraph*{A Naive Algorithm}
 
 The naive version of an algorithm for n-queens can be written as a
 nondeterministic program:
@@ -309,18 +307,19 @@ queensNaive :: MNondet m => Int -> m [Int]
 queensNaive n = choose (permutations [1..n]) >>= filtr valid
 \end{code}
 The program |queensNaive 4 :: [[Int]]| gives as result |[[2,4,1,3],[3,1,4,2]]|.
-On a high level, the function generates all permutations of queens, and then
-checks them one by one for validity.
+The program uses a generate-and-test strategy: it generates all permutations of queens as candiate solutions, and then
+tests which ones are actually valid solutions.
 % This version enumerates the entire search space to find solutions.
 
 Here, |permutations| nondeterministically computes a permutation of its input.
 The function |choose| nondeterministically picks an element from a list, and is
 implemented in \Cref{sec:interpreting-nondet-progs-with-list}.
+\tom{Show |permuations| and |choose| here?}
 
 The function |filtr p x| returns |x| if |p x| holds, and fails otherwise.
 \begin{code}
 filtr :: MNondet m => (a -> Bool) -> a -> m a
-filtr p x = (if p x then return () else mzero) >> return x
+filtr p x = if p x then return x else mzero
 \end{code}
 
 The pure function |valid :: [Int] -> Bool| determines whether a solution is
@@ -335,12 +334,12 @@ valid (q:qs) = valid qs && safe q 1 qs
 \end{code}
 %endif
 
-Although this solution works and is quite intuitive, it is not very efficient.
-For example, it is obvious that all solutions that start with |[1,2]| are invalid,
-but the algorithm still generates and tests all of these $(n-2)!$ candidates.
+Although this generate-and-test approach works and is quite intuitive, it is not very efficient.
+For example, all solutions of the form |(1:2:qs)| are invalid because the first two queens are on the same diagonal.
+Still, the algorithm generates and tests all $(n-2)!$ candidate solutions of this form.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{A More Performant Backtracking Algorithm}
+\paragraph*{A More Performant Backtracking Algorithm}
 
 We wish to fuse the two phases of the algorithm to produce a faster implementation.
 In fact, we want to improve the implementation on a high level so that
@@ -348,12 +347,12 @@ generating candidates and checking for validity happens in a single pass.
 We can do this by moving to a state-based implementation that allows early
 pruning of branches that are unsafe.
 
-In particular, we improve the previous implementation by placing the queens
-column by column so that we only place a queen on a position that is compatible
-with the previously placed queens.
+In particular, we improve the previous implementation by placing the queens in
+the successive columns and only in positions that are
+valid with respect to the already placed queens.
 
-We use a state |(Int, [Int])| that contains the column we are looking at, and
-the current solution with the already placed queens.
+We use a state |(Int, [Int])| that contains the current column, and
+the already placed queens.
 The new implementation of |queens| is as follows:
 \begin{code}
 queens :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
@@ -362,7 +361,7 @@ queens n = loop
     loop = do  s@(c, sol) <- get
                if c >= n then return sol
                else do  r <- choose [1..n]
-                        filtr valid (r:sol)
+                        guard (safe r 1 sol)
                         put (s `plus` r)
                         loop
 \end{code}
@@ -376,7 +375,7 @@ plus   (c, sol) r = (c+1, r:sol)
 
 The function |safe| checks whether the placement of a queen is safe with
 respect to the list of queens that is already present (for which we need its
-distance from the queen in the list). We only have to check that the queens are
+distance from the queen on the list). We only have to check that the queens are
 in different diagonals.
 %format q1
 \begin{code}
