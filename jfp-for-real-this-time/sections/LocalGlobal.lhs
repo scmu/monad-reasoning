@@ -58,19 +58,20 @@ simulate the former using the latter.
 In a program with local state, each nondeterministic branch has its own local
 copy of the state.  This is a convenient effect interaction which is provided
 by many systems that solve search problems, e.g. Prolog.  In contrast, global
-state sequentially threads a single state through the nondeterministic
-branches.
+state linearly threads a single state through the nondeterministic
+branches. This can be interesting for performance reasons: we can perform
+in-place updates and limit the memory use to a single copy of the state.
 
-The appearance of local state is obtained by the well-known backtracking
-technique, undoing changes to the state when going to the next branch.
-Therefore, local state is what Gibbons and Hinze call ``backtrackable state''
-\birthe{need citation?}.
-Backtracking is relatively efficient: remembering what to undo often requires
-less memory than creating multiple copies of the state, and undoing changes
-often takes less time than recomputing the state from scratch.
-\wenhao{I think the implementation of local state we give in 4.1 doesn't use the backtracking technique.}
-Global state is sometimes called non-backtrackable state.
-Let's first focus on local-state and global-state semantics in order to
+% The appearance of local state is obtained by the well-known backtracking
+% technique, undoing changes to the state when going to the next branch.
+% Therefore, local state is what Gibbons and Hinze call ``backtrackable state''
+% \birthe{need citation?}.
+% Backtracking is relatively efficient: remembering what to undo often requires
+% less memory than creating multiple copies of the state, and undoing changes
+% often takes less time than recomputing the state from scratch.
+% \wenhao{I think the implementation of local state we give in 4.1 doesn't use the backtracking technique.}
+% Global state is sometimes called non-backtrackable state.
+LWe first define local-state and global-state semantics and then present
 define a formal translation between the two.
 
 %-------------------------------------------------------------------------------
@@ -342,77 +343,87 @@ written for local-state semantics to a program that, when interpreted under
 global-state semantics, behaves exactly the same as the original program
 interpreted under global-state semantics.
 
+% %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+% \paragraph*{State-Restoring Put}
+% Backtracking algorithms with global state often adhere to a pattern
+% in which they:
+% \begin{enumerate}
+%     \item perform a step in the search that updates the current state,
+%     \item recursively search for solutions, and
+%     \item roll back the updated state to the previous step (regardless of whether
+%     a solution was found).
+% \end{enumerate}
+% A naive monadic program that implements this pattern has the following structure.
+% < get (\prev -> put next >> search >> put prev)
+% Here |next| is the updated state, and |prev| is the old state.
+% 
+% Now, assume a |search| that consists of two branches
+% |(m1 `mplus` m2)|.
+% We want both branches to start running with the |next| state, 
+% Furthermore, the state should be restored to |prev| when both branches are done.
+% In turn, we will assume that |m1| and |m2| follow the same discipline, rolling
+% back whatever further modifications they make to the state.
+% 
+% Due to (\ref{eq:mplus-dist}), however, the monadic program expands to the following:
+% < get (\prev -> put next >> (m1 `mplus` m2 `mplus` m3) >>= put prev
+% <   =  get (\prev ->  (put next >>  m1 >> put prev)  `mplus`
+% <                     (             m2 >> put prev)
+% With a global state, this means that |m1| starts with the |next| state and ends
+% with rolling back to to the |prev| state. This is wrong, because now |m2| now
+% starts with this |prev| instead of |next|.  Moreover, also our second
+% requirement can be violated, as we cannot guarantee that the state is rolled
+% back at the end.  Indeed, if |m2| fails and thus ends with |mzero|, |put prev| is
+% not run afterwards (because of (\ref{eq:mzero-zero})).
+% 
+% This naive approach is of course not what we want. Both braches should
+% start with the |next| state, and the |prev| state should be restored 
+% just once, after both branches are done.
+% 
+% Therefore, we define the |side| function, which does not generate a result
+% but rather represents a side-effect, hence the name.
+% \begin{code}
+% side :: MNondet m => m a -> m b
+% side m = m >> mzero
+% \end{code}
+% Since nondeterministic branches are executed sequentially, the program
+% < side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modReturn prev)
+% executes |modify next| and |modReturn prev| once, even if the nondeterministic
+% branches fail.
+% 
+% \wenhao{
+%   I think it is more natural to use |modify next >> m1 `mplus` m2 `mplus` m3 `mplus` side(modify prev)|.
+%   Also, this section is used to discuss the technique of "chaining using |`mplus`|", right?
+%   But it seems a little convoluted to discuss |modify| here and then discuss |putR| in 4.4 and then come back to |modify| in 4.5.}
+% 
+% The attentive reader may have noticed that we are using |mplus| as a kind of
+% sequencing operator now.
+% Recall from right-distributivity (\ref{eq:mplus-dist}) that
+% |(m1 `mplus` m2) >> n = (m1 >> n) `mplus` (m2 >> n)|.
+% That is, |mplus| acts as ``insertion points'', where future code followed by
+% |(>>)| can be inserted into.
+% This is a dangerous feature, which we replace by a safer programming pattern.
+% 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{Chaining using Nondeterministic Choice}
-Backtracking algorithms with global state often adhere to a pattern
-in which they
-\begin{enumerate}
-    \item update the current state to its next step,
-    \item recursively search for solutions, and
-    \item roll back the state to the previous step (regardless of whether
-    a solution was found).
-\end{enumerate}
-A monadic program that implements this pattern has the following structure.
-< modify next >> search >>= modReturn prev
-Here, |next| advances the state and |prev| undoes the modification so that
-|prev . next = id|\footnote{Sometimes, but not usually, also |next . prev = id|}.
-The functions |modify| and |modReturn| are defined as follows:
-\begin{code}
-modify     f    = get >>= put . f
-modReturn  f v  = modify f >> return v
-\end{code}
-Now, assume an initial state |s| and a |search| that finds three choices
-|m1 `mplus` m2 `mplus` m3|.
-We want all three choices to start running with state |next s|.
-Furthermore, the state should be restored to |prev (next s) = s| afterwards.
-Due to (\ref{eq:mplus-dist}), however, the monadic program expands to the following:
-< modify next >> m1 `mplus` m2 `mplus` m3 >>= modReturn prev
-<   = modify next >>   ((m1 >>= modReturn prev) `mplus`
-<                       (m2 >>= modReturn prev) `mplus`
-<                       (m3 >>= modReturn prev))
-With a global state, this means that |m1| starts with state |next s|,
-after which the state is rolled back to |s|, after |m2| to |prev s| and
-after |m3| to |prev (prev s)|.
-In fact, one cannot guarantee that |modReturn prev| is always executed.
-For example, if |search| fails and reduces to |mzero|, |modReturn prev| is not
-run at all (because of (\ref{eq:mzero-zero})).
-We need a way to say that |modify next| and |modReturn prev| are run exactly
-once, before and after all nondeterministic branches in |search|, respectively.
-Therefore, we define the |side| function, which does not generate a result
-but rather represents a side-effect, hence the name.
-\begin{code}
-side :: MNondet m => m a -> m b
-side m = m >> mzero
-\end{code}
-Since nondeterministic branches are executed sequentially, the program
-< side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modReturn prev)
-executes |modify next| and |modReturn prev| once, even if the nondeterministic
-branches fail.
+\paragraph*{State-Restoring Put}
 
-\wenhao{
-  I think it is more natural to use |modify next >> m1 `mplus` m2 `mplus` m3 `mplus` side(modify prev)|.
-  Also, this section is used to discuss the technique of "chaining using |`mplus`|", right?
-  But it seems a little convoluted to discuss |modify| here and then discuss |putR| in 4.4 and then come back to |modify| in 4.5.}
+Central to the implementation of backtracking in the global state setting is
+the backtracking variant of |put|. 
+Going forward, such a state-restoring |putR| modifies the state as usual,
+but, when backtracked over, it restores the old state.
 
-The attentive reader may have noticed that we are using |mplus| as a kind of
-sequencing operator now.
-Recall from right-distributivity (\ref{eq:mplus-dist}) that
-|(m1 `mplus` m2) >> n = (m1 >> n) `mplus` (m2 >> n)|.
-That is, |mplus| acts as ``insertion points'', where future code followed by
-|(>>)| can be inserted into.
-This is a dangerous feature, which we replace by a safer programming pattern.
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{State-Restoring Put}
-The discussion above suggests that, if we use |mplus| and |side| appropriately,
-we can implement backtracking in a global state setting.
-We can go even further by defining a variation on |put|,
-which restores the original state when it is backtracked over.
+This is accomplished with the following definition:
 \begin{code}
 putR :: (MState s m, MNondet m) => s -> m ()
 putR s = get >>= \t -> put s `mplus` side (put t)
 \end{code}
 \label{eq:state-restoring-put}
+
+Here the |side| branch is executed for its side-effect only; it fails
+before yielding a result.
+\begin{code}
+side :: MNondet m => m a -> m b
+side m = m >> mzero
+\end{code}
 
 For example, assume an arbitrary computation |comp| is placed after
 a state-restoring put. Now we reason as follows.
@@ -467,17 +478,16 @@ state-restoring put.
 \label{tab:state-restoring-put}
 \end{table}
 
-We wish that |putR|, when run with a global state, satisfies laws
+The idea is that |putR|, when run with a global state, satisfies laws
 (\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and the local
 state laws.
-If so, one could take a program written for a local state monad, replace
+Then, one can take a program written for a local state monad, replace
 all occurrences of |put| by |putR|, and run the program with a global state.
 However, to satisfy all of these laws,
-care should be taken to replace \emph{all} occurrences, also those
-|put| operations that occur in the context.
-Particularly, placing a program in a different context can change the meaning
+care should be taken to replace \emph{all} occurrences of |put|.
+Particularly, placing a program in a larger context, where |put| has not been replaced, can change the meaning
 of its subprograms.
-An example of such a problematic context is |(>> put t)|, where the get-put law
+An example of such a problematic context is |(>> put t)|, where the |get|-|put| law
 (\ref{eq:get-put}) breaks and programs |get >> putR| and |return ()| can be
 differentiated:
 
