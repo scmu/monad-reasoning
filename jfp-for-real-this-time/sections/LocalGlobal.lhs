@@ -653,7 +653,7 @@ and especially wasteful if the modifications made to that state are rather small
 (e.g., a single entry in the array). To improve upon this situation
 we can, instead of copying the state, keep track of the modifications made to it,
 and undo them when necessary.
-As mentioned in \Cref{sec:transforming-between-local-and-global-state}, rather
+Rather
 than using |put|, some algorithms typically use a pair of commands |modify next|
 and |modify prev| to update and roll back the state, respectively.
 Here, |next| and |prev| represent the modifications to the state, with |prev . next = id|.
@@ -666,7 +666,7 @@ modifyR next prev = modify next `mplus` side (modify prev)
 Observe that, unlike |putR|, |modifyR| does not hold onto a copy of the old state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph{N-queens with |modifyR|}
+\paragraph*{N-queens with |modifyR|}
 
 Let us revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
 Recall that, for the puzzle, the operator that alters the state
@@ -696,26 +696,25 @@ Taking into account that the local-state semantics
 discards the side-effects in the |side| branch, it is not difficult
 to see that
 % \begin{equation*}
-< hLocal . queensR = hLocal . queens
+< hLocal . queens = hLocal . queensR
 % \end{equation*}
 Moreover, following Theorem~\ref{thm:local-global}, we can conclude that |queensR| also behaves the same
 under global-state semantics where the |side| branch takes care of backtracking
 the state.
-\wenhao{Is a new theorem needed?}
+\wenhao{Is a new theorem needed?} \tom{yes, this requires a proof}
 % \begin{equation*}
-< hGlobal . queensR = hLocal . queens
+< hGlobal . queens = hGlobal . queensR
 % \end{equation*}
-The advantage of the latter is that it does not keep any copies of
+The advantage of the right-hand side is that it does not keep any copies of
 the state alive.
-\wenhao{I don't know what does ``the latter'' refer to here.}
 % The |put (0, [])| in the initialization of |queensR| does not
 % influence this behaviour as the final state is dropped.
-The function |queensModify| implements global state with undo semantics.
-
-\begin{code}
-queensModify :: Int -> [[Int]]
-queensModify = hNil . flip hGlobal (0,[]) . queensR
-\end{code}
+% The function |queensModify| implements global state with undo semantics.
+% 
+% \begin{code}
+% queensModify :: Int -> [[Int]]
+% queensModify = hNil . flip hGlobal (0,[]) . queensR
+% \end{code}
 
 %if False
 \begin{code}
