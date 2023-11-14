@@ -145,7 +145,7 @@ Furthermore, a monad should satisfy the three monad laws:
 
 Haskell supports |do| blocks as syntactic sugar for monadic computations.
 For example, |do x <- m; f x| is translated to |m >>= f|.
-Finally, two convenient derived operators are |(>>)| and |(<*>)|.\footnote{We
+Two convenient derived operators are |(>>)| and |(<*>)|.\footnote{We
 deviate from the type class hierarchy of |Functor|, |Applicative| and |Monad|
 that can be found in Haskell's standard library because its additional complexity
 is not needed in this article.}
@@ -315,6 +315,7 @@ Here, |permutations| nondeterministically computes a permutation of its input.
 The function |choose| nondeterministically picks an element from a list, and is
 implemented in \Cref{sec:interpreting-nondet-progs-with-list}.
 \tom{Show |permuations| and |choose| here?}
+\wenhao{I agree.}
 
 The function |filtr p x| returns |x| if |p x| holds, and fails otherwise.
 \begin{code}
@@ -323,7 +324,7 @@ filtr p x = if p x then return x else mzero
 \end{code}
 
 The pure function |valid :: [Int] -> Bool| determines whether a solution is
-valid: it only needs to make sure that no two queens are put on the same
+valid. It only needs to make sure that no two queens are put on the same
 diagonal.
 
 %if False

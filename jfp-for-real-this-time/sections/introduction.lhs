@@ -90,6 +90,6 @@ this paper makes the following contributions:
 \end{itemize}
 \birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
 Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:discussion})
-p
+%
 Throughout the paper, we use Haskell as a means to illustrate
 our findings with code.
