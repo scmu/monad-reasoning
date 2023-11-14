@@ -679,6 +679,11 @@ modifyR :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
 modifyR next prev = modify next `mplus` side (modify prev)
 \end{code}
 
+The function |modify| is defined as follows.
+\begin{code}
+modify f = get >>= put . f
+\end{code}
+
 Observe that, unlike |putR|, |modifyR| does not hold onto a copy of the old state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
