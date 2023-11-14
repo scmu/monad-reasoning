@@ -57,10 +57,11 @@ simulate the former using the latter.
 
 In a program with local state, each nondeterministic branch has its own local
 copy of the state.  This is a convenient effect interaction which is provided
-by many systems that solve search problems, e.g. Prolog.  In contrast, global
+by many systems that solve search problems, e.g., Prolog.  In contrast, global
 state linearly threads a single state through the nondeterministic
-branches. This can be interesting for performance reasons: we can perform
-in-place updates and limit the memory use to a single copy of the state.
+branches. This can be interesting for performance reasons: we can limit memory
+use by avoiding multiple copies, and perform in-place updates to reduce allocation
+and garbage collection, and to improve locality.
 
 % The appearance of local state is obtained by the well-known backtracking
 % technique, undoing changes to the state when going to the next branch.
@@ -71,7 +72,7 @@ in-place updates and limit the memory use to a single copy of the state.
 % often takes less time than recomputing the state from scratch.
 % \wenhao{I think the implementation of local state we give in 4.1 doesn't use the backtracking technique.}
 % Global state is sometimes called non-backtrackable state.
-LWe first define local-state and global-state semantics and then present
+In the rest of this section we first define local-state and global-state semantics and then 
 define a formal translation between the two.
 
 %-------------------------------------------------------------------------------
@@ -106,14 +107,13 @@ identity of |put|; it annihilates state updates.  The other law expresses that
 
 These two laws focus on |put|, and one may wonder whether similar laws are needed
 for |get|. It turns out that in fact they are not needed as
-the two |get| properties can be derived from the other laws:
+the two |get| properties can be derived from the other laws (see Appendix \ref{app:local-law} for their proofs):
 \begin{alignat}{2}
     &\mbox{\bf get-right-identity}:\quad &
     |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
     &\mbox{\bf get-left-distributivity}:~ &
     |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}
 \end{alignat}
-Appendix \ref{app:local-law} provides their derivation.
 
 If we take these four equations together with the left-identity and right-distributivity
 laws of nondeterminism, we can say that
@@ -195,10 +195,23 @@ where |m| is a nondeterministic monad, the simplest structure of which is a list
 This implementation is exactly that of |StateT s m a|
 in the Monad Transformer Library \citet{mtl}, and as introduced in
 Section \ref{sec:combining-effects}.
-With effect handling \citet{Kiselyov15, Wu14}, the monad behaves similarly
-% (except for the limited commutativity implied by law (\ref{eq:left-dist}))
-if we run the handler for state before that for list.
 
+With effect handling \citet{Kiselyov15, Wu14}, we get the local state semantics when
+we run the state handler for state before the nondeterminism handler:
+\begin{code}
+hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a])
+hLocal = fmap (fmap (fmap fst) . hNDf) . runStateT . hState
+\end{code}
+
+In the case where the remaining signature is empty (|f = NilF|), we get:
+\begin{code}
+fmap hNil . hLocal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
+\end{code}
+Here, the result type |(s -> [a])| differs from |Local s m a = s -> [(a,s)]| in that it produces
+only a list of results (|[a]|) and not pairs of results and their final state
+(|[(a,s)]|). The latter is needed for |Local s m| to have the structure of a monad, in particular
+to support the modular composition of computations with |(>>=)|. Such is not needed for the carriers of handlers, because
+the composition of computations is taken care of by the |(>>=)| operator of the free monad.
 
 %-------------------------------------------------------------------------------
 \subsection{Global-State Semantics}
@@ -310,6 +323,32 @@ instance MState s (Global s) where
 
 Failure, of course, returns an empty continuation and an unmodified state.
 Branching first exhausts the left branch before switching to the right branch.
+
+In terms of handlers, the global-state semantics can be implemented by simply switching the order of the
+two effect handlers compared to the local state handler:
+% < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+% < hGlobal = fmap (fmap fst) . runStateT . hState . hNDf
+\begin{code}
+hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a])
+hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
+\end{code} 
+This also runs a single state through a nondeterministic computation.
+Here, the |comm2| isomorphism swaps the order of two functors in the co-product signature of the free monad.
+\begin{code}
+comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 (Var x)             = Var x
+comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
+comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
+comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
+\end{code}
+By incorporating |comm2| in the definition of |hGlobal|, |hLocal| and |hGlobal| have exactly the same signature.
+
+As for |hLocal|, in the case where the remaining signature is empty (|f = NilF|), we get:
+\begin{code}
+fmap hNil . hGlobal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
+\end{code}
+The carrier type is again simpler than |Global s a| because it does not have to 
+support the |(>>=)| operator.
 
 %-------------------------------------------------------------------------------
 \subsection{Transforming Between Local State and Global State}
@@ -569,29 +608,6 @@ Now, we want to prove this translation correct, but what does correctness mean
 in this context?
 Informally stated, it should transform between local-state and global-state
 semantics.
-We can define handlers for these semantics.
-Local-state semantics is the semantics where we nondeterministically choose
-between different stateful computations.
-\begin{code}
-hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hLocal = fmap (fmap (fmap fst) . hNDf) . runStateT . hState
-\end{code}
-Global-state semantics can be implemented by simply inverting the order of the
-handlers: we run a single state through a nondeterministic computation.
-% < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-% < hGlobal = fmap (fmap fst) . runStateT . hState . hNDf
-\begin{code}
-hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
-hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
-\end{code}
-The function |comm2| here swaps the order of two functors connected by |(:+:)| in free monads.
-\begin{code}
-comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
-comm2 (Var x)             = Var x
-comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
-comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
-comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
-\end{code}
 % For simplicity, we can implicitly assume
 % commutativity and associativity of the coproduct operator |(:+:)|
 % and omit the |comm2| in the definition of |hGlobal|.
