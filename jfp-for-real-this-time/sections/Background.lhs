@@ -13,7 +13,7 @@
 
 module Background where
 
-import Control.Monad (ap, liftM, join)
+import Control.Monad (ap, liftM, join, when)
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Data.List
 
@@ -362,7 +362,7 @@ queens n = loop
     loop = do  s@(c, sol) <- get
                if c >= n then return sol
                else do  r <- choose [1..n]
-                        guard (safe r 1 sol)
+                        when (safe r 1 sol) mzero
                         put (s `plus` r)
                         loop
 \end{code}

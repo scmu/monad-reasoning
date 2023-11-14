@@ -98,7 +98,7 @@ with state and nondeterminism:
     % &\mbox{\bf get-left-distributivity}:~ &
     % |get >>= (\x -> k1 x `mplus` k2 x)| &= |(get >>= k1) `mplus` (get >>= k2)| ~~\mbox{.} \label{eq:get-left-dist}\\
     &\mbox{\bf put-left-distributivity}:~ &
-    |put s >> (m1 `mplus` m2)| &= |(put >> m1) `mplus` (put s >> m2)| ~~\mbox{.} \label{eq:put-left-dist}
+    |put s >> (m1 `mplus` m2)| &= |(put s >> m1) `mplus` (put s >> m2)| ~~\mbox{.} \label{eq:put-left-dist}
 \end{alignat}
 
 The equation (\ref{eq:put-right-identity}) expresses that |mzero| is the right
@@ -204,9 +204,9 @@ hLocal = fmap (fmap (fmap fst) . hNDf) . runStateT . hState
 \end{code}
 
 In the case where the remaining signature is empty (|f = NilF|), we get:
-\begin{code}
-fmap hNil . hLocal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
-\end{code}
+%
+< fmap hNil . hLocal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
+%
 Here, the result type |(s -> [a])| differs from |Local s m a = s -> [(a,s)]| in that it produces
 only a list of results (|[a]|) and not pairs of results and their final state
 (|[(a,s)]|). The latter is needed for |Local s m| to have the structure of a monad, in particular
@@ -344,9 +344,9 @@ comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 By incorporating |comm2| in the definition of |hGlobal|, |hLocal| and |hGlobal| have exactly the same signature.
 
 As for |hLocal|, in the case where the remaining signature is empty (|f = NilF|), we get:
-\begin{code}
-fmap hNil . hGlobal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
-\end{code}
+%
+< fmap hNil . hGlobal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
+%
 The carrier type is again simpler than |Global s a| because it does not have to 
 support the |(>>=)| operator.
 
