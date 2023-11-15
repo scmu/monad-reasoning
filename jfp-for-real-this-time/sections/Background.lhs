@@ -153,6 +153,7 @@ is not needed in this article.}
 %-------------------------------------------------------------------------------
 \subsection{Nondeterminism and State}
 \label{sec:nondeterminism}
+\label{sec:state}
 
 Following both the approaches of \citet{Hutton08} and of \citet{Gibbons11}, we introduce
 effects as subclasses of the |Monad| type class.
