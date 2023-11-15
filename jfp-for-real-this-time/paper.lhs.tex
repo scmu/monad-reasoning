@@ -10,9 +10,11 @@
 % add margin before code
 \usepackage{enumitem}
 \newlist{qwq}{itemize}{1}
-\setlist[qwq]{label={}, nosep}
+\setlist[qwq]{label={}, nosep, leftmargin=1em}
 \newcommand{\indentbegin}{\begin{qwq} \item}
 \newcommand{\indentend}{\end{qwq}}
+%subst code a = "\indentbegin \begin{hscode}\SaveRestoreHook'n" a "\ColumnHook'n\end{hscode}\resethooks'n\indentend "
+% NOTE: The above line is not a comment. It is a lhs command to insert indentation for code block.
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
