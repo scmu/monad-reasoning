@@ -1,15 +1,12 @@
 
 %if False
 \begin{code}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 module Background where
 
@@ -20,22 +17,21 @@ import Data.List
 import Debug.Trace as DT
 
 
-choose :: MNondet m => [a] -> m a
-choose = foldr (mplus . return) mzero
-
 \end{code}
 %endif
 
 \section{Background and Motivation}
 \label{sec:background}
 
-This section summarizes the main prerequisites for equational reasoning with
-effects.
-% For a more extensive treatment we refer to the work of \citep{Gibbons11}.
-We discuss the two paramount effects of this paper: state and nondeterminism.
-% Furthermore, this section explains how to arbitrarily combine effects using
-% free monads and the coproduct operator.
-
+This section summarises the main prerequisites for equational
+reasoning with effects and motivates our translations from high-level
+effects to low-level effects.
+% For a more extensive treatment we refer to the work of % % %
+% \citep{Gibbons11}.
+We discuss the two paramount effects of this paper: state and
+nondeterminism.
+% Furthermore, this section explains how to arbitrarily combine %
+% effects using free monads and the coproduct operator.
 
 % The main challenges addressed in this paper relate to the tension between writing
 % programs with high-level effects or with low-level effects.
@@ -72,21 +68,21 @@ We discuss the two paramount effects of this paper: state and nondeterminism.
 \label{sec:functors-and-monads}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{Functors}
+\paragraph*{Functors}\
 In Haskell, a functor |f :: * -> *| instantiates the functor type class, which has a single
 functor mapping operation.
 < class Functor f where
 <   fmap :: (a -> b) -> f a -> f b
 
-Furthermore, a functor should satisfy the two functor laws:
+Furthermore, a functor should satisfy the following two functor laws:
 \begin{alignat}{2}
     &\mbox{\bf identity}:\quad &
     |fmap id| &= |id|\mbox{~~,} \label{eq:functor-identity}\\
     &\mbox{\bf composition}:~ &
     |fmap (f . g)| &= |fmap f . fmap g| \mbox{~~.} \label{eq:functor-composition}
 \end{alignat}
-
-We sometimes use the operator |(<$>)| as an alias for |fmap|.
+%
+We sometimes use the operator |<$>| as an alias for |fmap|.
 
 < (<$>) :: Functor f => (a -> b) -> f a -> f b
 < (<$>) = fmap
@@ -120,19 +116,17 @@ We sometimes use the operator |(<$>)| as an alias for |fmap|.
 % Often, the notation |f <$> x| is used to denote |pure f <*> x|, which is equivalent to |fmap f x|.
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{Monads}
-
-Monadic side-effects~\cite{Moggi91}, the main focus of this paper, are those that can dynamically determine what
-happens next.
-A monad |m :: * -> *| is a functor instantiates the monad type class, which has two
-operations: return (|eta|) and bind (|>>=|).
+\paragraph*{Monads}\
+Monadic side-effects~\citep{Moggi91}, the main focus of this paper,
+are those that can dynamically determine what happens next.
+A monad |m :: * -> *| is a functor instantiates the monad type class,
+which has two operations return (|eta|) and bind (|>>=|).
 
 < class Functor m => Monad m where
 <   eta     :: a -> m a
 <   (>>=)   :: m a -> (a -> m b) -> m b
 
-%NOTE: tag1
-Furthermore, a monad should satisfy the three monad laws:
+Furthermore, a monad should satisfy the following three monad laws:
 \begin{alignat}{2}
     &\mbox{\bf return-bind}:\quad &
     |return x >>= f| &= |f x|\mbox{~~,} \label{eq:monad-ret-bind}\\
@@ -142,10 +136,10 @@ Furthermore, a monad should satisfy the three monad laws:
     |(m >>= f) >>= g| &= |m >>= (\x -> f x >>= g)| \mbox{~~.}
     \label{eq:monad-assoc}
 \end{alignat}
-
+%
 Haskell supports |do| blocks as syntactic sugar for monadic computations.
 For example, |do x <- m; f x| is translated to |m >>= f|.
-Two convenient derived operators are |(>>)| and |(<*>)|.\footnote{We
+Two convenient derived operators are |>>| and |<*>|.\footnote{We
 deviate from the type class hierarchy of |Functor|, |Applicative| and |Monad|
 that can be found in Haskell's standard library because its additional complexity
 is not needed in this article.}
@@ -164,21 +158,24 @@ Following both the approaches of \citet{Hutton08} and of \citet{Gibbons11}, we i
 effects as subclasses of the |Monad| type class.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{Nondeterminism}
-The first monadic effect we introduce in this way is nondeterminism.
-We define a type class to capture the nondeterministic interface as follows:
+\paragraph*{Nondeterminism}\
+The first monadic effect we introduce is nondeterminism. We define a
+subclass |MNondet| of |Monad| to capture the nondeterministic
+interfaces as follows:
 \begin{code}
 class Monad m => MNondet m where
   mzero  :: m a
   mplus  :: m a -> m a -> m a
 \end{code}
-Here, |mzero| denotes failure and |mplus| denotes nondeterministic choice.
-Instances of the |MNondet| interface should satisfy four laws:\footnote{
+Here, |mzero| denotes failures and |mplus| denotes nondeterministic
+choices.  Instances of the |MNondet| interface should satisfy the
+following four laws:
+%
+\footnote{
 One might expect additional laws such as idempotence or commutativity.
-As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on how the
-monad is used and how it should interact with other effects.
+As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on
+how the monad is used and how it should interact with other effects.
 We choose to present a minimal setting for nondeterminism here.}
-%NOTE: tag2
 \begin{alignat}{2}
     &\mbox{\bf identity}:\quad &
       |mzero `mplus` m| ~=~ & |m| ~=~ |m `mplus` mzero|\mbox{~~,}
@@ -195,14 +192,16 @@ We choose to present a minimal setting for nondeterminism here.}
 The first two laws state that |mplus| and |mzero| should form a monoid,
 i.e., |mplus| should be associative with |mzero| as its neutral element.
 The last two laws show that |(>>=)| is right-distributive
-over |mplus| and that |mzero| cancels bind on the left. The approach of
-\citet{Gibbons11} is to reason about programs by using these laws and
-not to rely on the specific implementation of any particular instance
-of |MNondet|.
+over |mplus| and that |mzero| cancels bind on the left.
 
+The approach of \citet{Gibbons11} is to reason about effectful
+programs using an axiomatic characterisation given by these laws. It
+does not rely on the specific implementation of any particular
+instance of |MNondet|.
+%
 In contrast, \citet{Hutton08} reason directly in terms of a particular
-instance.  In the case of |MNondet|, the quintessential instance is that of lists,
-which extends the following |Monad| instance for lists.
+instance.  In the case of |MNondet|, the quintessential instance is
+that of lists, which extends the conventional |Monad| instance for lists.
 
 \begin{minipage}{0.5\textwidth}
 \begin{code}
@@ -218,11 +217,14 @@ instance MNondet [] where
 \end{minipage}
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{State}
+\paragraph*{State}\
 The signature for the state effect has two operations:
 a |get| operation that reads and returns the state,
 and a |put| operation that modifies the state, overwriting it with the given
 value, and returns nothing.
+%
+Again, we define a subclass |MState| of |Monad| to capture its
+interfaces.
 
 \begin{code}
 class Monad m => MState s m | m -> s where
@@ -239,7 +241,6 @@ class Monad m => MState s m | m -> s where
       return x
 \end{code}
 %endif
-%NOTE: tag3
 These operations are regulated by four laws:
 \begin{alignat}{2}
     &\mbox{\bf put-put}:\quad &
@@ -252,8 +253,8 @@ These operations are regulated by four laws:
     |get >>= (\s -> get >>= k s)| &= |get >>= (\s -> k s s)|
     ~~\mbox{.} \label{eq:get-get}
 \end{alignat}
-
-The standard instance of |MState| is that of |State s|.
+%
+The standard instance of |MState| is the state monad |State s|.
 
 \begin{code}
 newtype State s a = State { runState :: s -> (a, s) }
@@ -298,24 +299,37 @@ the |j|th row.
 Using this representation, queens cannot be put on the same row or column.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{A Naive Algorithm}
-
-The naive version of an algorithm for n-queens can be written as a
-nondeterministic program:
+\paragraph*{A Naive Algorithm}\
+We have the following native nondeterministic algorithm for n-queens.
 \begin{code}
 queensNaive :: MNondet m => Int -> m [Int]
 queensNaive n = choose (permutations [1..n]) >>= filtr valid
 \end{code}
-The program |queensNaive 4 :: [[Int]]| gives as result |[[2,4,1,3],[3,1,4,2]]|.
-The program uses a generate-and-test strategy: it generates all permutations of queens as candiate solutions, and then
-tests which ones are actually valid solutions.
+The program |queensNaive 4 :: [[Int]]| gives as result |[[2,4,1,3],
+[3,1,4,2]]|.  The program uses a generate-and-test strategy: it
+generates all permutations of queens as candiate solutions, and then
+tests which ones are valid.
 % This version enumerates the entire search space to find solutions.
 
-Here, |permutations| nondeterministically computes a permutation of its input.
-The function |choose| nondeterministically picks an element from a list, and is
-implemented in \Cref{sec:interpreting-nondet-progs-with-list}.
-\tom{Show |permuations| and |choose| here?}
-\wenhao{I agree.}
+The function |permutations :: [a] -> [[a]]| from |Data.List| computes
+all the permutations of its input.
+%
+The function |choose| implemented as follows nondeterministically
+picks an element from a list.
+%
+We will further discuss
+in~\Cref{sec:interpreting-nondet-progs-with-list} that it is actually
+a monad morphism from the initial lawful instance of |MNondet| to any
+other nondeterministic monad.
+%
+\wenhao{I don't think the story of the initiality of |List| is
+essential to us since we're already working with the free monad
+representation. It is only discussed and used in S5.1.}
+
+\begin{code}
+choose :: MNondet m => [a] -> m a
+choose = foldr (mplus . return) mzero
+\end{code}
 
 The function |filtr p x| returns |x| if |p x| holds, and fails otherwise.
 \begin{code}
@@ -323,9 +337,11 @@ filtr :: MNondet m => (a -> Bool) -> a -> m a
 filtr p x = if p x then return x else mzero
 \end{code}
 
-The pure function |valid :: [Int] -> Bool| determines whether a solution is
-valid. It only needs to make sure that no two queens are put on the same
-diagonal.
+The pure function |valid :: [Int] -> Bool| determines whether the
+input is a valid solution. It only needs to make sure that no two
+queens are put on the same diagonal.
+
+\wenhao{Probably show the definition of |valid|.}
 
 %if False
 \begin{code}
@@ -337,43 +353,49 @@ valid (q:qs) = valid qs && safe q 1 qs
 
 Although this generate-and-test approach works and is quite intuitive, it is not very efficient.
 For example, all solutions of the form |(1:2:qs)| are invalid because the first two queens are on the same diagonal.
-Still, the algorithm generates and tests all $(n-2)!$ candidate solutions of this form.
+However, the algorithm still needs to generate and test all $(n-2)!$ candidate solutions of this form.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{A More Performant Backtracking Algorithm}
+% \paragraph*{A More Performant Backtracking Algorithm}\
+\paragraph*{A Backtracking Algorithm}\
+We can fuse the two phases of the naive algorithm to obtain a more
+efficient algorithm, where both generating candidates and checking for
+validity happens in a single pass.  The idea is to move to a
+state-based backtracking implementation that allows early pruning of
+branches that are invalid.
+%
+In particular, when placing the new queen in the next column, we make
+sure that it is only placed in positions that are valid with respect
+to the previously placed queens.
 
-We wish to fuse the two phases of the algorithm to produce a faster implementation.
-In fact, we want to improve the implementation on a high level so that
-generating candidates and checking for validity happens in a single pass.
-We can do this by moving to a state-based implementation that allows early
-pruning of branches that are unsafe.
-
-In particular, we improve the previous implementation by placing the queens in
-the successive columns and only in positions that are
-valid with respect to the already placed queens.
-
-We use a state |(Int, [Int])| that contains the current column, and
-the already placed queens.
-The new implementation of |queens| is as follows:
+We use a state |(Int, [Int])| to contain the current column and the
+previously placed queens.  The backtracking algorithm of n-queens is
+implemented as follows.
 \begin{code}
 queens :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
-queens n = loop
-  where
-    loop = do  s@(c, sol) <- get
-               if c >= n then return sol
-               else do  r <- choose [1..n]
-                        when (safe r 1 sol) mzero
-                        put (s `plus` r)
-                        loop
+queens n = loop where
+  loop = do  s@(c, sol) <- get
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      put (s `plus` r)
+                      loop
 \end{code}
 
-The function |s `plus` r| updates the state with a new queen placed on row |r|.
+The function |guard| fails when the input is false.
+\begin{code}
+guard :: MNondet m => Bool -> m ()
+guard True  = return ()
+guard False = mzero
+\end{code}
+%
+The function |s `plus` r| updates the state with a new queen placed on
+row |r| in the next column.
 \begin{code}
 plus   :: (Int, [Int]) -> Int -> (Int, [Int])
 plus   (c, sol) r = (c+1, r:sol)
 \end{code}
-
-
+%
 The function |safe| checks whether the placement of a queen is safe with
 respect to the list of queens that is already present (for which we need its
 distance from the queen on the list). We only have to check that the queens are
@@ -381,10 +403,11 @@ in different diagonals.
 %format q1
 \begin{code}
 safe :: Int -> Int -> [Int] -> Bool
-safe _ _ [] = True
-safe q n (q1:qs) = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
+safe _ _ []       = True
+safe q n (q1:qs)  = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
 \end{code}
 
-The above monadic version of |queens| is the starting point for this paper.  In the
-remainder, we investigate how low-level optimizations, such as those found in
-Prolog implementations and Constraint Programming systems, can be incorporated and shown correct.
+The above monadic version of |queens| is the starting point of this
+paper.  In the following sections, we investigate how low-level
+optimisations, such as those found in Prolog implementations and
+Constraint Programming systems, can be incorporated and shown correct.
