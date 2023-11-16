@@ -1,4 +1,8 @@
-\section{Equations of Interaction in Local-State Semantics: The Proofs}
+%if False
+\begin{code}
+\end{code}
+%endif
+\section{Proofs for Get Laws in Local-State Semantics}
 \label{app:local-law}
 
 In this section we prove two equations relevant to the interaction of nondeterminism and state in the local-state semantics.

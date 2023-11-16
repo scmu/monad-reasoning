@@ -4,14 +4,11 @@
 %if False
 \begin{code}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 module LocalGlobal where
 
@@ -72,7 +69,7 @@ and garbage collection, and to improve locality.
 % often takes less time than recomputing the state from scratch.
 % \wenhao{I think the implementation of local state we give in 4.1 doesn't use the backtracking technique.}
 % Global state is sometimes called non-backtrackable state.
-In the rest of this section we first define local-state and global-state semantics and then 
+In the rest of this section we first define local-state and global-state semantics and then
 define a formal translation between the two.
 
 %-------------------------------------------------------------------------------
@@ -83,12 +80,12 @@ When a branch of a nondeterministic computation runs into a dead end and
 the continuation is picked up at the most recent branching point,
 any alterations made to the state by the terminated branch are invisible to
 the continuation.
-We refer to these semantics as \emph{local-state semantics}.
+We refer to this semantics as \emph{local-state semantics}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{Interaction Laws}
-
-The following two laws characterize the local-state semantics for a monad |m|
+% \paragraph*{Interaction Laws}\
+\paragraph*{The Local-State Laws}\
+The following two laws characterise the local-state semantics for a monad
 with state and nondeterminism:
 \begin{alignat}{2}
     % &\mbox{\bf get-right-identity}:\quad &
@@ -105,9 +102,9 @@ The equation (\ref{eq:put-right-identity}) expresses that |mzero| is the right
 identity of |put|; it annihilates state updates.  The other law expresses that
 |put| distributes from the left in |mplus|.
 
-These two laws focus on |put|, and one may wonder whether similar laws are needed
-for |get|. It turns out that in fact they are not needed as
-the two |get| properties can be derived from the other laws (see Appendix \ref{app:local-law} for their proofs):
+These two laws only focus on the interaction between |put| and
+nondeterminism. The following laws for |get| can be derived from other
+laws. The proof can be found in \Cref{app:local-law}.
 \begin{alignat}{2}
     &\mbox{\bf get-right-identity}:\quad &
     |get >> mzero| &= |mzero|~~\mbox{,} \label{eq:get-right-identity}\\
@@ -183,7 +180,7 @@ can exchange their order (and vice versa).
 % \end{theorem}
 %
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{Implementation}
+\paragraph*{Implementation}\
 Implementation-wise, the laws
 imply that each nondeterministic branch has its own copy of the state.
 To see that, let |s = 1|, |m1 = put 2| and |m2 = get| in
@@ -193,10 +190,10 @@ One implementation satisfying the laws is
 < type Local s m a = s -> m (a, s)
 where |m| is a nondeterministic monad, the simplest structure of which is a list.
 This implementation is exactly that of |StateT s m a|
-in the Monad Transformer Library \citet{mtl}, and as introduced in
+in the Monad Transformer Library \citep{mtl}, and as introduced in
 Section \ref{sec:combining-effects}.
 
-With effect handling \citet{Kiselyov15, Wu14}, we get the local state semantics when
+With effect handling \citep{Kiselyov15, Wu14}, we get the local state semantics when
 we run the state handler for state before the nondeterminism handler:
 \begin{code}
 hLocal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a])
@@ -205,9 +202,9 @@ hLocal = fmap (fmap (fmap fst) . hNDf) . runStateT . hState
 
 In the case where the remaining signature is empty (|f = NilF|), we get:
 %
-< fmap hNil . hLocal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
+< fmap hNil . hLocal :: Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
 %
-Here, the result type |(s -> [a])| differs from |Local s m a = s -> [(a,s)]| in that it produces
+Here, the result type |(s -> [a])| differs from |s -> [(a,s)]| in that it produces
 only a list of results (|[a]|) and not pairs of results and their final state
 (|[(a,s)]|). The latter is needed for |Local s m| to have the structure of a monad, in particular
 to support the modular composition of computations with |(>>=)|. Such is not needed for the carriers of handlers, because
@@ -224,10 +221,10 @@ nondeterministic computation, we call this state the \emph{global-state
 semantics}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{The Global-State Law}
-The global-state law sets apart
-non-backtrackable state from backtrackable state.
-
+\paragraph*{The Global-State Law}\
+The global-state semantics sets apart non-backtrackable state from
+backtrackable state.
+%
 In addition to the general laws for nondeterminism
 ((\ref{eq:mzero}) -- (\ref{eq:mzero-zero})) and state
 ((\ref{eq:put-put}) -- (\ref{eq:get-get})), we provide a \emph{global-state law}
@@ -242,14 +239,14 @@ nondeterministic choice.
 For instance, if |m = mzero| in the left-hand side of the equation,
 then under local-state semantics
 (laws (\ref{eq:mzero}) and (\ref{eq:put-right-identity}))
-the lefthand side becomes equal to |n|,
+the left-hand side becomes equal to |n|,
 whereas under global-state semantics
 (laws (\ref{eq:mzero}) and (\ref{eq:put-or}))
 the equation simplifies to |put s >> n|.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{Implementation}
-
+\paragraph*{Implementation}\
+%
 This law leaves us free to choose from a large space of
 implementations with different properties.
 For example, in any given implementation, the programs
@@ -258,23 +255,24 @@ either semantically identical or distinct.
 The same goes for the programs |return x `mplus` return x| and |return x|
 or other examples. Also, there is no law that regulates |put s >> mzero|, which
 means that it may be distinguished from |mzero|.
-
+\wenhao{I'm confused. First, the first two equations are just about
+nondeterminism, right? Second, the third law |put s >> mzero = mzero|
+must not hold because of \Cref{eq:put-or}.}
 
 Figuring out a correct implementation for the global-state monad is tricky.
 One might believe that |Global s m a = s -> (m a, s)|
 is a natural implementation of such a monad.
-However, the usual, naive implementation of |(>>=)| does not satisfy
-right-distributivity (\ref{eq:mplus-dist}),
-violates monad laws and is therefore not even a monad.
+However, the usual naive implementation of |(>>=)| for it does not satisfy
+right-distributivity (\ref{eq:mplus-dist}) and is therefore not even a monad.
 The type |ListT (State s)| from the Monad Transformer Library \citep{mtl}
 expands to essentially the same implementation with
 monad |m| instantiated by the list monad.
 This implementation has the same flaws.
-More careful implementations of |ListT|\footnote{Often referred to as ``|ListT| done right''.} that do satisfy right-distributivity
-(\ref{eq:mplus-dist}) and the monad laws have been proposed by \citet{Volkov14} and \citet{Gale}.
-Effect handlers \cite{Kiselyov15, Wu14} produce implementations that match our intuition of
-non-backtrackable computations if we run the handler for nondeterminism before
-that for state.
+More careful implementations of |ListT| (often referred to as
+``|ListT| done right'') satisfying right-distributivity
+(\ref{eq:mplus-dist}) and other monad laws have been proposed by
+\citet{Volkov14, Gale}.
+%
 The following implementation is essentially that of Gale.
 \begin{code}
 newtype Global s a = Gl { runGl :: s -> (Maybe (a, Global s a), s) }
@@ -324,16 +322,24 @@ instance MState s (Global s) where
 Failure, of course, returns an empty continuation and an unmodified state.
 Branching first exhausts the left branch before switching to the right branch.
 
-In terms of handlers, the global-state semantics can be implemented by simply switching the order of the
-two effect handlers compared to the local state handler:
-% < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s -> Free f [a]
+Effect handlers \citep{Kiselyov15, Wu14} also provide implementations
+that match our intuition of non-backtrackable computations.
+%  if we run the handler for nondeterminism before that for state.
+%
+The global-state semantics can be implemented by simply switching the
+order of the two effect handlers compared to the local state handler
+|hLocal|.
+% < hGlobal :: Functor f => Free (StateF s :+: NondetF :+: f) a -> s
+% -> Free f [a]
 % < hGlobal = fmap (fmap fst) . runStateT . hState . hNDf
 \begin{code}
 hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a])
 hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
-\end{code} 
+\end{code}
 This also runs a single state through a nondeterministic computation.
-Here, the |comm2| isomorphism swaps the order of two functors in the co-product signature of the free monad.
+The |comm2| isomorphism swaps the order of two functors in the
+co-product signature of the free monad in order to let |hLocal| and
+|hGlobal| have the same type signature.
 \begin{code}
 comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
 comm2 (Var x)             = Var x
@@ -341,13 +347,13 @@ comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
 comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
 comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 \end{code}
-By incorporating |comm2| in the definition of |hGlobal|, |hLocal| and |hGlobal| have exactly the same signature.
+% By incorporating |comm2| in the definition of |hGlobal|, |hLocal| and |hGlobal| have exactly the same signature.
 
 As for |hLocal|, in the case where the remaining signature is empty (|f = NilF|), we get:
 %
-< fmap hNil . hGlobal :: Functor f => Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
+< fmap hNil . hGlobal :: Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
 %
-The carrier type is again simpler than |Global s a| because it does not have to 
+The carrier type is again simpler than |Global s a| because it does not have to
 support the |(>>=)| operator.
 
 %-------------------------------------------------------------------------------
@@ -356,7 +362,7 @@ support the |(>>=)| operator.
 
 Both local state and global state have their own laws and semantics.
 Also, both interpretations of nondeterminism with state have their own
-(dis)advantages.
+advantages and disadvantages.
 
 Local-state semantics imply that each nondeterministic branch has its own state.
 This may be expensive if the state is represented by data structures, e.g. arrays,
@@ -380,7 +386,7 @@ and then translate them to global-state style.
 This subsection shows a systematic program transformation that alters a program
 written for local-state semantics to a program that, when interpreted under
 global-state semantics, behaves exactly the same as the original program
-interpreted under global-state semantics.
+interpreted under local-state semantics.
 
 % %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 % \paragraph*{State-Restoring Put}
@@ -395,14 +401,14 @@ interpreted under global-state semantics.
 % A naive monadic program that implements this pattern has the following structure.
 % < get (\prev -> put next >> search >> put prev)
 % Here |next| is the updated state, and |prev| is the old state.
-% 
+%
 % Now, assume a |search| that consists of two branches
 % |(m1 `mplus` m2)|.
-% We want both branches to start running with the |next| state, 
+% We want both branches to start running with the |next| state,
 % Furthermore, the state should be restored to |prev| when both branches are done.
 % In turn, we will assume that |m1| and |m2| follow the same discipline, rolling
 % back whatever further modifications they make to the state.
-% 
+%
 % Due to (\ref{eq:mplus-dist}), however, the monadic program expands to the following:
 % < get (\prev -> put next >> (m1 `mplus` m2 `mplus` m3) >>= put prev
 % <   =  get (\prev ->  (put next >>  m1 >> put prev)  `mplus`
@@ -413,11 +419,11 @@ interpreted under global-state semantics.
 % requirement can be violated, as we cannot guarantee that the state is rolled
 % back at the end.  Indeed, if |m2| fails and thus ends with |mzero|, |put prev| is
 % not run afterwards (because of (\ref{eq:mzero-zero})).
-% 
+%
 % This naive approach is of course not what we want. Both braches should
-% start with the |next| state, and the |prev| state should be restored 
+% start with the |next| state, and the |prev| state should be restored
 % just once, after both branches are done.
-% 
+%
 % Therefore, we define the |side| function, which does not generate a result
 % but rather represents a side-effect, hence the name.
 % \begin{code}
@@ -428,12 +434,12 @@ interpreted under global-state semantics.
 % < side (modify next) `mplus` m1 `mplus` m2 `mplus` m3 `mplus` side (modReturn prev)
 % executes |modify next| and |modReturn prev| once, even if the nondeterministic
 % branches fail.
-% 
+%
 % \wenhao{
 %   I think it is more natural to use |modify next >> m1 `mplus` m2 `mplus` m3 `mplus` side(modify prev)|.
 %   Also, this section is used to discuss the technique of "chaining using |`mplus`|", right?
 %   But it seems a little convoluted to discuss |modify| here and then discuss |putR| in 4.4 and then come back to |modify| in 4.5.}
-% 
+%
 % The attentive reader may have noticed that we are using |mplus| as a kind of
 % sequencing operator now.
 % Recall from right-distributivity (\ref{eq:mplus-dist}) that
@@ -441,12 +447,12 @@ interpreted under global-state semantics.
 % That is, |mplus| acts as ``insertion points'', where future code followed by
 % |(>>)| can be inserted into.
 % This is a dangerous feature, which we replace by a safer programming pattern.
-% 
+%
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{State-Restoring Put}
-
+\paragraph*{State-Restoring Put}\
+%
 Central to the implementation of backtracking in the global state setting is
-the backtracking variant of |put|. 
+the backtracking variant of |put|.
 Going forward, such a state-restoring |putR| modifies the state as usual,
 but, when backtracked over, it restores the old state.
 
@@ -464,18 +470,18 @@ side :: MNondet m => m a -> m b
 side m = m >> mzero
 \end{code}
 
-For example, assume an arbitrary computation |comp| is placed after
-a state-restoring put. Now we reason as follows.
+For example, assuming an arbitrary computation |comp| is placed after
+a state-restoring put, we have the following equational reasoning.
 <    putR s >> comp
 < = {-~  definition of |putR|  -}
-<    (get >>= \t -> put s `mplus` side (put t)) >> comp
+<    (get >>= \s' -> put s `mplus` side (put s')) >> comp
 < = {-~  right-distributivity (\ref{eq:mplus-dist})  -}
-<    (get >>= \t -> (put s >> comp) `mplus` (side (put t) >> comp))
+<    (get >>= \s' -> (put s >> comp) `mplus` (side (put s') >> comp))
 < = {-~  left identity (\ref{eq:mzero-zero})  -}
-<    (get >>= \t -> (put s >> comp) `mplus` side (put t))
+<    (get >>= \s' -> (put s >> comp) `mplus` side (put s'))
 
-So, |putR| saves the current state |t|, computes |comp| using state |s|,
-and then restores the saved state |t|.
+The |putR| saves the current state |s'|, computes |comp| using state |s|,
+and then restores the saved state |s'|.
 Figure \ref{fig:state-restoring-put} shows how the state-passing works
 and the flow of execution for a computation after a state-restoring put.
 
@@ -518,8 +524,8 @@ state-restoring put.
 \end{table}
 
 The idea is that |putR|, when run with a global state, satisfies laws
-(\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and the local
-state laws.
+(\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and
+the local-state laws.
 Then, one can take a program written for a local state monad, replace
 all occurrences of |put| by |putR|, and run the program with a global state.
 However, to satisfy all of these laws,
@@ -549,15 +555,21 @@ differentiated:
 \end{minipage}
 
 Those two programs do not behave in the same way when |s /= t|.
-
+%
 Hence, only provided that \textbf{all} occurences of |put| in a program are replaced by |putR|
 can we simulate local-state semantics.
 
 %-------------------------------------------------------------------------------
 \subsection{Proving the |putR| Operation Correct}
 \label{sec:putr}
-It is time to give a more formal definition for the translation between
-global-state and local-state semantics using the free monad representation.
+
+It is time to give a more formal definition for the translation
+between global-state and local-state semantics using the free monad
+representation.  The corresponding translation function
+|local2global|, also implemented as a fold on free monads, transforms
+every |Put| into a |putR| and leaves the rest of the program
+untouched.
+
 % We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
 % notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
 % constructors. Their implementations are straightforwardly defined in terms of
@@ -593,8 +605,6 @@ failOp    = (Op . Inr . Inl) Fail
 % Here, we use a continuation-based representation, from which we can always recover the
 % representation of |putR| by setting the continuation to |return|.
 
-The corresponding translation function |local2global| transforms every |Put| into
-a |putR| and leaves the rest of the program untouched.
 \begin{code}
 local2global  :: Functor f
               => Free (StateF s :+: NondetF :+: f) a
@@ -604,15 +614,17 @@ local2global = fold Var alg
     alg (Inl (Put t k)) = putR t >> k
     alg p               = Op p
 \end{code}
-Now, we want to prove this translation correct, but what does correctness mean
-in this context?
-Informally stated, it should transform between local-state and global-state
-semantics.
+% Now, we want to prove this translation correct, but what does
+% correctness mean in this context?  Informally stated, it should
+% transform between local-state semantics and global-state semantics.
 % For simplicity, we can implicitly assume
 % commutativity and associativity of the coproduct operator |(:+:)|
 % and omit the |comm2| in the definition of |hGlobal|.
-
-A correct translation then transforms local state to global state.
+%
+% A correct translation then transforms local state to global state.
+The following theorem states that |local2global| transforms
+the local-state semantics given by |hLocal| to the global-state
+semantics given by |hGlobal|.
 \begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal
 \end{theorem}
@@ -731,7 +743,7 @@ the state alive.
 % The |put (0, [])| in the initialization of |queensR| does not
 % influence this behaviour as the final state is dropped.
 % The function |queensModify| implements global state with undo semantics.
-% 
+%
 % \begin{code}
 % queensModify :: Int -> [[Int]]
 % queensModify = hNil . flip hGlobal (0,[]) . queensR
