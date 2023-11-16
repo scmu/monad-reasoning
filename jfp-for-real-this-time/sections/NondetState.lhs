@@ -4,9 +4,7 @@
 %if False
 \begin{code}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
@@ -400,7 +398,7 @@ queensStateR  :: Int -> [[Int]]
 queensStateR  = hNil
               . fmap fst . flip runStateT (0, []) . hState
               . (extractSS . hState . nondet2state) . comm2
-              . queensR
+              . modify2global . queensR
 \end{code}
 \birthe{Don't know what this sentence says.}
 It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.

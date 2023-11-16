@@ -19,7 +19,7 @@ import Data.STRef
 
 import Background
 import Overview
-import LocalGlobal (local2global, hLocal, comm2, queensR)
+import LocalGlobal (local2global, hLocal, comm2, queensR, modify2global)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState, queensStateR)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
@@ -338,5 +338,5 @@ with the manual simulation |queensR| using the undo semantics.
 \begin{code}
 queensSimR   :: Int -> [[Int]]
 queensSimR   = hNil . flip extract (0, [])
-             . hState . states2state . nondet2state . comm2 . queensR
+             . hState . states2state . nondet2state . comm2 . modify2global . queensR
 \end{code}
