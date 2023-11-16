@@ -48,8 +48,8 @@ and the join operation is concatenation or flattening, which can be expressed in
 |mul = foldr (++) []|.
 
 We can interpret nondeterministic programs encoded as lists
-by means of the |choose| function, which can be implemented using a fold.
-This |choose| function is a nondeterminism-monad morphism
+by means of the |choose| function defined in \Cref{sec:motivation-and-challenges},
+which is a nondeterminism-monad morphism.
 %if False
 \begin{code}
 etand :: MNondet m => a -> m a
@@ -59,10 +59,10 @@ mul :: [[a]] -> [a]
 mul = foldr (++) []
 \end{code}
 %endif
-\begin{code}
-choose :: MNondet m => [a] -> m a
-choose = foldr (mplus . etand) mzero
-\end{code}
+% \begin{code}
+% choose :: MNondet m => [a] -> m a
+% choose = foldr (mplus . etand) mzero
+% \end{code}
 
 In fact, the |List| monad is not just an instance for nondeterminism;
 it is the \emph{initial} lawful instance.
@@ -112,10 +112,10 @@ type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], stack :: [Comp (S a) ()]}
 \end{code}
 To simulate a nondeterministic computation |Free NondetF a| with this state wrapper,
-we define a helper functions in Figure \ref{fig:pop-push-append}.
+we define three helper functions in Figure \ref{fig:pop-push-append}.
 The function |popS| takes the upper element of the stack.
 The function |pushS| adds a branch to the stack.
-The function |appendS| adds a result o the given results.
+The function |appendS| adds a result to the given results.
 
 \noindent
 \begin{figure}[t]

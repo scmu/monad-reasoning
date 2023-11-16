@@ -2,9 +2,7 @@
 \begin{code}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -19,7 +17,7 @@ import Data.STRef
 
 import Background
 import Overview
-import LocalGlobal (local2global, hLocal, comm2, queensR)
+import LocalGlobal (local2global, hLocal, comm2, queensR, modify2global)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState, queensStateR)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
@@ -29,7 +27,7 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 \section{Mutable State}
 \label{sec:mutable-state}
 
-Performance-wise, it would be better to have an algorithm with mutable state,
+Performance-wise, it would be better to have an algorithm with mutable states,
 instead of the built-in |State| monad that keeps track of state in a pure way.
 In all previously defined functions, we make unnecessary copies of the state,
 and keep track of them explicitly in the program.
@@ -41,7 +39,7 @@ that has the functionality of a mutable state.
 
 It is easy to show that a mutable state handler can be defined in
 Haskell.
-We use a stack to implement mutable state.
+We use a stack to implement mutable states.
 \begin{code}
 data Stack s b a = Stack {   stack     ::  STRef s   (STArray s Index a),
                              size      ::  STRef s   Index,
@@ -103,7 +101,8 @@ Figure \ref{fig:pushstack-popstack} shows how to push to and pop from a stack.
 \begin{subfigure}[t]{0.48\linewidth}
 \begin{code}
 pushStack :: a -> Stack s b a -> ST s ()
-pushStack x (Stack stackRef sizeRef resRef) = do
+pushStack x (Stack stackRef sizeRef resRef) =
+  do
     stack       <- readSTRef stackRef
     size        <- readSTRef sizeRef
     res         <- readSTRef resRef
@@ -123,7 +122,8 @@ pushStack x (Stack stackRef sizeRef resRef) = do
 \begin{subfigure}[t]{0.48\linewidth}
 \begin{code}
 popStack :: Stack s b a -> ST s (Maybe a)
-popStack (Stack stackRef sizeRef _) = do
+popStack (Stack stackRef sizeRef _) =
+  do
     stack  <- readSTRef stackRef
     size   <- readSTRef sizeRef
     if size == 0
@@ -296,9 +296,9 @@ with nondeterminism and other effects |f| into a free monad.
 The nondeterminism effects are handled, wrapping the result in a list monad,
 so that only the other effects |f| remain.
 
+% -- runNDSK p = fmap snd (runSTT $ liftST (emptyStack []) >>= hStack (unSK $ nondet2stack p))
 \begin{code}
 runNDSK :: Functor f => Free (NondetF :+: f) a -> Free f [a]
--- runNDSK p = fmap snd (runSTT $ liftST (emptyStack []) >>= hStack (unSK $ nondet2stack p))
 runNDSK p = fmap snd (runhStack [] (unSK $ nondet2stack p))
 
 runhStack :: Functor f => b -> Free (StackF e b :+: f) a -> Free f (a, b)
@@ -326,7 +326,7 @@ queensStackR  :: Int -> [[Int]]
 queensStackR  = hNil
               . fmap fst . flip runStateT (0, []) . hState
               . runNDSK . comm2
-              . queensR
+              . modify2global . queensR
 \end{code}
 
 %include TrailStack.lhs

@@ -2,9 +2,7 @@
 \begin{code}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -221,8 +219,8 @@ x5 y =
 %endif
 
 %-------------------------------------------------------------------------------
-\subsection{Simulating Nondeterminism and State with Only State}
-
+\paragraph*{Simulating Nondeterminism and State with Only State}\
+%
 By now we have defined three simulations for encoding a high-level effect as a lower-level effect.
 \begin{itemize}
   \item The function |nondet2state| simulates the high-level nondeterminism effect with the state effect
@@ -324,7 +322,8 @@ tt' = hNil $ hLocal prog 0
 \end{code}
 %endif
 
-\paragraph{N-queens with Only State}
+\paragraph*{N-queens with Only State}\
+%
 Using the simulation methods shown in Figure \ref{fig:simulation},
 we can simulate the backtracking algorithm of the n-queens problem
 of \Cref{sec:motivation-and-challenges} with only state.
