@@ -9,6 +9,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module LocalGlobal where
 
@@ -667,79 +668,205 @@ side-effects of |m| in |side m|, we also have the following:
 % These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
 
 %-------------------------------------------------------------------------------
-\subsection{Undo Optimization }
+\subsection{Optimisation with Undo}
 \label{sec:undo-semantics}
 
 % backtracking in local state
+\wenhao{TODO: Make the presentation in this section more clear.}
 
 We have just established how to simulate local state with global state
-by replacing |put| by |putR|.
+by replacing |put| with |putR|.
 The |putR| operation makes the implicit copying of the local-state
 semantics explicit in the global-state semantics.
 This copying is rather costly if the state is big (e.g., a long array),
 and especially wasteful if the modifications made to that state are rather small
-(e.g., a single entry in the array). To improve upon this situation
+(e.g., a single entry in the array).
+%
+To improve upon this situation
 we can, instead of copying the state, keep track of the modifications made to it,
 and undo them when necessary.
-Rather
-than using |put|, some algorithms typically use a pair of commands |modify next|
-and |modify prev| to update and roll back the state, respectively.
-Here, |next| and |prev| represent the modifications to the state, with |prev . next = id|.
-Following a style similar to |putR|, this can be modelled as follows:
+
+For example, the |queens| program in
+\Cref{sec:motivation-and-challenges} uses |do s <- get; put (s `plus` r)|
+to update the state.
+%
+Instead of copying the whole state via |putR| in the global-state semantics,
+we define
 \begin{code}
-modifyR :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
-modifyR next prev = modify next `mplus` side (modify prev)
+minus   :: (Int, [Int]) -> Int -> (Int, [Int])
+minus   (c, sol) r = (c-1, tail sol)
+\end{code}
+and use |do s <- get; put (s `minus` r)| to restore the state.
+%
+These two operators satisfy the equation |(`minus` x) . (`plus` x) = id|
+for any |x :: Int|.
+
+In general, we define a |modify| function as follows.
+\begin{code}
+modify           :: MState s m => (s -> s) -> m ()
+modify f         = get >>= put . f
+\end{code}
+If all the state updates in a program is given by some |modify fwd|
+where every |fwd| is accompanied with a left inverse |bwd| such that
+|bwd . fwd = id|, we can simulate its local-state semantics with
+global-state semantics by using |modify bwd| to roll back the updates.
+
+% Rather than using |put|, some algorithms typically use a pair of
+% commands |modify fwd| and |modify bwd| to update and roll back the
+% state, respectively.  The |fwd| and |bwd| represent the modifications
+% to the state, with |bwd . fwd = id|.
+  % Following a style similar to |putR|, this can be modelled as follows:
+% modifyR          :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
+% modifyR fwd bwd  = modify fwd `mplus` side (modify bwd)
+% We can implement |modify| with |get| and |put| as follows.
+
+% Similar to \Cref{sec:putr}, we can give a translation and show its
+% correctness.
+%
+% With |modify|, instead of copying the state in the global-state
+% semantics, we can use |modify bwd| to restore the changes introduced
+% by |modify fwd|.
+
+In order to show it formally, we need to make sure that every state
+update is given by some |modify fwd| with a left inverse |bwd| at the
+syntax level. We define a new signature giving the syntax of two
+operations for get and modify.
+%
+\begin{code}
+data ModifyF s a  = MGet (s -> a) | ModifyR (s -> s) (s -> s) a
+\end{code}
+%
+The operation |ModifyR fwd bwd| takes two functions with |bwd . fwd = id|.
+%if False
+\begin{code}
+instance Functor (ModifyF s) where
+    fmap f (MGet s)    = MGet (f . s)
+    fmap f (ModifyR g h x) = ModifyR g h (f x)
+\end{code}
+%endif
+As for nondeterminism and state, we define a subclass |MModify| of
+|Monad| to capture its effectful interfaces, and implement the free
+monad |Free (ModifyF s :+: f)| as an instance of it.
+\begin{code}
+class Monad m => MModify s m | m -> s where
+    mget     :: m s
+    modifyR  :: (s -> s) -> (s -> s) -> m ()
+instance Functor f => MModify s (Free (ModifyF s :+: f)) where
+  mget    =  Op (Inl (MGet return))
+  modifyR fwd bwd  =  Op (Inl (ModifyR fwd bwd (return ())))
 \end{code}
 
-The function |modify| is defined as follows.
+% We can interpret programs written with |ModifyF| and |NondetF| by
+% translating |ModifyF| operations to |StateF| and |NondetF| operations.
+%
+The local-state semantics of programs with |ModifyF| and |NondetF| is
+directly given by the local-state semantics of |StateF| and |NondetF|.
+We have the following translation |modify2local| which only uses |fwd|.
+%
 \begin{code}
-modify f = get >>= put . f
+modify2local  :: Functor f
+              => Free (ModifyF s :+: NondetF :+: f) a
+              -> Free (StateF s :+: NondetF :+: f) a
+modify2local  = fold Var alg
+  where
+    alg (Inl (ModifyR fwd _ k))  = modify fwd >> k
+    alg (Inl (MGet k))           = get >>= k
+    alg (Inr p)                  = Op (Inr p)
+\end{code}
+%
+To simulate the local-state semantics with global-state semantics,
+instead of using the translation |local2global| which uses the
+inefficient operation |putR|, we can give another translation
+|modify2global| as follows which makes use of |bwd| to roll back updates.
+% with the global-state semantics, in addition to
+% using |fwd|, we also need to use |bwd| to roll back the updates.
+%
+Similar to |putR|, it also uses |`mplus`| to implement backtracking.
+%
+\begin{code}
+modify2global  :: Functor f
+               => Free (ModifyF s :+: NondetF :+: f) a
+               -> Free (StateF s :+: NondetF :+: f) a
+modify2global  = fold Var alg
+  where
+    alg (Inl (ModifyR fwd bwd k))  = (modify fwd `mplus` modify bwd) >> k
+    alg (Inl (MGet k))             = get >>= k
+    alg (Inr p)                    = Op (Inr p)
 \end{code}
 
-Observe that, unlike |putR|, |modifyR| does not hold onto a copy of the old state.
+The following theorem shows that the simulation of local-state
+semantics with global-state semantics given by |modify2global|
+coincides with the local-state semantics given by |modify2local|.
+%
+\begin{theorem}\label{thm:modify-local-global}
+< hGlobal . modify2global = hLocal . modify2local
+\end{theorem}
+\wenhao{TODO: prove it.}
+
+Combining it with \Cref{thm:local-global}, we also have
+< hGlobal . modify2global = hGlobal . local2global . modify2local
+
+Observe that, unlike |putR|, the interpretation of |modifyR| in
+|modify2global| does not hold onto a copy of the old state.
+%
+Although the |modify| function still takes out the whole state and
+apply a function to it, it can be more efficient with in-place
+update~\citep{LorenzenLS23} or mutable states.
+% TODO: probably add a forward reference to where we use mutable states
+
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{N-queens with |modifyR|}
-
-Let us revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
-Recall that, for the puzzle, the operator that alters the state
-% (to check whether a chess placement is safe)
-is defined by
-< (c, sol) `plus` r = (c+1, r:sol)
-We can define its left inverse |minus|:
-< (c, sol) `minus` r = (c-1, tail sol)
-so that the equation |(`minus` x) . (`plus` x) = id| is satisfied.\footnote{This is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.}
-
-Thus, we can compute all the solutions to the puzzle in a scenario with a
-shared global state as follows:
+\paragraph*{N-queens with |modifyR|}\
+%
+% Let us revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
+% Recall that, for the puzzle, the operator that alters the state
+% % (to check whether a chess placement is safe)
+% is defined by
+% < (c, sol) `plus` r = (c+1, r:sol)
+% We can define its left inverse |minus| as
+% < (c, sol) `minus` r = (c-1, tail sol)
+% so that the equation |(`minus` x) . (`plus` x) = id| is satisfied.
+% \footnote{This is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.}
+% TODO: some literature survey on incremental computation if I have time
+%
+% Thus, we can compute all the solutions to the puzzle in a scenario with a
+% shared global state as follows:
+Now we can rewrite the |queens| program with modify and nondeterminism.
 \begin{code}
-queensR :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
-queensR n = loop
-  where
-    loop = do  s@(c, sol) <- get
-               if c >= n then return sol
-               else do  r <- choose [1..n]
-                        filtr valid (r:sol)
-                        modifyR (`plus` r) (`minus` r)
-                        loop
+queensR :: (MModify (Int, [Int]) m, MNondet m) => Int -> m [Int]
+queensR n = loop where
+  loop = do  (c, sol) <- mget
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      modifyR (`plus` r) (`minus` r)
+                      loop
 \end{code}
-This function has replaced the |put| operation in the original implementation's
-|loop| by a call to |modifyR (`plus` r) (`minus` r)|.
-Taking into account that the local-state semantics
-discards the side-effects in the |side| branch, it is not difficult
-to see that
-% \begin{equation*}
-< hLocal . queens = hLocal . queensR
-% \end{equation*}
-Moreover, following Theorem~\ref{thm:local-global}, we can conclude that |queensR| also behaves the same
-under global-state semantics where the |side| branch takes care of backtracking
-the state.
-\wenhao{Is a new theorem needed?} \tom{yes, this requires a proof}
-% \begin{equation*}
-< hGlobal . queens = hGlobal . queensR
-% \end{equation*}
-The advantage of the right-hand side is that it does not keep any copies of
+%
+It is not hard to see that
+%
+< modify2local queensR = queens
+%
+Combined with \Cref{thm:modify-local-global}, we have
+< hGlobal (modify2global queensR) = hLocal queens
+
+% This function replaces the |put| operation in the original implementation's
+% |loop| by a call to |modifyR (`plus` r) (`minus` r)|.
+% Taking into account that the local-state semantics
+% discards the side-effects in the |side| branch, it is not difficult
+% to see that
+% % \begin{equation*}
+% < hLocal . queens = hLocal . queensR
+% % \end{equation*}
+% Moreover, following Theorem~\ref{thm:local-global}, we can conclude that |queensR| also behaves the same
+% under global-state semantics where the |side| branch takes care of backtracking
+% the state.
+% % \begin{equation*}
+% < hGlobal . queens = hGlobal . queensR
+% % \end{equation*}
+The advantage of the left-hand side is that it does not keep any copies of
 the state alive.
+
 % The |put (0, [])| in the initialization of |queensR| does not
 % influence this behaviour as the final state is dropped.
 % The function |queensModify| implements global state with undo semantics.
@@ -750,14 +877,14 @@ the state alive.
 % \end{code}
 
 %if False
-\begin{code}
-minus   :: (Int, [Int]) -> Int -> (Int, [Int])
-minus   (c, sol) r = (c-1, tail sol)
+% \begin{code}
+% minus   :: (Int, [Int]) -> Int -> (Int, [Int])
+% minus   (c, sol) r = (c-1, tail sol)
 
--- tR :: StateT (Int, [Int]) [] [Int]
--- tR = queensR 9
+% -- tR :: StateT (Int, [Int]) [] [Int]
+% -- tR = queensR 9
 
--- testR :: [[Int]]
--- testR = fmap fst $ runStateT t (0,[])
-\end{code}
+% -- testR :: [[Int]]
+% -- testR = fmap fst $ runStateT t (0,[])
+% \end{code}
 %endif

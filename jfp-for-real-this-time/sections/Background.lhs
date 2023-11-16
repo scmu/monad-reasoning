@@ -375,10 +375,11 @@ implemented as follows.
 \begin{code}
 queens :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
 queens n = loop where
-  loop = do  s@(c, sol) <- get
+  loop = do  (c, sol) <- get
              if c >= n then return sol
              else do  r <- choose [1..n]
                       guard (safe r 1 sol)
+                      s <- get
                       put (s `plus` r)
                       loop
 \end{code}

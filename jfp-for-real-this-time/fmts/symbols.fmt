@@ -119,6 +119,7 @@
 %format NondetF = "\Varid{Nondet_{F}}"
 %format NondetF' = "\Varid{Nondet_{F}}^\prime"
 %format StateF = "\Varid{State_{F}}"
+%format ModifyF = "\Varid{Modify_{F}}"
 %format NilF = "\Varid{Nil_{F}}"
 %format ScopeF = "\Varid{Scope_{F}}"
 %format CutF = "\Varid{Cut_{F}}"
