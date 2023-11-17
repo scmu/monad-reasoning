@@ -1,3 +1,8 @@
+%if False
+\begin{code}
+\end{code}
+%endif
+
 \section{Introduction}
 \label{sec:introduction}
 
@@ -88,7 +93,8 @@ this paper makes the following contributions:
 		  all sections.
 	\item We prove all simulations correct using equational reasoning techniques and the fusion law in particular (\Cref{app:universality-nondeterminism}, \Cref{app:nondet-state} and \Cref{app:local-global}).
 \end{itemize}
-\birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
+% \birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
+% Wenhao: I don't think the global state law (put-or) is new.
 Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:discussion})
 %
 Throughout the paper, we use Haskell as a means to illustrate

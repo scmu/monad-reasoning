@@ -10,9 +10,11 @@
 % add margin before code
 \usepackage{enumitem}
 \newlist{qwq}{itemize}{1}
-\setlist[qwq]{label={}, nosep}
+\setlist[qwq]{label={}, nosep, leftmargin=1em}
 \newcommand{\indentbegin}{\begin{qwq} \item}
 \newcommand{\indentend}{\end{qwq}}
+%subst code a = "\indentbegin \begin{hscode}\SaveRestoreHook'n" a "\ColumnHook'n\end{hscode}\resethooks'n\indentend "
+% NOTE: The above line is not a comment. It is a lhs command to insert indentation for code block.
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
@@ -43,25 +45,37 @@
 \end{authgrp}
 
 \begin{abstract}
-  Just as of programming languages, one can think of some effects as being more
-  low-level than others. Indeed, particular effects allow a more fine-grained
-  control over program execution and resources, while others offer a higher level
-  of abstraction. It is usually desirable to
-  write programs using higher-level effects, and at the same time still
-  benefit from the optimizations that lower-level effects afford.
+  Just as of programming languages, some effects are considered to be
+  more low-level than others. Low-level effects usually allow a more
+  fine-grained control over program execution and resources, while
+  others offer a higher level of abstraction. It is usually desirable
+  to write programs using higher-level effects, and at the same time
+  still benefit from the optimisations enabled by lower-level effects.
 
-  This paper studies how higher-level effects can be simulated in terms of low-level effects.
-  In particular, our contribution focusses at the possible interactions between
-  state and nondeterminism.
-  We model these interactions using a single state effect and prove all intermediate
-  steps and results correct.
-  These proofs use equational reasoning techniques and stand out
-  from other proofs because of the presence of algebraic effects. \birthe{??}
-  We distinguish between local-state and global-state semantics
-  and transform the higher-level nondeterminism to state. We demonstrate
-  possible optimizations such as efficient backtracking and mutable state.
-  We illustrate our simulations on the well-known n-queens example and
-  prove all simulation functions correct using equational reasoning techniques.
+  This paper studies how higher-level effects can be simulated in
+  terms of low-level effects.
+  %
+  In particular, our contributions focus at the different interactions
+  between state and nondeterminism, known as the local-state and
+  global-state semantics.
+  %
+  We model state and nondeterminism with algebraic effects and
+  handlers, and simulate the high-level local-state semantics with a
+  single state effect via a sequence of translations.
+  %
+  We prove the correctness of translations by equational reasoning on
+  effect handlers.
+  %
+%   We distinguish between local-state and global-state semantics and
+%   transform the higher-level nondeterminism to state.
+  %
+  Moreover, we demonstrate possible optimisations such as efficient
+  backtracking and mutable states.
+  %
+%   We illustrate our simulations on the well-known n-queens example.
+%   prove all simulation functions correct using equational reasoning
+%   techniques.
+  \wenhao{TODO: fill in all contributions.}
 \end{abstract}
 
 \maketitle

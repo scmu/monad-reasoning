@@ -5,7 +5,7 @@ module FusionGlobal where
 import Prelude hiding (fail, or)
 import Background
 import Overview
-import LocalGlobal (queensR)
+import LocalGlobal (ModifyF(ModifyR,MGet), modify, minus, side)
 -- import Combination (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
 -- import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt)
 --               , getInfoSt, putInfoSt)
@@ -30,6 +30,23 @@ instance (Monad m, TermAlgebra m (NondetF :+: g), Functor g) => MNondet m where
 instance (Monad m, TermAlgebra m (f :+: StateF s :+: g), Functor f, Functor g) => MState s m where
   get = con (Inr . Inl $ Get return)
   put x = con (Inr . Inl $ Put x (return ()))
+
+
+modifyR          :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
+modifyR fwd bwd  = modify fwd `mplus` side (modify bwd)
+
+queensR :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
+queensR n = loop where
+  loop = do  (c, sol) <- get
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      modifyR (`plus` r) (`minus` r)
+                      loop
+
+-- instance MNondet (Free (ModifyF (Int, [Int]) :+: (NondetF :+: NilF))) where
+--   mzero = Op (Inr (Inl Fail))
+--   mplus x y = Op (Inr (Inl (Or x y)))
 
 fhGlobal :: Cod (MList (StateT s Identity)) a -> s -> Identity [a]
 fhGlobal = fmap (fmap fst) . runStateT . unMList . runCod genMList

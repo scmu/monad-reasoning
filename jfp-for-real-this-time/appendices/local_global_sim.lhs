@@ -1,4 +1,21 @@
-\section{Simulating Local State with Global State: The Proofs}
+%if False
+\begin{code}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
+
+import Background
+import Overview
+import Control.Monad (ap, liftM, liftM2)
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
+import LocalGlobal
+\end{code}
+%endif
+
+\section{Proofs for Simulating Local State with Global State}
 \label{app:local-global}
 
 %-------------------------------------------------------------------------------

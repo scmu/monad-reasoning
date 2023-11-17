@@ -114,6 +114,22 @@ numpages = {15},
 series = {FoSSaCS '02}
 }
 
+@article{PlotkinP03,
+  author       = {Gordon D. Plotkin and
+                  John Power},
+  title        = {Algebraic Operations and Generic Effects},
+  journal      = {Appl. Categorical Struct.},
+  volume       = {11},
+  number       = {1},
+  pages        = {69--94},
+  year         = {2003},
+  url          = {https://doi.org/10.1023/A:1023064908962},
+  doi          = {10.1023/A:1023064908962},
+  timestamp    = {Tue, 29 Sep 2020 10:59:27 +0200},
+  biburl       = {https://dblp.org/rec/journals/acs/PlotkinP03.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
 @InProceedings{Plotkin09,
 author="Plotkin, Gordon
 and Pretnar, Matija",
@@ -390,4 +406,44 @@ title = {Reasoning About Effects: Seeing the Wood Through the Trees (Extended Ve
   timestamp = {Mon, 22 Nov 2021 12:51:26 +0100},
   biburl    = {https://dblp.org/rec/conf/acmmpc/2000.bib},
   bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{Gibbons00,
+  author       = {Jeremy Gibbons},
+  editor       = {Roland Carl Backhouse and
+                  Roy L. Crole and
+                  Jeremy Gibbons},
+  title        = {Calculating Functional Programs},
+  booktitle    = {Algebraic and Coalgebraic Methods in the Mathematics of Program Construction,
+                  International Summer School and Workshop, Oxford, UK, April 10-14,
+                  2000, Revised Lectures},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {2297},
+  pages        = {149--202},
+  publisher    = {Springer},
+  year         = {2000},
+  url          = {https://doi.org/10.1007/3-540-47797-7\_5},
+  doi          = {10.1007/3-540-47797-7\_5},
+  timestamp    = {Tue, 14 May 2019 10:00:53 +0200},
+  biburl       = {https://dblp.org/rec/conf/acmmpc/Gibbons00.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+@article{LorenzenLS23,
+author = {Lorenzen, Anton and Leijen, Daan and Swierstra, Wouter},
+title = {FP²: Fully in-Place Functional Programming},
+year = {2023},
+issue_date = {August 2023},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {7},
+number = {ICFP},
+url = {https://doi.org/10.1145/3607840},
+doi = {10.1145/3607840},
+abstract = {As functional programmers we always face a dilemma: should we write purely functional code, or sacrifice purity for efficiency and resort to in-place updates? This paper identifies precisely when we can have the best of both worlds: a wide class of purely functional programs can be executed safely using in-place updates without requiring allocation, provided their arguments are not shared elsewhere. We describe a linear _fully in-place_ (FIP) calculus where we prove that we can always execute such functions in a way that requires no (de)allocation and uses constant stack space. Of course, such a calculus is only relevant if we can express interesting algorithms; we provide numerous examples of in-place functions on datastructures such as splay trees or finger trees, together with in-place versions of merge sort and quick sort. We also show how we can generically derive a map function over _any_ polynomial data type that is fully in-place. Finally, we have implemented the rules of the FIP calculus in the Koka language. Using the Perceus reference counting garbage collection, this implementation dynamically executes FIP functions in-place whenever possible.},
+journal = {Proc. ACM Program. Lang.},
+month = {aug},
+articleno = {198},
+numpages = {30},
+keywords = {FBIP, Tail Recursion Modulo Cons}
 }
