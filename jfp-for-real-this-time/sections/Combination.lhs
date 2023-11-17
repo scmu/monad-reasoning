@@ -17,8 +17,8 @@ import Data.STRef
 
 import Background
 import Overview
-import LocalGlobal (local2global, hLocal, comm2, queensR, modify2global)
-import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState, queensStateR)
+import LocalGlobal (local2global, hLocal, comm2)
+import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
 
 \end{code}
@@ -355,10 +355,11 @@ The function |queensSim| shows this simulation for the n-queens example.
 queensSim  :: Int -> [[Int]]
 queensSim  = hNil . flip extract (0, []) . simulate . queens
 \end{code}
-Furthermore, we can replace the simulation |local2global| in the definition of |simulate|
-with the manual simulation |queensR| using the undo semantics.
-\begin{code}
-queensSimR   :: Int -> [[Int]]
-queensSimR   = hNil . flip extract (0, [])
-             . hState . states2state . nondet2state . comm2 . modify2global . queensR
-\end{code}
+
+% Furthermore, we can replace the simulation |local2global| in the definition of |simulate|
+% with the manual simulation |queensR| using the undo semantics.
+% \begin{code}
+% queensSimR   :: Int -> [[Int]]
+% queensSimR   = hNil . flip extract (0, [])
+%              . hState . states2state . nondet2state . comm2 . modify2global . queensR
+% \end{code}
