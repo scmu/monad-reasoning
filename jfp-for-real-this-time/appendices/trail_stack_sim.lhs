@@ -1,3 +1,7 @@
+%if False
+\begin{code}
+\end{code}
+%endif
 \section{Simulating Local State with Trail Stack: The Proofs}
 \label{app:trail-stack}
 

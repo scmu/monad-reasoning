@@ -1,4 +1,3 @@
-
 %if False
 \begin{code}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -11,14 +10,14 @@
 
 module TrailStack where
 
-import Background hiding (plus)
+import Background
 import Overview
 import Control.Monad (ap, liftM, liftM2)
 -- import qualified Control.Monad.Trans.State.Lazy as S
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import Control.Monad.ST.Trans (STT, runSTT)
 import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
-import LocalGlobal hiding (minus)
+import LocalGlobal hiding (ModifyF)
 import MutableState
 import Debug.Trace
 
@@ -69,6 +68,7 @@ t2 = fmap (\ x -> fmap fst (runhStack () x)) . hGlobal . local2trail
 
 
 % NOTE: for proof
+%if False
 \begin{code}
 -- h1 . aaf = alg' . fmap h1
 h1 :: Functor f => Free (StateF s :+: NondetF :+: StackF e () :+: f) a -> s -> Free f [a]
@@ -98,6 +98,7 @@ qwq t = case t of
         in 1
       _ -> 2
 \end{code}
+%endif
 
 The n-queens example using the trail stack:
 \begin{code}
@@ -110,10 +111,10 @@ queensTrail = hNil . flip t2 (0, []) . queens
 
 To better illustrate the idea of undo semantics, we introduce another version of state effect which uses |get| and |modify|.
 \wenhao{We can also rewrite |queensR| using |ModifyF|.}
+% class Undo s r where
+  % plus :: s -> r -> s
+  % minus :: s -> r -> s
 \begin{code}
-class Undo s r where
-  plus :: s -> r -> s
-  minus :: s -> r -> s
 
 data ModifyF s r a = GetM (s -> a) | PlusM r a deriving Functor
 -- instance MState s (Free (ModifyF s r)) where
@@ -139,14 +140,13 @@ plusM r = Op . Inl $ PlusM r (return ())
 local2trailM :: (Functor f, Undo s r)
              => Free (ModifyF s r :+: NondetF :+: f) a -- local state
              -> Free (StateF s :+: NondetF :+: StackF (Either r ()) () :+: f) a -- global state and stack
-local2trailM = fold gen (alg1 # alg2 # fwd)
+local2trailM = fold Var (alg1 # alg2 # fwd)
   where
-    gen               = return
     -- alg1 (PlusM r k)  = do push (Left r); plusM r; k
-    alg1 (GetM k)     = Op . Inl $ Get k
     alg1 (PlusM r k)  = do push (Left r); s <- get; Op . Inl $ Put (s `plus` r) k
+    alg1 (GetM k)     = Op . Inl $ Get k
     alg2 (Or p q)     = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
-    alg2 Fail          = Op . Inr . Inl $ Fail
+    alg2 Fail         = Op . Inr . Inl $ Fail
     fwd op            = Op . Inr . Inr . Inr $ op
     undoTrail = do  top <- pop;
                     case top of
@@ -169,15 +169,15 @@ hGlobalM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s
 hGlobalM = fmap (fmap fst) . hModify . hNDf . comm2
 
 tM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
-tM = fmap (\ x -> fmap fst (runSTT $ liftST (emptyStack ()) >>= hStack x)) . hGlobal . local2trailM
+tM = fmap (\ x -> fmap fst (runhStack () x)) . hGlobal . local2trailM
 \end{code}
 
 The n-queens example using the trail stack:
-\begin{code}
-instance Undo (Int, [Int]) Int where
-  plus (c, sol) r   = (c+1, r:sol)
-  minus (c, sol) r  = (c-1, tail sol)
+% instance Undo (Int, [Int]) Int where
+%   plus (c, sol) r   = (c+1, r:sol)
+%   minus (c, sol) r  = (c-1, tail sol)
 
+\begin{code}
 --queensR :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]
 queensM :: Functor f => Int -> Free (ModifyF (Int, [Int]) Int :+: NondetF :+: f) [Int]
 queensM n = loop

@@ -24,6 +24,9 @@
 %format k1
 %format k2
 
+%format h1
+%format h2
+
 %format `times` = "\mathbin{\times}"
 %format times = "(\mathbin{\times})"
 %format `plus` = "\mathbin{\oplus}"

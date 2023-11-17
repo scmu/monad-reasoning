@@ -687,26 +687,39 @@ we can, instead of copying the state, keep track of the modifications made to it
 and undo them when necessary.
 
 For example, the |queens| program in
-\Cref{sec:motivation-and-challenges} uses |do s <- get; put (s `plus` r)|
-to update the state.
+\Cref{sec:motivation-and-challenges} uses |s `plus` r| to update the
+state.
 %
-Instead of copying the whole state via |putR| in the global-state semantics,
-we define
-\begin{code}
+We can define its left inverse as follows.
+\begin{spec}
 minus   :: (Int, [Int]) -> Int -> (Int, [Int])
 minus   (c, sol) r = (c-1, tail sol)
-\end{code}
-and use |do s <- get; put (s `minus` r)| to restore the state.
+\end{spec}
 %
 These two operators satisfy the equation |(`minus` x) . (`plus` x) = id|
 for any |x :: Int|.
+%
+Then, we can just use |s `minus` r| to roll back the update, instead
+of copying the whole state like |putR| in the global-state semantics.
+
+In general, we define a type-class |Undo s r| and implement |Undo (Int, [Int]) Int|
+as an instance using the previously defined |plus| and |minus|.
+\begin{spec}
+class Undo s r where
+  plus :: s -> r -> s
+  minus :: s -> r -> s
+\end{spec}
+% instance Undo (Int, [Int]) Int where
+%   plus (c, sol) r   = (c+1, r:sol)
+%   minus (c, sol) r  = (c-1, tail sol)
 
 In general, we define a |modify| function as follows.
 \begin{code}
 modify           :: MState s m => (s -> s) -> m ()
 modify f         = get >>= put . f
 \end{code}
-If all the state updates in a program is given by some |modify fwd|
+
+If all the state updates in a program are given by some |modify fwd|
 where every |fwd| is accompanied with a left inverse |bwd| such that
 |bwd . fwd = id|, we can simulate its local-state semantics with
 global-state semantics by using |modify bwd| to roll back the updates.
