@@ -185,8 +185,11 @@ instance MNondet (Free NondetF) where
   mzero      = Op Fail
   mplus p q  = Op (Or p q)
 \end{code}
+With this representation the 
+\textbf{right-distributivity} law and the \textbf{left-identity} law 
+follow trivially from the definition of |(>>=)| for the free monad.
 
-This does not respect the identity or associativity law on the nose. Indeed,
+In contrast, the \textbf{identity} and \textbf{associativity} laws are not satisfied on the nose. Indeed,
 |Op (Or Fail p)| is for instance a different abstract syntax tree than |p|.
 Yet, these syntactic differences do not matter as long as their interpretation
 is the same. This is where the handlers come in; the meaning they assign
@@ -202,7 +205,28 @@ hND = fold genND algND
     algND Fail      = []
     algND (Or p q)  = p ++ q
 \end{code}
-\wenhao{Did we say anywhere that it satisfies the laws?}
+
+With this handler, the \textbf{identity} and \textbf{associativity} laws are 
+satisfied up to handling as follows:
+\begin{equation*}
+\begin{array}{r@@{}c@@{}l}
+      |hND (mzero `mplus` m)| & ~=~ & |hND m| ~=~ |hND (m `mplus` mzero)| \\
+      |hND ((m `mplus` n) `mplus` o)| & ~=~ & |hND (m `mplus` (n `mplus` o))|
+\end{array}
+\end{equation*}
+In fact, two stronger \textit{contextual} equalities hold:
+\begin{equation*}
+\begin{array}{r@@{}c@@{}l}
+      |hND ((mzero `mplus` m) >>= k)| & ~=~ & |hND (m >>= k)| ~=~ |hND ((m `mplus` mzero) >>= k)| \\
+      |hND (((m `mplus` n) `mplus` o) >>= k)| & ~=~ & |hND ((m `mplus` (n `mplus` o)) >>= k)|
+\end{array}
+\end{equation*}
+These equations state that the intepretations of the left- and right-hand sides are
+indistinguishable even when put in a larger program context |>>= k|. 
+They follow from the definitions of |hND| and |(>>=)|, as well as the associativity
+and identity proprerties of |(++)|.
+
+We obtain the two non-contextual equations as a corollary by choosing |k = return|.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph*{State}\
@@ -229,7 +253,8 @@ hState' = fold genS' algS'
     algS' (Get     k)  = State $ \s -> runState (k s) s
     algS' (Put s'  k)  = State $ \s -> runState k s'
 \end{code}
-\wenhao{Same question here.}
+
+It is easy to verify that the four state laws hold contextually up to interpretation with |hState'|.
 
 %-------------------------------------------------------------------------------
 \subsection{Modularly Combining Effects}
