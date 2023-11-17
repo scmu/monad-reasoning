@@ -6,7 +6,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 module TrailStack where
 
@@ -114,27 +113,6 @@ To better illustrate the idea of undo semantics, we introduce another version of
 % class Undo s r where
   % plus :: s -> r -> s
   % minus :: s -> r -> s
-\begin{code}
-
-data ModifyF s r a = GetM (s -> a) | PlusM r a deriving Functor
--- instance MState s (Free (ModifyF s r)) where
---   get    =  Op (GetM return)
---   put s  =  Op (ModifyM (const s) (return ()))
-
-hModify :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
-hModify = fold gen (alg # fwd)
-  where
-    gen x              s  = return (x, s)
-    alg (GetM k)       s  = k s s
-    alg (PlusM r k)    s  = k (s `plus` r)
-    fwd y              s  = Op (fmap ($s) y)
-
-getM :: Functor f => Free (ModifyF s r :+: f) s
-getM = Op . Inl $ GetM return
-plusM :: Functor f => r -> Free (ModifyF s r :+: f) ()
-plusM r = Op . Inl $ PlusM r (return ())
-\end{code}
-
 
 \begin{code}
 local2trailM :: (Functor f, Undo s r)
@@ -143,11 +121,12 @@ local2trailM :: (Functor f, Undo s r)
 local2trailM = fold Var (alg1 # alg2 # fwd)
   where
     -- alg1 (PlusM r k)  = do push (Left r); plusM r; k
-    alg1 (PlusM r k)  = do push (Left r); s <- get; Op . Inl $ Put (s `plus` r) k
-    alg1 (GetM k)     = Op . Inl $ Get k
-    alg2 (Or p q)     = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
-    alg2 Fail         = Op . Inr . Inl $ Fail
-    fwd op            = Op . Inr . Inr . Inr $ op
+    alg1 (MUpdate r k)  = do push (Left r); s <- get; Op . Inl $ Put (s `plus` r) k
+    alg1 (MRestore r k) = error "no restore here"
+    alg1 (MGet k)       = Op . Inl $ Get k
+    alg2 (Or p q)       = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
+    alg2 Fail           = Op . Inr . Inl $ Fail
+    fwd op              = Op . Inr . Inr . Inr $ op
     undoTrail = do  top <- pop;
                     case top of
                       Nothing -> return ()
@@ -158,15 +137,37 @@ local2trailM = fold Var (alg1 # alg2 # fwd)
     push e = Op . Inr . Inr . Inl $ Push e (return ())
     pop :: (Functor f1, Functor f2, Functor g) => Free (f1 :+: (f2 :+: (StackF e b :+: g))) (Maybe e)
     pop = Op . Inr . Inr . Inl $ Pop return
+
+local2trailMu :: (Functor f, Undo s r)
+              => Free (ModifyF s r :+: NondetF :+: f) a -- local state
+              -> Free (ModifyF s r :+: NondetF :+: StackF (Either r ()) () :+: f) a -- global state and stack
+local2trailMu = fold Var (alg1 # alg2 # fwd)
+  where
+    alg1 (MUpdate r k)   = do push (Left r); Op (Inl (MUpdate r k))
+    alg1 (MRestore r k)  = error "no restore here"
+    alg1 (MGet k)        = Op . Inl $ MGet k
+    alg2 (Or p q)        = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
+    alg2 Fail            = Op . Inr . Inl $ Fail
+    fwd op               = Op . Inr . Inr . Inr $ op
+    undoTrail = do  top <- pop;
+                    case top of
+                      Nothing -> return ()
+                      Just (Right ()) -> return ()
+                      Just (Left r) -> do Op (Inl (MRestore r (return ()))); undoTrail
+
+    push :: (Functor f1, Functor f2, Functor g) => e -> Free (f1 :+: (f2 :+: (StackF e b :+: g))) ()
+    push e = Op . Inr . Inr . Inl $ Push e (return ())
+    pop :: (Functor f1, Functor f2, Functor g) => Free (f1 :+: (f2 :+: (StackF e b :+: g))) (Maybe e)
+    pop = Op . Inr . Inr . Inl $ Pop return
 \end{code}
 
 Simulation: |hLocalM = tM|.
 \begin{code}
 hLocalM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
-hLocalM = fmap (fmap (fmap fst) . hNDf) . hModify
+hLocalM = fmap (fmap (fmap fst) . hNDf) . runStateT . hModify
 
 hGlobalM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
-hGlobalM = fmap (fmap fst) . hModify . hNDf . comm2
+hGlobalM = fmap (fmap fst) . runStateT . hModify . hNDf . comm2
 
 tM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
 tM = fmap (\ x -> fmap fst (runhStack () x)) . hGlobal . local2trailM
@@ -182,12 +183,11 @@ The n-queens example using the trail stack:
 queensM :: Functor f => Int -> Free (ModifyF (Int, [Int]) Int :+: NondetF :+: f) [Int]
 queensM n = loop
   where
-    loop = do  s@(c, sol) <- getM
+    loop = do  s@(c, sol) <- mget
                if c >= n then return sol
                else do  r <- choose [1..n]
                         filtr valid (r:sol)
-                        plusM r
-                        --modifyR (`plus` r) (`minus` r)
+                        modify r
                         loop
 
 queensLocalM :: Int -> [[Int]]

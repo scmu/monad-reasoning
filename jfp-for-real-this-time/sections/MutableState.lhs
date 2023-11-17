@@ -174,17 +174,28 @@ The handler for mutable state |hStack| then works as follows.
 The |Push| and |Pop| operations are used to respectively push elements to the
 stack and pop them from the stack.
 The |GetSt| and |PutSt| operations can get and put results.
+% an inefficient hStack, not mutable at all:
+% hStack  :: Functor f
+%         => Free (StackF e b :+: f) a -> Stack s b e -> STT s (Free f) (a, b)
+% hStack = fold gen (alg # fwd)
+%   where
+%     gen x            stack = liftST ((readSTRef . results) stack)   >>= \b -> return (x, b)
+%     alg (Push x k)   stack = liftST (pushStack x stack)             >> k stack
+%     alg (Pop k)      stack = liftST (popStack stack)                >>= \x -> k x stack
+%     alg (GetSt k)    stack = liftST ((readSTRef . results) stack)   >>= \x -> k x stack
+%     alg (PutSt x k)  stack = liftST (writeSTRef (results stack) x)  >> k stack
+%     fwd op           stack = STT $ \s -> Op ((\f -> unSTT (f stack) s) <$> op)
 \begin{code}
 hStack  :: Functor f
-        => Free (StackF e b :+: f) a -> Stack s b e -> STT s (Free f) (a, b)
-hStack = fold gen (alg # fwd)
+        => Stack s b e -> Free (StackF e b :+: f) a -> STT s (Free f) (a, b)
+hStack stack = fold gen (alg # fwd)
   where
-    gen x            stack = liftST ((readSTRef . results) stack)   >>= \b -> return (x, b)
-    alg (Push x k)   stack = liftST (pushStack x stack)             >> k stack
-    alg (Pop k)      stack = liftST (popStack stack)                >>= \x -> k x stack
-    alg (GetSt k)    stack = liftST ((readSTRef . results) stack)   >>= \x -> k x stack
-    alg (PutSt x k)  stack = liftST (writeSTRef (results stack) x)  >> k stack
-    fwd op           stack = STT $ \s -> Op ((\f -> unSTT (f stack) s) <$> op)
+    gen x            = liftST ((readSTRef . results) stack)   >>= \b -> return (x, b)
+    alg (Push x k)   = liftST (pushStack x stack)             >> k
+    alg (Pop k)      = liftST (popStack stack)                >>= \x -> k x
+    alg (GetSt k)    = liftST ((readSTRef . results) stack)   >>= \x -> k x
+    alg (PutSt x k)  = liftST (writeSTRef (results stack) x)  >> k
+    fwd op           = STT $ \s -> Op ((\f -> unSTT f s) <$> op)
 \end{code}
 
 \subsection{Simulating Nondeterminism with Mutable State}
@@ -303,7 +314,7 @@ runNDSK :: Functor f => Free (NondetF :+: f) a -> Free f [a]
 runNDSK p = fmap snd (runhStack [] (unSK $ nondet2stack p))
 
 runhStack :: Functor f => b -> Free (StackF e b :+: f) a -> Free f (a, b)
-runhStack b x = runSTT $ liftST (emptyStack b) >>= hStack x
+runhStack b x = runSTT $ liftST (emptyStack b) >>= \ stack -> hStack stack x
 \end{code}
 
 \wenhao{The correctness of |nondet2stack| is not proved.}
@@ -372,19 +383,39 @@ of copying the whole state like |putR| in the global-state semantics.
 
 In general, we define a type-class |Undo s r| and implement |Undo (Int, [Int]) Int|
 as an instance using the previously defined |plus| and |minus|.
-\begin{spec}
-class Undo s r where
-  plus :: s -> r -> s
-  minus :: s -> r -> s
-\end{spec}
+% \begin{spec}
+% class Undo s r where
+%   plus :: s -> r -> s
+%   minus :: s -> r -> s
+% \end{spec}
 % instance Undo (Int, [Int]) Int where
 %   plus (c, sol) r   = (c+1, r:sol)
 %   minus (c, sol) r  = (c-1, tail sol)
 
+\begin{code}
+class MuState s a r where
+  update   :: a s -> r -> ST s ()
+  restore  :: a s -> r -> ST s ()
+
+newtype NQueens = NQueens (Int, [Int])
+
+data MQueens s = MQueens { col :: STRef s Int, sol :: STRef s (STArray s Index Int) }
+
+instance MuState s MQueens Int where
+  (MQueens colRef solRef) `update` r = do
+    c <- readSTRef colRef
+    arr <- readSTRef solRef
+    writeSTRef colRef (c+1)
+    writeArray arr (c+1) r  -- simply assume that there is enough space
+  (MQueens colRef solRef) `restore` r = do
+    c <- readSTRef colRef
+    writeSTRef colRef (c-1)
+\end{code}
+
 In general, we define a |modify| function as follows.
 \begin{code}
-modify           :: MState s m => (s -> s) -> m ()
-modify f         = get >>= put . f
+modfun           :: MState s m => (s -> s) -> m ()
+modfun f         = get >>= put . f
 \end{code}
 
 If all the state updates in a program are given by some |modify fwd|
@@ -414,28 +445,52 @@ syntax level. We define a new signature giving the syntax of two
 operations for get and modify.
 %
 \begin{code}
-data ModifyF s a  = MGet (s -> a) | ModifyR (s -> s) (s -> s) a
+data ModifyF s r a = MGet (s -> a) | MUpdate r a | MRestore r a
 \end{code}
 %
 The operation |ModifyR fwd bwd| takes two functions with |bwd . fwd = id|.
 %if False
 \begin{code}
-instance Functor (ModifyF s) where
-    fmap f (MGet s)    = MGet (f . s)
-    fmap f (ModifyR g h x) = ModifyR g h (f x)
+instance Functor (ModifyF s r) where
+    fmap f (MGet s)        = MGet (f . s)
+    fmap f (MUpdate r x)   = MUpdate r (f x)
+    fmap f (MRestore r x)  = MRestore r (f x)
 \end{code}
 %endif
 As for nondeterminism and state, we define a subclass |MModify| of
 |Monad| to capture its effectful interfaces, and implement the free
 monad |Free (ModifyF s :+: f)| as an instance of it.
 \begin{code}
-class Monad m => MModify s m | m -> s where
-    mget     :: m s
-    modifyR  :: (s -> s) -> (s -> s) -> m ()
-instance Functor f => MModify s (Free (ModifyF s :+: f)) where
-  mget    =  Op (Inl (MGet return))
-  modifyR fwd bwd  =  Op (Inl (ModifyR fwd bwd (return ())))
+class Monad m => MModify s r m | m -> s, m -> r where
+    mget    :: m s
+    modify  :: r -> m ()
+instance Functor f => MModify s r (Free (ModifyF s r :+: f)) where
+  mget      =  Op (Inl (MGet return))
+  modify r  =  Op (Inl (MUpdate r (return ())))
 \end{code}
+
+\begin{code}
+hModify :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> StateT s (Free f) a
+hModify = fold gen (alg # fwd)
+  where
+    gen x               = StateT $ \s -> return (x, s)
+    alg (MGet k)        = StateT $ \s -> runStateT (k s) s
+    alg (MUpdate r k)   = StateT $ \s -> runStateT k (s `plus` r)
+    alg (MRestore r k)  = StateT $ \s -> runStateT k (s `minus` r)
+    fwd y               = StateT $ \s -> Op (fmap (\k -> runStateT k s) y)
+
+hMuModify  :: (Functor f, MuState s st r)
+           => st s -> Free (ModifyF (st s) r :+: f) a
+           -> STT s (Free f) a
+hMuModify st = fold gen (alg # fwd)
+  where
+    gen x               = return x
+    alg (MGet k)        = k st
+    alg (MUpdate r k)   = liftST (st `update` r) >> k
+    alg (MRestore r k)  = liftST (st `restore` r) >> k
+    fwd op              = STT $ \s -> Op ((\f -> unSTT f s) <$> op)
+\end{code}
+% Wenhao: This actually doesn't work with local-state semantics!
 
 % We can interpret programs written with |ModifyF| and |NondetF| by
 % translating |ModifyF| operations to |StateF| and |NondetF| operations.
@@ -445,14 +500,15 @@ directly given by the local-state semantics of |StateF| and |NondetF|.
 We have the following translation |modify2local| which only uses |fwd|.
 %
 \begin{code}
-modify2local  :: Functor f
-              => Free (ModifyF s :+: NondetF :+: f) a
+modify2local  :: (Functor f, Undo s r)
+              => Free (ModifyF s r :+: NondetF :+: f) a
               -> Free (StateF s :+: NondetF :+: f) a
 modify2local  = fold Var alg
   where
-    alg (Inl (ModifyR fwd _ k))  = modify fwd >> k
-    alg (Inl (MGet k))           = get >>= k
-    alg (Inr p)                  = Op (Inr p)
+    alg (Inl (MUpdate r k))  = modfun (`plus` r) >> k
+    alg (Inl (MRestore r k))  = modfun (`minus` r) >> k
+    alg (Inl (MGet k))      = get >>= k
+    alg (Inr p)             = Op (Inr p)
 \end{code}
 %
 To simulate the local-state semantics with global-state semantics,
@@ -465,14 +521,15 @@ inefficient operation |putR|, we can give another translation
 Similar to |putR|, it also uses |`mplus`| to implement backtracking.
 %
 \begin{code}
-modify2global  :: Functor f
-               => Free (ModifyF s :+: NondetF :+: f) a
+modify2global  :: (Functor f, Undo s r)
+               => Free (ModifyF s r :+: NondetF :+: f) a
                -> Free (StateF s :+: NondetF :+: f) a
 modify2global  = fold Var alg
   where
-    alg (Inl (ModifyR fwd bwd k))  = (modify fwd `mplus` modify bwd) >> k
-    alg (Inl (MGet k))             = get >>= k
-    alg (Inr p)                    = Op (Inr p)
+    alg (Inl (MUpdate r k))  = (modfun (`plus` r) `mplus` modfun (`minus` r)) >> k
+    alg (Inl (MRestore r k)) = error "no"
+    alg (Inl (MGet k))       = get >>= k
+    alg (Inr p)              = Op (Inr p)
 \end{code}
 
 The following theorem shows that the simulation of local-state
@@ -514,13 +571,13 @@ update~\citep{LorenzenLS23} or mutable states.
 % shared global state as follows:
 Now we can rewrite the |queens| program with modify and nondeterminism.
 \begin{code}
-queensR :: (MModify (Int, [Int]) m, MNondet m) => Int -> m [Int]
+queensR :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
 queensR n = loop where
   loop = do  (c, sol) <- mget
              if c >= n then return sol
              else do  r <- choose [1..n]
                       guard (safe r 1 sol)
-                      modifyR (`plus` r) (`minus` r)
+                      modify r
                       loop
 \end{code}
 %
