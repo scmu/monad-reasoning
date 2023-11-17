@@ -402,15 +402,15 @@ queensState   = hNil
               . (extractSS . hState . nondet2state) . comm2
               . local2global . queens
 \end{code}
-Similarly, we can develop a version of |queensStateR| based on |queensModify|,
-which uses the undo semantics.
-\begin{code}
-queensStateR  :: Int -> [[Int]]
-queensStateR  = hNil
-              . fmap fst . flip runStateT (0, []) . hState
-              . (extractSS . hState . nondet2state) . comm2
-              . modify2global . queensR
-\end{code}
-\birthe{Don't know what this sentence says.}
-It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
+% Similarly, we can develop a version of |queensStateR| based on |queensModify|,
+% which uses the undo semantics.
+% \begin{code}
+% queensStateR  :: Int -> [[Int]]
+% queensStateR  = hNil
+%               . fmap fst . flip runStateT (0, []) . hState
+%               . (extractSS . hState . nondet2state) . comm2
+%               . modify2global . queensR
+% \end{code}
+% \birthe{Don't know what this sentence says.}
+% It also has two simulations, except that the simulation of local state with global state is implemented manually with the |modifyR| in |queensR|.
 %endif
