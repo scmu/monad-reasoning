@@ -393,10 +393,20 @@ guard False = mzero
 %
 The function |s `plus` r| updates the state with a new queen placed on
 row |r| in the next column.
+%if False
 \begin{code}
+class Undo s r where
+  plus :: s -> r -> s
+  minus :: s -> r -> s
+instance Undo (Int, [Int]) Int where
+  plus (c, sol) r   = (c+1, r:sol)
+  minus (c, sol) r  = (c-1, tail sol)
+\end{code}
+%endif
+\begin{spec}
 plus   :: (Int, [Int]) -> Int -> (Int, [Int])
 plus   (c, sol) r = (c+1, r:sol)
-\end{code}
+\end{spec}
 %
 The function |safe| checks whether the placement of a queen is safe with
 respect to the list of queens that is already present (for which we need its

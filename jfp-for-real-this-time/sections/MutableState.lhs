@@ -183,7 +183,7 @@ hStack = fold gen (alg # fwd)
     alg (Pop k)      stack = liftST (popStack stack)                >>= \x -> k x stack
     alg (GetSt k)    stack = liftST ((readSTRef . results) stack)   >>= \x -> k x stack
     alg (PutSt x k)  stack = liftST (writeSTRef (results stack) x)  >> k stack
-    fwd y            stack = STT $ \s -> Op ((\f -> unSTT (f stack) s) <$> y)
+    fwd op           stack = STT $ \s -> Op ((\f -> unSTT (f stack) s) <$> op)
 \end{code}
 
 \subsection{Simulating Nondeterminism with Mutable State}
@@ -304,6 +304,8 @@ runNDSK p = fmap snd (runhStack [] (unSK $ nondet2stack p))
 runhStack :: Functor f => b -> Free (StackF e b :+: f) a -> Free f (a, b)
 runhStack b x = runSTT $ liftST (emptyStack b) >>= hStack x
 \end{code}
+
+\wenhao{The correctness of |nondet2stack| is not proved.}
 
 \subsection{Using Mutable State to Simulate Nondeterminism in N-queens}
 \label{sec:n-queens-mut-state}
