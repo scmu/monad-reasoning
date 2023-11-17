@@ -28,7 +28,7 @@ high-level combination of state and nondeterminism, onto the global-state
 semantics, which is a more low-level combination of state and nondeterminism.
 This section takes on the resulting nondeterminism component, which is itself a
 relatively high-level effect that can be mapped onto a more low-level
-implementation in terms of state. Indeed, while nondeterminism typically
+implementation in terms of state. Indeed, while nondeterminism is typically
 modelled using the |List| monad, many efficient nondeterministic systems, such
 as Prolog, use a lower-level state-based implementation to simulate this
 effect.
@@ -36,75 +36,77 @@ effect.
 This section shows how the simulation works, and proves it correct using
 equational reasoning techniques.
 
-%-------------------------------------------------------------------------------
-\subsection{Interpreting Nondeterministic Programs with List}
-\label{sec:interpreting-nondet-progs-with-list}
-
-The |List| monad, which is used in Haskell to implement nondeterminism, is a lawful instance of |MNondet|.
-Indeed, all nondeterminism laws of \cref{sec:nondeterminism} are satisfied by
-this implementation.
-The return |etal| of the |List| monad is a singleton list
-and the join operation is concatenation or flattening, which can be expressed in terms of a |foldr|:
-|mul = foldr (++) []|.
-
-We can interpret nondeterministic programs encoded as lists
-by means of the |choose| function defined in \Cref{sec:motivation-and-challenges},
-which is a nondeterminism-monad morphism.
-%if False
-\begin{code}
-etand :: MNondet m => a -> m a
-etand = return
-
-mul :: [[a]] -> [a]
-mul = foldr (++) []
-\end{code}
-%endif
+% %-------------------------------------------------------------------------------
+% \subsection{Interpreting Nondeterministic Programs with List}
+% \label{sec:interpreting-nondet-progs-with-list}
+% 
+% The |List| monad, which is used in Haskell to implement nondeterminism, is a lawful instance of |MNondet|.
+% Indeed, all nondeterminism laws of \cref{sec:nondeterminism} are satisfied by
+% this implementation.
+% The return |etal| of the |List| monad is a singleton list
+% and the join operation is concatenation or flattening, which can be expressed in terms of a |foldr|:
+% |mul = foldr (++) []|.
+% 
+% We can interpret nondeterministic programs encoded as lists
+% by means of the |choose| function defined in \Cref{sec:motivation-and-challenges},
+% which is a nondeterminism-monad morphism.
+% %if False
 % \begin{code}
-% choose :: MNondet m => [a] -> m a
-% choose = foldr (mplus . etand) mzero
+% etand :: MNondet m => a -> m a
+% etand = return
+% 
+% mul :: [[a]] -> [a]
+% mul = foldr (++) []
 % \end{code}
-
-In fact, the |List| monad is not just an instance for nondeterminism;
-it is the \emph{initial} lawful instance.
-This means that, for every other lawful instance of nondeterminism, there is a
-unique nondeterminism-monad morphism from |List| to that instance.
-The above definition of |choose| is exactly that nondeterminism-monad morphism.
-Indeed, for every nondeterminism monad |m| (instance of |MNondet m|),
-the following equalities hold.
-\begin{align*}
-  |choose []|       &= |mzero|\\
-  |choose (x ++ y)| &= |g x `mplus` g y| \\
-  |choose . etal|   &= |etand|\\
-  |choose . mul|    &= |mund . choose . fmap choose|\\
-                    &= |mund . fmap choose . choose|
-\end{align*}
-
-To prove that the morphism is unique, we use the universality of fold,
-which is stated for lists and |choose| as follows:
-\begin{equation*}
-\begin{array}{r@@{\,}c@@{\,}l}
-|choose []| & = & |v| \\
-|choose (x:xs)| & = & |f x (choose x)| \\
-\end{array}
-\qquad\Longleftrightarrow\qquad
-|choose = fold f v|
-\end{equation*}
-
-
-An extended version of this proof, which uses equational reasoning techniques
-to show these properties are satisfied,
-can be found in Appendix \ref{app:universality-nondeterminism}.
-
+% %endif
+% % \begin{code}
+% % choose :: MNondet m => [a] -> m a
+% % choose = foldr (mplus . etand) mzero
+% % \end{code}
+% 
+% In fact, the |List| monad is not just an instance for nondeterminism;
+% it is the \emph{initial} lawful instance.
+% This means that, for every other lawful instance of nondeterminism, there is a
+% unique nondeterminism-monad morphism from |List| to that instance.
+% The above definition of |choose| is exactly that nondeterminism-monad morphism.
+% Indeed, for every nondeterminism monad |m| (instance of |MNondet m|),
+% the following equalities hold.
+% \begin{align*}
+%   |choose []|       &= |mzero|\\
+%   |choose (x ++ y)| &= |g x `mplus` g y| \\
+%   |choose . etal|   &= |etand|\\
+%   |choose . mul|    &= |mund . choose . fmap choose|\\
+%                     &= |mund . fmap choose . choose|
+% \end{align*}
+% 
+% To prove that the morphism is unique, we use the universality of fold,
+% which is stated for lists and |choose| as follows:
+% \begin{equation*}
+% \begin{array}{r@@{\,}c@@{\,}l}
+% |choose []| & = & |v| \\
+% |choose (x:xs)| & = & |f x (choose x)| \\
+% \end{array}
+% \qquad\Longleftrightarrow\qquad
+% |choose = fold f v|
+% \end{equation*}
+% 
+% 
+% An extended version of this proof, which uses equational reasoning techniques
+% to show these properties are satisfied,
+% can be found in Appendix \ref{app:universality-nondeterminism}.
+% 
 %-------------------------------------------------------------------------------
 \subsection{Simulating Nondeterministic Programs with State}
 \label{sec:sim-nondet-state}
 
-This section shows how to use a state-based implementation to simulate nondeterminism.
-
-For this, we use a type of state |S a| that is a essentially a tuple of
-(1) the |results| found so far |[a]|, and
-(2) a stack the branches with computations yet to be explored, which we call the
+To simulate nondeterminism we use a type of state |S a| that is a essentially a tuple of:
+\begin{enumerate}
+\item
+the |results| found so far |[a]|, and
+\item
+a stack of yet to be explored branches, which we call the
 residual computations or the |stack|.
+\end{enumerate}
 The branches in the stack are represented by computations in the monad over the
 state signature.
 \begin{code}
@@ -112,10 +114,17 @@ type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], stack :: [Comp (S a) ()]}
 \end{code}
 To simulate a nondeterministic computation |Free NondetF a| with this state wrapper,
-we define three helper functions in Figure \ref{fig:pop-push-append}.
-The function |popS| takes the upper element of the stack.
+we define three helper functions in Figure \ref{fig:pop-push-append}:
+\begin{itemize}
+\item
+The function |popS| removes and executes the top element of the stack.
+\item
 The function |pushS| adds a branch to the stack.
+\item
 The function |appendS| adds a result to the given results.
+\end{itemize}
+%format getS = get
+%format putS = put
 
 \noindent
 \begin{figure}[t]
@@ -161,9 +170,10 @@ appendS x p = do
 \label{fig:pop-push-append}
 \end{figure}
 
-Furthermore, we define smart constructors |getS| and |putS s| for getting
-the current state and putting a new state.
-
+% TOM: The following have already been defined earlier in section 3, named get and put without the S
+% Furthermore, we define smart constructors |getS| and |putS s| for getting
+% the current state and putting a new state.
+%if False 
 \begin{minipage}[t][][t]{0.5\textwidth}
 \begin{code}
 getS :: Comp s s
@@ -176,6 +186,7 @@ putS :: s -> Comp s ()
 putS s = Op (Put s (return ()))
 \end{code}
 \end{minipage}
+%endif
 
 Now, everything is in place to define a simulation function |nondet2stateS| that
 interprets every nondeterministic computation as a state-wrapped program.
@@ -282,7 +293,7 @@ putSS s = Op (Inl (Put s (return ())))
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
 popSS  :: Functor f
-       => CompSS (SS f a) f ()
+  => CompSS (SS f a) f ()
 popSS = do
   SS xs stack <- getSS
   case stack of
@@ -296,9 +307,9 @@ popSS = do
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
 pushSS  :: Functor f
-        => CompSS (SS f a) f ()
-        -> CompSS (SS f a) f ()
-        -> CompSS (SS f a) f ()
+  => CompSS (SS f a) f ()
+  -> CompSS (SS f a) f ()
+  -> CompSS (SS f a) f ()
 pushSS q p = do
   SS xs stack <- getSS
   putSS (SS xs (q : stack)); p
@@ -309,8 +320,8 @@ pushSS q p = do
 \begin{subfigure}[t]{0.35\linewidth}
 \begin{code}
 appendSS  :: Functor f => a
-          -> CompSS (SS f a) f ()
-          -> CompSS (SS f a) f ()
+  -> CompSS (SS f a) f ()
+  -> CompSS (SS f a) f ()
 appendSS x p = do
   SS xs stack <- getSS
   putSS (SS (xs ++ [x]) stack); p
