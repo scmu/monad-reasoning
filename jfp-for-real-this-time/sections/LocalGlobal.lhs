@@ -524,6 +524,9 @@ state-restoring put.
 \label{tab:state-restoring-put}
 \end{table}
 
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\paragraph*{Correctness of State-Restoring Put}
+
 The idea is that |putR|, when run with a global state, satisfies laws
 (\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and
 the local-state laws.
@@ -558,19 +561,13 @@ differentiated:
 Those two programs do not behave in the same way when |s /= t|.
 %
 Hence, only provided that \textbf{all} occurences of |put| in a program are replaced by |putR|
-can we simulate local-state semantics.
+can we simulate local-state semantics. The replacement itself as well as the correctness statement
+that incorporates this requirement can be easily epressed with effect handlers.
 
-%-------------------------------------------------------------------------------
-\subsection{Proving the |putR| Operation Correct}
-\label{sec:putr}
-
-It is time to give a more formal definition for the translation
-between global-state and local-state semantics using the free monad
-representation.  The corresponding translation function
-|local2global|, also implemented as a fold on free monads, transforms
-every |Put| into a |putR| and leaves the rest of the program
-untouched.
-
+%\paragraph*{Proving the |putR| Operation Correct}
+% \label{sec:putr}
+% It is time to give a more formal definition for the translation between
+% global-state and local-state semantics using the free monad representation.
 % We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
 % notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
 % constructors. Their implementations are straightforwardly defined in terms of
@@ -606,6 +603,8 @@ failOp    = (Op . Inr . Inl) Fail
 % Here, we use a continuation-based representation, from which we can always recover the
 % representation of |putR| by setting the continuation to |return|.
 
+Firstly, the translation function |local2global| that replaces every every |Put| into
+a |putR| and leaves the rest of the program untouched, is just an effect handler.
 \begin{code}
 local2global  :: Functor f
               => Free (StateF s :+: NondetF :+: f) a
@@ -615,23 +614,24 @@ local2global = fold Var alg
     alg (Inl (Put t k)) = putR t >> k
     alg p               = Op p
 \end{code}
-% Now, we want to prove this translation correct, but what does
-% correctness mean in this context?  Informally stated, it should
-% transform between local-state semantics and global-state semantics.
+% Now, we want to prove this translation correct, but what does correctness mean
+% in this context?
+% Informally stated, it should transform between local-state and global-state
+% semantics.
 % For simplicity, we can implicitly assume
 % commutativity and associativity of the coproduct operator |(:+:)|
 % and omit the |comm2| in the definition of |hGlobal|.
-%
-% A correct translation then transforms local state to global state.
-The following theorem states that |local2global| transforms
-the local-state semantics given by |hLocal| to the global-state
-semantics given by |hGlobal|.
+
+A correct translation then preserves the meaning when going 
+from local to global state semantics:
 \begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal
 \end{theorem}
-Thanks to the use of algebraic effects and handlers, we can
-use straightforward equational reasoning to prove this equality.
-In particular, we use fold fusion on both the left-hand side
+Here, the |hGlobal| and |hLocal| handlers both eliminate all
+nondeterminsm and state effects in the program.
+
+Moreover, to prove this equation we can
+use fold fusion on both the left-hand side
 and the right-hand side, turning each into a single fold.
 Then, we can prove the equality of those two folds through
 the universality property of folds.
