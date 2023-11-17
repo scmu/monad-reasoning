@@ -248,18 +248,18 @@ the equation simplifies to |put s >> n|.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph*{Implementation}\
 %
-This law leaves us free to choose from a large space of
-implementations with different properties.
-For example, in any given implementation, the programs
-|return x `mplus` return y| and |return y `mplus` return x| can be considered
-either semantically identical or distinct.
-The same goes for the programs |return x `mplus` return x| and |return x|
-or other examples. Also, there is no law that regulates |put s >> mzero|, which
-means that it may be distinguished from |mzero|.
-\wenhao{I'm confused. First, the first two equations are just about
-nondeterminism, right? Second, the third law |put s >> mzero = mzero|
-must not hold because of \Cref{eq:put-or}.}
-
+% This law leaves us free to choose from a large space of
+% implementations with different properties.
+% For example, in any given implementation, the programs
+% |return x `mplus` return y| and |return y `mplus` return x| can be considered
+% either semantically identical or distinct.
+% The same goes for the programs |return x `mplus` return x| and |return x|
+% or other examples. Also, there is no law that regulates |put s >> mzero|, which
+% means that it may be distinguished from |mzero|.
+% \wenhao{I'm confused. First, the first two equations are just about
+% nondeterminism, right? Second, the third law |put s >> mzero = mzero|
+% must not hold because of \Cref{eq:put-or}.}
+% TOM: I think we better drop this altogether. It is not helpful.
 Figuring out a correct implementation for the global-state monad is tricky.
 One might believe that |Global s m a = s -> (m a, s)|
 is a natural implementation of such a monad.
