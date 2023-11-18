@@ -1,18 +1,22 @@
+%if False
+\begin{code}
+\end{code}
+%endif
 \section{Simulating Multiple States with State: The Proofs}
 \label{app:states-state}
 
 %-------------------------------------------------------------------------------
-\subsection{|flatten| and |nested| form an isomorphism}
-\label{app:flatten-nested}
+\subsection{|flatten| and |nest| form an isomorphism}
+\label{app:flatten-nest}
 
-This section shows that |nested . flatten = id| and |flatten . nested = id|.
+This section shows that |nest . flatten = id| and |flatten . nest = id|.
 
-First, we prove that |(nested . flatten) t = t| for all |t :: StateT s1 (StateT s2 (Free f))| by equational reasoning.
+First, we prove that |(nest . flatten) t = t| for all |t :: StateT s1 (StateT s2 (Free f))| by equational reasoning.
 
-<    (nested . flatten) t
+<    (nest . flatten) t
 < = {-~  definition of |flatten|  -}
-<    nested $ StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
-< = {-~  definition of |nested|  -}
+<    nest $ StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
+< = {-~  definition of |nest|  -}
 <    StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$>
 <      runStateT (StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2) (s1, s2)
 < = {-~  definition of |runStateT|  -}
@@ -36,10 +40,10 @@ First, we prove that |(nested . flatten) t = t| for all |t :: StateT s1 (StateT 
 < = {-~  definition of |runStateT|  -}
 <    t
 
-Then, we prove that |(flatten . nested) t = t| for all |t :: StateT (s1, s2) (Free f) a| also by equational reasoning.
+Then, we prove that |(flatten . nest) t = t| for all |t :: StateT (s1, s2) (Free f) a| also by equational reasoning.
 
-<    (flatten . nested) t = t
-< = {-~  definition of |nested|  -}
+<    (flatten . nest) t = t
+< = {-~  definition of |nest|  -}
 <    flatten $ StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
 < = {-~  definition of |flatten|  -}
 <    StateT $ \ (s1, s2) -> alpha <$>

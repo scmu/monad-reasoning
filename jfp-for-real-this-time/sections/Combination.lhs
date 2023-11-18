@@ -111,8 +111,8 @@ hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
 Moreover, the |nest| function mediates between 
 the two different carrier types:
 \begin{code}
-nested     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
-nested t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
+nest     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
+nest t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
 \end{code}
 Here, |alpha1| rearranges a nested tuple.
 \begin{code}
@@ -131,7 +131,7 @@ Here, |flatten| is the inverse of |nest|:
 flatten :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
 flatten t   = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
 \end{code}
-The proof of the |nest|/|flatten| isomorphism can be found in \ref{app:flatten-nested}
+The proof of the |nest|/|flatten| isomorphism can be found in \ref{app:flatten-nest}
 and the proof of the theorem is written out in Appendix \Cref{app:states-state-sim}.
 The theorem is a trivial corollary of the lemma.
 

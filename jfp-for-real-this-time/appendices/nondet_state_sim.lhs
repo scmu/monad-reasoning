@@ -1,3 +1,7 @@
+%if False
+\begin{code}
+\end{code}
+%endif
 \section{Simulating Nondeterminism with State: The Proofs}
 \label{app:nondet-state}
 %-------------------------------------------------------------------------------
