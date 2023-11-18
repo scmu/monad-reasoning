@@ -318,14 +318,14 @@ all the permutations of its input.
 The function |choose| implemented as follows nondeterministically
 picks an element from a list.
 %
-We will further discuss
-in~\Cref{sec:interpreting-nondet-progs-with-list} that it is actually
-a monad morphism from the initial lawful instance of |MNondet| to any
-other nondeterministic monad.
-%
-\wenhao{I don't think the story of the initiality of |List| is
-essential to us since we're already working with the free monad
-representation. It is only discussed and used in S5.1.}
+% We will further discuss
+% in~\Cref{sec:interpreting-nondet-progs-with-list} that it is actually
+% a monad morphism from the initial lawful instance of |MNondet| to any
+% other nondeterministic monad.
+% %
+% \wenhao{I don't think the story of the initiality of |List| is
+% essential to us since we're already working with the free monad
+% representation. It is only discussed and used in S5.1.}
 
 \begin{code}
 choose :: MNondet m => [a] -> m a
