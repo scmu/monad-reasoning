@@ -106,7 +106,8 @@ We prove this by equational reasoning.
 \subsection{Correctness of the Simulation of Multiple States with State}
 \label{app:states-state-sim}
 
-This section shows that the function |hStates'| is equivalent to |hState . states2state|, where |hStates'| and |states2state| are defined in Section \ref{sec:multiple-states}.
+This section shows that the function |hStates'| is equivalent to |hState . states2state|.
+%  where |hStates'| and |states2state| are defined in Section \ref{sec:multiple-states}.
 
 \begin{theorem}\label{eq:states-state}
 |hStates' = hState . states2state|

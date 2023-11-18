@@ -170,6 +170,7 @@ The following commuting diagram simmuarizes the simulation.
 \end{tikzcd}\]
 
 % TOM: What is the point of this?
+% WT: just remove it
 % We can easily fuse the composition |flatten . hStates| using equational reasoning techniques,
 % as shown in \Cref{app:states-state-fusion}.
 
