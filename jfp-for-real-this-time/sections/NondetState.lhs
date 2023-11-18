@@ -123,8 +123,6 @@ The function |pushS| adds a branch to the stack.
 \item
 The function |appendS| adds a result to the given results.
 \end{itemize}
-%format getS = get
-%format putS = put
 
 \noindent
 \begin{figure}[t]
@@ -133,11 +131,11 @@ The function |appendS| adds a result to the given results.
 \begin{code}
 popS :: Comp (S a) ()
 popS = do
-  S xs stack <- getS
+  S xs stack <- get
   case stack of
     []       -> return ()
     op : ps  -> do
-      putS (S xs ps); op
+      put (S xs ps); op
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop}
@@ -148,8 +146,8 @@ pushS   :: Comp (S a) ()
         -> Comp (S a) ()
         -> Comp (S a) ()
 pushS q p = do
-  S xs stack <- getS
-  putS (S xs (q : stack)); p
+  S xs stack <- get
+  put (S xs (q : stack)); p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push}
@@ -160,8 +158,8 @@ appendS   :: a
           -> Comp (S a) ()
           -> Comp (S a) ()
 appendS x p = do
- S xs stack <- getS
- putS (S (xs ++ [x]) stack); p
+ S xs stack <- get
+ put (S (xs ++ [x]) stack); p
 \end{code}
 \caption{Appending a result.}
 \label{fig:append}
@@ -173,19 +171,20 @@ appendS x p = do
 % TOM: The following have already been defined earlier in section 3, named get and put without the S
 % Furthermore, we define smart constructors |getS| and |putS s| for getting
 % the current state and putting a new state.
-%if False 
-\begin{minipage}[t][][t]{0.5\textwidth}
-\begin{code}
-getS :: Comp s s
-getS = Op (Get return)
-\end{code}
-\end{minipage}
-\begin{minipage}[t][][t]{0.5\textwidth}
-\begin{code}
-putS :: s -> Comp s ()
-putS s = Op (Put s (return ()))
-\end{code}
-\end{minipage}
+% WT: Yes, this is also true for |getSS| and |putSS|. We should deprecate them.
+%if False
+% \begin{minipage}[t][][t]{0.5\textwidth}
+% \begin{code}
+% get :: Comp s s
+% get = Op (Get return)
+% \end{code}
+% \end{minipage}
+% \begin{minipage}[t][][t]{0.5\textwidth}
+% \begin{code}
+% put :: s -> Comp s ()
+% put s = Op (Put s (return ()))
+% \end{code}
+% \end{minipage}
 %endif
 
 Now, everything is in place to define a simulation function |nondet2stateS| that
@@ -269,22 +268,27 @@ nondet2state = fold gen (alg # fwd)
 The helper functions |popSS|, |pushSS| and |appendSS|
 (Figure \ref{fig:pop-push-append-SS}) are very similar to the
 previous definitions, but adapted to the new state-wrapper type.
-Similarly, |getSS| and |putSS s| are smart constructors for getting
+Similarly, |get| and |put s| are smart constructors for getting
 the stating and putting a new state, adapted from their previous definitions
 to take the coproduct operator into account.
 
-\begin{minipage}[t][][t]{0.5\textwidth}
-\begin{code}
-getSS :: Functor f => CompSS s f s
-getSS = Op (Inl (Get return))
-\end{code}
-\end{minipage}
-\begin{minipage}[t][][t]{0.5\textwidth}
-\begin{code}
-putSS :: Functor f => s -> CompSS s f ()
-putSS s = Op (Inl (Put s (return ())))
-\end{code}
-\end{minipage}
+% \begin{minipage}[t][][t]{0.5\textwidth}
+% \begin{code}
+% get :: Functor f => CompSS s f s
+% get = Op (Inl (Get return))
+% \end{code}
+% \end{minipage}
+% \begin{minipage}[t][][t]{0.5\textwidth}
+% \begin{code}
+% put :: Functor f => s -> CompSS s f ()
+% put s = Op (Inl (Put s (return ())))
+% \end{code}
+% \end{minipage}
+% \begin{code}
+% instance Functor f => MState s (Free (StateF s :+: f)) where
+%   get    = Op (Inl (Get return))
+%   put s  = Op (Inl (Put s (return ())))
+% \end{code}
 
 \noindent
 \begin{figure}[h]
@@ -295,11 +299,11 @@ putSS s = Op (Inl (Put s (return ())))
 popSS  :: Functor f
   => CompSS (SS f a) f ()
 popSS = do
-  SS xs stack <- getSS
+  SS xs stack <- get
   case stack of
     []       -> return ()
     op : ps  -> do
-      putSS (SS xs ps); op
+      put (SS xs ps); op
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop-ss}
@@ -311,8 +315,8 @@ pushSS  :: Functor f
   -> CompSS (SS f a) f ()
   -> CompSS (SS f a) f ()
 pushSS q p = do
-  SS xs stack <- getSS
-  putSS (SS xs (q : stack)); p
+  SS xs stack <- get
+  put (SS xs (q : stack)); p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push-ss}
@@ -323,8 +327,8 @@ appendSS  :: Functor f => a
   -> CompSS (SS f a) f ()
   -> CompSS (SS f a) f ()
 appendSS x p = do
-  SS xs stack <- getSS
-  putSS (SS (xs ++ [x]) stack); p
+  SS xs stack <- get
+  put (SS (xs ++ [x]) stack); p
 \end{code}
 \caption{Appending a solution.}
 \label{fig:append-ss}
@@ -333,7 +337,7 @@ appendSS x p = do
 \label{fig:pop-push-append-SS}
 \end{figure}
 
-Finally, |runNDf| puts everything together:
+Finally, |runNDf| put everything together:
 it transforms the non-determinism effect into the state effect and forwards
 |f|. Then it uses the, now modular, state handler to interpret the
 state effect. Lastly, it extracts the results from the state.
