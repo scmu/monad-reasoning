@@ -21,6 +21,7 @@ import Overview
 import LocalGlobal (local2global, hLocal, comm2)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, guard)
+import Undo
 
 \end{code}
 %endif
@@ -63,7 +64,7 @@ Figure \ref{fig:grow-empty} defines a helper function to create an empty stack.
 
 \begin{figure}[h]
 \small
-% \begin{subfigure}[t]{0.4\linewidth}
+% WT: to improve the efficiency we could allocate a larger array at the beginning
 \begin{code}
 emptyStack :: b -> ST s (Stack s b a)
 emptyStack results = do
@@ -96,19 +97,14 @@ emptyStack results = do
 \end{figure}
 
 Figure \ref{fig:pushstack-popstack} shows how to push to and pop from a stack.
-
-\begin{figure}[h]
-\small
-\begin{subfigure}[t]{0.48\linewidth}
+%
+The |pushStack| uses the following |safeWriteArray| function which
+doubles the size of array when there is not enough space.
 \begin{code}
-pushStack :: a -> Stack s b a -> ST s ()
-pushStack x (Stack stackRef sizeRef resRef) =
+safeWriteArray stackRef size x =
   do
     stack       <- readSTRef stackRef
-    size        <- readSTRef sizeRef
-    res         <- readSTRef resRef
     (_, space)  <- getBounds stack
-    writeSTRef sizeRef (size + 1)
     if size < space
     then writeArray stack size x
     else do
@@ -116,6 +112,36 @@ pushStack x (Stack stackRef sizeRef resRef) =
         stack'       <- newListArray (0, space * 2) elems
         writeArray  stack' size x
         writeSTRef  stackRef stack'
+\end{code}
+
+\begin{figure}[h]
+\small
+\begin{subfigure}[t]{0.48\linewidth}
+% \begin{code}
+% pushStack :: a -> Stack s b a -> ST s ()
+% pushStack x (Stack stackRef sizeRef resRef) =
+%   do
+%     stack       <- readSTRef stackRef
+%     size        <- readSTRef sizeRef
+%     res         <- readSTRef resRef
+%     (_, space)  <- getBounds stack
+%     writeSTRef sizeRef (size + 1)
+%     if size < space
+%     then writeArray stack size x
+%     else do
+%         elems        <- getElems stack
+%         stack'       <- newListArray (0, space * 2) elems
+%         writeArray  stack' size x
+%         writeSTRef  stackRef stack'
+% \end{code}
+\begin{code}
+pushStack :: a -> Stack s b a -> ST s ()
+pushStack x (Stack stackRef sizeRef resRef) =
+  do
+    size        <- readSTRef sizeRef
+    res         <- readSTRef resRef
+    writeSTRef sizeRef (size + 1)
+    safeWriteArray stackRef size x
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:pushstack}
@@ -345,287 +371,59 @@ queensStack   = hNil
 
 
 %-------------------------------------------------------------------------------
-\subsection{Optimisation with Undo}
-\label{sec:undo-semantics}
+\subsection{Mutable Undo}
+\label{sec:mutable-undo}
 
-% backtracking in local state
-
-In \Cref{sec:transforming-between-local-and-global-state}, we give a
-translation |local2global| which simulates local state with global
-state by replacing |put| with |putR|.  The |putR| operation makes the
-implicit copying of the local-state semantics explicit in the
-global-state semantics.  This copying is rather costly if the state is
-big (e.g., a long array), and especially wasteful if the modifications
-made to that state are rather small (e.g., a single entry in the
-array).
+We implement a mutable version of the typeclass |Undo|.
 %
-To improve upon this situation we can, instead of copying the state,
-keep track of the modifications made to it, and undo them when
-necessary.
-%
-This is especially efficient when we have mutable states.
-
-For example, the |queens| program in
-\Cref{sec:motivation-and-challenges} uses |s `plus` r| to update the
-state.
-%
-We can define its left inverse as follows.
-\begin{spec}
-minus   :: (Int, [Int]) -> Int -> (Int, [Int])
-minus   (c, sol) r = (c-1, tail sol)
-\end{spec}
-%
-These two operators satisfy the equation |(`minus` x) . (`plus` x) = id|
-for any |x :: Int|.
-%
-Then, we can just use |s `minus` r| to roll back the update, instead
-of copying the whole state like |putR| in the global-state semantics.
-
-In general, we define a type-class |Undo s r| and implement |Undo (Int, [Int]) Int|
-as an instance using the previously defined |plus| and |minus|.
-% \begin{spec}
-% class Undo s r where
-%   plus :: s -> r -> s
-%   minus :: s -> r -> s
-% \end{spec}
-% instance Undo (Int, [Int]) Int where
-%   plus (c, sol) r   = (c+1, r:sol)
-%   minus (c, sol) r  = (c-1, tail sol)
+For example, we can use |MQueens| to represent the mutable state of
+the n-queens problem.
 
 \begin{code}
-class MuState s a r where
-  update   :: a s -> r -> ST s ()
-  restore  :: a s -> r -> ST s ()
-
-newtype NQueens = NQueens (Int, [Int])
+class MUndo s a r where
+  muplus   :: a s -> r -> ST s ()
+  muminus  :: a s -> r -> ST s ()
 
 data MQueens s = MQueens { col :: STRef s Int, sol :: STRef s (STArray s Index Int) }
 
-instance MuState s MQueens Int where
-  (MQueens colRef solRef) `update` r = do
+instance MUndo s MQueens Int where
+  (MQueens colRef solRef) `muplus` r = do
     c <- readSTRef colRef
     arr <- readSTRef solRef
     writeSTRef colRef (c+1)
     writeArray arr (c+1) r  -- simply assume that there is enough space
-  (MQueens colRef solRef) `restore` r = do
+  (MQueens colRef solRef) `muminus` r = do
     c <- readSTRef colRef
     writeSTRef colRef (c-1)
 \end{code}
 
-In general, we define a |modify| function as follows.
 \begin{code}
-modfun           :: MState s m => (s -> s) -> m ()
-modfun f         = get >>= put . f
-\end{code}
-
-If all the state updates in a program are given by some |modify fwd|
-where every |fwd| is accompanied with a left inverse |bwd| such that
-|bwd . fwd = id|, we can simulate its local-state semantics with
-global-state semantics by using |modify bwd| to roll back the updates.
-
-% Rather than using |put|, some algorithms typically use a pair of
-% commands |modify fwd| and |modify bwd| to update and roll back the
-% state, respectively.  The |fwd| and |bwd| represent the modifications
-% to the state, with |bwd . fwd = id|.
-  % Following a style similar to |putR|, this can be modelled as follows:
-% modifyR          :: (MState s m, MNondet m) => (s -> s) -> (s -> s) -> m ()
-% modifyR fwd bwd  = modify fwd `mplus` side (modify bwd)
-% We can implement |modify| with |get| and |put| as follows.
-
-% Similar to \Cref{sec:putr}, we can give a translation and show its
-% correctness.
-%
-% With |modify|, instead of copying the state in the global-state
-% semantics, we can use |modify bwd| to restore the changes introduced
-% by |modify fwd|.
-
-In order to show it formally, we need to make sure that every state
-update is given by some |modify fwd| with a left inverse |bwd| at the
-syntax level. We define a new signature giving the syntax of two
-operations for get and modify.
-%
-\begin{code}
-data ModifyF s r a = MGet (s -> a) | MUpdate r a | MRestore r a
-\end{code}
-%
-The operation |ModifyR fwd bwd| takes two functions with |bwd . fwd = id|.
-%if False
-\begin{code}
-instance Functor (ModifyF s r) where
-    fmap f (MGet s)        = MGet (f . s)
-    fmap f (MUpdate r x)   = MUpdate r (f x)
-    fmap f (MRestore r x)  = MRestore r (f x)
-\end{code}
-%endif
-As for nondeterminism and state, we define a subclass |MModify| of
-|Monad| to capture its effectful interfaces, and implement the free
-monad |Free (ModifyF s :+: f)| as an instance of it.
-\begin{code}
-class Monad m => MModify s r m | m -> s, m -> r where
-    mget    :: m s
-    modify  :: r -> m ()
-instance Functor f => MModify s r (Free (ModifyF s r :+: f)) where
-  mget      =  Op (Inl (MGet return))
-  modify r  =  Op (Inl (MUpdate r (return ())))
-\end{code}
-
-\begin{code}
-hModify :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> StateT s (Free f) a
-hModify = fold gen (alg # fwd)
-  where
-    gen x               = StateT $ \s -> return (x, s)
-    alg (MGet k)        = StateT $ \s -> runStateT (k s) s
-    alg (MUpdate r k)   = StateT $ \s -> runStateT k (s `plus` r)
-    alg (MRestore r k)  = StateT $ \s -> runStateT k (s `minus` r)
-    fwd y               = StateT $ \s -> Op (fmap (\k -> runStateT k s) y)
-
-hMuModify  :: (Functor f, MuState s st r)
+hMuModify  :: (Functor f, MUndo s st r)
            => st s -> Free (ModifyF (st s) r :+: f) a
            -> STT s (Free f) a
 hMuModify st = fold gen (alg # fwd)
   where
     gen x               = return x
     alg (MGet k)        = k st
-    alg (MUpdate r k)   = liftST (st `update` r) >> k
-    alg (MRestore r k)  = liftST (st `restore` r) >> k
+    alg (MUpdate r k)   = liftST (st `muplus` r) >> k
+    alg (MRestore r k)  = liftST (st `muminus` r) >> k
     fwd op              = STT $ \s -> Op ((\f -> unSTT f s) <$> op)
 \end{code}
-% Wenhao: This actually doesn't work with local-state semantics!
+% WT: with STT, local-state semantics does not make sense at all.
 
-% We can interpret programs written with |ModifyF| and |NondetF| by
-% translating |ModifyF| operations to |StateF| and |NondetF| operations.
+There is no local-state semantics any more.
 %
-The local-state semantics of programs with |ModifyF| and |NondetF| is
-directly given by the local-state semantics of |StateF| and |NondetF|.
-We have the following translation |modify2local| which only uses |fwd|.
-%
-\begin{code}
-modify2local  :: (Functor f, Undo s r)
-              => Free (ModifyF s r :+: NondetF :+: f) a
-              -> Free (StateF s :+: NondetF :+: f) a
-modify2local  = fold Var alg
+\begin{spec}
+hGlobalM  :: (Functor f, MUndo s st r)
+          => (forall s. () -> st s) -> Free (ModifyF (st s) r :+: NondetF :+: f) a -> (s -> Free f [a])
+hGlobalM initial x = fmap (fmap fst) . runSTT $ t
   where
-    alg (Inl (MUpdate r k))  = modfun (`plus` r) >> k
-    alg (Inl (MRestore r k))  = modfun (`minus` r) >> k
-    alg (Inl (MGet k))      = get >>= k
-    alg (Inr p)             = Op (Inr p)
-\end{code}
-%
-To simulate the local-state semantics with global-state semantics,
-instead of using the translation |local2global| which uses the
-inefficient operation |putR|, we can give another translation
-|modify2global| as follows which makes use of |bwd| to roll back updates.
-% with the global-state semantics, in addition to
-% using |fwd|, we also need to use |bwd| to roll back the updates.
-%
-Similar to |putR|, it also uses |`mplus`| to implement backtracking.
-%
-\begin{code}
-modify2global  :: (Functor f, Undo s r)
-               => Free (ModifyF s r :+: NondetF :+: f) a
-               -> Free (StateF s :+: NondetF :+: f) a
-modify2global  = fold Var alg
-  where
-    alg (Inl (MUpdate r k))  = (modfun (`plus` r) `mplus` modfun (`minus` r)) >> k
-    alg (Inl (MRestore r k)) = error "no"
-    alg (Inl (MGet k))       = get >>= k
-    alg (Inr p)              = Op (Inr p)
-\end{code}
+    t = hMuModify (initial ()). hNDf . comm2 $ x
+\end{spec}
 
-The following theorem shows that the simulation of local-state
-semantics with global-state semantics given by |modify2global|
-coincides with the local-state semantics given by |modify2local|.
-%
-\begin{theorem}\label{thm:modify-local-global}
-< hGlobal . modify2global = hLocal . modify2local
-\end{theorem}
-\wenhao{TODO: prove it.}
-
-Combining it with \Cref{thm:local-global}, we also have
-< hGlobal . modify2global = hGlobal . local2global . modify2local
-
-Observe that, unlike |putR|, the interpretation of |modifyR| in
-|modify2global| does not hold onto a copy of the old state.
-%
-Although the |modify| function still takes out the whole state and
-apply a function to it, it can be more efficient with in-place
-update~\citep{LorenzenLS23} or mutable states.
-% TODO: probably add a forward reference to where we use mutable states
-
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{N-queens with |modifyR|}\
-%
-% Let us revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
-% Recall that, for the puzzle, the operator that alters the state
-% % (to check whether a chess placement is safe)
-% is defined by
-% < (c, sol) `plus` r = (c+1, r:sol)
-% We can define its left inverse |minus| as
-% < (c, sol) `minus` r = (c-1, tail sol)
-% so that the equation |(`minus` x) . (`plus` x) = id| is satisfied.
-% \footnote{This is similar to the properties of the addition and subtraction operations used in the differential lambda calculus \cite{Xu21}.}
-% TODO: some literature survey on incremental computation if I have time
-%
-% Thus, we can compute all the solutions to the puzzle in a scenario with a
-% shared global state as follows:
-Now we can rewrite the |queens| program with modify and nondeterminism.
-\begin{code}
-queensR :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
-queensR n = loop where
-  loop = do  (c, sol) <- mget
-             if c >= n then return sol
-             else do  r <- choose [1..n]
-                      guard (safe r 1 sol)
-                      modify r
-                      loop
-\end{code}
-%
-It is not hard to see that
-%
-< modify2local queensR = queens
-%
-Combined with \Cref{thm:modify-local-global}, we have
-< hGlobal (modify2global queensR) = hLocal queens
-
-% This function replaces the |put| operation in the original implementation's
-% |loop| by a call to |modifyR (`plus` r) (`minus` r)|.
-% Taking into account that the local-state semantics
-% discards the side-effects in the |side| branch, it is not difficult
-% to see that
-% % \begin{equation*}
-% < hLocal . queens = hLocal . queensR
-% % \end{equation*}
-% Moreover, following Theorem~\ref{thm:local-global}, we can conclude that |queensR| also behaves the same
-% under global-state semantics where the |side| branch takes care of backtracking
-% the state.
-% % \begin{equation*}
-% < hGlobal . queens = hGlobal . queensR
-% % \end{equation*}
-The advantage of the left-hand side is that it does not keep any copies of
-the state alive.
-
-% The |put (0, [])| in the initialization of |queensR| does not
-% influence this behaviour as the final state is dropped.
-% The function |queensModify| implements global state with undo semantics.
-%
-% \begin{code}
-% queensModify :: Int -> [[Int]]
-% queensModify = hNil . flip hGlobal (0,[]) . queensR
-% \end{code}
-
-%if False
-% \begin{code}
-% minus   :: (Int, [Int]) -> Int -> (Int, [Int])
-% minus   (c, sol) r = (c-1, tail sol)
-
-% -- tR :: StateT (Int, [Int]) [] [Int]
-% -- tR = queensR 9
-
-% -- testR :: [[Int]]
-% -- testR = fmap fst $ runStateT t (0,[])
-% \end{code}
-%endif
+\wenhao{It is very tricky to interpret stateful operations with
+mutable states. The current approach doesn't work because of the
+requirement of rank-2 polymorphism.}
 
 
 %include TrailStack.lhs

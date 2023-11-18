@@ -33,6 +33,13 @@
 %format plus = "(\mathbin{\oplus})"
 %format `minus` = "\mathbin{\ominus}"
 %format minus = "(\mathbin{\ominus})"
+
+%format `muplus` = "\mathbin{\odot}"
+%format muplus = "(\mathbin{\odot})"
+%format `muminus` = "\mathbin{\oslash}"
+%format muminus = "(\mathbin{\oslash})"
+
+
 %format queensNaive = "\Varid{queens_{naive}}"
 
 %format * = "\mathbin{\ast}"
