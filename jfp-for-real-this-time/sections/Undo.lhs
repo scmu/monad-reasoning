@@ -243,8 +243,8 @@ coincides with the local-state semantics given by |modify2local|.
 %
 Now we can rewrite the |queens| program with modify and nondeterminism.
 \begin{code}
-queensR :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
-queensR n = loop where
+queensM :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
+queensM n = loop where
   loop = do  (c, sol) <- mget
              if c >= n then return sol
              else do  r <- choose [1..n]
