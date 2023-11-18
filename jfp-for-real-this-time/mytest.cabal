@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 39bde7f6853279024db8408d46073f9e055b0175e9bd0f1070d46dca5ddbfba1
+-- hash: 94737782d93617f9bc13218f8c78718e4772a06985aa1d15f2574597f78265d9
 
 name:           mytest
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
       TermAlg
       Test
       TrailStack
+      Undo
   other-modules:
       Paths_mytest
   hs-source-dirs:

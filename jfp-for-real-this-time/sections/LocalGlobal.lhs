@@ -360,6 +360,7 @@ support the |(>>=)| operator.
 %-------------------------------------------------------------------------------
 \subsection{Transforming Between Local State and Global State}
 \label{sec:transforming-between-local-and-global-state}
+\label{sec:local2global}
 
 Both local state and global state have their own laws and semantics.
 Also, both interpretations of nondeterminism with state have their own
