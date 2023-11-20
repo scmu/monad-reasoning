@@ -22,8 +22,6 @@ import LocalGlobal
 
 This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|,
 where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:local-global}.
-In this section, we assume implicit commutativity and associativity of the coproduct
-operator |(:+:)| (\Cref{sec:global-state}).
 
 \paragraph*{Preliminary}
 It is easy to see that |runStateT . hState| can be fused into a single fold defined as follows:
@@ -91,8 +89,25 @@ This last step is valid provided that the fusion conditions are satisfied:
 |hL . (algS # fwdS)| & = & |(algSRHS # algNDRHS # fwdRHS) . fmap hL|
 \end{eqnarray*}
 
-We can trivially satisfy the first fusion condition by defining |genRHS| as follows:
-< genRHS = hL . genS
+We calculate for the first fusion condition:
+<   hL (genS x)
+< = {-~ definition of |genS| -}
+<   hL (\s -> Var (x, s))
+< = {-~ definition of |hL| -}
+<   fmap (fmap (fmap fst) . hNDf) (\s -> Var (x,s))
+< = {-~ definition of |fmap| -}
+<   \s -> fmap (fmap fst) (hNDf (Var (x,s)))
+< = {-~ definition of |hNDf| -}
+<   \s -> fmap (fmap fst) (Var [(x,s)])
+< = {-~ definition of |fmap| (twice) -}
+<   \s -> Var [x]
+< = {-~ define |genRHS x = \s -> Var [x]| -}
+< = genRHS x
+
+We conclude that the first fusion condition is satisfied by:
+
+< genRHS :: Functor f => a -> (s -> Free f [a])
+< genRHS x = \s -> Var [x]
 
 The second fusion condition decomposes into two separate conditions:
 \begin{eqnarray*}
@@ -167,6 +182,7 @@ For the first of these, we calculate:
 <   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) op)))
 
 We split on |op|:
+
 \noindent \mbox{\underline{case |op = Fail|}}
 <   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) Fail)))
 < = {-~ defintion of |fmap| (twice) -}
@@ -231,11 +247,152 @@ From this we conclude that the definition of |fwdRHS| should be:
 
 \subsection{Fusing the Left-Hand Side}
 
+We proceed in the same fashion with the fusing left-hand side, 
+discovering the definitions that we need to satisfy the fusion
+condition.
+
+We calculate as follows:
+\begin{spec}
+    hGlobal . local2global
+ = {-~  definition of |local2global| -}
+    hGlobal . fold Var alg
+      where
+        alg (Inl (Put t k)) = putR t >> k
+        alg p               = Op p
+ = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
+    fold genLHS (algSLHS # algNDLHS # fwdLHS) 
+\end{spec}
+
+This last step is valid provided that the fusion conditions are satisfied:
+\begin{eqnarray*}
+|hGlobal . Var| & = & |genLHS| \\
+|hGlobal . alg| & = & |(algSLHS # algNDLHS # fwdLHS) . fmap hGlobal|
+\end{eqnarray*}
+
+We calculate for the first fusion condition:
+<   hGlobal (Var x)
+< = {-~ definition of |hGlobal| -}
+<   fmap (fmap fst) (hState1 (hNDf (comm2 (Var x))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hState1 (hNDf (Var x)))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hState1 (Var [x]))
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst) (\s -> Var ([x], s))
+< = {-~ definition of |fmap| (twice) -}
+<   \s -> Var [x]
+< = {-~ define |genLHS x = \s -> Var [x]| -}
+<   genLHS x
+
+We conclude that the first fusion condition is satisfied by:
+
+< genLHS :: Functor f => a -> (s -> Free f [a])
+< genLHS x = \s -> Var [x]
+
+We can split the second fusion condition in three subconditions:
+\begin{eqnarray*}
+|hGlobal . alg . Inl| & = & |algSLHS . fmap hGlobal| \\
+|hGlobal . alg . Inr . Inl| & = & |algNDLHS . fmap hGlobal| \\
+|hGlobal . alg . Inr . Inr| & = & |fwdLHS . fmap hGlobal|
+\end{eqnarray*}
+
+Let's consider the first subconditions. It has two cases:
+
+\noindent \mbox{\underline{case |op = Get k|}}
+<   hGlobal (alg (Inl (Get k)))
+< = {-~ definition of |alg| -}
+<   hGlobal (Op (Inl (Get k))) 
+< = {-~ definition of |hGlobal| -}
+<   fmap (fmap fst) (hState1 (hNDf (comm2 (Op (Inl (Get k))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inr (Inl (fmap comm2 (Get k)))))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inr (Inl (Get (comm2 . k)))))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hState1 (Op (fmap hNDf (Inl (Get (comm2 . k))))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hState1 (Op (Inl (Get (hNDf . comm2 . k)))))
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst) (\s -> (hNDf . comm2 . k) s s)
+
 TODO
+
+Let's consider the second subcondition. It has also two cases:
+
+\noindent \mbox{\underline{case |op = Fail|}}
+<   hGlobal (alg (Inr (Inl Fail)))
+< = {-~ definition of |alg| -}
+<   hGlobal (Op (Inr (Inl Fail)))
+< = {-~ definition of |hGlobal| -}
+<   fmap (fmap fst) (hState1 (hNDf (comm2 (Op (Inr (Inl Fail))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inl (fmap comm2 Fail)))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inl Fail))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hState1 (Var []))
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst) (\s -> Var ([], s))
+< = {-~ definition of |fmap| twice and |fst| -}
+<   \s -> Var []
+< = {-~ define |algNDRHS Fail = \s -> Var []| -}
+<  algNDRHS Fail 
+< = {-~ definition of |fmap| -}
+<  algNDRHS (fmap hGlobal Fail)
+
+TODO
+
+Finally, the last subcondition:
+<   hGlobal (alg (Inr (Inr op)))
+< = {-~ definition of |alg| -}
+<   hGlobal (Op (Inr (Inr op)))
+< = {-~ definition of |hGlobal| -}
+<   fmap (fmap fst) (hState1 (hNDf (comm2 (Op (Inr (Inr op))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inr (Inr (fmap comm2 op))))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hState1 (Op (fmap hNDf (Inr (fmap comm2 op)))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hState1 (Op (Inr (fmap hNDf (fmap comm2 op)))))
+< = {-~ |fmap| fusion -}
+<   fmap (fmap fst) (hState1 (Op (Inr (fmap (hNDf . comm2) op))))
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst) (\s -> Op (fmap ($ s) (fmap hState1 (fmap (hNDf . comm2) op))))
+< = {-~ |fmap| fusion -}
+<   fmap (fmap fst) (\s -> Op (fmap ($ s) (fmap (hState1 . hNDf . comm2) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> fmap fst (Op (fmap ($ s) (fmap (hState1 . hNDf . comm2) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> Op (fmap (fmap fst) (fmap ($ s) (fmap (hState1 . hNDf . comm2) op)))
+< = {-~ |fmap| fusion -}
+<   \s -> Op (fmap (fmap fst . ($ s)) (fmap (hState1 . hNDf . comm2) op)))
+< = {-~ naturality of |($ s)| -}
+<   \s -> Op (fmap (($ s) . fmap (fmap fst)) (fmap (hState1 . hNDf . comm2) op)))
+< = {-~ |fmap| fission -}
+<   \s -> Op ((fmap ($ s) . fmap (fmap (fmap fst))) (fmap (hState1 . hNDf . comm2) op))
+< = {-~ |fmap| fusion -}
+<   \s -> Op (fmap ($ s) (fmap (fmap (fmap fst) . hState1 . hNDf . comm2) op))
+< = {-~ definition of |hGlobal| -}
+<   \s -> Op (fmap ($ s) (fmap hGlobal op))
+< = {-~ define |fwdLHS op = \s -> Op (fmap ($ s) op| -}
+<   fwdLHS (fmap hGlobal op)
+
+We conclude that this fusion subcondition holds provided that:
+
+< fwdLHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+< fwdLHS op = \s -> Op (fmap ($ s) op)
 
 \subsection{Equating the Fused Sides}
 
-TODO
+We observe that the following equations hold trivially. 
+\begin{eqnarray*}
+|genLHS| & = & |genRHS| \\
+|algSLHS| & = & |algSRHS| \\
+|algNDLHS| & = & |algNDRHS| \\
+|fwdLHS| & = & |fwdRHS|
+\end{eqnarray*}
+
+Therefore, the main theorem holds.
 
 \paragraph*{More Stuff}
 For the left hand side, we can also expand the definition of |local2global| and use the fold fusion law (Law (\ref{eq:functor-composition})):
