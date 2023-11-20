@@ -184,7 +184,8 @@ For the left-hand side, we have:
 <    \ s -> fmap fst . runSTT $
 <      do  st <- liftST (emptyStack ())
 <          STT $ \ s' -> Op (fmap ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
-< = {-~  Lemma \ref{eq:runst-homomorphism}  -} % NOTE: properties of st monad
+\wenhao{This step is not correct because of escaping.}
+< = {-~  Lemma \ref{eq:runst-homomorphism}  -}
 <    \ s -> fmap fst $
 <      do  st <- runSTT $ liftST (emptyStack ())
 <          runSTT . STT $ \ s' -> Op (fmap ((\ f -> unSTT (f st) s') . hStack . (\ k -> k s) . hGlobal) y)
