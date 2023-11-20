@@ -403,9 +403,9 @@ adjustment to be used in the composite setting since they only consider the sign
 of their own effects.
 We need to interpret the free monads into composite domains,
 |StateT (Free f) a| and |Free f [a]|, respectively.
-The |StateT| is the state transformer from the Monad Transformer Library \citep{mtl}.
+Here |StateT| is the state transformer from the Monad Transformer Library \citep{mtl}.
 < newtype StateT s m a = StateT { runStateT :: s -> m (a,s) }
-The new handlers are defined as follows:
+The new handlers, into these composite domains, are defined as follows:
 \begin{code}
 hState :: Functor f => Free (StateF s :+: f) a -> StateT s (Free f) a
 hState = fold genS (algS # fwdS)
@@ -414,6 +414,8 @@ hState = fold genS (algS # fwdS)
     algS (Get     k)  = StateT $ \s -> runStateT (k s) s
     algS (Put s'  k)  = StateT $ \s -> runStateT k s'
     fwdS op           = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
+\end{code}
+\begin{code}
 hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
 hNDf  =  fold genNDf (algNDf # fwdNDf)
   where

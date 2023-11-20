@@ -515,12 +515,14 @@ Note the difference between the final state and the program result for the
 state-restoring put.
 
 \begin{table}[h]
+\begin{center}
 \begin{tabular}{l||ll}
                             & Program result & Final state \\ \hline
 |return x >> get|           & |s0|           & |s0|        \\
 |put s >> return x >> get|  & |s|            & |s|         \\
 |putR s >> return x >> get| & |s|            & |s0|
 \end{tabular}
+\end{center}
 \caption{Comparing |put| and |putR|.}
 \label{tab:state-restoring-put}
 \end{table}
@@ -631,10 +633,10 @@ from local to global state semantics:
 Here, the |hGlobal| and |hLocal| handlers both eliminate all
 nondeterminsm and state effects in the program.
 
-Moreover, to prove this equation we can
+To prove this equation we 
 use fold fusion on both the left-hand side
 and the right-hand side, turning each into a single fold.
-Then, we can prove the equality of those two folds through
+Then, we prove the equality of those two folds through
 the universality property of folds.
 The full proof of this simulation is included in Appendix \ref{app:local-global}.
 %
