@@ -68,7 +68,7 @@ Figure \ref{fig:grow-empty} defines a helper function to create an empty stack.
 \begin{code}
 emptyStack :: b -> ST s (Stack s b a)
 emptyStack results = do
-    stack        <- newArray_ (0, 1)
+    stack        <- newArray_ (1, 1) -- start from 1
     sizeRef      <- newSTRef 0
     stackRef     <- newSTRef stack
     resultsRef   <- newSTRef results
@@ -101,17 +101,17 @@ Figure \ref{fig:pushstack-popstack} shows how to push to and pop from a stack.
 The |pushStack| uses the following |safeWriteArray| function which
 doubles the size of array when there is not enough space.
 \begin{code}
-safeWriteArray stackRef size x =
+safeWriteArray arrayRef size x =
   do
-    stack       <- readSTRef stackRef
-    (_, space)  <- getBounds stack
+    array       <- readSTRef arrayRef
+    (_, space)  <- getBounds array
     if size < space
-    then writeArray stack size x
+    then writeArray array size x
     else do
-        elems        <- getElems stack
-        stack'       <- newListArray (0, space * 2) elems
-        writeArray  stack' size x
-        writeSTRef  stackRef stack'
+        elems        <- getElems array
+        array'       <- newListArray (1, space * 2 + 1) elems
+        writeArray  array' size x
+        writeSTRef  arrayRef array'
 \end{code}
 
 \begin{figure}[h]
@@ -374,10 +374,16 @@ queensStack   = hNil
 \subsection{Mutable Undo}
 \label{sec:mutable-undo}
 
-We implement a mutable version of the typeclass |Undo|.
+We implement a mutable version of the typeclass |Undo| for which we
+call |MUndo|.
 %
-For example, we can use |MQueens| to represent the mutable state of
-the n-queens problem.
+Similar to |MUndo|, all instances of |MUndo st r| satisfy the law
+|(x `muplus` y) >> (x `muminus` y) = return ()| for any |x :: st s|
+and |y :: r|.
+%
+To use |MUndo|, we need a mutable representation of states. We define
+another typeclass |MIM| to transform between mutable representations
+and immutable representations.
 %
 The type class |MIM st a| requires the following two laws:
 \begin{alignat}{2}
@@ -386,7 +392,9 @@ The type class |MIM st a| requires the following two laws:
     &\mbox{\bf mu-imu-mu}:~ &
     |mu2imu y >>= imu2mu| &= |return y| \mbox{~~.} \label{eq:mu-imu-mu}
 \end{alignat}
-\wenhao{?}
+%
+\wenhao{I'm not sure if these three laws (including the one for
+|MUndo|) would work.}
 
 \begin{code}
 class MUndo st r | st -> r where
@@ -396,7 +404,12 @@ class MUndo st r | st -> r where
 class MIM st a | a -> st where
   mu2imu  :: forall s . st s -> ST s a
   imu2mu  :: forall s . a -> ST s (st s)
+\end{code}
 
+For example, we can use |MQueens| to represent the mutable states of
+the n-queens problem, and |IQueens| for its immutable version as
+before.
+\begin{code}
 type IQueens = (Int, [Int])
 data MQueens s = MQueens { column :: STRef s Int, solution :: STRef s (STArray s Index Int) }
 
@@ -417,10 +430,16 @@ instance MIM MQueens IQueens where
     return (x, y)
   imu2mu (x, y) = do
     colRef  <- newSTRef x
-    arr     <- newListArray (1, length y) y
+    arr     <- newListArray (1, 1 + length y) y
     solRef  <- newSTRef arr
     return (MQueens colRef solRef)
 \end{code}
+
+We have the following handler |hMuModify| which interprets |ModifyF|
+using mutable states.
+%
+Compared to |hModify| which uses the |StateT| monad, |hMuModify| uses
+the |STT| monad.
 
 \begin{code}
 hMuModify  :: (Functor f, MUndo st r, MIM st b)
@@ -438,27 +457,17 @@ hMuModify st = fold gen (alg # fwd)
 
 %if False
 % some code for testing
-\begin{code}
-testm :: Monad m => STT s m Bool
-testm = undefined
 
-testf :: Monad m => Bool -> STT s m Int
-testf = undefined
-
-test1 :: Monad m => m Int
--- test1 = runSTT (testm >>= testf)
--- test1 = runSTT testm >>= runSTT . testf -- ill-typed
-test1 = runSTT testm >>= \ y -> runSTT (testf y)
-\end{code}
+Essentially we only need to prove |hModify1 = hMuModify1|.
 
 \begin{code}
-hModify1 :: (Functor f, Undo b r)
-  => Free (ModifyF b r :+: f) a -> b -> Free f a
-hModify1 x y = fmap fst (runStateT (hModify x) y)
-
-hMuModify1 :: (Functor f, MUndo st r, MIM st b)
-  => Free (ModifyF b r :+: f) a -> b -> Free f a
-hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
+-- hModify1 :: (Functor f, Undo b r)
+--   => Free (ModifyF b r :+: f) a -> b -> Free f a
+-- hModify1 x y = fmap fst (runStateT (hModify x) y)
+-- 
+-- hMuModify1 :: (Functor f, MUndo st r, MIM st b)
+--   => Free (ModifyF b r :+: f) a -> b -> Free f a
+-- hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
 -- hMuModify1 x y = runSTT (liftST (imu2mu y)) >>= \ res -> runSTT ((\ y -> hMuModify y x) res)
 -- ill-typed because of escaping
 
@@ -472,8 +481,9 @@ hGlobalMu1 = hMuModify1 . hNDf . comm2
 \end{code}
 %endif
 
-There is no local-state semantics any more.
-%
+We have another version of the global-state semantics which uses
+mutable states.
+
 \begin{code}
 hGlobalMu  :: (Functor f, MUndo st r, MIM st b)
            => Free (ModifyF b r :+: NondetF :+: f) a
@@ -483,15 +493,51 @@ hGlobalMu x initial =
 \end{code}
 
 We have the following theorem.
-\begin{theorem}
-For all |x :: Free (ModifyF b r :+: NondetF :+: NilF) a|, |y :: b|, and |st| with
-|MUndo st r|, |MIM st b|, |Undo b r|, we have
+\begin{theorem} \label{thm:mutable-global}
+For all |x :: Free (ModifyF b r :+: NondetF :+: f) a|, |y :: b|,
+and |st| with instances |MUndo st r|, |MIM st b|, |Undo b r|, we have
 %
 < hGlobalMu x y = hGlobalM x y
 \end{theorem}
-\wenhao{We need to restrict the remaining functor. For example, the
-theorem does not hold obvisouly if the remaining functor contains
-another |NondetF|.}
+
+Essentially, we only need to prove |hModify1 = hMuModify1|, where
+%
+\begin{code}
+hModify1 :: (Functor f, Undo b r)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hModify1 x y = fmap fst (runStateT (hModify x) y)
+
+hMuModify1 :: (Functor f, MUndo st r, MIM st b)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
+\end{code}
+
+\wenhao{It is not clear to me how to prove |hModify1 = hMuModify1|.}
+
+\wenhao{We probably need to restrict the remaining functor |f| in
+\Cref{thm:mutable-global}. This is because |STT| does not work well
+with monads which contain multiple answers.  For example, this theorem
+does not hold obvisouly if |f| contains another |NondetF|.
+%
+One safe solution is to restrict |f| to |NilF|. However, this would
+prevent us from combining |hGlobalMu| with trail stacks.
+}
+
+\wenhao{Actually, I also doubt that the theorem and proof of trail
+stack are not correct, since there is no restriction of the remaining
+functor. I have already found one unsound step in the proof of
+|local2trail| because of the misuse of Law~\ref{eq:runst-homomorphism}.
+Things become much more involved with mutable states. I wonder whether
+we can treat all results relevant to mutable states as extensions,
+i.e., no proofs.}
+
+\paragraph*{N-queens with mutable states}\
+%
+We have the following programs.
+\begin{code}
+queensMu :: Int -> [[Int]]
+queensMu n = hNil $ hGlobalMu (local2globalM (queensM n)) (0, [])
+\end{code}
 
 %include TrailStack.lhs
 

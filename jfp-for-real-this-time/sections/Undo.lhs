@@ -253,13 +253,15 @@ queensM n = loop where
                       update r
                       loop
 \end{code}
-% %
-% It is not hard to see that
-% %
-% < modify2local queensR = queens
-%
-By \Cref{thm:modify-local-global}, we have
-< hGlobalM (local2globalM queensR) = hLocalM queensR
+
+We have the following program:
+\begin{code}
+queensMM :: Int -> [[Int]]
+queensMM n = hNil $ hGlobalM (local2globalM (queensM n)) (0, [])
+\end{code}
+
+% By \Cref{thm:modify-local-global}, we have
+% < hGlobalM (local2globalM (queensM n)) = hLocalM (queensM n)
 
 % The advantage of the left-hand side is that it does not keep any copies of
 % the state alive.
