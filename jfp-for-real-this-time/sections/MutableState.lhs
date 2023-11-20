@@ -380,31 +380,47 @@ For example, we can use |MQueens| to represent the mutable state of
 the n-queens problem.
 
 \begin{code}
-class MUndo s a r where
-  muplus   :: a s -> r -> ST s ()
-  muminus  :: a s -> r -> ST s ()
+class MUndo st r | st -> r where
+  muplus   :: forall s . st s -> r -> ST s ()
+  muminus  :: forall s . st s -> r -> ST s ()
 
+class MTrans st a | a -> st where
+  mu2imu  :: forall s . st s -> ST s a
+  imu2mu  :: forall s . a -> ST s (st s)
+
+type IQueens = (Int, [Int])
 data MQueens s = MQueens { col :: STRef s Int, sol :: STRef s (STArray s Index Int) }
 
-instance MUndo s MQueens Int where
+instance MUndo MQueens Int where
   (MQueens colRef solRef) `muplus` r = do
     c <- readSTRef colRef
-    arr <- readSTRef solRef
     writeSTRef colRef (c+1)
-    writeArray arr (c+1) r  -- simply assume that there is enough space
+    safeWriteArray solRef (c+1) r
   (MQueens colRef solRef) `muminus` r = do
     c <- readSTRef colRef
     writeSTRef colRef (c-1)
+
+instance MTrans MQueens IQueens where
+  mu2imu (MQueens colRef solRef) = do
+    x    <- readSTRef colRef
+    arr  <- readSTRef solRef
+    y    <- getElems arr
+    return (x, y)
+  imu2mu (x, y) = do
+    colRef  <- newSTRef x
+    arr     <- newListArray (1, length y) y
+    solRef  <- newSTRef arr
+    return (MQueens colRef solRef)
 \end{code}
 
 \begin{code}
-hMuModify  :: (Functor f, MUndo s st r)
-           => st s -> Free (ModifyF (st s) r :+: f) a
+hMuModify  :: (Functor f, MUndo st r, MTrans st b)
+           => st s -> Free (ModifyF b r :+: f) a
            -> STT s (Free f) a
 hMuModify st = fold gen (alg # fwd)
   where
     gen x               = return x
-    alg (MGet k)        = k st
+    alg (MGet k)        = liftST (mu2imu st) >>= k
     alg (MUpdate r k)   = liftST (st `muplus` r) >> k
     alg (MRestore r k)  = liftST (st `muminus` r) >> k
     fwd op              = STT $ \s -> Op ((\f -> unSTT f s) <$> op)
@@ -413,18 +429,14 @@ hMuModify st = fold gen (alg # fwd)
 
 There is no local-state semantics any more.
 %
-\begin{spec}
-hGlobalM  :: (Functor f, MUndo s st r)
-          => (forall s. () -> st s) -> Free (ModifyF (st s) r :+: NondetF :+: f) a -> (s -> Free f [a])
-hGlobalM initial x = fmap (fmap fst) . runSTT $ t
-  where
-    t = hMuModify (initial ()). hNDf . comm2 $ x
-\end{spec}
-
-\wenhao{It is very tricky to interpret stateful operations with
-mutable states. The current approach doesn't work because of the
-requirement of rank-2 polymorphism.}
-
+\begin{code}
+hGlobal  :: (Functor f, MUndo st r, MTrans st b)
+         => b
+         -> Free (ModifyF b r :+: NondetF :+: f) a
+         -> Free f [a]
+hGlobal initial x =
+  runSTT $ liftST (imu2mu initial) >>= \ y -> hMuModify y . hNDf . comm2 $ x
+\end{code}
 
 %include TrailStack.lhs
 
