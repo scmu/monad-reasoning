@@ -21,10 +21,11 @@ import LocalGlobal
 %-------------------------------------------------------------------------------
 
 This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|,
-where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:putr}.
+where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:local-global}.
 In this section, we assume implicit commutativity and associativity of the coproduct
-operator |(:+:)| (\Cref{sec:transforming-between-local-and-global-state}).
+operator |(:+:)| (\Cref{sec:global-state}).
 
+\paragraph*{Preliminary}
 It is easy to see that |runStateT . hState| can be fused into a single fold defined as follows:
 \begin{code}
 hState1 :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (a, s))
@@ -37,25 +38,124 @@ hState1  =  fold genS (algS # fwdS)
 \end{code}
 For brevity, we use |hState1| to replace |runStateT . hState| in the following proofs.
 
-
+%format genLHS = "\Varid{gen}_{\Varid{LHS}}"
+%format genRHS = "\Varid{gen}_{\Varid{RHS}}"
+%format algSLHS = "\Varid{alg}_{\Varid{LHS}}^{\Varid{S}}"
+%format algSRHS = "\Varid{alg}_{\Varid{RHS}}^{\Varid{S}}"
+%format algNDLHS = "\Varid{alg}_{\Varid{LHS}}^{\Varid{ND}}"
+%format algNDRHS = "\Varid{alg}_{\Varid{RHS}}^{\Varid{ND}}"
+%format fwdLHS = "\Varid{fwd}_{\Varid{LHS}}"
+%format fwdRHS = "\Varid{fwd}_{\Varid{RHS}}"
+\subsection{Main Proof Structure}
+The main theorem we prove in this section is:
 \begin{theorem}\label{eq:local-global}
 |hGlobal . local2global = hLocal|
 \end{theorem}
 \begin{proof}
-We start with applying fold fusion to both sides of the equation.
-We rewrite |hLocal| as |hL . hState1|, where |hL| is defined as follows:
-\begin{spec}
-hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
-hL = fmap hL'
-  where hL' = fmap (fmap fst) . hNDf
-\end{spec}
-We can expand the definition of |hState1| and use the fold fusion law for postcomposition as defined in Equation \ref{eq:fusion-post}:
-<    hL . hState1
-< = {-~  definition of |hState1|  -}
-<    hL . fold genS (algS # fwdS)
-< = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
-<    fold (hL . genS) (algS' # fwdS') {-" \text{with } "-} hL . (algS # fwdS) = (algS' # fwdS') . fmap hL
+Both the left-hand side and the right-hand side of the equation consist of 
+function compositions involving one or more folds.
+We apply fold fusion separately on both sides to contract each
+into a single fold:
+\begin{eqnarray*}
+|hGlobal . local2global| & = & |fold genLHS (algSLHS # algNDRHS # fwdLHS)| \\
+|hLocal|& = & |fold genRHS (algSRHS # algNDRHS # fwdRHS)|
+\end{eqnarray*}
+Finally, we show that both folds are equal by showing that their
+corresponding parameters are equal:
+\begin{eqnarray*}
+|genLHS| & = & |genRHS| \\
+|algSLHS| & = & |algSRHS| \\
+|algNDLHS| & = & |algNDRHS| \\
+|fwdLHS| & = & |fwdRHS|
+\end{eqnarray*}
+We elaborate each of these steps below.
+\end{proof}
 
+\subsection{Fusing the Right-Hand Side}
+We calculate as follows:
+\begin{spec}
+    hLocal
+ = {-~  definition -}
+    hL . hState1
+      {-" \text{with } "-} 
+         hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
+         hL = fmap (fmap (fmap fst) . hNDf)
+ = {-~  definition of |hState1|  -}
+    hL . fold genS (algS # fwdS)
+ = {-~  fold fusion-post (Equation \ref{eq:fusion-post})  -}
+    fold genRHS (algSRHS # algNDRHS # fwdRHS) 
+\end{spec}
+This last step is valid provided that the fusion conditions are satisfied:
+\begin{eqnarray*}
+|hL . genS| & = & |genRHS| \\
+|hL . (algS # fwdS)| & = & |(algSRHS # algNDRHS # fwdRHS) . fmap hL|
+\end{eqnarray*}
+
+We can trivially satisfy the first fusion condition by defining |genRHS| as follows:
+< genRHS = hL . genS
+
+The second fusion condition decomposes into two separate conditions:
+\begin{eqnarray*}
+|hL . algS| & = & |algSRHS . fmap hL| \\
+|hL . fwdS| & = & |algNDRHS # fwdRHS . fmap hL|
+\end{eqnarray*}
+
+The first subcondition is met by taking:
+
+> algSRHS :: Functor f => StateF s (s -> Free f [a]) -> (s -> Free f [a])
+> algSRHS (Get k)    = \ s -> k s s
+> algSRHS (Put s k)  = \ _ -> k s
+
+We establish that the subcondition holds, when we apply both
+sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
+
+\noindent \mbox{\underline{case |t = Get k|}}
+<   hL (algS (Get k))
+< = {-~  definition of |algS| -}
+<   hL (\s -> k s s)
+< = {-~  definition of |hL| -}
+<   fmap (fmap (fmap fst) . hNDf) (\s -> k s s)
+< = {-~  definition of |fmap| -}
+<   \s -> fmap (fmap fst) (hNDf (k s s))
+< = {-~  beta-expansion (twice) -}
+< = \s -> (\s1 s2 -> fmap (fmap fst) (hNDf (k s2 s1))) s s
+< = {-~  definition of |fmap| (twice) -}
+< = \s -> (fmap (fmap (fmap (fmap fst) . hNDf)) k) s s
+< = {-~  definition of |algRHS| -}
+< = algSRHS (Get (fmap (fmap (fmap (fmap fst) . hNDf)) k))
+< = {-~  definition of |fmap| -}
+< = algSRHS (fmap (fmap (fmap (fmap fst) . hNDf)) (Get k))
+< = {-~  definition of |hL| -}
+< = algSRHS (fmap hL (Get k))
+\noindent \mbox{\underline{case |t = Put s k|}}
+<   hL (algS (Put s k))
+< = {-~  definition of |algS| -}
+<   hL (\ _ -> k s)
+< = {-~  definition of |hL| -}
+<   fmap (fmap (fmap fst) . hNDf) (\ _ -> k s)
+< = {-~  definition of |fmap| -}
+<   \ _ -> fmap (fmap fst) (hNDf (k s))
+< = {-~  beta-expansion -}
+< = \ _ -> (\s1 -> fmap (fmap fst) (hNDf (k s1))) s s
+< = {-~  definition of |fmap| -}
+< = \ _ -> (fmap (fmap (fmap fst) . hNDf) k) s
+< = {-~  definition of |algRHS| -}
+< = algSRHS (Put s (fmap (fmap (fmap fst) . hNDf) k))
+< = {-~  definition of |fmap| -}
+< = algSRHS (fmap (fmap (fmap fst) . hNDf)) (Put s k))
+< = {-~  definition of |hL| -}
+< = algSRHS (fmap hL (Put s k))
+
+TODO 
+\subsection{Fusing the Left-Hand Side}
+
+TODO
+
+\subsection{Equating the Fused Sides}
+
+TODO
+
+\paragraph*{More Stuff}
 For the left hand side, we can also expand the definition of |local2global| and use the fold fusion law (Law (\ref{eq:functor-composition})):
 <    hGlobal . local2global
 < = {-~  definition of |local2global|  -}
@@ -127,7 +227,6 @@ alg' = alg1 # alg2 # fwd1
 \end{code}
 These two equations (1) and (2) are proved in Lemma \ref{eq:fusion-cond-1} and Lemma \ref{eq:fusion-cond-2} respectively.
 This implies that our original equation |hLocal = fold (hL . genS) alg' = fold (hGlobal . Var) alg' = hGlobal . local2global| holds.
-\end{proof}
 
 \begin{lemma}[Fusion Condition 1] \label{eq:fusion-cond-1}
 |alg' . fmap hL = hL . algS|
