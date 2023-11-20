@@ -1,3 +1,7 @@
+%if False
+\begin{code}
+\end{code}
+%endif
 \section{Additional Equations in Proofs}
 
 In this section, we list the additional equations and properties we use in the proofs.
@@ -5,8 +9,10 @@ In this section, we list the additional equations and properties we use in the p
 \subsection{Equations about ST Monad}
 
 \begin{lemma} \label{eq:runst-homomorphism} ~
+For monad |m|, |x :: STT s m a|, and |y :: a -> STT s m b|,
+if the phantom type variable |s| does not appear freely in |a|, then
 % < runST (m >>= f) == runST m >>= runST . f
-< runSTT (m >>= f) == runSTT m >>= runST . f
+< runSTT (x >>= y) == runSTT x >>= runSTT . y
 \end{lemma}
 
 \begin{lemma} \label{eq:st-into-op} ~

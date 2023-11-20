@@ -142,6 +142,7 @@ the following |hLocalM| and |hGlobalM|, respectively.
 hLocalM   :: (Functor f, Undo s r)
           => Free (ModifyF s r :+: NondetF :+: f) a -> (s -> Free f [a])
 hLocalM   = fmap (fmap (fmap fst) . hNDf) . runStateT . hModify
+
 hGlobalM  :: (Functor f, Undo s r)
           => Free (ModifyF s r :+: NondetF :+: f) a -> (s -> Free f [a])
 hGlobalM  = fmap (fmap fst) . runStateT . hModify . hNDf . comm2

@@ -378,53 +378,120 @@ We implement a mutable version of the typeclass |Undo|.
 %
 For example, we can use |MQueens| to represent the mutable state of
 the n-queens problem.
+%
+The type class |MIM st a| requires the following two laws:
+\begin{alignat}{2}
+    &\mbox{\bf imu-mu-imu}:\quad &
+    |imu2mu x >>= mu2imu| &= |return x|\mbox{~~,} \label{eq:imu-mu-imu}\\
+    &\mbox{\bf mu-imu-mu}:~ &
+    |mu2imu y >>= imu2mu| &= |return y| \mbox{~~.} \label{eq:mu-imu-mu}
+\end{alignat}
+\wenhao{?}
 
 \begin{code}
-class MUndo s a r where
-  muplus   :: a s -> r -> ST s ()
-  muminus  :: a s -> r -> ST s ()
+class MUndo st r | st -> r where
+  muplus   :: forall s . st s -> r -> ST s ()
+  muminus  :: forall s . st s -> r -> ST s ()
 
-data MQueens s = MQueens { col :: STRef s Int, sol :: STRef s (STArray s Index Int) }
+class MIM st a | a -> st where
+  mu2imu  :: forall s . st s -> ST s a
+  imu2mu  :: forall s . a -> ST s (st s)
 
-instance MUndo s MQueens Int where
+type IQueens = (Int, [Int])
+data MQueens s = MQueens { column :: STRef s Int, solution :: STRef s (STArray s Index Int) }
+
+instance MUndo MQueens Int where
   (MQueens colRef solRef) `muplus` r = do
     c <- readSTRef colRef
-    arr <- readSTRef solRef
     writeSTRef colRef (c+1)
-    writeArray arr (c+1) r  -- simply assume that there is enough space
+    safeWriteArray solRef (c+1) r
   (MQueens colRef solRef) `muminus` r = do
     c <- readSTRef colRef
     writeSTRef colRef (c-1)
+
+instance MIM MQueens IQueens where
+  mu2imu (MQueens colRef solRef) = do
+    x    <- readSTRef colRef
+    arr  <- readSTRef solRef
+    y    <- getElems arr
+    return (x, y)
+  imu2mu (x, y) = do
+    colRef  <- newSTRef x
+    arr     <- newListArray (1, length y) y
+    solRef  <- newSTRef arr
+    return (MQueens colRef solRef)
 \end{code}
 
 \begin{code}
-hMuModify  :: (Functor f, MUndo s st r)
-           => st s -> Free (ModifyF (st s) r :+: f) a
+hMuModify  :: (Functor f, MUndo st r, MIM st b)
+           => st s -> Free (ModifyF b r :+: f) a
            -> STT s (Free f) a
 hMuModify st = fold gen (alg # fwd)
   where
     gen x               = return x
-    alg (MGet k)        = k st
+    alg (MGet k)        = liftST (mu2imu st) >>= k
     alg (MUpdate r k)   = liftST (st `muplus` r) >> k
     alg (MRestore r k)  = liftST (st `muminus` r) >> k
     fwd op              = STT $ \s -> Op ((\f -> unSTT f s) <$> op)
 \end{code}
 % WT: with STT, local-state semantics does not make sense at all.
 
+%if False
+% some code for testing
+\begin{code}
+testm :: Monad m => STT s m Bool
+testm = undefined
+
+testf :: Monad m => Bool -> STT s m Int
+testf = undefined
+
+test1 :: Monad m => m Int
+-- test1 = runSTT (testm >>= testf)
+-- test1 = runSTT testm >>= runSTT . testf -- ill-typed
+test1 = runSTT testm >>= \ y -> runSTT (testf y)
+\end{code}
+
+\begin{code}
+hModify1 :: (Functor f, Undo b r)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hModify1 x y = fmap fst (runStateT (hModify x) y)
+
+hMuModify1 :: (Functor f, MUndo st r, MIM st b)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
+-- hMuModify1 x y = runSTT (liftST (imu2mu y)) >>= \ res -> runSTT ((\ y -> hMuModify y x) res)
+-- ill-typed because of escaping
+
+hGlobalM1 :: (Functor f, Undo b r)
+          => Free (ModifyF b r :+: NondetF :+: f) a -> (b -> Free f [a])
+hGlobalM1 = hModify1 . hNDf . comm2
+
+hGlobalMu1 :: (Functor f, MUndo st r, MIM st b)
+           => Free (ModifyF b r :+: NondetF :+: f) a -> (b -> Free f [a])
+hGlobalMu1 = hMuModify1 . hNDf . comm2
+\end{code}
+%endif
+
 There is no local-state semantics any more.
 %
-\begin{spec}
-hGlobalM  :: (Functor f, MUndo s st r)
-          => (forall s. () -> st s) -> Free (ModifyF (st s) r :+: NondetF :+: f) a -> (s -> Free f [a])
-hGlobalM initial x = fmap (fmap fst) . runSTT $ t
-  where
-    t = hMuModify (initial ()). hNDf . comm2 $ x
-\end{spec}
+\begin{code}
+hGlobalMu  :: (Functor f, MUndo st r, MIM st b)
+           => Free (ModifyF b r :+: NondetF :+: f) a
+           -> b -> Free f [a]
+hGlobalMu x initial =
+  runSTT $ liftST (imu2mu initial) >>= \ y -> hMuModify y . hNDf . comm2 $ x
+\end{code}
 
-\wenhao{It is very tricky to interpret stateful operations with
-mutable states. The current approach doesn't work because of the
-requirement of rank-2 polymorphism.}
-
+We have the following theorem.
+\begin{theorem}
+For all |x :: Free (ModifyF b r :+: NondetF :+: NilF) a|, |y :: b|, and |st| with
+|MUndo st r|, |MIM st b|, |Undo b r|, we have
+%
+< hGlobalMu x y = hGlobalM x y
+\end{theorem}
+\wenhao{We need to restrict the remaining functor. For example, the
+theorem does not hold obvisouly if the remaining functor contains
+another |NondetF|.}
 
 %include TrailStack.lhs
 
