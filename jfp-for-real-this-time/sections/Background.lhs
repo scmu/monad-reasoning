@@ -339,18 +339,22 @@ filtr p x = if p x then return x else mzero
 \end{code}
 
 The pure function |valid :: [Int] -> Bool| determines whether the
-input is a valid solution. It only needs to make sure that no two
-queens are put on the same diagonal.
-
-\wenhao{Probably show the definition of |valid|.}
-
-%if False
+input is a valid solution. 
 \begin{code}
 valid :: [Int] -> Bool
-valid [] = True
-valid (q:qs) = valid qs && safe q 1 qs
+valid []      = True
+valid (q:qs)  = valid qs && safe q 1 qs
 \end{code}
-%endif
+A solution is valid when each queen is |safe| with respect
+to the subsequent queens:
+%format q1
+\begin{code}
+safe :: Int -> Int -> [Int] -> Bool
+safe _ _ []       = True
+safe q n (q1:qs)  = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
+\end{code}
+The call |safe q n qs| checks whether the current queen |q| is on a different ascending and descending diagonal
+than the other queens |qs|, where |n| is the number of columns that |q| is apart from the first queen |q1| in |qs|.
 
 Although this generate-and-test approach works and is quite intuitive, it is not very efficient.
 For example, all solutions of the form |(1:2:qs)| are invalid because the first two queens are on the same diagonal.
@@ -408,16 +412,6 @@ plus   :: (Int, [Int]) -> Int -> (Int, [Int])
 plus   (c, sol) r = (c+1, r:sol)
 \end{spec}
 %
-The function |safe| checks whether the placement of a queen is safe with
-respect to the list of queens that is already present (for which we need its
-distance from the queen on the list). We only have to check that the queens are
-in different diagonals.
-%format q1
-\begin{code}
-safe :: Int -> Int -> [Int] -> Bool
-safe _ _ []       = True
-safe q n (q1:qs)  = and [q /= q1 , q /= q1 + n , q /= q1 - n , safe q (n+1) qs]
-\end{code}
 
 The above monadic version of |queens| is the starting point of this
 paper.  In the following sections, we investigate how low-level
