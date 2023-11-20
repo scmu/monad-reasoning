@@ -97,7 +97,7 @@ We can trivially satisfy the first fusion condition by defining |genRHS| as foll
 The second fusion condition decomposes into two separate conditions:
 \begin{eqnarray*}
 |hL . algS| & = & |algSRHS . fmap hL| \\
-|hL . fwdS| & = & |algNDRHS # fwdRHS . fmap hL|
+|hL . fwdS| & = & |(algNDRHS # fwdRHS) . fmap hL|
 \end{eqnarray*}
 
 The first subcondition is met by taking:
@@ -106,7 +106,7 @@ The first subcondition is met by taking:
 > algSRHS (Get k)    = \ s -> k s s
 > algSRHS (Put s k)  = \ _ -> k s
 
-We establish that the subcondition holds, when we apply both
+Given this defintion we establish that the subcondition holds, when we apply both
 sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
 
 \noindent \mbox{\underline{case |t = Get k|}}
@@ -139,14 +139,96 @@ sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
 < = \ _ -> (\s1 -> fmap (fmap fst) (hNDf (k s1))) s s
 < = {-~  definition of |fmap| -}
 < = \ _ -> (fmap (fmap (fmap fst) . hNDf) k) s
-< = {-~  definition of |algRHS| -}
+< = {-~  definition of |algSRHS| -}
 < = algSRHS (Put s (fmap (fmap (fmap fst) . hNDf) k))
 < = {-~  definition of |fmap| -}
 < = algSRHS (fmap (fmap (fmap fst) . hNDf)) (Put s k))
 < = {-~  definition of |hL| -}
 < = algSRHS (fmap hL (Put s k))
 
-TODO 
+The second subcondition can be split up in two further subconditions:
+\begin{eqnarray*}
+|hL . fwdS . Inl|& = & |algNDRHS . fmap hL| \\
+|hL . fwdS . Inr|& = & |fwdRHS . fmap hL|
+\end{eqnarray*}
+
+For the first of these, we calculate:
+
+<   hL (fwdS (Inl op))
+< = {-~ definition of |fwdS| -}
+<   hL (\s -> Op (fmap ($ s) (Inl op)))
+< = {-~ definition of |fmap| -}
+<   hL (\s -> Op (Inl (fmap ($ s) op)))
+< = {-~ definition of |hL| -}
+<   fmap (fmap (fmap fst) . hNDf)(\s -> Op (Inl (fmap ($ s) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> fmap (fmap fst) (hNDf (Op (Inl (fmap ($ s) op))))
+< = {-~ definition of |hNDf| -}
+<   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) op)))
+
+We split on |op|:
+\noindent \mbox{\underline{case |op = Fail|}}
+<   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) Fail)))
+< = {-~ defintion of |fmap| (twice) -}
+<   \s -> fmap (fmap fst) (algNDf Fail)
+< = {-~ definition of |algNDf| -}
+<   \s -> fmap (fmap fst) (Var [])
+< = {-~ definition of |fmap| (twice) -}
+<   \s -> Var []
+< = {-~ define |algNDRHS Fail = \s -> Var []| -}
+<   algNDRHS Fail
+< = {- definition fo |fmap| -}
+<   algNDRHS (fmap hL fail)
+\noindent \mbox{\underline{case |op = Or p q|}}
+<   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) (Or p q))))
+< = {-~ defintion of |fmap| (twice) -}
+<   \s -> fmap (fmap fst) (algNDf (Or (hNDf (p s)) (hNDf (q s))))
+< = {-~ definition of |algNDf| -}
+<   \s -> fmap (fmap fst) (liftM2 (++) (hNDf (p s)) (hNDf (q s)))
+< = {-~ property of |liftM2 (++)| -}
+<   \s -> liftM2 (++) (fmap (fmap fst) (hNDf (p s))) (fmap (fmap fst) (hNDf (q s)))
+< = {-~ define |algNDRHS (Or p q) = \s -> liftM2 (++) (p s) (q s)| -}
+<   algNDRHS (Or (fmap (fmap fst) . hNDf . p) (fmap (fmap fst) . hNDf . q)
+< = {-~ defintion of |fmap| (twice) -}
+<   algNDRHS (fmap (fmap (fmap (fmap fst) . nHNDf)) (Or p q))
+< = {-~ defintion of |hL| -}
+<   algNDRHS (fmap hL (Or p q))
+
+From this we conclude that the definition of |algNDRHS| should be:
+
+< algNDRHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+< algNDRHS Fail      = \ s -> Var []
+< algNDRHS (Or p q)  = \ s -> liftM2 (++) (p s) (q s)
+
+For the last subcondition, we calculate:
+
+<   hL (fwdS (Inr op))
+< = {-~ definition of |fwdS| -}
+<   hL (\s -> Op (fmap ($ s) (Inr op)))
+< = {-~ definition of |fmap| -}
+<   hL (\s -> Op (Inr (fmap ($ s) op)))
+< = {-~ definition of |hL| -}
+<   fmap (fmap (fmap fst) . hNDf) (\s -> Op (Inr (fmap ($ s) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> fmap (fmap fst) (hNDf (Op (Inr (fmap ($ s) op))))
+< = {-~ definition of |hNDf| -}
+<   \s -> fmap (fmap fst) (fwdNDf (fmap hNDf (fmap ($ s) op)))
+< = {-~ definition of |fwdNDf| -}
+<   \s -> fmap (fmap fst) (Op (fmap hNDf (fmap ($ s) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> Op (fmap (fmap (fmap fst)) (fmap hNDf (fmap ($ s) op)))
+< = {-~ definition of |hL| -}|
+<   \s -> Op (hL (fmap ($ s) op))
+< = {-~ property of |($ s)| -}
+<   \s -> Op (fmap ($ s) (fmap hL op))
+< = {-~ define |fwdRHS op = \s -> Op (fmap ($s) op)| -}
+<   fwdRHS (fmap hL op)
+
+From this we conclude that the definition of |fwdRHS| should be:
+
+< fwdRHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+< fwdRHS op = \s -> Op (fmap ($s) op)
+
 \subsection{Fusing the Left-Hand Side}
 
 TODO
