@@ -296,10 +296,12 @@ definition of the signatures of combined effects.  For instance, we
 can encode programs with both state and nondeterminism as effects
 using the data type |Free (StateF :+: NondetF) a|.  The coproduct also
 has a neutral element |NilF|, representing the empty effect set.
-
+\begin{code}
+data NilF a
+\end{code}
 %if False
 \begin{code}
-data NilF a deriving (Functor)
+  deriving (Functor)
 \end{code}
 %endif
 
