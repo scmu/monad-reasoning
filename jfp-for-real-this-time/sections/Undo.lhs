@@ -67,8 +67,22 @@ In general, we define a type-class |Undo s r| and implement |Undo
 (Int, [Int]) Int| as an instance using the previously defined |plus|
 and |minus|.
 %
-All instances of |Undo s r| satisfy the law |(`minus` x) . (`plus` x)
-= id| for any |x :: r|.
+\begin{spec}
+class Undo s r where
+  plus   :: s -> r -> s
+  minus  :: s -> r -> s
+instance Undo (Int, [Int]) Int where
+  plus (c, sol) r   = (c+1, r:sol)
+  minus (c, sol) r  = (c-1, tail sol)
+\end{spec}
+%
+We have the following law for |Undo|:
+\begin{alignat}{2}
+    &\mbox{\bf plus-minus}:\quad &
+      |(`minus` x) . (`plus` x)| ~=~ & |id| \label{eq:plus-minus} \mbox{~~.}
+      \\
+\end{alignat}
+
 % In general, we define a |modify| function as follows.
 % \begin{code}
 % modfun           :: MState s m => (s -> s) -> m ()
@@ -91,7 +105,7 @@ class Monad m => MModify s r m | m -> s, m -> r where
     restore  :: r -> m ()
 \end{code}
 %
-The two operations |update| and |restore| satisfy the following law.
+The two operations |update| and |restore| satisfy the following law:
 \begin{alignat}{2}
     &\mbox{\bf update-restore}:\quad &
     |update r >> restore r| &= |return ()|~~\mbox{.} \label{eq:update-restore}
@@ -172,7 +186,10 @@ semantics with global-state semantics given by |modify2global|
 coincides with the local-state semantics given by |modify2local|.
 %
 \begin{theorem}\label{thm:modify-local-global}
+Given |Functor f| and |Undo s r|, the equation
 < hGlobalM . local2globalM = hLocalM
+holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
+that do not use the operation |Op (Inl MRestore _ _)|.
 \end{theorem}
 \wenhao{TODO: prove it.}
 
