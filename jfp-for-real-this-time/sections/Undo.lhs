@@ -28,7 +28,7 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, gu
 
 %-------------------------------------------------------------------------------
 \section{Optimisation with Undo}
-\label{sec:undo-semantics}
+\label{sec:undo}
 
 % backtracking in local state
 
@@ -258,10 +258,10 @@ queensM n = loop where
 We have the following program:
 \begin{code}
 queensGlobalM :: Int -> [[Int]]
-queensGlobalM n = hNil $ hGlobalM (local2globalM (queensM n)) (0, [])
+queensGlobalM = hNil . flip hGlobalM (0, []) . local2globalM . queensM
 
 queensLocalM :: Int -> [[Int]]
-queensLocalM n = hNil $ hLocalM (queensM n) (0, [])
+queensLocalM = hNil . flip hLocalM (0, []) . queensM
 \end{code}
 
 % By \Cref{thm:modify-local-global}, we have

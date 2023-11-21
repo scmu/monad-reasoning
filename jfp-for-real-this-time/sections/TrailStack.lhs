@@ -69,9 +69,6 @@ t2 = fmap (\ x -> fmap fst (runhStack () x)) . hGlobal . local2trail
 
 The n-queens example using the trail stack:
 \begin{code}
-queensLocal :: Int -> [[Int]]
-queensLocal = hNil . flip hLocal (0, []) . queens
-
 queensTrail :: Int -> [[Int]]
 queensTrail = hNil . flip (fmap (fmap fst . runhStack ()) . hGlobal . local2trail) (0, []) . queens
 \end{code}
@@ -79,14 +76,13 @@ queensTrail = hNil . flip (fmap (fmap fst . runhStack ()) . hGlobal . local2trai
 The following version which uses |ModifyF| is more efficient.
 
 \begin{code}
-local2trailM :: (Functor f, Undo s r)
+local2trailM :: (Functor f)
              => Free (ModifyF s r :+: NondetF :+: f) a -- local state
              -> Free (ModifyF s r :+: NondetF :+: StackF (Either r ()) () :+: f) a -- global state and stack
 local2trailM = fold Var (alg1 # alg2 # fwd)
   where
     alg1 (MUpdate r k)  = do push (Left r); update r; k
-    alg1 (MRestore r k) = error "no restore here"
-    alg1 (MGet k)       = mget >>= k
+    alg1 oth            = Op . Inl $ oth
     alg2 (Or p q)       = Op . Inr . Inl $ Or (do push (Right ()); p) (do undoTrail; q)
     alg2 Fail           = Op . Inr . Inl $ Fail
     fwd op              = Op . Inr . Inr . Inr $ op
@@ -100,21 +96,33 @@ local2trailM = fold Var (alg1 # alg2 # fwd)
     pop = Op . Inr . Inr . Inl $ Pop return
 \end{code}
 
-We have the following theorem.
+We can combine it with either |hGlobalM| or |hGlobalMu|, giving two
+theorems as follows (with different typeclass conditions).
+
 < hLocal = fmap (fmap fst . runhStack ()) . hGlobalM . local2trailM
+< hLocal = fmap (fmap fst . runhStack ()) . hGlobalMu . local2trailM
 %if False
 \begin{code}
 tM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
-tM = fmap (\ x -> fmap fst (runhStack () x)) . hGlobalM . local2trailM
+tM = fmap (fmap fst . runhStack ()) . hGlobalM . local2trailM
+
+tMu :: (Functor f, MUndo st r, MIM st s)
+    => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
+tMu = fmap (fmap fst . runhStack ()) . hGlobalMu . local2trailM
 \end{code}
 %endif
 
 The n-queens example using the trail stack:
 
 \begin{code}
-queensLocalM :: Int -> [[Int]]
-queensLocalM = hNil . flip hLocalM (0, []) . queensM
-
 queensTrailM :: Int -> [[Int]]
-queensTrailM = hNil . flip (fmap (fmap fst . runhStack ()) . hGlobalM . local2trailM) (0, []) . queensM
+queensTrailM =
+    hNil
+  . flip (fmap (fmap fst . runhStack ()) . hGlobalM . local2trailM) (0, [])
+  . queensM
+queensTrailMu :: Int -> [[Int]]
+queensTrailMu =
+    hNil
+  . flip (fmap (fmap fst . runhStack ()) . hGlobalMu . local2trailM) (0, [])
+  . queensM
 \end{code}

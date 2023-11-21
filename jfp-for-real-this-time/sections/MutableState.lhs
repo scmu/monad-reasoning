@@ -344,7 +344,8 @@ runhStack :: Functor f => b -> Free (StackF e b :+: f) a -> Free f (a, b)
 runhStack b x = runSTT $ liftST (emptyStack b) >>= \ stack -> hStack stack x
 \end{code}
 
-\wenhao{The correctness of |nondet2stack| is not proved.}
+\wenhao{The correctness of |nondet2stack| is not proved. We may need
+to restrict the remaining functor |f|.}
 
 \subsection{Using Mutable State to Simulate Nondeterminism in N-queens}
 \label{sec:n-queens-mut-state}
@@ -375,6 +376,10 @@ queensStack   = hNil
 \subsection{Mutable Undo}
 \label{sec:mutable-undo}
 
+In addition to using a mutable stack to simulate nondeterminism, we
+can also implement the state update and restore in \Cref{sec:undo}
+with mutable states.
+%
 We implement a mutable version of the typeclass |Undo| for which we
 call |MUndo|.
 %
@@ -440,23 +445,23 @@ readQueens array = loop 1
   where
     loop cur end =
       if cur <= end
-      then do x <- readArray array cur;
-              y <- loop (cur+1) end;
-              return (x : y)
+      then do  x <- readArray array cur;
+               y <- loop (cur+1) end;
+               return (x : y)
       else return []
 \end{code}
 
-We have the following handler |hMuModify| which interprets |ModifyF|
+We have the following handler |hModifyMu| which interprets |ModifyF|
 using mutable states.
 %
-Compared to |hModify| which uses the |StateT| monad, |hMuModify| uses
+Compared to |hModify| which uses the |StateT| monad, |hModifyMu| uses
 the |STT| monad.
 
 \begin{code}
-hMuModify  :: (Functor f, MUndo st r, MIM st b)
+hModifyMu  :: (Functor f, MUndo st r, MIM st b)
            => st s -> Free (ModifyF b r :+: f) a
            -> STT s (Free f) a
-hMuModify st = fold gen (alg # fwd)
+hModifyMu st = fold gen (alg # fwd)
   where
     gen x               = return x
     alg (MGet k)        = liftST (mu2imu st) >>= k
@@ -469,17 +474,16 @@ hMuModify st = fold gen (alg # fwd)
 %if False
 % some code for testing
 
-Essentially we only need to prove |hModify1 = hMuModify1|.
+Essentially we only need to prove |hModify1 = hModifyMu1|.
 
 \begin{code}
--- hModify1 :: (Functor f, Undo b r)
---   => Free (ModifyF b r :+: f) a -> b -> Free f a
--- hModify1 x y = fmap fst (runStateT (hModify x) y)
--- 
--- hMuModify1 :: (Functor f, MUndo st r, MIM st b)
---   => Free (ModifyF b r :+: f) a -> b -> Free f a
--- hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
--- hMuModify1 x y = runSTT (liftST (imu2mu y)) >>= \ res -> runSTT ((\ y -> hMuModify y x) res)
+hModify1 :: (Functor f, Undo b r)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hModify1 x y = fmap fst (runStateT (hModify x) y)
+
+hModifyMu1 :: (Functor f, MUndo st r, MIM st b)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hModifyMu1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hModifyMu y x)
 -- ill-typed because of escaping
 
 hGlobalM1 :: (Functor f, Undo b r)
@@ -488,7 +492,7 @@ hGlobalM1 = hModify1 . hNDf . comm2
 
 hGlobalMu1 :: (Functor f, MUndo st r, MIM st b)
            => Free (ModifyF b r :+: NondetF :+: f) a -> (b -> Free f [a])
-hGlobalMu1 = hMuModify1 . hNDf . comm2
+hGlobalMu1 = hModifyMu1 . hNDf . comm2
 \end{code}
 %endif
 
@@ -499,11 +503,17 @@ mutable states.
 hGlobalMu  :: (Functor f, MUndo st r, MIM st b)
            => Free (ModifyF b r :+: NondetF :+: f) a
            -> b -> Free f [a]
-hGlobalMu x initial =
-  runSTT $ liftST (imu2mu initial) >>= \ y -> hMuModify y . hNDf . comm2 $ x
-\end{code}
+hGlobalMu = runhModifyMu . hNDf . comm2
 
-We have the following theorem.
+runhModifyMu  :: (Functor f, MUndo st r, MIM st b)
+             => Free (ModifyF b r :+: f) a -> b -> Free f a
+runhModifyMu x y = runSTT (liftST (imu2mu y) >>= \ y -> hModifyMu y x)
+\end{code}
+% hGlobalMu = runSTT $ liftST (imu2mu initial) >>= \ y -> hModifyMu y . hNDf . comm2 $ x
+
+We have the following theorem connecting |hGlobalMu| and |hGlobalM| in
+\Cref{sec:undo}.
+%
 \begin{theorem} \label{thm:mutable-global}
 For all |x :: Free (ModifyF b r :+: NondetF :+: f) a|, |y :: b|,
 and |st| with instances |MUndo st r|, |MIM st b|, |Undo b r|, we have
@@ -511,53 +521,46 @@ and |st| with instances |MUndo st r|, |MIM st b|, |Undo b r|, we have
 < hGlobalMu x y = hGlobalM x y
 \end{theorem}
 
-Essentially, we only need to prove |hModify1 = hMuModify1|, where
-%
-\begin{code}
-hModify1 :: (Functor f, Undo b r)
-  => Free (ModifyF b r :+: f) a -> b -> Free f a
-hModify1 x y = fmap fst (runStateT (hModify x) y)
+Essentially, we only need to prove
+|runhModifyMu y x = (fmap (fmap fst) . runStateT . hModify) y x|.
 
-hMuModify1 :: (Functor f, MUndo st r, MIM st b)
-  => Free (ModifyF b r :+: f) a -> b -> Free f a
-hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
-\end{code}
+\wenhao{It is not clear to me how to prove it.}
 
-\wenhao{It is not clear to me how to prove |hModify1 = hMuModify1|.}
-
-\wenhao{We probably need to restrict the remaining functor |f| in
-\Cref{thm:mutable-global}. This is because |STT| does not work well
-with monads which contain multiple answers.  For example, this theorem
-does not hold obvisouly if |f| contains another |NondetF|.
+\wenhao{We probably need to restrict the remaining functor |f|. This
+is because |STT| does not work well with monads which contain multiple
+answers.  For example, this equation does not hold obvisouly if |f|
+contains another |NondetF|.
 %
 One safe solution is to restrict |f| to |NilF|. However, this would
-prevent us from combining |hGlobalMu| with trail stacks.
-}
+prevent us from combining |hGlobalMu| with trail stacks.  }
 
 \wenhao{Actually, I also doubt that the theorem and proof of trail
-stack are not correct, since there is no restriction of the remaining
-functor. I have already found one unsound step in the proof of
-|local2trail| because of the misuse of Law~\ref{eq:runst-homomorphism}.
-Things become much more involved with mutable states. I wonder whether
-we can treat all results relevant to mutable states as extensions,
-i.e., no proofs.}
+stack (as well as |nondet2stack|) are not correct, since there is no
+restriction of the remaining functor. I have already found one unsound
+step in the proof of |local2trail| because of the misuse of
+Law~\ref{eq:runst-homomorphism}.  Things become much more involved
+with mutable states. I wonder whether we can treat all results
+relevant to mutable states as extensions, i.e., no proofs.}
 
 \paragraph*{N-queens with mutable states}\
 %
 We have the following programs.
 \begin{code}
 queensGlobalMu :: Int -> [[Int]]
-queensGlobalMu n = hNil $ hGlobalMu (local2globalM (queensM n)) (0, [])
+queensGlobalMu = hNil . flip hGlobalMu (0, []) . local2globalM . queensM
 \end{code}
 
-
+We can further combine it with the |nondet2stack| defined in
+\Cref{sec:sim-nondet-with-mut-state}.
 \begin{code}
-mytest :: ST s (STArray s Int Int)
-mytest = do
-  arr <- newListArray (1, 10) [1,2,3]
-  lis <- getElems arr
-  return arr
+queensGlobalMuStack :: Int -> [[Int]]
+queensGlobalMuStack =
+    hNil
+  . flip runhModifyMu (0, [])
+  . runNDSK . comm2
+  . local2globalM . queensM
 \end{code}
+
 
 %include TrailStack.lhs
 
