@@ -201,7 +201,7 @@ We split on |op|:
 <   \s -> fmap (fmap fst) (algNDf (Or (hNDf (p s)) (hNDf (q s))))
 < = {-~ definition of |algNDf| -}
 <   \s -> fmap (fmap fst) (liftM2 (++) (hNDf (p s)) (hNDf (q s)))
-< = {-~ property of |liftM2 (++)| -}
+< = {-~ Lemma~\ref{eq:liftM2-fst-comm} -}
 <   \s -> liftM2 (++) (fmap (fmap fst) (hNDf (p s))) (fmap (fmap fst) (hNDf (q s)))
 < = {-~ define |algNDRHS (Or p q) = \s -> liftM2 (++) (p s) (q s)| -}
 <   algNDRHS (Or (fmap (fmap fst) . hNDf . p) (fmap (fmap fst) . hNDf . q)
@@ -313,9 +313,97 @@ Let's consider the first subconditions. It has two cases:
 < = {-~ definition of |fmap| -}
 <   fmap (fmap fst) (hState1 (Op (Inl (Get (hNDf . comm2 . k)))))
 < = {-~ definition of |hState1| -}
-<   fmap (fmap fst) (\s -> (hNDf . comm2 . k) s s)
+<   fmap (fmap fst) (\s -> (hState1 . hNDf . comm2 . k) s s)
+< = {-~ definition of |fmap| -}
+<   (\s -> fmap fst ((hState1 . hNDf . comm2 . k) s s))
+< = {-~ definition of |fmap| -}
+<   (\s -> ((fmap (fmap fst) . hState1 . hNDf . comm2 . k) s s))
+< = {-~ define |algSLHS (Get k) = \s -> k s s| -}
+<   algSLHS (Get (hGLobal . k))
+< = {-~ definition of |fmap| -}
+<   algSLHS (fmap hGlobal (Get k))
 
-TODO
+\noindent \mbox{\underline{case |op = Put s k|}}
+
+<   hGlobal (alg (Inl (Put s k)))
+< = {-~ definition of |alg| -}
+<   hGlobal (putR s >> k)
+< = {-~ definition of |putR| -}
+<   hGlobal ((get >>= \t -> put s `mplus` side (put t)) >> k)
+< = {-~ definitions of |side|, |get|, |put|, |mplus|, |(>>=)| -}
+<   hGlobal (Op (Inl (Get (\t -> Op (Inr (Inl (Or  (Op (Inl (Put s k))) 
+<                                                  (Op (Inl (Put t (Op (Inr (Inl Fail)))))))))))))
+< = {-~ definition of |hGlobal| -}
+<   fmap (fmap fst) (hState1 (hNDf (comm2
+<     (Op (Inl (Get (\t -> Op (Inr (Inl (Or  (Op (Inl (Put s k))) 
+<                                            (Op (Inl (Put t (Op Inr ((Inl Fail))))))))))))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hState1 (hNDf (
+<     (Op (Inr (Inl (Get (\t -> Op (Inl (Or  (Op (Inr (Inl (Put s (comm2 k))))) 
+<                                            (Op (Inr (Inl (Put t (Op (Inl Fail))))))))))))))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hState1 (
+<     (Op (Inl (Get (\t -> liftM2 (++)  (Op (Inl (Put s (hNDf (comm2 k))))) 
+<                                       (Op (Inl (Put t (Var []))))))))))
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst)
+<     (\t -> hState1 (liftM2 (++)  (Op (Inl (Put s (hNDf (comm2 k))))) 
+<                                  (Op (Inl (Put t (Var []))))) t)
+< = {-~ definition of |liftM2| -}
+<   fmap (fmap fst)
+<     (\t -> hState1 (do x <- Op (Inl (Put s (hNDf (comm2 k)))) 
+<                        y <- Op (Inl (Put t (Var [])))
+<                        Var (x ++ y)
+<                    ) t)
+< = {-~ TODO -}
+<   fmap (fmap fst)
+<     (\t -> do (x,t1) <- hState1 (Op (Inl (Put s (hNDf (comm2 k))))) t 
+<               (y,t2) <- hState1 (Op (Inl (Put t (Var [])))) t1
+<               hState1 (Var (x ++ y)) t2
+<     )
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst)
+<     (\t -> do (x,_) <- hState1 (hNDf (comm2 k)) s 
+<               (y,t2) <- Var ([],t)
+<               Var (x ++ y, t2)
+<     )
+< = {-~ monad law -}
+<   fmap (fmap fst)
+<     (\t -> do (x,_) <- hState1 (hNDf (comm2 k)) s 
+<               Var (x ++ [], t)
+<     )
+< = {-~ right unit of |(++)| -}
+<   fmap (fmap fst)
+<     (\t -> do (x,_) <- hState1 (hNDf (comm2 k)) s 
+<               Var (x, t)
+<     )
+< = {-~ definition of |fmap fst| -}
+<   fmap (fmap fst)
+<     (\t -> do x <- fmap fst (hState1 (hNDf (comm2 k)) s)
+<               Var (x, t)
+<     )
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst)
+<     (\t -> do x <- (fmap (fmap fst) (hState1 (hNDf (comm2 k)))) s
+<               Var (x, t)
+<     )
+< = {-~ definition of |fmap (fmap fst)| -}
+<   \_ -> do x <- (fmap (fmap fst) (hState1 (hNDf (comm2 k)))) s
+<            Var x
+< = {-~ monad law -}
+<   \_ -> (fmap (fmap fst) (hState1 (hNDf (comm2 k)))) s
+< = {-~ definition of |hGlobal| -}
+<   \_ -> (hGlobal k) s
+< = {-~ define |algSLHS (Put s k) = \_ -> k s| -}
+<   algSLHS (Put s (hGlobal k)) 
+< = {-~ definition of |fmap| -}
+<   algSLHS (fmap hGlobal (Put s)) 
+
+We conclude that this fusion subcondition holds provided that:
+
+< algSLHS :: Functor f => StateF s (s -> Free f [a]) -> (s -> Free f [a])
+< algSLHS (Get k)    =  \s -> k s s
+< algSLHS (Put s k)  =  \_ -> k s 
 
 Let's consider the second subcondition. It has also two cases:
 
@@ -339,8 +427,66 @@ Let's consider the second subcondition. It has also two cases:
 <  algNDRHS Fail 
 < = {-~ definition of |fmap| -}
 <  algNDRHS (fmap hGlobal Fail)
+\noindent \mbox{\underline{case |op = Or p q|}}
+<   hGlobal (alg (Inr (Inl (Or p q))))
+< = {-~ definition of |alg| -}
+<   hGlobal (Op (Inr (Inl (Or p q))))
+< = {-~ definition of |hGlobal| -}
+<   fmap (fmap fst) (hState1 (hNDf (comm2 (Op (Inr (Inl (Or p q)))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inl (fmap comm2 (Or p q))))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hState1 (hNDf (Op (Inl (Or (comm2 p) (comm2 q))))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hState1 (liftM2 (++) (hNDf (comm2 p)) (hNDf (comm2 q))))
+< = {-~ definition of |liftM2| -}
+<   fmap (fmap fst) (hState1 (do  x <- hNDf (comm2 p)
+<                                 y <- hNDf (comm2 q)
+<                                 return (x ++ y)))
+< = {-~ |hState1| lemma -}
+<   fmap (fmap fst) (\s0-> (do  (x, s1) <- hState1 (hNDf (comm2 p)) s0
+<                               (y, s2) <- hState1 (hNDf (comm2 q)) s1
+<                               hState1 (return (x ++ y)) s2))
+< = {-~ definition of |hState1| -}
+<   fmap (fmap fst) (\s0-> (do  (x, s1) <- hState1 (hNDf (comm2 p)) s0
+<                               (y, s2) <- hState1 (hNDf (comm2 q)) s1
+<                               Var (x ++ y, s2)))
+< = {-~ Lemma \ref{lemma:dist-hState1} -}
+<   fmap (fmap fst) (\s0-> (do  (x, s1) <- do {(x,_) <- hState1 (hNDf (comm2 p)) s0; return (x, s0)}
+<                               (y, s2) <- do {(y,_) <- hState1 (hNDf (comm2 q)) s1; return (x, s1)}
+<                               Var (x ++ y, s2)))
+< = {-~ monad laws -}
+<   fmap (fmap fst) (\s0-> (do  (x,_) <- hState1 (hNDf (comm2 p)) s0
+<                               (y,_) <- hState1 (hNDf (comm2 q)) s0
+<                               Var (x ++ y, s0)))
+< = {-~ definition of |fmap| (twice) and |fst| -}
+<   \s0-> (do  (x,_) <- hState1 (hNDf (comm2 p)) s0
+<              (y,_) <- hState1 (hNDf (comm2 q)) s0
+<              Var (x ++ y))
+< = {-~ definition of |fmap|, |fst| and monad laws -}
+<   \s0-> (do  x <- fmap fst (hState1 (hNDf (comm2 p)) s0)
+<              y <- fmap fst (hState1 (hNDf (comm2 q)) s0)
+<              Var (x ++ y))
+< = {-~ definition of |fmap| -}
+<   \s0-> (do  x <- fmap (fmap fst) (hState1 (hNDf (comm2 p))) s0
+<              y <- fmap (fmap fst) (hState1 (hNDf (comm2 q))) s0
+<              Var (x ++ y))
+< = {-~ definition of |hGlobal| -}
+<   \s0-> (do  x <- hGlobal p s0
+<              y <- hGlobal q s0
+<              Var (x ++ y))
+< = {-~ definition of |liftM2| -}
+<   \s0-> liftM2 (++) (hGlobal p s0) (hGlobal q s0)
+< = {-~ define |algNDLHS (Or p q) = \s -> liftM2 (++) (p s) (q s)| -}
+<   algNDLHS (Or (hGlobal p) (hGlobal q))
+> = {-~ definition of |fmap| -}
+<   algNDLHS (fmap hGobal (Or p q))
 
-TODO
+We conclude that this fusion subcondition holds provided that:
+
+< algNDLHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+< algNDLHS Fail      = \s -> Var []
+< algNDLHS (Or p q)  = \s -> liftM2 (++) (p s) (q s)
 
 Finally, the last subcondition:
 <   hGlobal (alg (Inr (Inr op)))
@@ -394,7 +540,105 @@ We observe that the following equations hold trivially.
 
 Therefore, the main theorem holds.
 
-\paragraph*{More Stuff}
+\subsection{Auxiliary Lemmas}
+
+The derivations above made use of several auxliary lemmas.
+We prove them here.
+
+\begin{lemma} \label{eq:liftM2-fst-comm}~
+< fmap (fmap fst) (liftM2 (++) p q) = liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
+\end{lemma}
+\begin{proof}~
+
+<    fmap (fmap fst) (liftM2 (++) p q)
+< = {-~  definition of |liftM2| -}
+<    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
+< = {-~  derived property for monad: |fmap f (m >>= k) = m >>= fmap f . k| -}
+<    do {x <- p; y <- q; fmap (fmap fst) (return (x ++ y))}
+< = {-~  definition of |fmap| -}
+<    do {x <- p; y <- q; return (fmap fst (x ++ y))}
+< = {-~  naturality of |(++)| -}
+<    do {x <- p; y <- q; return ((fmap fst x) ++ (fmap fst y))}
+< = {-~  monad left unit law (twice) -}
+<    do {x <- p; x' <- return (fmap fst x); y <- q; y' <- return (fmap fst y) return (x' ++ y')}
+< = {-~  definition of |fmap| -}
+<    do {x <- fmap (fmap fst) p; y <- fmap (fmap fst) q; return (x ++ y)}
+< = {-~  definition of |liftM2| -}
+<    liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
+\end{proof}
+
+\begin{lemma}[Distributivity of |hState1|] \label{lemma:dist-hState1} \ \\
+< hState1 (p >>= k) s = hState1 p s >>= \(x,s') -> hState1 (k x) s'
+\end{lemma}
+
+\begin{proof}
+The proof proceeds by induction on |p|.
+
+\noindent \mbox{\underline{case |p = Var x|}}
+
+<    hState1 (Var x >>= k) s
+< = {-~  monad law  -}
+<    hState1 (k x) s
+< = {-~  monad law  -}
+<    return (x, s) >>= \(x,s') -> hState1 (k x) s'
+< = {-~  definition of |hState1|  -}
+<    hState1 (Var x) s >>= \(x,s') -> hState1 (k x) s'
+
+\noindent \mbox{\underline{case |p = Op (Inl (Get p))|}}
+
+<    hState1 (Op (Inl (Get p)) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (Op (fmap (>>= k) (Inl (Get p)))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hState1 (Op (Inl (fmap (>>= k) (Get p)))) s
+< = {-~  definition of |fmap| for |Get|  -}
+<    hState1 (Op (Inl (Get (\x -> p s >>= k)))) s
+< = {-~  definition of |hState1|  -}
+<    hState1 (p s >>= k) s
+< = {-~  induction hypothesis  -}
+<    hState1 (p s) s >>= \(x,s') -> hState1 (k x) s'
+< = {-~  definition of |hState1|  -}
+<    hState1 (Op (Inl (Get p))) s >>= \(x,s') -> hState1 (k x) s'
+
+\noindent \mbox{\underline{case |p = Op (Inl (Put t p))|}}
+
+<    hState1 (Op (Inl (Put t p)) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (Op (fmap (>>= k) (Inl (Put t p)))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hState1 (Op (Inl (fmap (>>= k) (Put t p)))) s
+< = {-~  definition of |fmap| for |Put|  -}
+<    hState1 (Op (Inl (Put t (p >>= k)))) s
+< = {-~  definition of |hState1|  -}
+<    hState1 (p >>= k) t
+< = {-~  induction hypothesis  -}
+<    hState1 p t >>= \(x, s') -> hState1 (k x) s'
+< = {-~  definition of |hState1|  -}
+<    hState1 (Op (Inl (Put t p))) s >>= \(x,s') -> hState1 (k x) s'
+
+\noindent \mbox{\underline{case |p = Op (Inr y)|}}
+
+<    hState1 (Op (Inr y) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hState1 (Op (fmap (>>= k) (Inr y))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hState1 (Op (Inr (fmap (>>= k) y))) s
+< = {-~  definition of |hState1|  -}
+<    Op (fmap (\x -> hState1 x s) (fmap (>>= k) y))
+< = {-~  |fmap| fusion  -}
+<    Op (fmap ((\x -> hState1 (x >>= k) s)) y)
+< = {-~  induction hypothesis  -}
+<    Op (fmap (\x -> hState1 x s >>= \(x',s') -> hState1 (k x) s') y)
+< = {-~  |fmap| fission -}
+<    Op (fmap (\x -> x >>= \(x',s') -> hState1 (k x) s') (fmap (\x -> hState1 x s) y))
+< = {-~  definition of |(>>=)| -} 
+<    Op ( (fmap (\x -> hState1 x s) y)) >>= \(x',s') -> hState1 (k x) s'
+< = {-~  definition of |hState1|  -}
+<    Op (Inr y) s >>= \(x',s') -> hState1 (k x) s'
+
+\end{proof}
+
+
 For the left hand side, we can also expand the definition of |local2global| and use the fold fusion law (Law (\ref{eq:functor-composition})):
 <    hGlobal . local2global
 < = {-~  definition of |local2global|  -}
@@ -631,23 +875,6 @@ We do a case analysis on |t|.
 % <    (f . (\ k -> k s)) t
 % \end{proof}
 
-\begin{lemma} \label{eq:liftM2-fst-comm}~
-< fmap (fmap fst) (liftM2 (++) p q) = liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
-\end{lemma}
-\begin{proof}~
-
-<    fmap (fmap fst) (liftM2 (++) p q)
-< = {-~  definition of |liftM2| -}
-<    fmap (fmap fst) (do {x <- p; y <- q; return (x ++ y)})
-< = {-~  derived property for monad: |fmap f (m >>= k) = m >>= fmap f . k| -}
-<    do {x <- p; y <- q; fmap (fmap fst) (return (x ++ y))}
-< = {-~  definition of |fmap| -}
-<    do {x <- p; y <- q; return ((fmap fst x) ++ (fmap fst y))}
-< = {-~  reformulation -}
-<    do {x <- fmap (fmap fst) p; y <- fmap (fmap fst) q; return (x ++ y)}
-< = {-~  definition of |liftM2| -}
-<    liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)
-\end{proof}
 
 % no longer necessary
 % \begin{lemma}[Fusion of |hL'|]\label{eq:hl-fusion}~
@@ -937,74 +1164,6 @@ Thus, |hLocal . local2global = hLocal . identity = hLocal|.
 \end{proof}
 %endif
 
-\begin{lemma}[Distributivity of |hState1|] \label{lemma:dist-hState1}
-< hState1 (p >>= k) s = hState1 p s >>= hState1 . k
-\end{lemma}
-
-\begin{proof}
-\noindent \mbox{\underline{case |p = Var x|}}
-
-<    hState1 (Var x >>= k) s
-< = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (k x) s
-< = {-~  \todo{}  -}
-<    hState1 (k (x, s))
-< = {-~  reformulation  -}
-<    Var (x, s) >>= hState1 . k
-< = {-~  definition of |hState1|  -}
-<    hState1 (Var x) s >>= hState1 . k
-
-\noindent \mbox{\underline{case |p = Op (Inl (Get p))|}}
-
-<    hState1 (Op (Inl (Get p)) >>= k) s
-< = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (Op (fmap (>>= k) (Inl (Get p)))) s
-< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
-<    hState1 (Op (Inl (fmap (>>= k) (Get p)))) s
-< = {-~  definition of |fmap| for |Get|  -}
-<    hState1 (Op (Inl (Get (>>= k . p)))) s
-< = {-~  definition of |hState1|  -}
-<    hState1 (p s >>= k) s
-< = {-~  induction hypothesis  -}
-<    hState1 (p s) s >>= hState1 . k
-< = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inl (Get p))) s >>= hState1 . k
-
-\noindent \mbox{\underline{case |p = Op (Inl (Put t p))|}}
-
-<    hState1 (Op (Inl (Put t p)) >>= k) s
-< = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (Op (fmap (>>= k) (Inl (Put t p)))) s
-< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
-<    hState1 (Op (Inl (fmap (>>= k) (Put t p)))) s
-< = {-~  definition of |fmap| for |Put|  -}
-<    hState1 (Op (Inl (Put t (p >>= k)))) s
-< = {-~  definition of |hState1|  -}
-<    hState1 (p >>= k) t
-< = {-~  induction hypothesis  -}
-<    hState1 p t >>= hState1 . k
-< = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inl (Put t p))) s >>= hState1 . k
-
-\noindent \mbox{\underline{case |p = Op (Inr y)|}}
-
-<    hState1 (Op (Inr y) >>= k) s
-< = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (Op (fmap (>>= k) (Inr y))) s
-< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
-<    hState1 (Op (Inr (fmap (>>= k) y))) s
-< = {-~  definition of |hState1|  -}
-<    Op (fmap (\x -> hState1 x s) (fmap (>>= k) y))
-< = {-~  Law (\ref{eq:functor-composition}): functor composition  -}
-<    Op (fmap ((\x -> hState1 (x >>= k) s)) y)
-< = {-~  induction hypothesis  -}
-<    Op (fmap (\x -> hState1 x s >>= hState1 . k) y)
-< = {-~  \todo{}  -}
-<    Op (fmap (\x -> hState1 x s) y) >>= hState1 . k
-< = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inr y)) s >>= hState1 . k
-
-\end{proof}
 
 \begin{lemma}[State is Restored] \label{lemma:state-restore}
 For all |t :: Free (NondetF :+: StateF s :+: f) a|
