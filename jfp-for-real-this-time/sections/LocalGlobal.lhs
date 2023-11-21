@@ -647,6 +647,7 @@ side-effects of |m| in |side m|, we also have the following:
 \end{equation*}
 
 % %-------------------------------------------------------------------------------
+%if False
 % \subsection{The N-Queens Puzzle with Local or Global State}
 % \label{sec:n-queens-global}
 % \wenhao{paragraph or subsubsection?}
@@ -656,16 +657,17 @@ side-effects of |m| in |side m|, we also have the following:
 % It runs in the local-state semantics because every branch maintains its own copy
 % of the state and has no influence on other branches.
 % The function |queensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
-% \begin{code}
-% queensLocal :: Int -> [[Int]]
-% queensLocal = hNil . flip hLocal (0, []) . queens
-% \end{code}
+\begin{code}
+queensLocal :: Int -> [[Int]]
+queensLocal = hNil . flip hLocal (0, []) . queens
+\end{code}
 % % For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
 %
 % Using the simulation function |local2global|, we can also have a function |queensGlobal|
 % which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
-% \begin{code}
-% queensGlobal :: Int -> [[Int]]
-% queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
-% \end{code}
+\begin{code}
+queensGlobal :: Int -> [[Int]]
+queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
+\end{code}
 % These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
+%endif

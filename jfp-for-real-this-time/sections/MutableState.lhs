@@ -15,6 +15,7 @@ import Control.Monad.ST
 import Control.Monad.ST.Trans (STT, runSTT)
 import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
+import Debug.Trace as DT
 
 import Background
 import Overview
@@ -43,9 +44,9 @@ It is easy to show that a mutable state handler can be defined in
 Haskell.
 We use a stack to implement mutable states.
 \begin{code}
-data Stack s b a = Stack {   stack     ::  STRef s   (STArray s Index a),
-                             size      ::  STRef s   Index,
-                             results   ::  STRef s   b }
+data Stack s b a = Stack {   stack    ::  STRef s   (STArray s Index a),
+                             top      ::  STRef s   Index,
+                             results  ::  STRef s   b }
 
 type Index = Int
 \end{code}
@@ -69,10 +70,10 @@ Figure \ref{fig:grow-empty} defines a helper function to create an empty stack.
 emptyStack :: b -> ST s (Stack s b a)
 emptyStack results = do
     stack        <- newArray_ (1, 1) -- start from 1
-    sizeRef      <- newSTRef 0
+    topRef       <- newSTRef 1
     stackRef     <- newSTRef stack
     resultsRef   <- newSTRef results
-    return (Stack stackRef sizeRef resultsRef)
+    return (Stack stackRef topRef resultsRef)
 \end{code}
 
 % \caption{Empty stack.}
@@ -101,16 +102,16 @@ Figure \ref{fig:pushstack-popstack} shows how to push to and pop from a stack.
 The |pushStack| uses the following |safeWriteArray| function which
 doubles the size of array when there is not enough space.
 \begin{code}
-safeWriteArray arrayRef size x =
+safeWriteArray arrayRef index x =
   do
     array       <- readSTRef arrayRef
     (_, space)  <- getBounds array
-    if size < space
-    then writeArray array size x
+    if index <= space
+    then writeArray array index x
     else do
         elems        <- getElems array
         array'       <- newListArray (1, space * 2 + 1) elems
-        writeArray  array' size x
+        writeArray  array' index x
         writeSTRef  arrayRef array'
 \end{code}
 
@@ -136,12 +137,12 @@ safeWriteArray arrayRef size x =
 % \end{code}
 \begin{code}
 pushStack :: a -> Stack s b a -> ST s ()
-pushStack x (Stack stackRef sizeRef resRef) =
+pushStack x (Stack stackRef topRef resRef) =
   do
-    size        <- readSTRef sizeRef
+    top         <- readSTRef topRef
     res         <- readSTRef resRef
-    writeSTRef sizeRef (size + 1)
-    safeWriteArray stackRef size x
+    writeSTRef topRef (top + 1)
+    safeWriteArray stackRef top x
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:pushstack}
@@ -149,15 +150,15 @@ pushStack x (Stack stackRef sizeRef resRef) =
 \begin{subfigure}[t]{0.48\linewidth}
 \begin{code}
 popStack :: Stack s b a -> ST s (Maybe a)
-popStack (Stack stackRef sizeRef _) =
+popStack (Stack stackRef topRef _) =
   do
     stack  <- readSTRef stackRef
-    size   <- readSTRef sizeRef
-    if size == 0
+    top    <- readSTRef topRef
+    if top == 1
     then return Nothing
     else do
-        writeSTRef sizeRef (size - 1)
-        Just <$> readArray stack (size - 1)
+        writeSTRef topRef (top - 1)
+        Just <$> readArray stack (top - 1)
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:popstack}
@@ -343,7 +344,8 @@ runhStack :: Functor f => b -> Free (StackF e b :+: f) a -> Free f (a, b)
 runhStack b x = runSTT $ liftST (emptyStack b) >>= \ stack -> hStack stack x
 \end{code}
 
-\wenhao{The correctness of |nondet2stack| is not proved.}
+\wenhao{The correctness of |nondet2stack| is not proved. We may need
+to restrict the remaining functor |f|.}
 
 \subsection{Using Mutable State to Simulate Nondeterminism in N-queens}
 \label{sec:n-queens-mut-state}
@@ -374,6 +376,10 @@ queensStack   = hNil
 \subsection{Mutable Undo}
 \label{sec:mutable-undo}
 
+In addition to using a mutable stack to simulate nondeterminism, we
+can also implement the state update and restore in \Cref{sec:undo}
+with mutable states.
+%
 We implement a mutable version of the typeclass |Undo| for which we
 call |MUndo|.
 %
@@ -426,26 +432,36 @@ instance MIM MQueens IQueens where
   mu2imu (MQueens colRef solRef) = do
     x    <- readSTRef colRef
     arr  <- readSTRef solRef
-    y    <- getElems arr
-    return (x, y)
+    y    <- readQueens arr x
+    return (x, reverse y)
   imu2mu (x, y) = do
     colRef  <- newSTRef x
-    arr     <- newListArray (1, 1 + length y) y
+    arr     <- newListArray (1, length y) (reverse y)
     solRef  <- newSTRef arr
     return (MQueens colRef solRef)
+
+readQueens :: STArray s Index Int -> Int -> ST s [Int]
+readQueens array = loop 1
+  where
+    loop cur end =
+      if cur <= end
+      then do  x <- readArray array cur;
+               y <- loop (cur+1) end;
+               return (x : y)
+      else return []
 \end{code}
 
-We have the following handler |hMuModify| which interprets |ModifyF|
+We have the following handler |hModifyMu| which interprets |ModifyF|
 using mutable states.
 %
-Compared to |hModify| which uses the |StateT| monad, |hMuModify| uses
+Compared to |hModify| which uses the |StateT| monad, |hModifyMu| uses
 the |STT| monad.
 
 \begin{code}
-hMuModify  :: (Functor f, MUndo st r, MIM st b)
+hModifyMu  :: (Functor f, MUndo st r, MIM st b)
            => st s -> Free (ModifyF b r :+: f) a
            -> STT s (Free f) a
-hMuModify st = fold gen (alg # fwd)
+hModifyMu st = fold gen (alg # fwd)
   where
     gen x               = return x
     alg (MGet k)        = liftST (mu2imu st) >>= k
@@ -458,17 +474,16 @@ hMuModify st = fold gen (alg # fwd)
 %if False
 % some code for testing
 
-Essentially we only need to prove |hModify1 = hMuModify1|.
+Essentially we only need to prove |hModify1 = hModifyMu1|.
 
 \begin{code}
--- hModify1 :: (Functor f, Undo b r)
---   => Free (ModifyF b r :+: f) a -> b -> Free f a
--- hModify1 x y = fmap fst (runStateT (hModify x) y)
--- 
--- hMuModify1 :: (Functor f, MUndo st r, MIM st b)
---   => Free (ModifyF b r :+: f) a -> b -> Free f a
--- hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
--- hMuModify1 x y = runSTT (liftST (imu2mu y)) >>= \ res -> runSTT ((\ y -> hMuModify y x) res)
+hModify1 :: (Functor f, Undo b r)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hModify1 x y = fmap fst (runStateT (hModify x) y)
+
+hModifyMu1 :: (Functor f, MUndo st r, MIM st b)
+  => Free (ModifyF b r :+: f) a -> b -> Free f a
+hModifyMu1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hModifyMu y x)
 -- ill-typed because of escaping
 
 hGlobalM1 :: (Functor f, Undo b r)
@@ -477,7 +492,7 @@ hGlobalM1 = hModify1 . hNDf . comm2
 
 hGlobalMu1 :: (Functor f, MUndo st r, MIM st b)
            => Free (ModifyF b r :+: NondetF :+: f) a -> (b -> Free f [a])
-hGlobalMu1 = hMuModify1 . hNDf . comm2
+hGlobalMu1 = hModifyMu1 . hNDf . comm2
 \end{code}
 %endif
 
@@ -488,11 +503,17 @@ mutable states.
 hGlobalMu  :: (Functor f, MUndo st r, MIM st b)
            => Free (ModifyF b r :+: NondetF :+: f) a
            -> b -> Free f [a]
-hGlobalMu x initial =
-  runSTT $ liftST (imu2mu initial) >>= \ y -> hMuModify y . hNDf . comm2 $ x
-\end{code}
+hGlobalMu = runhModifyMu . hNDf . comm2
 
-We have the following theorem.
+runhModifyMu  :: (Functor f, MUndo st r, MIM st b)
+             => Free (ModifyF b r :+: f) a -> b -> Free f a
+runhModifyMu x y = runSTT (liftST (imu2mu y) >>= \ y -> hModifyMu y x)
+\end{code}
+% hGlobalMu = runSTT $ liftST (imu2mu initial) >>= \ y -> hModifyMu y . hNDf . comm2 $ x
+
+We have the following theorem connecting |hGlobalMu| and |hGlobalM| in
+\Cref{sec:undo}.
+%
 \begin{theorem} \label{thm:mutable-global}
 For all |x :: Free (ModifyF b r :+: NondetF :+: f) a|, |y :: b|,
 and |st| with instances |MUndo st r|, |MIM st b|, |Undo b r|, we have
@@ -500,44 +521,46 @@ and |st| with instances |MUndo st r|, |MIM st b|, |Undo b r|, we have
 < hGlobalMu x y = hGlobalM x y
 \end{theorem}
 
-Essentially, we only need to prove |hModify1 = hMuModify1|, where
-%
-\begin{code}
-hModify1 :: (Functor f, Undo b r)
-  => Free (ModifyF b r :+: f) a -> b -> Free f a
-hModify1 x y = fmap fst (runStateT (hModify x) y)
+Essentially, we only need to prove
+|runhModifyMu y x = (fmap (fmap fst) . runStateT . hModify) y x|.
 
-hMuModify1 :: (Functor f, MUndo st r, MIM st b)
-  => Free (ModifyF b r :+: f) a -> b -> Free f a
-hMuModify1 x y = runSTT (liftST (imu2mu y) >>= \ y -> hMuModify y x)
-\end{code}
+\wenhao{It is not clear to me how to prove it.}
 
-\wenhao{It is not clear to me how to prove |hModify1 = hMuModify1|.}
-
-\wenhao{We probably need to restrict the remaining functor |f| in
-\Cref{thm:mutable-global}. This is because |STT| does not work well
-with monads which contain multiple answers.  For example, this theorem
-does not hold obvisouly if |f| contains another |NondetF|.
+\wenhao{We probably need to restrict the remaining functor |f|. This
+is because |STT| does not work well with monads which contain multiple
+answers.  For example, this equation does not hold obvisouly if |f|
+contains another |NondetF|.
 %
 One safe solution is to restrict |f| to |NilF|. However, this would
-prevent us from combining |hGlobalMu| with trail stacks.
-}
+prevent us from combining |hGlobalMu| with trail stacks.  }
 
 \wenhao{Actually, I also doubt that the theorem and proof of trail
-stack are not correct, since there is no restriction of the remaining
-functor. I have already found one unsound step in the proof of
-|local2trail| because of the misuse of Law~\ref{eq:runst-homomorphism}.
-Things become much more involved with mutable states. I wonder whether
-we can treat all results relevant to mutable states as extensions,
-i.e., no proofs.}
+stack (as well as |nondet2stack|) are not correct, since there is no
+restriction of the remaining functor. I have already found one unsound
+step in the proof of |local2trail| because of the misuse of
+Law~\ref{eq:runst-homomorphism}.  Things become much more involved
+with mutable states. I wonder whether we can treat all results
+relevant to mutable states as extensions, i.e., no proofs.}
 
 \paragraph*{N-queens with mutable states}\
 %
 We have the following programs.
 \begin{code}
-queensMu :: Int -> [[Int]]
-queensMu n = hNil $ hGlobalMu (local2globalM (queensM n)) (0, [])
+queensGlobalMu :: Int -> [[Int]]
+queensGlobalMu = hNil . flip hGlobalMu (0, []) . local2globalM . queensM
 \end{code}
+
+We can further combine it with the |nondet2stack| defined in
+\Cref{sec:sim-nondet-with-mut-state}.
+\begin{code}
+queensGlobalMuStack :: Int -> [[Int]]
+queensGlobalMuStack =
+    hNil
+  . flip runhModifyMu (0, [])
+  . runNDSK . comm2
+  . local2globalM . queensM
+\end{code}
+
 
 %include TrailStack.lhs
 

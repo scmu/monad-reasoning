@@ -15,10 +15,11 @@ import Control.Monad.ST
 import Control.Monad.ST.Trans (STT, runSTT)
 import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
+import Debug.Trace as DT
 
 import Background
 import Overview
-import LocalGlobal (local2global, hLocal, comm2)
+import LocalGlobal (local2global, hLocal, comm2, side)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, guard)
 
@@ -27,7 +28,7 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, gu
 
 %-------------------------------------------------------------------------------
 \section{Optimisation with Undo}
-\label{sec:undo-semantics}
+\label{sec:undo}
 
 % backtracking in local state
 
@@ -162,7 +163,7 @@ local2globalM  :: (Functor f, Undo s r)
                -> Free (ModifyF s r :+: NondetF :+: f) a
 local2globalM  = fold Var alg
   where
-    alg (Inl (MUpdate r k)) = (update r `mplus` restore r) >> k
+    alg (Inl (MUpdate r k)) = (update r `mplus` side (restore r)) >> k
     alg p               = Op p
 \end{code}
 
@@ -256,8 +257,11 @@ queensM n = loop where
 
 We have the following program:
 \begin{code}
-queensMM :: Int -> [[Int]]
-queensMM n = hNil $ hGlobalM (local2globalM (queensM n)) (0, [])
+queensGlobalM :: Int -> [[Int]]
+queensGlobalM = hNil . flip hGlobalM (0, []) . local2globalM . queensM
+
+queensLocalM :: Int -> [[Int]]
+queensLocalM = hNil . flip hLocalM (0, []) . queensM
 \end{code}
 
 % By \Cref{thm:modify-local-global}, we have
