@@ -15,6 +15,7 @@ import Control.Monad.ST
 import Control.Monad.ST.Trans (STT, runSTT)
 import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import Data.STRef
+import Debug.Trace as DT
 
 import Background
 import Overview
@@ -43,9 +44,9 @@ It is easy to show that a mutable state handler can be defined in
 Haskell.
 We use a stack to implement mutable states.
 \begin{code}
-data Stack s b a = Stack {   stack     ::  STRef s   (STArray s Index a),
-                             size      ::  STRef s   Index,
-                             results   ::  STRef s   b }
+data Stack s b a = Stack {   stack    ::  STRef s   (STArray s Index a),
+                             top      ::  STRef s   Index,
+                             results  ::  STRef s   b }
 
 type Index = Int
 \end{code}
@@ -69,10 +70,10 @@ Figure \ref{fig:grow-empty} defines a helper function to create an empty stack.
 emptyStack :: b -> ST s (Stack s b a)
 emptyStack results = do
     stack        <- newArray_ (1, 1) -- start from 1
-    sizeRef      <- newSTRef 0
+    topRef       <- newSTRef 1
     stackRef     <- newSTRef stack
     resultsRef   <- newSTRef results
-    return (Stack stackRef sizeRef resultsRef)
+    return (Stack stackRef topRef resultsRef)
 \end{code}
 
 % \caption{Empty stack.}
@@ -101,16 +102,16 @@ Figure \ref{fig:pushstack-popstack} shows how to push to and pop from a stack.
 The |pushStack| uses the following |safeWriteArray| function which
 doubles the size of array when there is not enough space.
 \begin{code}
-safeWriteArray arrayRef size x =
+safeWriteArray arrayRef index x =
   do
     array       <- readSTRef arrayRef
     (_, space)  <- getBounds array
-    if size < space
-    then writeArray array size x
+    if index <= space
+    then writeArray array index x
     else do
         elems        <- getElems array
         array'       <- newListArray (1, space * 2 + 1) elems
-        writeArray  array' size x
+        writeArray  array' index x
         writeSTRef  arrayRef array'
 \end{code}
 
@@ -136,12 +137,12 @@ safeWriteArray arrayRef size x =
 % \end{code}
 \begin{code}
 pushStack :: a -> Stack s b a -> ST s ()
-pushStack x (Stack stackRef sizeRef resRef) =
+pushStack x (Stack stackRef topRef resRef) =
   do
-    size        <- readSTRef sizeRef
+    top         <- readSTRef topRef
     res         <- readSTRef resRef
-    writeSTRef sizeRef (size + 1)
-    safeWriteArray stackRef size x
+    writeSTRef topRef (top + 1)
+    safeWriteArray stackRef top x
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:pushstack}
@@ -149,15 +150,15 @@ pushStack x (Stack stackRef sizeRef resRef) =
 \begin{subfigure}[t]{0.48\linewidth}
 \begin{code}
 popStack :: Stack s b a -> ST s (Maybe a)
-popStack (Stack stackRef sizeRef _) =
+popStack (Stack stackRef topRef _) =
   do
     stack  <- readSTRef stackRef
-    size   <- readSTRef sizeRef
-    if size == 0
+    top    <- readSTRef topRef
+    if top == 1
     then return Nothing
     else do
-        writeSTRef sizeRef (size - 1)
-        Just <$> readArray stack (size - 1)
+        writeSTRef topRef (top - 1)
+        Just <$> readArray stack (top - 1)
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:popstack}
@@ -426,13 +427,23 @@ instance MIM MQueens IQueens where
   mu2imu (MQueens colRef solRef) = do
     x    <- readSTRef colRef
     arr  <- readSTRef solRef
-    y    <- getElems arr
-    return (x, y)
+    y    <- readQueens arr x
+    return (x, reverse y)
   imu2mu (x, y) = do
     colRef  <- newSTRef x
-    arr     <- newListArray (1, 1 + length y) y
+    arr     <- newListArray (1, length y) (reverse y)
     solRef  <- newSTRef arr
     return (MQueens colRef solRef)
+
+readQueens :: STArray s Index Int -> Int -> ST s [Int]
+readQueens array = loop 1
+  where
+    loop cur end =
+      if cur <= end
+      then do x <- readArray array cur;
+              y <- loop (cur+1) end;
+              return (x : y)
+      else return []
 \end{code}
 
 We have the following handler |hMuModify| which interprets |ModifyF|
@@ -535,8 +546,17 @@ i.e., no proofs.}
 %
 We have the following programs.
 \begin{code}
-queensMu :: Int -> [[Int]]
-queensMu n = hNil $ hGlobalMu (local2globalM (queensM n)) (0, [])
+queensGlobalMu :: Int -> [[Int]]
+queensGlobalMu n = hNil $ hGlobalMu (local2globalM (queensM n)) (0, [])
+\end{code}
+
+
+\begin{code}
+mytest :: ST s (STArray s Int Int)
+mytest = do
+  arr <- newListArray (1, 10) [1,2,3]
+  lis <- getElems arr
+  return arr
 \end{code}
 
 %include TrailStack.lhs
