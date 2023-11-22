@@ -135,6 +135,8 @@ sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
 < = {-~  beta-expansion (twice) -}
 < = \s -> (\s1 s2 -> fmap (fmap fst) (hNDf (k s2 s1))) s s
 < = {-~  definition of |fmap| (twice) -}
+< = \s -> (fmap (fmap (fmap (fmap fst) . hNDf)) (\ s1 s2 -> k s2 s1)) s s
+< = {-~  eta-expansion of |k| -}
 < = \s -> (fmap (fmap (fmap (fmap fst) . hNDf)) k) s s
 < = {-~  definition of |algRHS| -}
 < = algSRHS (Get (fmap (fmap (fmap (fmap fst) . hNDf)) k))
@@ -151,8 +153,10 @@ sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
 < = {-~  definition of |fmap| -}
 <   \ _ -> fmap (fmap fst) (hNDf (k s))
 < = {-~  beta-expansion -}
-< = \ _ -> (\s1 -> fmap (fmap fst) (hNDf (k s1))) s s
+< = \ _ -> (\ s1 -> fmap (fmap fst) (hNDf (k s1))) s
 < = {-~  definition of |fmap| -}
+< = \ _ -> (fmap (fmap (fmap fst) . hNDf) (\ s1 -> k s1)) s
+< = {-~  eta-expansion of |k| -}
 < = \ _ -> (fmap (fmap (fmap fst) . hNDf) k) s
 < = {-~  definition of |algSRHS| -}
 < = algSRHS (Put s (fmap (fmap (fmap fst) . hNDf) k))
@@ -204,9 +208,9 @@ We split on |op|:
 < = {-~ Lemma~\ref{eq:liftM2-fst-comm} -}
 <   \s -> liftM2 (++) (fmap (fmap fst) (hNDf (p s))) (fmap (fmap fst) (hNDf (q s)))
 < = {-~ define |algNDRHS (Or p q) = \s -> liftM2 (++) (p s) (q s)| -}
-<   algNDRHS (Or (fmap (fmap fst) . hNDf . p) (fmap (fmap fst) . hNDf . q)
+<   algNDRHS (Or (fmap (fmap fst) . hNDf . p) (fmap (fmap fst) . hNDf . q))
 < = {-~ defintion of |fmap| (twice) -}
-<   algNDRHS (fmap (fmap (fmap (fmap fst) . nHNDf)) (Or p q))
+<   algNDRHS (fmap (fmap (fmap (fmap fst) . hNDf)) (Or p q))
 < = {-~ defintion of |hL| -}
 <   algNDRHS (fmap hL (Or p q))
 
@@ -235,7 +239,7 @@ For the last subcondition, we calculate:
 <   \s -> Op (fmap (fmap (fmap fst)) (fmap hNDf (fmap ($ s) op)))
 < = {-~ definition of |hL| -}|
 <   \s -> Op (hL (fmap ($ s) op))
-< = {-~ property of |($ s)| -}
+< = {-~ \Cref{eq:comm-app-fmap} -}
 <   \s -> Op (fmap ($ s) (fmap hL op))
 < = {-~ define |fwdRHS op = \s -> Op (fmap ($s) op)| -}
 <   fwdRHS (fmap hL op)
@@ -544,6 +548,23 @@ Therefore, the main theorem holds.
 
 The derivations above made use of several auxliary lemmas.
 We prove them here.
+
+\begin{lemma} \label{eq:comm-app-fmap}
+< ($x) . fmap f = f . ($x)
+\end{lemma}
+\begin{proof}~
+<   (($x) . fmap f) m
+< = {-~ function application -}
+<   (fmap f m) x
+< = {-~ eta-expansion -}
+<   (fmap f (\ y . m y)) x
+< = {-~ definition of |fmap| -}
+<   (\ y . f (m y)) x
+< = {-~ function application -}
+<   f (m x)
+< = {-~ definition of |.| and |$| -}
+<   (f . ($x)) m
+\end{proof}
 
 \begin{lemma} \label{eq:liftM2-fst-comm}~
 < fmap (fmap fst) (liftM2 (++) p q) = liftM2 (++) (fmap (fmap fst) p) (fmap (fmap fst) q)

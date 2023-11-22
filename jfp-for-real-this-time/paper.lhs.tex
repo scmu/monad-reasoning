@@ -7,6 +7,8 @@
 %include forall.fmt
 %include fmts/symbols.fmt
 
+\usepackage{thm-restate}
+
 % add margin before code
 \usepackage{enumitem}
 \newlist{qwq}{itemize}{1}
@@ -94,7 +96,7 @@
 
 %include sections/Undo.lhs
 
-%include sections/MutableState.lhs
+% include sections/MutableState.lhs
 
 % %include sections/optimizations.lhs
 
@@ -144,8 +146,10 @@ None.
 
 %include appendices/final_simulate.lhs
 
-%include appendices/trail_stack_sim.lhs
+% include appendices/trail_stack_sim.lhs
 
-%include appendices/additional_equations.lhs
+% include appendices/additional_equations.lhs
+
+%include appendices/modify_local_global_sim.lhs
 
 \end{document}

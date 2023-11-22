@@ -67,8 +67,22 @@ In general, we define a type-class |Undo s r| and implement |Undo
 (Int, [Int]) Int| as an instance using the previously defined |plus|
 and |minus|.
 %
-All instances of |Undo s r| satisfy the law |(`minus` x) . (`plus` x)
-= id| for any |x :: r|.
+\begin{spec}
+class Undo s r where
+  plus   :: s -> r -> s
+  minus  :: s -> r -> s
+instance Undo (Int, [Int]) Int where
+  plus (c, sol) r   = (c+1, r:sol)
+  minus (c, sol) r  = (c-1, tail sol)
+\end{spec}
+%
+We have the following law for |Undo|:
+\begin{alignat}{2}
+    &\mbox{\bf plus-minus}:\quad &
+      |(`minus` x) . (`plus` x)| ~=~ & |id| \label{eq:plus-minus} \mbox{~~.}
+      \\
+\end{alignat}
+
 % In general, we define a |modify| function as follows.
 % \begin{code}
 % modfun           :: MState s m => (s -> s) -> m ()
@@ -91,7 +105,7 @@ class Monad m => MModify s r m | m -> s, m -> r where
     restore  :: r -> m ()
 \end{code}
 %
-The two operations |update| and |restore| satisfy the following law.
+The two operations |update| and |restore| satisfy the following law:
 \begin{alignat}{2}
     &\mbox{\bf update-restore}:\quad &
     |update r >> restore r| &= |return ()|~~\mbox{.} \label{eq:update-restore}
@@ -171,10 +185,15 @@ The following theorem shows that the simulation of local-state
 semantics with global-state semantics given by |modify2global|
 coincides with the local-state semantics given by |modify2local|.
 %
-\begin{theorem}\label{thm:modify-local-global}
+% \begin{theorem}
+\begin{restatable}[]{theorem}{modifyLocalGlobal}
+\label{thm:modify-local-global}
+Given |Functor f| and |Undo s r|, the equation
 < hGlobalM . local2globalM = hLocalM
-\end{theorem}
-\wenhao{TODO: prove it.}
+holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
+that do not use the operation |Op (Inl MRestore _ _)|.
+\end{restatable}
+% \end{theorem}
 
 % Observe that, unlike |putR|, the interpretation of |modifyR| in
 % |modify2global| does not hold onto a copy of the old state.
@@ -269,3 +288,45 @@ queensLocalM = hNil . flip hLocalM (0, []) . queensM
 
 % The advantage of the left-hand side is that it does not keep any copies of
 % the state alive.
+
+%if False
+% Just for testing code:
+\begin{code}
+hModify1  :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
+hModify1  =  fold genS (algS # fwdS)
+  where
+    genS x               s = Var (x, s)
+    algS :: (Undo s r) => ModifyF s r (s -> p) -> s -> p
+    algS (MGet k)        s = k s s
+    algS (MUpdate r k)   s = k (s `plus` r)
+    algS (MRestore r k)  s = k (s `minus` r)
+    fwdS y               s = Op (fmap ($s) y)
+
+-- hL :: (Functor f) => (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
+hL :: (Functor f, Functor g) => g (Free (NondetF :+: f) (a, s)) -> g (Free f [a])
+hL = fmap (fmap (fmap fst) . _hNDf)
+
+_hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
+_hNDf  =  fold genNDf (algNDf # fwdNDf)
+  where
+    genNDf           = Var . return
+    algNDf Fail      = Var []
+    algNDf (Or p q)  = liftM2 (++) p q
+    fwdNDf op        = Op op
+
+algSRHS :: (Undo s r) => ModifyF s r (s -> p) -> (s -> p)
+algSRHS (MGet k)    = \ s -> k s s
+algSRHS (MUpdate r k)  = \ s -> k (s `plus` r)
+algSRHS (MRestore r k)  = \ s -> k (s `plus` r)
+
+algNDRHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+algNDRHS Fail      = \ s -> Var []
+algNDRHS (Or p q)  = \ s -> liftM2 (++) (p s) (q s)
+
+fwdRHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+fwdRHS op = \s -> Op (fmap ($s) op)
+
+test :: Functor f => f (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
+test = fwdRHS . fmap hL
+\end{code}
+%endif

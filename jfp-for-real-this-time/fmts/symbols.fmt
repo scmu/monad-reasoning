@@ -1,3 +1,5 @@
+%format ++ = "+\!\!+"
+
 %format mzero = "\Varid{\varnothing}"
 %format mplus = "(\talloblong)"
 %format `mplus` = "\mathbin{\talloblong}"
