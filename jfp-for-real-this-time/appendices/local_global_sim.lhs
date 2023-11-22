@@ -639,7 +639,11 @@ The proof proceeds by induction on |p|.
 \end{proof}
 
 \begin{lemma}[State is Restored] \label{lemma:state-restore} \ \\
-< hState1 (hNDf (local2global t)) s = do (x, _) <- hState1 (hNDf (local2global t)) s; return (x, s)
+\begin{eqnarray*}
+& |hState1 (hNDf (comm2 (local2global t))) s| & \\
+& = & \\
+& |do (x, _) <- hState1 (hNDf (comm2 (local2global t))) s; return (x, s)| &
+\end{eqnarray*}
 \end{lemma}
 
 \begin{proof}
@@ -651,8 +655,10 @@ The proof proceeds by structural induction on |t|.
 % constructors based on the context to make the term well-typed in the following proof.
 
 \noindent \mbox{\underline{case |t = Var y|}}
-<    hState1 (hNDf (local2global (Var y))) s
+<    hState1 (hNDf (comm2 (local2global (Var y)))) s
 < = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Var y))) s
+< = {-~  definition of |comm2|  -}
 <    hState1 (hNDf (Var y)) s
 < = {-~  definition of |hNDf|  -}
 <    hState1 (Var [y]) s
@@ -660,38 +666,42 @@ The proof proceeds by structural induction on |t|.
 <    Var ([y], s)
 < = {-~  monad law -}
 <    do (x,_) <- Var ([y], s); Var (x, s)
-< = {-~  definition of |local2global, hNDf, hState1| and |return|  -}
-<    do (x,_) <- hState1 (hNDf (local2global (Var y))) s; return (x, s)
+< = {-~  definition of |local2global, hNDf, comm2, hState1| and |return|  -}
+<    do (x,_) <- hState1 (hNDf (comm2 (local2global (Var y)))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inl (Get k))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inl (Get k)))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Op (Inl (Get (local2global . k)))))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Op (Inr (Inl (Get (comm2 . local2global . k)))))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Op (Inl (Get (hNDf . comm2 . local2global . k)))) s
+< = {-~  definition of |hState1|  -}
+<    (hState1 . hNDf . comm2 . local2global . k) s s
+< = {-~  definition of |(.)|  -}
+<    (hState1 (hNDf (comm2 (local2global (k s))))) s
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- hState1 (comm2 (hNDf (local2global (k s)))) s; return (x, s)
+< = {-~  definition of |local2global, comm2, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (local2global (Op (Inl (Get k))))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inl Fail))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inr (Inl Fail)))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Op (Inr (Inl Fail))))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Op (Inl Fail))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Var []) s
+< = {-~  definition of |hState1|  -}
+<    Var ([], s)
+< = {-~  monad law -}
+<    do (x, _) <- Var ([], s); Var (x, s)
+< = {-~  definition of |local2global, comm2, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inl Fail)))))) s; return (x, s)
 
 TODO
-
-\noindent \mbox{\underline{case |t = getOp k|}}
-<    hState1 (hNDf (local2global (getOp k))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (getOp (local2global . k))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (getOp (hNDf . local2global . k)) s
-< = {-~  definition of |hState1|  -}
-<    (hState1 . hNDf . local2global . k) s s
-< = {-~  function application  -}
-<    hState1 (hNDf (local2global (k s))) s
-< = {-~  induction hypothesis  -}
-<    do (x, _) <- hState1 (hNDf (local2global (k s))) s; return (x, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global (getOp k))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = failOp|}}
-<    hState1 (hNDf (local2global (failOp))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf failOp) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (return []) s
-< = {-~  definition of |hState1|  -}
-<    \ s -> return ([], s)
-< = {-~  reformulation  -}
-<    do (x, _) <- return ([], s); return (x, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global failOp)) s; return (x, s)
 
 \noindent \mbox{\underline{case |t = putOp t k|}}
 <    hState1 (hNDf (local2global (putOp t k))) s
