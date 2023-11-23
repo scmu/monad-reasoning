@@ -323,7 +323,7 @@ Let's consider the first subconditions. It has two cases:
 < = {-~ definition of |fmap| -}
 <   (\s -> ((fmap (fmap fst) . hState1 . hNDf . comm2 . k) s s))
 < = {-~ define |algSLHS (Get k) = \s -> k s s| -}
-<   algSLHS (Get (hGLobal . k))
+<   algSLHS (Get (hGlobal . k))
 < = {-~ definition of |fmap| -}
 <   algSLHS (fmap hGlobal (Get k))
 
@@ -359,7 +359,7 @@ Let's consider the first subconditions. It has two cases:
 <                        y <- Op (Inl (Put t (Var [])))
 <                        Var (x ++ y)
 <                    ) t)
-< = {-~ TODO -}
+< = {-~ \Cref{eq:dist-hState1} -}
 <   fmap (fmap fst)
 <     (\t -> do (x,t1) <- hState1 (Op (Inl (Put s (hNDf (comm2 k))))) t 
 <               (y,t2) <- hState1 (Op (Inl (Put t (Var [])))) t1
@@ -590,6 +590,7 @@ We prove them here.
 
 \begin{lemma}[Distributivity of |hState1|] \label{lemma:dist-hState1} \ \\
 < hState1 (p >>= k) s = hState1 p s >>= \(x,s') -> hState1 (k x) s'
+% < hState1 (x >>= f) = \ s . hState1 x s >>= \ (y, s') -> hState1 (f y) s'
 \end{lemma}
 
 \begin{proof}

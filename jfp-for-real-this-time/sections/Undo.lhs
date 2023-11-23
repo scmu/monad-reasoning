@@ -341,7 +341,7 @@ genLHS :: Functor f => a -> (s -> Free f [a])
 genLHS x = \s -> Var [x]
 
 algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
-algSLHS (MGet k)        =  \s -> k s s
+algSLHS (MGet k)       =  \s -> k s s
 algSLHS (MUpdate r k)  = \ s -> k (s `plus` r)
 algSLHS (MRestore r k) = \ s -> k (s `plus` r)
 
