@@ -425,7 +425,7 @@ in the codomain of |local2globalM|.
 <         y <- Op (Inl (MRestore r (Var [])))
 <         Var (x ++ y)
 <   ))
-< = {-~ \Cref{eq:dist-hModify1} -}
+< = {-~ \Cref{lemma:dist-hModify1} -}
 <   fmap (fmap fst) (\ t ->
 <     do  (x,t1) <- hModify1 (Op (Inl (MUpdate r (hNDf (comm2 k))))) t
 <         (y,t2) <- hModify1 (Op (Inl (MRestore r (Var [])))) t1
@@ -447,7 +447,7 @@ in the codomain of |local2globalM|.
 <     (\t -> do  (x,t1) <- hModify1 (hNDf (comm2 k)) (t `plus` r)
 <                Var (x, t1 `minus` r)
 <     )
-< = {-~ \Cref{eq:modify-state-restore} -}
+< = {-~ \Cref{lemma:modify-state-restore} -}
 <   fmap (fmap fst)
 <     (\t -> do  (x, t `plus` r) <- hModify1 (hNDf (comm2 k)) (t `plus` r)
 <                Var (x, (t `plus` r) `minus` r)
@@ -533,7 +533,7 @@ We proceed by a case analysis on |op|.
 <   fmap (fmap fst) (hModify1 (do  x <- hNDf (comm2 p)
 <                                  y <- hNDf (comm2 q)
 <                                  return (x ++ y)))
-< = {-~ \Cref{eq:dist-hModify1} -}
+< = {-~ \Cref{lemma:dist-hModify1} -}
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- hModify1 (hNDf (comm2 p)) s0
 <                               (y, s2) <- hModify1 (hNDf (comm2 q)) s1
 <                               hModify1 (return (x ++ y)) s2))
@@ -630,7 +630,7 @@ We observe that the following equations hold trivially.
 |fwdLHS| & = & |fwdRHS|
 \end{eqnarray*}
 
-Therefore, the main theorem holds.
+Therefore, the main theorem (\Cref{thm:modify-local-global}) holds.
 
 \subsection{Auxiliary Lemmas}
 
@@ -638,73 +638,93 @@ The derivations above made use of several auxliary lemmas.
 We prove them here.
 
 \begin{lemma}[Distributivity of |hModify1|] \label{lemma:dist-hModify1} \ \\
-< hState1 (p >>= k) s = hState1 p s >>= \ (x,s') -> hState1 (k x) s'
+\[
+|hModify1 (p >>= k) s| \quad =\quad |hModify1 p s >>= \ (x,s') -> hModify1 (k x) s'|
+\]
 \end{lemma}
 
 \begin{proof}
-The proof proceeds by induction on |p|.
+The proof follows the same structure of \Cref{lemma:dist-hState1}.
+%
+We proceed by induction on |p|.
 
 \noindent \mbox{\underline{case |p = Var x|}}
 
-<    hState1 (Var x >>= k) s
+<    hModify1 (Var x >>= k) s
 < = {-~  monad law  -}
-<    hState1 (k x) s
+<    hModify1 (k x) s
 < = {-~  monad law  -}
-<    return (x, s) >>= \(x,s') -> hState1 (k x) s'
-< = {-~  definition of |hState1|  -}
-<    hState1 (Var x) s >>= \(x,s') -> hState1 (k x) s'
+<    return (x, s) >>= \ (x,s') -> hModify1 (k x) s'
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (Var x) s >>= \ (x,s') -> hModify1 (k x) s'
 
-\noindent \mbox{\underline{case |p = Op (Inl (Get p))|}}
+\noindent \mbox{\underline{case |p = Op (Inl (MGet p))|}}
 
-<    hState1 (Op (Inl (Get p)) >>= k) s
+<    hModify1 (Op (Inl (MGet p)) >>= k) s
 < = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (Op (fmap (>>= k) (Inl (Get p)))) s
+<    hModify1 (Op (fmap (>>= k) (Inl (MGet p)))) s
 < = {-~  definition of |fmap| for coproduct |(:+:)|  -}
-<    hState1 (Op (Inl (fmap (>>= k) (Get p)))) s
-< = {-~  definition of |fmap| for |Get|  -}
-<    hState1 (Op (Inl (Get (\x -> p s >>= k)))) s
-< = {-~  definition of |hState1|  -}
-<    hState1 (p s >>= k) s
+<    hModify1 (Op (Inl (fmap (>>= k) (MGet p)))) s
+< = {-~  definition of |fmap| for |MGet|  -}
+<    hModify1 (Op (Inl (MGet (\x -> p s >>= k)))) s
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (p s >>= k) s
 < = {-~  induction hypothesis  -}
-<    hState1 (p s) s >>= \(x,s') -> hState1 (k x) s'
-< = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inl (Get p))) s >>= \(x,s') -> hState1 (k x) s'
+<    hModify1 (p s) s >>= \ (x,s') -> hModify1 (k x) s'
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (Op (Inl (MGet p))) s >>= \ (x,s') -> hModify1 (k x) s'
 
-\noindent \mbox{\underline{case |p = Op (Inl (Put t p))|}}
+\noindent \mbox{\underline{case |p = Op (Inl (MUpdate r p))|}}
 
-<    hState1 (Op (Inl (Put t p)) >>= k) s
+<    hModify1 (Op (Inl (MUpdate r p)) >>= k) s
 < = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (Op (fmap (>>= k) (Inl (Put t p)))) s
+<    hModify1 (Op (fmap (>>= k) (Inl (MUpdate r p)))) s
 < = {-~  definition of |fmap| for coproduct |(:+:)|  -}
-<    hState1 (Op (Inl (fmap (>>= k) (Put t p)))) s
-< = {-~  definition of |fmap| for |Put|  -}
-<    hState1 (Op (Inl (Put t (p >>= k)))) s
-< = {-~  definition of |hState1|  -}
-<    hState1 (p >>= k) t
+<    hModify1 (Op (Inl (fmap (>>= k) (MUpdate r p)))) s
+< = {-~  definition of |fmap| for |MUpdate|  -}
+<    hModify1 (Op (Inl (MUpdate r (p >>= k)))) s
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (p >>= k) (s `plus` r)
 < = {-~  induction hypothesis  -}
-<    hState1 p t >>= \(x, s') -> hState1 (k x) s'
-< = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inl (Put t p))) s >>= \(x,s') -> hState1 (k x) s'
+<    hModify1 p (s `plus` r) >>= \ (x, s') -> hModify1 (k x) s'
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (Op (Inl (MUpdate r p))) s >>= \ (x, s') -> hModify1 (k x) s'
+
+\noindent \mbox{\underline{case |p = Op (Inl (MRestore r p))|}}
+
+<    hModify1 (Op (Inl (MRestore r p)) >>= k) s
+< = {-~  definition of |(>>=)| for free monad  -}
+<    hModify1 (Op (fmap (>>= k) (Inl (MRestore r p)))) s
+< = {-~  definition of |fmap| for coproduct |(:+:)|  -}
+<    hModify1 (Op (Inl (fmap (>>= k) (MRestore r p)))) s
+< = {-~  definition of |fmap| for |MRestore|  -}
+<    hModify1 (Op (Inl (MRestore r (p >>= k)))) s
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (p >>= k) (s `minus` r)
+< = {-~  induction hypothesis  -}
+<    hModify1 p (s `minus` r) >>= \ (x, s') -> hModify1 (k x) s'
+< = {-~  definition of |hModify1|  -}
+<    hModify1 (Op (Inl (MRestore r p))) s >>= \ (x, s') -> hModify1 (k x) s'
 
 \noindent \mbox{\underline{case |p = Op (Inr y)|}}
 
-<    hState1 (Op (Inr y) >>= k) s
+<    hModify1 (Op (Inr y) >>= k) s
 < = {-~  definition of |(>>=)| for free monad  -}
-<    hState1 (Op (fmap (>>= k) (Inr y))) s
+<    hModify1 (Op (fmap (>>= k) (Inr y))) s
 < = {-~  definition of |fmap| for coproduct |(:+:)|  -}
-<    hState1 (Op (Inr (fmap (>>= k) y))) s
-< = {-~  definition of |hState1|  -}
-<    Op (fmap (\x -> hState1 x s) (fmap (>>= k) y))
+<    hModify1 (Op (Inr (fmap (>>= k) y))) s
+< = {-~  definition of |hModify1|  -}
+<    Op (fmap (\x -> hModify1 x s) (fmap (>>= k) y))
 < = {-~  |fmap| fusion  -}
-<    Op (fmap ((\x -> hState1 (x >>= k) s)) y)
+<    Op (fmap ((\x -> hModify1 (x >>= k) s)) y)
 < = {-~  induction hypothesis  -}
-<    Op (fmap (\x -> hState1 x s >>= \(x',s') -> hState1 (k x) s') y)
+<    Op (fmap (\x -> hModify1 x s >>= \ (x',s') -> hModify1 (k x') s') y)
 < = {-~  |fmap| fission -}
-<    Op (fmap (\x -> x >>= \(x',s') -> hState1 (k x) s') (fmap (\x -> hState1 x s) y))
+<    Op (fmap (\x -> x >>= \ (x',s') -> hModify1 (k x') s') (fmap (\x -> hModify1 x s) y))
 < = {-~  definition of |(>>=)| -}
-<    Op ( (fmap (\x -> hState1 x s) y)) >>= \(x',s') -> hState1 (k x) s'
-< = {-~  definition of |hState1|  -}
-<    Op (Inr y) s >>= \ (x',s') -> hState1 (k x) s'
+<    Op ( (fmap (\x -> hModify1 x s) y)) >>= \ (x',s') -> hModify1 (k x') s'
+< = {-~  definition of |hModify1|  -}
+<    Op (Inr y) s >>= \ (x',s') -> hModify1 (k x') s'
 
 \end{proof}
 

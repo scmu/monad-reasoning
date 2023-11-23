@@ -359,7 +359,7 @@ Let's consider the first subconditions. It has two cases:
 <                        y <- Op (Inl (Put t (Var [])))
 <                        Var (x ++ y)
 <                    ) t)
-< = {-~ \Cref{eq:dist-hState1} -}
+< = {-~ \Cref{lemma:dist-hState1} -}
 <   fmap (fmap fst)
 <     (\t -> do (x,t1) <- hState1 (Op (Inl (Put s (hNDf (comm2 k))))) t 
 <               (y,t2) <- hState1 (Op (Inl (Put t (Var [])))) t1
@@ -549,7 +549,7 @@ Therefore, the main theorem holds.
 The derivations above made use of several auxliary lemmas.
 We prove them here.
 
-\begin{lemma} \label{eq:comm-app-fmap}
+\begin{lemma}[Naturality of |($s)|] \label{eq:comm-app-fmap}
 < ($x) . fmap f = f . ($x)
 \end{lemma}
 \begin{proof}~
@@ -589,7 +589,7 @@ We prove them here.
 \end{proof}
 
 \begin{lemma}[Distributivity of |hState1|] \label{lemma:dist-hState1} \ \\
-< hState1 (p >>= k) s = hState1 p s >>= \(x,s') -> hState1 (k x) s'
+< hState1 (p >>= k) s = hState1 p s >>= \ (x,s') -> hState1 (k x) s'
 % < hState1 (x >>= f) = \ s . hState1 x s >>= \ (y, s') -> hState1 (f y) s'
 \end{lemma}
 
@@ -602,9 +602,9 @@ The proof proceeds by induction on |p|.
 < = {-~  monad law  -}
 <    hState1 (k x) s
 < = {-~  monad law  -}
-<    return (x, s) >>= \(x,s') -> hState1 (k x) s'
+<    return (x, s) >>= \ (x,s') -> hState1 (k x) s'
 < = {-~  definition of |hState1|  -}
-<    hState1 (Var x) s >>= \(x,s') -> hState1 (k x) s'
+<    hState1 (Var x) s >>= \ (x,s') -> hState1 (k x) s'
 
 \noindent \mbox{\underline{case |p = Op (Inl (Get p))|}}
 
@@ -618,9 +618,9 @@ The proof proceeds by induction on |p|.
 < = {-~  definition of |hState1|  -}
 <    hState1 (p s >>= k) s
 < = {-~  induction hypothesis  -}
-<    hState1 (p s) s >>= \(x,s') -> hState1 (k x) s'
+<    hState1 (p s) s >>= \ (x,s') -> hState1 (k x) s'
 < = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inl (Get p))) s >>= \(x,s') -> hState1 (k x) s'
+<    hState1 (Op (Inl (Get p))) s >>= \ (x,s') -> hState1 (k x) s'
 
 \noindent \mbox{\underline{case |p = Op (Inl (Put t p))|}}
 
@@ -634,9 +634,9 @@ The proof proceeds by induction on |p|.
 < = {-~  definition of |hState1|  -}
 <    hState1 (p >>= k) t
 < = {-~  induction hypothesis  -}
-<    hState1 p t >>= \(x, s') -> hState1 (k x) s'
+<    hState1 p t >>= \ (x, s') -> hState1 (k x) s'
 < = {-~  definition of |hState1|  -}
-<    hState1 (Op (Inl (Put t p))) s >>= \(x,s') -> hState1 (k x) s'
+<    hState1 (Op (Inl (Put t p))) s >>= \ (x,s') -> hState1 (k x) s'
 
 \noindent \mbox{\underline{case |p = Op (Inr y)|}}
 
@@ -650,13 +650,13 @@ The proof proceeds by induction on |p|.
 < = {-~  |fmap| fusion  -}
 <    Op (fmap ((\x -> hState1 (x >>= k) s)) y)
 < = {-~  induction hypothesis  -}
-<    Op (fmap (\x -> hState1 x s >>= \(x',s') -> hState1 (k x) s') y)
+<    Op (fmap (\x -> hState1 x s >>= \ (x',s') -> hState1 (k x') s') y)
 < = {-~  |fmap| fission -}
-<    Op (fmap (\x -> x >>= \(x',s') -> hState1 (k x) s') (fmap (\x -> hState1 x s) y))
+<    Op (fmap (\x -> x >>= \ (x',s') -> hState1 (k x') s') (fmap (\x -> hState1 x s) y))
 < = {-~  definition of |(>>=)| -} 
-<    Op ( (fmap (\x -> hState1 x s) y)) >>= \(x',s') -> hState1 (k x) s'
+<    Op ( (fmap (\x -> hState1 x s) y)) >>= \ (x',s') -> hState1 (k x') s'
 < = {-~  definition of |hState1|  -}
-<    Op (Inr y) s >>= \(x',s') -> hState1 (k x) s'
+<    Op (Inr y) s >>= \ (x',s') -> hState1 (k x') s'
 
 \end{proof}
 
@@ -1209,7 +1209,7 @@ TODO
 % % <          putOp s' (Var [])
 % % <          return x) s
 % < = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-% <    \ s' -> fmap (fmap fst) $ hState1 (hNDf k) s >>= \(x,_) -> return (x, s')
+% <    \ s' -> fmap (fmap fst) $ hState1 (hNDf k) s >>= \ (x,_) -> return (x, s')
 % % <    \ s' -> fmap (fmap fst) $
 % % <      do  (x, _) <- hState1 (hNDf k) s
 % % <          return (x, s')
