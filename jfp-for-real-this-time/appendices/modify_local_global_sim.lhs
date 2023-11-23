@@ -127,10 +127,10 @@ the second fusion condition decomposes into two separate conditions:
 
 The first subcondition \refa{} is met by taking:
 
-> algSRHS :: Undo s r => StateF s (s -> p) -> (s -> p)
-> algSRHS (MGet k)        = \ s -> k s s
-> algSRHS (MUpdate r k)   = \ s -> k (s `plus` r)
-> algSRHS (MRestore r k)  = \ s -> k (s `plus` r)
+< algSRHS :: Undo s r => StateF s (s -> p) -> (s -> p)
+< algSRHS (MGet k)        = \ s -> k s s
+< algSRHS (MUpdate r k)   = \ s -> k (s `plus` r)
+< algSRHS (MRestore r k)  = \ s -> k (s `plus` r)
 
 Given this defintion of |algSRHS| we establish that the subcondition
 holds, when we apply both sides of the equation to any |t :: StateF s
@@ -729,11 +729,16 @@ We proceed by induction on |p|.
 \end{proof}
 
 \begin{lemma}[State is Restored] \label{lemma:modify-state-restore} \ \\
-< hModify1 (hNDf (local2globalM t)) s = do (x, _) <- hModify1 (hNDf (local2globalM t)) s; return (x, s)
+\[\ba{ll}
+  &|hModify1 (hNDf (local2globalM p)) s| \\
+= &|do (x, _) <- hModify1 (hNDf (local2globalM p)) s; return (x, s)|
+\ea\]
 \end{lemma}
 
 \begin{proof}
-The proof proceeds by structural induction on |t|.
+The proof follows the same structure of \Cref{lemma:state-restore}.
+%
+We proceed by induction on |t|.
 % In the following proofs, we assume implicit commutativity and associativity of
 % the coproduct operator |(:+:)| (\Cref{sec:transforming-between-local-and-global-state}).
 % We assume the smart constructors |getOp, putOp, orOp, failOp|, which are wrappers around
@@ -741,140 +746,52 @@ The proof proceeds by structural induction on |t|.
 % constructors based on the context to make the term well-typed in the following proof.
 
 \noindent \mbox{\underline{case |t = Var y|}}
-<    hState1 (hNDf (local2global (Var y))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (Var y)) s
+<    hModify1 (hNDf (comm2 (local2globalM (Var y)))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Var y))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Var y)) s
 < = {-~  definition of |hNDf|  -}
-<    hState1 (Var [y]) s
-< = {-~  definition of |hState1|  -}
+<    hModify1 (Var [y]) s
+< = {-~  definition of |hModify1|  -}
 <    Var ([y], s)
 < = {-~  monad law -}
 <    do (x,_) <- Var ([y], s); Var (x, s)
-< = {-~  definition of |local2global, hNDf, hState1| and |return|  -}
-<    do (x,_) <- hState1 (hNDf (local2global (Var y))) s; return (x, s)
+< = {-~  definition of |local2globalM, hNDf, comm2, hModify1| and |return|  -}
+<    do (x,_) <- hModify1 (hNDf (comm2 (local2globalM (Var y)))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inl (MGet k))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inl (MGet k)))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Op (Inl (MGet (local2globalM . k)))))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Op (Inr (Inl (MGet (comm2 . local2globalM . k)))))) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (Op (Inl (MGet (hNDf . comm2 . local2globalM . k)))) s
+< = {-~  definition of |hModify1|  -}
+<    (hModify1 . hNDf . comm2 . local2globalM . k) s s
+< = {-~  definition of |(.)|  -}
+<    (hModify1 (hNDf (comm2 (local2globalM (k s))))) s
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- hModify1 (comm2 (hNDf (local2globalM (k s)))) s; return (x, s)
+< = {-~  definition of |local2globalM, comm2, hNDf, hModify1|  -}
+<    do (x, _) <- hModify1 (hNDf (local2globalM (Op (Inl (MGet k))))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inl Fail))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl Fail)))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Op (Inr (Inl Fail))))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Op (Inl Fail))) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (Var []) s
+< = {-~  definition of |hModify1|  -}
+<    Var ([], s)
+< = {-~  monad law -}
+<    do (x, _) <- Var ([], s); Var (x, s)
+< = {-~  definition of |local2globalM, comm2, hNDf, hModify1|  -}
+<    do (x, _) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl Fail)))))) s; return (x, s)
 
 TODO
-
-\noindent \mbox{\underline{case |t = getOp k|}}
-<    hState1 (hNDf (local2global (getOp k))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (getOp (local2global . k))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (getOp (hNDf . local2global . k)) s
-< = {-~  definition of |hState1|  -}
-<    (hState1 . hNDf . local2global . k) s s
-< = {-~  function application  -}
-<    hState1 (hNDf (local2global (k s))) s
-< = {-~  induction hypothesis  -}
-<    do (x, _) <- hState1 (hNDf (local2global (k s))) s; return (x, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global (getOp k))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = failOp|}}
-<    hState1 (hNDf (local2global (failOp))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf failOp) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (return []) s
-< = {-~  definition of |hState1|  -}
-<    \ s -> return ([], s)
-< = {-~  reformulation  -}
-<    do (x, _) <- return ([], s); return (x, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global failOp)) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = putOp t k|}}
-<    hState1 (hNDf (local2global (putOp t k))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (putR t >> local2global k)) s
-< = {-~  definition of |putR|  -}
-<    hState1 (hNDf ((get >>= \t' -> put t `mplus` side (put t')) >> local2global k)) s
-< = {-~  definition of |orOp|  -}
-<    hState1 (hNDf (do t' <- get; orOp (put t) (side (put t')); local2global k)) s
-< = {-~  definition of |side| and |failOp|  -}
-<    hState1 (hNDf (do t' <- get; orOp (put t) ((put t') >> failOp); local2global k)) s
-< = {-~  reformulation  -}
-<    hState1 (hNDf (getOp (\t' -> orOp (putOp t (local2global k)) (putOp t' (failOp >> local2global k)))) s
-< = {-~  Law (\ref{eq:mzero-zero}): left identity of |mzero| or |failOp|  -}
-<    hState1 (hNDf (getOp (\t' -> orOp (putOp t (local2global k)) (putOp t' failOp))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (do  t'  <- get;
-<                 x   <- hNDf (putOp t (local2global k));
-<                 y   <- hNDf (putOp t' failOp);
-<                 return (x ++ y)) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (do  t'  <- get;
-<                 put t;
-<                 x   <- hNDf (local2global k);
-<                 put t';
-<                 y   <- hNDf failOp;
-<                 return (x ++ y)) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (do  t'  <- get;
-<                 put t;
-<                 x   <- hNDf (local2global k);
-<                 put t';
-<                 return x) s
-< = {-~  Law (\ref{eq:get-put}): get-put  -}
-<    hState1 (do  put t;
-<                 x   <- hNDf (local2global k);
-<                 return x) s
-< = {-~  reformulation  -}
-<    hState1 (do  put t;
-<                 hNDf (local2global k)) s
-< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-<    do  hState1 (put t) s;
-<        hState1 (hNDf (local2global k)) s
-< = {-~  induction hypothesis  -}
-<    do  hState1 (put t) s;
-<        (x, _) <- hState1 (hNDf (local2global k)) s;
-<        return (x, s)
-< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-<    do  (x, _) -> hState1 (put t >> hNDf (local2global k)) s
-<        return (x, s)
-< = {-~  definition of |hNDf|  -}
-<    do  (x, _) -> hState1 (hNDf (putOp t (local2global k))) s
-<        return (x, s)
-< = {-~  definition of |local2global|  -}
-<    do  (x, _) -> hState1 (hNDf (local2global (putOp t k))) s
-<        return (x, s)
-
-\noindent \mbox{\underline{case |t = orOp p q|}}
-<    hState1 (hNDf (local2global (orOp p q))) s
-< = {-~  definition of |local2global|; let |p' = local2global p, q' = local2global q|  -}
-<    hState1 (hNDf (orOp p' q')) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (liftM2 (++) (hNDf p') (hNDf q')) s
-< = {-~  definition of |liftM2|  -}
-<    hState1 (do x <- hNDf p'; y <- hNDf q'; return (x ++ y)) s
-< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-<    do (x, s1) <- hState1 (hNDf p') s; (y, s2) <- hState1 (hNDf q') s1; return (x++y, s2)
-< = {-~  induction hypothesis  -}
-<    do (x, _) <- hState1 (hNDf p') s; (y, _) <- hState1 (hNDf q') s; return (x++y, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global (orOp p q))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
-<    hState1 (hNDf . local2global $ Op (Inr (Inr y))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf $ Op (Inr (Inr (fmap local2global y)))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (Op (Inr (fmap hNDf (fmap local2global y)))) s
-< = {-~  definition of |hState1|  -}
-<    (\ s -> Op (fmap ($s) (fmap (hState1 (fmap hNDf (fmap local2global y)))))) s
-< = {-~  Law (\ref{eq:functor-composition}): composition of |fmap|  -}
-<    (\ s -> Op (fmap (($s) . hState1 . hNDf . local2global) y)) s
-< = {-~  function application  -}
-<    Op (fmap (($s) . hState1 . hNDf . local2global) y)
-< = {-~  induction hypothesis  -}
-<    Op (fmap ((>>= \ (x, _) -> return (x, s)) . ($s) . hState1 . hNDf . local2global) y)
-< = {-~  Law (\ref{eq:functor-composition}): composition of |fmap|  -}
-<    Op (fmap (>>= \ (x, _) -> return (x, s)) $ (fmap (($s) . hState1 . hNDf . local2global) y))
-< = {-~  definition of |(>>=)|  -}
-<    Op (fmap (($s) . hState1 . hNDf . local2global) y) >>= \ (x, _) -> return (x, s)
-< = {-~  reformulation  -}
-<    do (x, _) <- Op (fmap (($s) . hState1 . hNDf . local2global) y); return (x, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf . local2global $ Op (Inr (Inr y))) s; return (x, s)
 
 \end{proof}
