@@ -12,6 +12,7 @@ import Overview
 import Control.Monad (ap, liftM, liftM2)
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import LocalGlobal
+import Undo
 \end{code}
 %endif
 
