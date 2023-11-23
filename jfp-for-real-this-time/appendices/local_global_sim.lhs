@@ -251,7 +251,7 @@ From this we conclude that the definition of |fwdRHS| should be:
 
 \subsection{Fusing the Left-Hand Side}
 
-We proceed in the same fashion with the fusing left-hand side, 
+We proceed in the same fashion with fusing left-hand side,
 discovering the definitions that we need to satisfy the fusion
 condition.
 

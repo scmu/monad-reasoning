@@ -295,6 +295,9 @@ with |Functor f|, we calculate:
 <   \s -> Op (fmap ($s) (fmap hL op))
 < = {-~ definition of |fwdRHS| -}
 <   fwdRHS (fmap hL op)
+%if False
+$
+%endif
 
 % From this we conclude that the definition of |fwdRHS| should be:
 

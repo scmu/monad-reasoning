@@ -326,7 +326,26 @@ algNDRHS (Or p q)  = \ s -> liftM2 (++) (p s) (q s)
 fwdRHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
 fwdRHS op = \s -> Op (fmap ($s) op)
 
-test :: Functor f => f (s -> Free (NondetF :+: f) (a, s)) -> s -> Free f [a]
-test = fwdRHS . fmap hL
+\end{code}
+
+\begin{code}
+_local2globalM  :: (Functor f, Undo s r)
+               => Free (ModifyF s r :+: NondetF :+: f) a
+               -> Free (ModifyF s r :+: NondetF :+: f) a
+_local2globalM  = fold Var alg
+  where
+    alg (Inl (MUpdate r k)) = (update r `mplus` side (restore r)) >> k
+    alg p               = Op p
+
+genLHS :: Functor f => a -> (s -> Free f [a])
+genLHS x = \s -> Var [x]
+
+algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
+algSLHS (MGet k)        =  \s -> k s s
+algSLHS (MUpdate r k)  = \ s -> k (s `plus` r)
+algSLHS (MRestore r k) = \ s -> k (s `plus` r)
+
+test :: (Functor f, Undo s r) => ModifyF s r (Free (ModifyF s r :+: NondetF :+: f) a) -> (s -> Free f [a])
+test = algSLHS . fmap hGlobalM
 \end{code}
 %endif
