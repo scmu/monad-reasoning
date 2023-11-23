@@ -345,7 +345,14 @@ algSLHS (MGet k)       =  \s -> k s s
 algSLHS (MUpdate r k)  = \ s -> k (s `plus` r)
 algSLHS (MRestore r k) = \ s -> k (s `plus` r)
 
-test :: (Functor f, Undo s r) => ModifyF s r (Free (ModifyF s r :+: NondetF :+: f) a) -> (s -> Free f [a])
-test = algSLHS . fmap hGlobalM
+algNDLHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+algNDLHS Fail      = \s -> Var []
+algNDLHS (Or p q)  = \s -> liftM2 (++) (p s) (q s)
+
+fwdLHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+fwdLHS op = \s -> Op (fmap ($ s) op)
+
+test :: (Functor f, Undo s r) => f (Free (ModifyF s r :+: NondetF :+: f) a) -> (s -> Free f [a])
+test = fwdLHS . fmap hGlobalM
 \end{code}
 %endif

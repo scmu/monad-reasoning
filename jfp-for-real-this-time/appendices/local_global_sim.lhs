@@ -447,7 +447,7 @@ Let's consider the second subcondition. It has also two cases:
 <   fmap (fmap fst) (hState1 (do  x <- hNDf (comm2 p)
 <                                 y <- hNDf (comm2 q)
 <                                 return (x ++ y)))
-< = {-~ |hState1| lemma -}
+< = {-~ \Cref{lemma:dist-hState1} -}
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- hState1 (hNDf (comm2 p)) s0
 <                               (y, s2) <- hState1 (hNDf (comm2 q)) s1
 <                               hState1 (return (x ++ y)) s2))
@@ -455,7 +455,7 @@ Let's consider the second subcondition. It has also two cases:
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- hState1 (hNDf (comm2 p)) s0
 <                               (y, s2) <- hState1 (hNDf (comm2 q)) s1
 <                               Var (x ++ y, s2)))
-< = {-~ Lemma \ref{lemma:dist-hState1} -}
+< = {-~ Lemma \ref{lemma:state-restore} (|p| and |q| are in the codomain of |local2global|) -}
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- do {(x,_) <- hState1 (hNDf (comm2 p)) s0; return (x, s0)}
 <                               (y, s2) <- do {(y,_) <- hState1 (hNDf (comm2 q)) s1; return (x, s1)}
 <                               Var (x ++ y, s2)))
@@ -483,7 +483,7 @@ Let's consider the second subcondition. It has also two cases:
 <   \s0-> liftM2 (++) (hGlobal p s0) (hGlobal q s0)
 < = {-~ define |algNDLHS (Or p q) = \s -> liftM2 (++) (p s) (q s)| -}
 <   algNDLHS (Or (hGlobal p) (hGlobal q))
-> = {-~ definition of |fmap| -}
+< = {-~ definition of |fmap| -}
 <   algNDLHS (fmap hGobal (Or p q))
 
 We conclude that this fusion subcondition holds provided that:
@@ -516,7 +516,7 @@ Finally, the last subcondition:
 <   \s -> Op (fmap (fmap fst) (fmap ($ s) (fmap (hState1 . hNDf . comm2) op)))
 < = {-~ |fmap| fusion -}
 <   \s -> Op (fmap (fmap fst . ($ s)) (fmap (hState1 . hNDf . comm2) op)))
-< = {-~ naturality of |($ s)| -}
+< = {-~ \Cref{eq:comm-app-fmap} -}
 <   \s -> Op (fmap (($ s) . fmap (fmap fst)) (fmap (hState1 . hNDf . comm2) op)))
 < = {-~ |fmap| fission -}
 <   \s -> Op ((fmap ($ s) . fmap (fmap (fmap fst))) (fmap (hState1 . hNDf . comm2) op))

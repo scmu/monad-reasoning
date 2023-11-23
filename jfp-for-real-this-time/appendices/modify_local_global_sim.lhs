@@ -368,6 +368,8 @@ For brevity, we omit the last common part |fmap local2globalM| of the
 equation \refc{}. Instead, we assume that |op| is in the codomain of
 |fmap local2globalM|.
 
+We proceed by a case analysis on |op|.
+
 \vspace{0.5\lineskip}
 
 \noindent \mbox{\underline{case |op = MGet k|}}
@@ -478,6 +480,144 @@ in the codomain of |local2globalM|.
 <   algSLHS (fmap hGlobalM (MUpdate r k))
 
 
+% Let's consider the second subcondition \refd{}. It has also two cases:
+For the second subcondition \refd{}, we can define |algNDLHS| as
+follows.
+< algNDLHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+< algNDLHS Fail      = \s -> Var []
+< algNDLHS (Or p q)  = \s -> liftM2 (++) (p s) (q s)
+
+We prove it by a case analysis on the shape of input |op :: NondetF
+(Free (ModifyF s r :+: NondetF :+: f) a)|.
+%
+For brevity, we omit the last common part |fmap local2globalM| of the
+equation \refc{}. Instead, we assume that |op| is in the codomain of
+|fmap local2globalM|.
+
+We proceed by a case analysis on |op|.
+
+\noindent \mbox{\underline{case |op = Fail|}}
+<   hGlobalM (alg (Inr (Inl Fail)))
+< = {-~ definition of |alg| -}
+<   hGlobalM (Op (Inr (Inl Fail)))
+< = {-~ definition of |hGlobalM| -}
+<   fmap (fmap fst) (hModify1 (hNDf (comm2 (Op (Inr (Inl Fail))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hModify1 (hNDf (Op (Inl (fmap comm2 Fail)))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hModify1 (hNDf (Op (Inl Fail))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hModify1 (Var []))
+< = {-~ definition of |hModify1| -}
+<   fmap (fmap fst) (\s -> Var ([], s))
+< = {-~ definition of |fmap| twice and |fst| -}
+<   \s -> Var []
+< = {-~ definition of |algNDRHS|  -}
+<  algNDRHS Fail
+< = {-~ definition of |fmap| -}
+<  algNDRHS (fmap hGlobalM Fail)
+
+\noindent \mbox{\underline{case |op = Or p q|}}
+<   hGlobalM (alg (Inr (Inl (Or p q))))
+< = {-~ definition of |alg| -}
+<   hGlobalM (Op (Inr (Inl (Or p q))))
+< = {-~ definition of |hGlobalM| -}
+<   fmap (fmap fst) (hModify1 (hNDf (comm2 (Op (Inr (Inl (Or p q)))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hModify1 (hNDf (Op (Inl (fmap comm2 (Or p q))))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hModify1 (hNDf (Op (Inl (Or (comm2 p) (comm2 q))))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hModify1 (liftM2 (++) (hNDf (comm2 p)) (hNDf (comm2 q))))
+< = {-~ definition of |liftM2| -}
+<   fmap (fmap fst) (hModify1 (do  x <- hNDf (comm2 p)
+<                                  y <- hNDf (comm2 q)
+<                                  return (x ++ y)))
+< = {-~ \Cref{eq:dist-hModify1} -}
+<   fmap (fmap fst) (\s0-> (do  (x, s1) <- hModify1 (hNDf (comm2 p)) s0
+<                               (y, s2) <- hModify1 (hNDf (comm2 q)) s1
+<                               hModify1 (return (x ++ y)) s2))
+< = {-~ definition of |hModify1| -}
+<   fmap (fmap fst) (\s0-> (do  (x, s1) <- hModify1 (hNDf (comm2 p)) s0
+<                               (y, s2) <- hModify1 (hNDf (comm2 q)) s1
+<                               Var (x ++ y, s2)))
+< = {-~ Lemma \ref{lemma:modify-state-restore} (|p| and |q| are in the codomain of |local2globalM|) -}
+<   fmap (fmap fst) (\s0-> (do  (x, s1) <- do {(x,_) <- hModify1 (hNDf (comm2 p)) s0; return (x, s0)}
+<                               (y, s2) <- do {(y,_) <- hModify1 (hNDf (comm2 q)) s1; return (x, s1)}
+<                               Var (x ++ y, s2)))
+< = {-~ monad laws -}
+<   fmap (fmap fst) (\s0-> (do  (x,_) <- hModify1 (hNDf (comm2 p)) s0
+<                               (y,_) <- hModify1 (hNDf (comm2 q)) s0
+<                               Var (x ++ y, s0)))
+< = {-~ definition of |fmap| (twice) and |fst| -}
+<   \s0-> (do  (x,_) <- hModify1 (hNDf (comm2 p)) s0
+<              (y,_) <- hModify1 (hNDf (comm2 q)) s0
+<              Var (x ++ y))
+< = {-~ definition of |fmap|, |fst| and monad laws -}
+<   \s0-> (do  x <- fmap fst (hModify1 (hNDf (comm2 p)) s0)
+<              y <- fmap fst (hModify1 (hNDf (comm2 q)) s0)
+<              Var (x ++ y))
+< = {-~ definition of |fmap| -}
+<   \s0-> (do  x <- fmap (fmap fst) (hModify1 (hNDf (comm2 p))) s0
+<              y <- fmap (fmap fst) (hModify1 (hNDf (comm2 q))) s0
+<              Var (x ++ y))
+< = {-~ definition of |hGlobalM| -}
+<   \s0-> (do  x <- hGlobalM p s0
+<              y <- hGlobalM q s0
+<              Var (x ++ y))
+< = {-~ definition of |liftM2| -}
+<   \s0-> liftM2 (++) (hGlobalM p s0) (hGlobalM q s0)
+< = {-~ definition of |algNDLHS|  -}
+<   algNDLHS (Or (hGlobalM p) (hGlobalM q))
+< = {-~ definition of |fmap| -}
+<   algNDLHS (fmap hGobal (Or p q))
+
+% Finally, the last subcondition:
+For the second subcondition \refe{}, we can define |algNDLHS| as
+follows.
+< fwdLHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+< fwdLHS op = \s -> Op (fmap ($ s) op)
+
+We prove it by a case analysis on the shape of input |op :: f
+(Free (ModifyF s r :+: NondetF :+: f) a)|.
+%
+For brevity, we omit the last common part |fmap local2globalM| of the
+equation \refc{}. Instead, we assume that |op| is in the codomain of
+|fmap local2globalM|.
+
+<   hGlobalM (alg (Inr (Inr op)))
+< = {-~ definition of |alg| -}
+<   hGlobalM (Op (Inr (Inr op)))
+< = {-~ definition of |hGlobalM| -}
+<   fmap (fmap fst) (hModify1 (hNDf (comm2 (Op (Inr (Inr op))))))
+< = {-~ definition of |comm2| -}
+<   fmap (fmap fst) (hModify1 (hNDf (Op (Inr (Inr (fmap comm2 op))))))
+< = {-~ definition of |hNDf| -}
+<   fmap (fmap fst) (hModify1 (Op (fmap hNDf (Inr (fmap comm2 op)))))
+< = {-~ definition of |fmap| -}
+<   fmap (fmap fst) (hModify1 (Op (Inr (fmap hNDf (fmap comm2 op)))))
+< = {-~ |fmap| fusion -}
+<   fmap (fmap fst) (hModify1 (Op (Inr (fmap (hNDf . comm2) op))))
+< = {-~ definition of |hModify1| -}
+<   fmap (fmap fst) (\s -> Op (fmap ($ s) (fmap hModify1 (fmap (hNDf . comm2) op))))
+< = {-~ |fmap| fusion -}
+<   fmap (fmap fst) (\s -> Op (fmap ($ s) (fmap (hModify1 . hNDf . comm2) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> fmap fst (Op (fmap ($ s) (fmap (hModify1 . hNDf . comm2) op)))
+< = {-~ definition of |fmap| -}
+<   \s -> Op (fmap (fmap fst) (fmap ($ s) (fmap (hModify1 . hNDf . comm2) op)))
+< = {-~ |fmap| fusion -}
+<   \s -> Op (fmap (fmap fst . ($ s)) (fmap (hModify1 . hNDf . comm2) op)))
+< = {-~ \Cref{eq:comm-app-fmap} -}
+<   \s -> Op (fmap (($ s) . fmap (fmap fst)) (fmap (hModify1 . hNDf . comm2) op)))
+< = {-~ |fmap| fission -}
+<   \s -> Op ((fmap ($ s) . fmap (fmap (fmap fst))) (fmap (hModify1 . hNDf . comm2) op))
+< = {-~ |fmap| fusion -}
+<   \s -> Op (fmap ($ s) (fmap (fmap (fmap fst) . hModify1 . hNDf . comm2) op))
+< = {-~ definition of |hGlobalM| -}
+<   \s -> Op (fmap ($ s) (fmap hGlobalM op))
+< = {-~ definition of |fwdLHS|  -}
+<   fwdLHS (fmap hGlobalM op)
 
 
 \subsection{Equating the Fused Sides}
