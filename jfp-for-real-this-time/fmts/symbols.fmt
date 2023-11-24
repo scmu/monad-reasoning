@@ -171,6 +171,7 @@
 %format local2globalM = "\Varid{local2global_M}"
 %format hStack = "\Varid{h_{Stack}}"
 %format hModify = "\Varid{h_{Modify}}"
+%format hModify1 = "\Varid{h_{Modify1}}"
 %format hModifyMu = "\Varid{h_{ModifyMu}}"
 %format hL = "\Varid{h_{L}}"
 %format hL' = "\Varid{h_{L}^\prime}"
