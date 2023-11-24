@@ -60,13 +60,12 @@ into a single fold:
 \end{eqnarray*}
 We approach this calculationally. That is to say, we do not first postulate
 definitions of the unknowns above (|algSLHS| and so on) and then verify whether
-the fusion conditions are satisfied. Instead, we start from the known side of
+the fusion conditions are satisfied. Instead, we discover the definitions of the unknowns.
+We start from the known side of
 each fusion condition and perform case analysis on the possible shapes of
 input. By simplifying the resulting case-specific expression, and pushing the handler
 applications inwards, we end up at a point where we can read off the definition
 of the unknown that makes the fusion condition hold for that case.
-
-TODO: discuss the fusion rule used
 
 Finally, we show that both folds are equal by showing that their
 corresponding parameters are equal:
@@ -76,6 +75,44 @@ corresponding parameters are equal:
 |algNDLHS| & = & |algNDRHS| \\
 |fwdLHS| & = & |fwdRHS|
 \end{eqnarray*}
+
+A noteworthy observation is that, for fusing the left-hand side of the equation, we do not use the standard
+fusion rule:
+\begin{eqnarray*}
+    |hGlobal . fold Var alg| & = & |fold (hGlobal . Var) alg'| \\
+     \Leftarrow \qquad
+   |hGlobal . alg| & = & |alg' . fmap hGlobal|
+\end{eqnarray*}
+where |local2global = fold Var alg|. The problem is that we will not find an
+appropriate |alg'| such that |alg' (fmap hGlobal t)| restores the state for any
+|t| of type |(StateF s :+: NondetF :+: f) (Free (StateF s :+: NonDetF :+: f)
+a)|. 
+
+Fortunately, we do not need such an |alg'|. As we have already pointed out, we
+can assume that the subterms of |t| have already been transformed by
+|local2global|, and thus all occurrences of |Put| appear in the |putR|
+constellation.
+
+We can incorporate this assumption by using the alternativee fusion rule:
+\begin{eqnarray*}
+    |hGlobal . fold Var alg| & = & |fold (hGlobal . Var) alg'| \\
+     \Leftarrow \qquad
+   |hGlobal . alg . fmap local2global| & = & |alg' . fmap hGlobal . fmap local2global|
+\end{eqnarray*}
+The additional |fmap local2global| in the condition captures the property that
+all the subterms have been transformed by |local2global|.
+
+In order to not clutter the proofs, we abstract everywhere over this additional |fmap local2global| application, except
+in the one place where we need it. That is the appeal to the key lemma:
+\begin{eqnarray*}
+& |hState1 (hNDf (comm2 (local2global t))) s| & \\
+& = & \\
+& |do (x, _) <- hState1 (hNDf (comm2 (local2global t))) s; return (x, s)| &
+\end{eqnarray*}
+This expresses that the syntactic transformation |local2global| makes sure
+that, despite any temporary changes, the computation |t| restores the state
+back to its initial value.
+
 We elaborate each of these steps below.
 \end{proof}
 
