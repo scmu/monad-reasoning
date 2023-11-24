@@ -207,9 +207,9 @@ We calculate for the first subcondition:
 
 We conclude that the first subcondition is met by taking:
 
-> algSRHS :: Functor f => StateF s (s -> Free f [a]) -> (s -> Free f [a])
-> algSRHS (Get k)    = \ s -> k s s
-> algSRHS (Put s k)  = \ _ -> k s
+< algSRHS :: Functor f => StateF s (s -> Free f [a]) -> (s -> Free f [a])
+< algSRHS (Get k)    = \ s -> k s s
+< algSRHS (Put s k)  = \ _ -> k s
 
 The second subcondition can be split up in two further subconditions:
 \begin{eqnarray*}
@@ -671,11 +671,11 @@ The proof proceeds by structural induction on |t|.
 < = {-~  definition of |comm2|  -}
 <    hState1 (hNDf (Op (Inr (Inl (Get (\t' -> 
 <                                   Op (Inl (Or  (Op (Inr (Inl (Put t (comm2 (local2global k)))))) 
-                                                 (Op (Inr (Inl (Put t' (Op (Inl Fail)))))))))))))) s
+<                                                (Op (Inr (Inl (Put t' (Op (Inl Fail)))))))))))))) s
 < = {-~  definition of |hNDf|  -}
 <    hState1 (Op (Inl (Get (\t' -> 
 <                        liftM2 (++)  (Op (Inl (Put t (hNDf (comm2 (local2global k)))))) 
-                                      (Op (Inl (Put t' (Var [])))))))) s
+<                                     (Op (Inl (Put t' (Var [])))))))) s
 < = {-~  definition of |hState1|  -}
 <    hState1 (liftM2 (++) (Op (Inl (Put t (hNDf (comm2 (local2global k)))))) (Op (Inl (Put s (Var []))))) s
 < = {-~  definition of |liftM2| -}
@@ -683,32 +683,34 @@ The proof proceeds by structural induction on |t|.
 <                  y <- Op (Inl (Put s (Var [])))
 <                  Var (x ++ y)
 <             ) s
-< = {-~  Lemma~\ref{eq:liftM2-fst-comm} -}
+< = {-~  Lemma~\ref{lemma:dist-hState1} -}
 <    do  (x,s1) <- hState1 (Op (Inl (Put t (hNDf (comm2 (local2global k)))))) s 
 <        (y,s2) <- hState1 (Op (Inl (Put s (Var [])))) s1
 <        Var (x ++ y,s2)
 < = {-~  definition of |hState1| -}
 <    do  (x,s1) <- hState1 (hNDf (comm2 (local2global k))) t
-<        (y,s2) <- Var ([], s1)
+<        (y,s2) <- Var ([], s)
 <        Var (x ++ y,s2)
 < = {-~  monad laws -}
-<    do  (x,s1) <- hState1 (hNDf (comm2 (local2global k))) t
-<        Var (x ++ [],s1)
+<    do  (x,_) <- hState1 (hNDf (comm2 (local2global k))) t
+<        Var (x ++ [],s)
 < = {-~  right unit of |(++)| -}
-<    do  (x,s1) <- hState1 (hNDf (comm2 (local2global k))) t
-<        Var (x,s1)
-< = {-~  induction hypothesis -}
-<    do  (x,s1) <- do { (x, _) <- hState1 (hNDf (comm2 (local2global k))) t ; return (x, t)}
-<        Var (x,s1)
+<    do  (x,_) <- hState1 (hNDf (comm2 (local2global k))) t
+<        Var (x,s)
 < = {-~  monad laws  -}
-<    do  (x, _) <- hState1 (hNDf (comm2 (local2global k))) t
-<        Var (x,t)
-< = {-~  monad laws  -}
-<    do  (x, _) <- do { (x, s1) <- hState1 (hNDf (comm2 (local2global k))) t; return (x, s1) }
-<        Var (x,t)
+<    do  (x, _) <- do { (x, _) <- hState1 (hNDf (comm2 (local2global k))) t; return (x, s) }
+<        Var (x,s)
 < = {-~  deriviation in reverse  -}
 <    do  (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inl (Put t k)))))) s
-<        Var (x,t)
+<        Var (x,s)
+
+% < = {-~  induction hypothesis -}
+% <    do  (x,s1) <- do { (x, _) <- hState1 (hNDf (comm2 (local2global k))) t ; return (x, t)}
+% <        Var (x,s1)
+% < = {-~  monad laws  -}
+% <    do  (x, _) <- hState1 (hNDf (comm2 (local2global k))) t
+% <        Var (x,s)
+
 
 \noindent \mbox{\underline{case |t = Op (Inr (Inl (Or p q)))|}}
 <    hState1 (hNDf (comm2 (local2global (Op (Inr (Inl (Or p q))))))) s
@@ -723,7 +725,7 @@ The proof proceeds by structural induction on |t|.
 <                 y <- hNDf (comm2 (local2global q))
 <                 Var (x++y)
 <            ) s
-< = {-~  Lemma~\ref{eq:liftM2-fst-comm}  -}
+< = {-~  Lemma~\ref{lemma:dist-hState1}  -}
 <    do  (x,s1) <- hState1 (hNDf (comm2 (local2global p))) s
 <        (y,s2) <- hState1 (hNDf (comm2 (local2global q))) s1
 <        hState1 (Var (x++y)) s2
@@ -735,7 +737,18 @@ The proof proceeds by structural induction on |t|.
 <    do  (x,_) <- hState1 (hNDf (comm2 (local2global p))) s
 <        (y,_) <- hState1 (hNDf (comm2 (local2global q))) s1
 <        hState1 (Var (x++y)) s
-< = {-~  derivation in reverse  -}
+< = {-~  definition of |hState1| -}
+<    do  (x,_) <- hState1 (hNDf (comm2 (local2global p))) s
+<        (y,_) <- hState1 (hNDf (comm2 (local2global q))) s
+<        return (x++y, s)
+< = {-~  monad laws  -}
+<    do  (x, _) <- (
+<          do  (x,_) <- hState1 (hNDf (comm2 (local2global p))) s
+<              (y,_) <- hState1 (hNDf (comm2 (local2global q))) s1
+<              return (x++y, s)
+<          )
+<        return (x, s)
+< = {-~  derivation in reverse (similar to before)  -}
 <    do  (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inl (Or p q))))))) s
 <        return (x, s)
 
@@ -750,11 +763,11 @@ The proof proceeds by structural induction on |t|.
 < = {-~  definition of |hState1|; |fmap| fusion  -}
 <    Op (fmap (($s) . hState1 . hNDf . comm2 . local2global) y)
 < = {-~  induction hypothesis  -}
-<    Op (fmap ((>>= \(x,_) -> return (x,s)) . ($s) . hState1 . hNDf . comm2 . local2global) y)
+<    Op (fmap ((>>= \ (x,_) -> return (x,s)) . ($s) . hState1 . hNDf . comm2 . local2global) y)
 < = {-~  |fmap| fission; definition of |(>>=)|  -}
 <    do  (x,_) <- Op (fmap (($s) . hState1 . hNDf . comm2 . local2global) y)
 <        return(x,s)
-< = {-~  deriviation in reverse  -}
+< = {-~  deriviation in reverse (similar to before)  -}
 <    do  (x,_) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inr y)))))) s 
 <        return(x,s)
 
