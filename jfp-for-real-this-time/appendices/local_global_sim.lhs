@@ -58,6 +58,16 @@ into a single fold:
 |hGlobal . local2global| & = & |fold genLHS (algSLHS # algNDRHS # fwdLHS)| \\
 |hLocal|& = & |fold genRHS (algSRHS # algNDRHS # fwdRHS)|
 \end{eqnarray*}
+We approach this calculationally. That is to say, we do not first postulate
+definitions of the unknowns above (|algSLHS| and so on) and then verify whether
+the fusion conditions are satisfied. Instead, we start from the known side of
+each fusion condition and perform case analysis on the possible shapes of
+input. By simplifying the resulting case-specific expression, and pushing the handler
+applications inwards, we end up at a point where we can read off the definition
+of the unknown that makes the fusion condition hold for that case.
+
+TODO: discuss the fusion rule used
+
 Finally, we show that both folds are equal by showing that their
 corresponding parameters are equal:
 \begin{eqnarray*}
@@ -115,14 +125,7 @@ The second fusion condition decomposes into two separate conditions:
 |hL . fwdS| & = & |(algNDRHS # fwdRHS) . fmap hL|
 \end{eqnarray*}
 
-The first subcondition is met by taking:
-
-> algSRHS :: Functor f => StateF s (s -> Free f [a]) -> (s -> Free f [a])
-> algSRHS (Get k)    = \ s -> k s s
-> algSRHS (Put s k)  = \ _ -> k s
-
-Given this defintion we establish that the subcondition holds, when we apply both
-sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
+We calculate for the first subcondition:
 
 \noindent \mbox{\underline{case |t = Get k|}}
 <   hL (algS (Get k))
@@ -138,7 +141,7 @@ sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
 < = \s -> (fmap (fmap (fmap (fmap fst) . hNDf)) (\ s1 s2 -> k s2 s1)) s s
 < = {-~  eta-expansion of |k| -}
 < = \s -> (fmap (fmap (fmap (fmap fst) . hNDf)) k) s s
-< = {-~  definition of |algRHS| -}
+< = {-~  define |algSRHS (Get k) = \s -> k s s| -}
 < = algSRHS (Get (fmap (fmap (fmap (fmap fst) . hNDf)) k))
 < = {-~  definition of |fmap| -}
 < = algSRHS (fmap (fmap (fmap (fmap fst) . hNDf)) (Get k))
@@ -158,12 +161,18 @@ sides of the equation to any |t :: StateF s (s -> Free (NondetF :+: f) (a,s))|.
 < = \ _ -> (fmap (fmap (fmap fst) . hNDf) (\ s1 -> k s1)) s
 < = {-~  eta-expansion of |k| -}
 < = \ _ -> (fmap (fmap (fmap fst) . hNDf) k) s
-< = {-~  definition of |algSRHS| -}
+< = {-~  define |algSRHS (Pus s k) = \_ -> k s| -}
 < = algSRHS (Put s (fmap (fmap (fmap fst) . hNDf) k))
 < = {-~  definition of |fmap| -}
 < = algSRHS (fmap (fmap (fmap fst) . hNDf)) (Put s k))
 < = {-~  definition of |hL| -}
 < = algSRHS (fmap hL (Put s k))
+
+We conclude that the first subcondition is met by taking:
+
+> algSRHS :: Functor f => StateF s (s -> Free f [a]) -> (s -> Free f [a])
+> algSRHS (Get k)    = \ s -> k s s
+> algSRHS (Put s k)  = \ _ -> k s
 
 The second subcondition can be split up in two further subconditions:
 \begin{eqnarray*}
@@ -359,7 +368,7 @@ Let's consider the first subconditions. It has two cases:
 <                        y <- Op (Inl (Put t (Var [])))
 <                        Var (x ++ y)
 <                    ) t)
-< = {-~ TODO -}
+< = {-~ Lemma~\ref{lemma:dist-hState1} -}
 <   fmap (fmap fst)
 <     (\t -> do (x,t1) <- hState1 (Op (Inl (Put s (hNDf (comm2 k))))) t 
 <               (y,t2) <- hState1 (Op (Inl (Put t (Var [])))) t1
@@ -447,7 +456,7 @@ Let's consider the second subcondition. It has also two cases:
 <   fmap (fmap fst) (hState1 (do  x <- hNDf (comm2 p)
 <                                 y <- hNDf (comm2 q)
 <                                 return (x ++ y)))
-< = {-~ |hState1| lemma -}
+< = {-~ Lemma~\ref{lemma:dist-hState1} -}
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- hState1 (hNDf (comm2 p)) s0
 <                               (y, s2) <- hState1 (hNDf (comm2 q)) s1
 <                               hState1 (return (x ++ y)) s2))
@@ -455,7 +464,7 @@ Let's consider the second subcondition. It has also two cases:
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- hState1 (hNDf (comm2 p)) s0
 <                               (y, s2) <- hState1 (hNDf (comm2 q)) s1
 <                               Var (x ++ y, s2)))
-< = {-~ Lemma \ref{lemma:dist-hState1} -}
+< = {-~ Lemma \ref{lemma:state-restore} -}
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- do {(x,_) <- hState1 (hNDf (comm2 p)) s0; return (x, s0)}
 <                               (y, s2) <- do {(y,_) <- hState1 (hNDf (comm2 q)) s1; return (x, s1)}
 <                               Var (x ++ y, s2)))
@@ -544,9 +553,180 @@ We observe that the following equations hold trivially.
 
 Therefore, the main theorem holds.
 
+\subsection{Key Lemma: State Restoration}
+
+The key lemma is the following, which guarantees that
+|local2global| restores the initial state after a computation.
+
+\begin{lemma}[State is Restored] \label{lemma:state-restore} \ \\
+\begin{eqnarray*}
+& |hState1 (hNDf (comm2 (local2global t))) s| & \\
+& = & \\
+& |do (x, _) <- hState1 (hNDf (comm2 (local2global t))) s; return (x, s)| &
+\end{eqnarray*}
+\end{lemma}
+
+\begin{proof}
+The proof proceeds by structural induction on |t|.
+% In the following proofs, we assume implicit commutativity and associativity of
+% the coproduct operator |(:+:)| (\Cref{sec:transforming-between-local-and-global-state}).
+% We assume the smart constructors |getOp, putOp, orOp, failOp|, which are wrappers around
+% constructors |Get, Put, Or, Fail|, respectively, automatically insert correct |Op, Inl, Inr|
+% constructors based on the context to make the term well-typed in the following proof.
+
+\noindent \mbox{\underline{case |t = Var y|}}
+<    hState1 (hNDf (comm2 (local2global (Var y)))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Var y))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Var y)) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Var [y]) s
+< = {-~  definition of |hState1|  -}
+<    Var ([y], s)
+< = {-~  monad law -}
+<    do (x,_) <- Var ([y], s); Var (x, s)
+< = {-~  definition of |local2global, hNDf, comm2, hState1| and |return|  -}
+<    do (x,_) <- hState1 (hNDf (comm2 (local2global (Var y)))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inl (Get k))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inl (Get k)))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Op (Inl (Get (local2global . k)))))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Op (Inr (Inl (Get (comm2 . local2global . k)))))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Op (Inl (Get (hNDf . comm2 . local2global . k)))) s
+< = {-~  definition of |hState1|  -}
+<    (hState1 . hNDf . comm2 . local2global . k) s s
+< = {-~  definition of |(.)|  -}
+<    (hState1 (hNDf (comm2 (local2global (k s))))) s
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- hState1 (comm2 (hNDf (local2global (k s)))) s; return (x, s)
+< = {-~  definition of |local2global, comm2, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (local2global (Op (Inl (Get k))))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inl Fail))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inr (Inl Fail)))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Op (Inr (Inl Fail))))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Op (Inl Fail))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Var []) s
+< = {-~  definition of |hState1|  -}
+<    Var ([], s)
+< = {-~  monad law -}
+<    do (x, _) <- Var ([], s); Var (x, s)
+< = {-~  definition of |local2global, comm2, hNDf, hState1|  -}
+<    do (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inl Fail)))))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inl (Put t k))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inl (Put t k)))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (putR t >> local2global k))) s
+< = {-~  definition of |putR|  -}
+<    hState1 (hNDf (comm2 ((get >>= \t' -> put t `mplus` side (put t')) >> local2global k))) s
+< = {-~  definition of |mplus|, |get|, |put|, |side| and |(>>=)|  -}
+<    hState1 (hNDf (comm2 (Op (Inl (Get (\t' -> 
+<                                     Op (Inr (Inl (Or  (Op (Inl (Put t (local2global k)))) 
+<                                                       (Op (Inl (Put t' (Op (Inr (Inl Fail))))))))))))))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Op (Inr (Inl (Get (\t' -> 
+<                                   Op (Inl (Or  (Op (Inr (Inl (Put t (comm2 (local2global k)))))) 
+                                                 (Op (Inr (Inl (Put t' (Op (Inl Fail)))))))))))))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (Op (Inl (Get (\t' -> 
+<                        liftM2 (++)  (Op (Inl (Put t (hNDf (comm2 (local2global k)))))) 
+                                      (Op (Inl (Put t' (Var [])))))))) s
+< = {-~  definition of |hState1|  -}
+<    hState1 (liftM2 (++) (Op (Inl (Put t (hNDf (comm2 (local2global k)))))) (Op (Inl (Put s (Var []))))) s
+< = {-~  definition of |liftM2| -}
+<    hState1  (do  x <- Op (Inl (Put t (hNDf (comm2 (local2global k)))))
+<                  y <- Op (Inl (Put s (Var [])))
+<                  Var (x ++ y)
+<             ) s
+< = {-~  Lemma~\ref{eq:liftM2-fst-comm} -}
+<    do  (x,s1) <- hState1 (Op (Inl (Put t (hNDf (comm2 (local2global k)))))) s 
+<        (y,s2) <- hState1 (Op (Inl (Put s (Var [])))) s1
+<        Var (x ++ y,s2)
+< = {-~  definition of |hState1| -}
+<    do  (x,s1) <- hState1 (hNDf (comm2 (local2global k))) t
+<        (y,s2) <- Var ([], s1)
+<        Var (x ++ y,s2)
+< = {-~  monad laws -}
+<    do  (x,s1) <- hState1 (hNDf (comm2 (local2global k))) t
+<        Var (x ++ [],s1)
+< = {-~  right unit of |(++)| -}
+<    do  (x,s1) <- hState1 (hNDf (comm2 (local2global k))) t
+<        Var (x,s1)
+< = {-~  induction hypothesis -}
+<    do  (x,s1) <- do { (x, _) <- hState1 (hNDf (comm2 (local2global k))) t ; return (x, t)}
+<        Var (x,s1)
+< = {-~  monad laws  -}
+<    do  (x, _) <- hState1 (hNDf (comm2 (local2global k))) t
+<        Var (x,t)
+< = {-~  monad laws  -}
+<    do  (x, _) <- do { (x, s1) <- hState1 (hNDf (comm2 (local2global k))) t; return (x, s1) }
+<        Var (x,t)
+< = {-~  deriviation in reverse  -}
+<    do  (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inl (Put t k)))))) s
+<        Var (x,t)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inl (Or p q)))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inr (Inl (Or p q))))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Op (Inr (Inl (Or (local2global p) (local2global q))))))) s
+< = {-~  definition of |comm2|  -}
+<    hState1 (hNDf (Op (Inl (Or (comm2 (local2global p)) (comm2 (local2global q)))))) s
+< = {-~  definition of |hNDf|  -}
+<    hState1 (liftM2 (++) (hNDf (comm2 (local2global p))) (hNDf (comm2 (local2global q)))) s
+< = {-~  definition of |liftM2|  -}
+<    hState1 (do  x <- hNDf (comm2 (local2global p)) 
+<                 y <- hNDf (comm2 (local2global q))
+<                 Var (x++y)
+<            ) s
+< = {-~  Lemma~\ref{eq:liftM2-fst-comm}  -}
+<    do  (x,s1) <- hState1 (hNDf (comm2 (local2global p))) s
+<        (y,s2) <- hState1 (hNDf (comm2 (local2global q))) s1
+<        hState1 (Var (x++y)) s2
+< = {-~  induction hypothesis  -}
+<    do  (x,s1) <- do { (x,_) <- hState1 (hNDf (comm2 (local2global p))) s; return (x,s) }
+<        (y,s2) <- do { (y,_) <- hState1 (hNDf (comm2 (local2global q))) s1; return (y,s1) }
+<        hState1 (Var (x++y)) s2
+< = {-~  monad laws  -}
+<    do  (x,_) <- hState1 (hNDf (comm2 (local2global p))) s
+<        (y,_) <- hState1 (hNDf (comm2 (local2global q))) s1
+<        hState1 (Var (x++y)) s
+< = {-~  derivation in reverse  -}
+<    do  (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inl (Or p q))))))) s
+<        return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
+<    hState1 (hNDf (comm2 (local2global (Op (Inr (Inr y)))))) s
+< = {-~  definition of |local2global|  -}
+<    hState1 (hNDf (comm2 (Op (Inr (Inr (fmap local2global y)))))) s
+< = {-~  definition of |comm2|; |fmap| fusion  -}
+<    hState1 (hNDf (Op (Inr (Inr (fmap (comm2 . local2global) y))))) s
+< = {-~  definition of |hNDf|; |fmap| fusion  -}
+<    hState1 (Op (Inr (fmap (hNDf . comm2 . local2global) y))) s
+< = {-~  definition of |hState1|; |fmap| fusion  -}
+<    Op (fmap (($s) . hState1 . hNDf . comm2 . local2global) y)
+< = {-~  induction hypothesis  -}
+<    Op (fmap ((>>= \(x,_) -> return (x,s)) . ($s) . hState1 . hNDf . comm2 . local2global) y)
+< = {-~  |fmap| fission; definition of |(>>=)|  -}
+<    do  (x,_) <- Op (fmap (($s) . hState1 . hNDf . comm2 . local2global) y)
+<        return(x,s)
+< = {-~  deriviation in reverse  -}
+<    do  (x,_) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inr y)))))) s 
+<        return(x,s)
+
+\end{proof}
+
+
 \subsection{Auxiliary Lemmas}
 
-The derivations above made use of several auxliary lemmas.
+The derivations above make use of two auxliary lemmas.
 We prove them here.
 
 \begin{lemma} \label{eq:comm-app-fmap}
@@ -656,167 +836,6 @@ The proof proceeds by induction on |p|.
 <    Op ( (fmap (\x -> hState1 x s) y)) >>= \(x',s') -> hState1 (k x) s'
 < = {-~  definition of |hState1|  -}
 <    Op (Inr y) s >>= \(x',s') -> hState1 (k x) s'
-
-\end{proof}
-
-\begin{lemma}[State is Restored] \label{lemma:state-restore} \ \\
-\begin{eqnarray*}
-& |hState1 (hNDf (comm2 (local2global t))) s| & \\
-& = & \\
-& |do (x, _) <- hState1 (hNDf (comm2 (local2global t))) s; return (x, s)| &
-\end{eqnarray*}
-\end{lemma}
-
-\begin{proof}
-The proof proceeds by structural induction on |t|.
-% In the following proofs, we assume implicit commutativity and associativity of
-% the coproduct operator |(:+:)| (\Cref{sec:transforming-between-local-and-global-state}).
-% We assume the smart constructors |getOp, putOp, orOp, failOp|, which are wrappers around
-% constructors |Get, Put, Or, Fail|, respectively, automatically insert correct |Op, Inl, Inr|
-% constructors based on the context to make the term well-typed in the following proof.
-
-\noindent \mbox{\underline{case |t = Var y|}}
-<    hState1 (hNDf (comm2 (local2global (Var y)))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (comm2 (Var y))) s
-< = {-~  definition of |comm2|  -}
-<    hState1 (hNDf (Var y)) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (Var [y]) s
-< = {-~  definition of |hState1|  -}
-<    Var ([y], s)
-< = {-~  monad law -}
-<    do (x,_) <- Var ([y], s); Var (x, s)
-< = {-~  definition of |local2global, hNDf, comm2, hState1| and |return|  -}
-<    do (x,_) <- hState1 (hNDf (comm2 (local2global (Var y)))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = Op (Inl (Get k))|}}
-<    hState1 (hNDf (comm2 (local2global (Op (Inl (Get k)))))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (comm2 (Op (Inl (Get (local2global . k)))))) s
-< = {-~  definition of |comm2|  -}
-<    hState1 (hNDf (Op (Inr (Inl (Get (comm2 . local2global . k)))))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (Op (Inl (Get (hNDf . comm2 . local2global . k)))) s
-< = {-~  definition of |hState1|  -}
-<    (hState1 . hNDf . comm2 . local2global . k) s s
-< = {-~  definition of |(.)|  -}
-<    (hState1 (hNDf (comm2 (local2global (k s))))) s
-< = {-~  induction hypothesis  -}
-<    do (x, _) <- hState1 (comm2 (hNDf (local2global (k s)))) s; return (x, s)
-< = {-~  definition of |local2global, comm2, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global (Op (Inl (Get k))))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = Op (Inr (Inl Fail))|}}
-<    hState1 (hNDf (comm2 (local2global (Op (Inr (Inl Fail)))))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (comm2 (Op (Inr (Inl Fail))))) s
-< = {-~  definition of |comm2|  -}
-<    hState1 (hNDf (Op (Inl Fail))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (Var []) s
-< = {-~  definition of |hState1|  -}
-<    Var ([], s)
-< = {-~  monad law -}
-<    do (x, _) <- Var ([], s); Var (x, s)
-< = {-~  definition of |local2global, comm2, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (comm2 (local2global (Op (Inr (Inl Fail)))))) s; return (x, s)
-
-TODO
-
-\noindent \mbox{\underline{case |t = putOp t k|}}
-<    hState1 (hNDf (local2global (putOp t k))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf (putR t >> local2global k)) s
-< = {-~  definition of |putR|  -}
-<    hState1 (hNDf ((get >>= \t' -> put t `mplus` side (put t')) >> local2global k)) s
-< = {-~  definition of |orOp|  -}
-<    hState1 (hNDf (do t' <- get; orOp (put t) (side (put t')); local2global k)) s
-< = {-~  definition of |side| and |failOp|  -}
-<    hState1 (hNDf (do t' <- get; orOp (put t) ((put t') >> failOp); local2global k)) s
-< = {-~  reformulation  -}
-<    hState1 (hNDf (getOp (\t' -> orOp (putOp t (local2global k)) (putOp t' (failOp >> local2global k)))) s
-< = {-~  Law (\ref{eq:mzero-zero}): left identity of |mzero| or |failOp|  -}
-<    hState1 (hNDf (getOp (\t' -> orOp (putOp t (local2global k)) (putOp t' failOp))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (do  t'  <- get;
-<                 x   <- hNDf (putOp t (local2global k));
-<                 y   <- hNDf (putOp t' failOp);
-<                 return (x ++ y)) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (do  t'  <- get;
-<                 put t;
-<                 x   <- hNDf (local2global k);
-<                 put t';
-<                 y   <- hNDf failOp;
-<                 return (x ++ y)) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (do  t'  <- get;
-<                 put t;
-<                 x   <- hNDf (local2global k);
-<                 put t';
-<                 return x) s
-< = {-~  Law (\ref{eq:get-put}): get-put  -}
-<    hState1 (do  put t;
-<                 x   <- hNDf (local2global k);
-<                 return x) s
-< = {-~  reformulation  -}
-<    hState1 (do  put t;
-<                 hNDf (local2global k)) s
-< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-<    do  hState1 (put t) s;
-<        hState1 (hNDf (local2global k)) s
-< = {-~  induction hypothesis  -}
-<    do  hState1 (put t) s;
-<        (x, _) <- hState1 (hNDf (local2global k)) s;
-<        return (x, s)
-< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-<    do  (x, _) -> hState1 (put t >> hNDf (local2global k)) s
-<        return (x, s)
-< = {-~  definition of |hNDf|  -}
-<    do  (x, _) -> hState1 (hNDf (putOp t (local2global k))) s
-<        return (x, s)
-< = {-~  definition of |local2global|  -}
-<    do  (x, _) -> hState1 (hNDf (local2global (putOp t k))) s
-<        return (x, s)
-
-\noindent \mbox{\underline{case |t = orOp p q|}}
-<    hState1 (hNDf (local2global (orOp p q))) s
-< = {-~  definition of |local2global|; let |p' = local2global p, q' = local2global q|  -}
-<    hState1 (hNDf (orOp p' q')) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (liftM2 (++) (hNDf p') (hNDf q')) s
-< = {-~  definition of |liftM2|  -}
-<    hState1 (do x <- hNDf p'; y <- hNDf q'; return (x ++ y)) s
-< = {-~  Lemma \ref{lemma:dist-hState1}: distributivity of |hState1|  -}
-<    do (x, s1) <- hState1 (hNDf p') s; (y, s2) <- hState1 (hNDf q') s1; return (x++y, s2)
-< = {-~  induction hypothesis  -}
-<    do (x, _) <- hState1 (hNDf p') s; (y, _) <- hState1 (hNDf q') s; return (x++y, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf (local2global (orOp p q))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
-<    hState1 (hNDf . local2global $ Op (Inr (Inr y))) s
-< = {-~  definition of |local2global|  -}
-<    hState1 (hNDf $ Op (Inr (Inr (fmap local2global y)))) s
-< = {-~  definition of |hNDf|  -}
-<    hState1 (Op (Inr (fmap hNDf (fmap local2global y)))) s
-< = {-~  definition of |hState1|  -}
-<    (\ s -> Op (fmap ($s) (fmap (hState1 (fmap hNDf (fmap local2global y)))))) s
-< = {-~  Law (\ref{eq:functor-composition}): composition of |fmap|  -}
-<    (\ s -> Op (fmap (($s) . hState1 . hNDf . local2global) y)) s
-< = {-~  function application  -}
-<    Op (fmap (($s) . hState1 . hNDf . local2global) y)
-< = {-~  induction hypothesis  -}
-<    Op (fmap ((>>= \ (x, _) -> return (x, s)) . ($s) . hState1 . hNDf . local2global) y)
-< = {-~  Law (\ref{eq:functor-composition}): composition of |fmap|  -}
-<    Op (fmap (>>= \ (x, _) -> return (x, s)) $ (fmap (($s) . hState1 . hNDf . local2global) y))
-< = {-~  definition of |(>>=)|  -}
-<    Op (fmap (($s) . hState1 . hNDf . local2global) y) >>= \ (x, _) -> return (x, s)
-< = {-~  reformulation  -}
-<    do (x, _) <- Op (fmap (($s) . hState1 . hNDf . local2global) y); return (x, s)
-< = {-~  definition of |local2global, hNDf, hState1|  -}
-<    do (x, _) <- hState1 (hNDf . local2global $ Op (Inr (Inr y))) s; return (x, s)
 
 \end{proof}
 
