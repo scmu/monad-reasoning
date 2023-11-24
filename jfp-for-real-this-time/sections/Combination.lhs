@@ -6,6 +6,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Combination where
 
@@ -19,7 +20,7 @@ import Background
 import Overview
 import LocalGlobal (local2global, hLocal, comm2)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
-import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
+import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put)
 
 \end{code}
 %endif
@@ -35,12 +36,12 @@ nondeterminism and state with a single state effect.
 \subsection{Modeling Two States with One State}
 \label{sec:multiple-states}
 
-When we combine the two simulation steps from the two previous section, we end
+When we combine the two simulation steps from the two previous sections, we end
 up with a computation that features two state effects. The first state effect
 is the one present originally, and the second state effect keeps track of the
 results and the stack of remaining branches to simulate the nondeterminism.
 
-When we have such a computation of type |Free (StateF s1 :+: StateF s2 :+: f) a|
+For a computation of type |Free (StateF s1 :+: StateF s2 :+: f) a|
 that features two state effects,
 % \begin{enumerate}
 %   \item A representation using and effect functor with two state functors |StateF s1 :+: StateF s2|,
@@ -59,7 +60,7 @@ that features two state effects,
 % hStateTuple = hState
 % \end{code}
 % \end{enumerate}
-% 
+%
 we can actually go to a slightly more primitive representation
 |Free (StateF (s1, s2) :+: f) a| that features only a single state effect.
 
@@ -69,71 +70,61 @@ The |states2state| function defines this simulation using a |fold|:
 states2state  :: Functor f
               => Free (StateF s1 :+: StateF s2 :+: f) a
               -> Free (StateF (s1, s2) :+: f) a
-states2state  = fold gen (alg1 # alg2 # fwd)
+states2state  = fold Var (alg1 # alg2 # fwd)
   where
-    gen :: Functor f => a -> Free (StateF (s1, s2) :+: f) a
-    gen = return
-
-    alg1  :: Functor f  => StateF s1 (Free (StateF (s1, s2) :+: f) a)
-                        -> Free (StateF (s1, s2) :+: f) a
-    alg1 (Get k)      = get' >>= \(s1,  _)   -> k s1
-    alg1 (Put s1' k)  = get' >>= \(_,   s2)  -> put' (s1', s2) k
-
-    alg2  :: Functor f  => StateF s2 (Free (StateF (s1, s2) :+: f) a)
-                        -> Free (StateF (s1, s2) :+: f) a
-    alg2 (Get k)      = get' >>= \(_,   s2)  -> k s2
-    alg2 (Put s2' k)  = get' >>= \(s1,  _)   -> put' (s1, s2') k
-
-    fwd  :: Functor f   => f (Free (StateF (s1, s2) :+: f) a)
-                        -> Free (StateF (s1, s2) :+: f) a
+    alg1 (Get k)      = get >>= \(s1,  _)   -> k s1
+    alg1 (Put s1' k)  = get >>= \(_,   s2)  -> put (s1', s2) >> k
+    alg2 (Get k)      = get >>= \(_,   s2)  -> k s2
+    alg2 (Put s2' k)  = get >>= \(s1,  _)   -> put (s1, s2') >> k
     fwd op            = Op (Inr op)
 \end{code}
-Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
-\begin{code}
-get'        :: Functor f => Free (StateF s :+: f) s
-get'        = Op (Inl (Get return))
+% Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
+% \begin{code}
+% get'        :: Functor f => Free (StateF s :+: f) s
+% get'        = Op (Inl (Get return))
 
-put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
-put' sts k  = Op (Inl (Put sts k))
-\end{code}
+% put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
+% put' sts k  = Op (Inl (Put sts k))
+% \end{code}
 
-\paragraph*{Correctness}
-To prove the simulation correct we have to prove the following theorem:
+\paragraph*{Correctness}\
+We have the following theorem showing the correctness of |states2state|:
 \begin{theorem}\label{thm:states-state}
 < hStates = nest . hState . states2state
 \end{theorem}
 \noindent
-Here, |hStates| is the composition of two consecutive state handlers:
+On the left-hand side, we write |hStates| for the composition of two
+consecutive state handlers:
 \begin{code}
 hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
+hStates s = StateT (hState . runStateT (hState s))
 \end{code}
-Moreover, the |nest| function mediates between 
-the two different carrier types:
+On the right-hand side, we use the isomorphism |nest| to mediate
+between the two different carrier types. The definition of |nest| and
+its inverse |flatten| are defined as follows:
 \begin{code}
-nest     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
-nest t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
-\end{code}
-Here, |alpha1| rearranges a nested tuple.
-\begin{code}
-alpha :: ((a, x), y) -> (a, (x, y))
-alpha ((a, x), y) = (a, (x, y))
-
-alpha1 :: (a, (x, y)) -> ((a, x), y)
-alpha1 (a, (x, y)) = ((a, x), y)
-\end{code}
-We prove the theorem in terms of the lemma:
-\begin{lemma}
-< flatten . hStates = hState . states2state
-\end{lemma}
-Here, |flatten| is the inverse of |nest|:
-\begin{code}
-flatten :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
+nest        :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
+nest t      = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
+flatten     :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
 flatten t   = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
 \end{code}
-The proof of the |nest|/|flatten| isomorphism can be found in \ref{app:flatten-nest}
-and the proof of the theorem is written out in Appendix \Cref{app:states-state-sim}.
-The theorem is a trivial corollary of the lemma.
+They use the isomorphism |alpha1| and its inverse |alpha| rearrange a
+nested tuple.
+\begin{code}
+alpha   :: ((a, x), y) -> (a, (x, y))
+alpha ((a, x), y)   = (a, (x, y))
+alpha1  :: (a, (x, y)) -> ((a, x), y)
+alpha1 (a, (x, y))  = ((a, x), y)
+\end{code}
+The proof of \Cref{thm:states-state} can be found in
+\Cref{app:states-state}. Instead of proving it directly, we show the
+correctness of the isomorphism of |nest| and |flatten|, and prove the
+following equation:
+< flatten . hStates = hState . states2state
+% The proof of the |nest| / |flatten| isomorphism can be found in
+% \Cref{app:flatten-nest} and the proof of the theorem is written out in
+% \Cref{app:states-state-sim}.  The theorem is a trivial
+% corollary of the lemma.
 
 % The function |alpha| is .
 % https://q.uiver.app/?q=WzAsMixbMCwwLCJ8KChhLHgpLHkpfCJdLFsyLDAsInwoYSwgKHgseSkpfCJdLFswLDEsInxhbHBoYXwiLDAseyJvZmZzZXQiOi0zfV0sWzEsMCwifGFscGhhMXwiLDAseyJvZmZzZXQiOi0zfV1d
@@ -150,12 +141,12 @@ The theorem is a trivial corollary of the lemma.
 % as well:
 % < hStates = nested . hStateTuple . states2state
 % Here, |nested| is defined as follows:
-% \begin{code} 
+% \begin{code}
 % nested     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
 % nested t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
 % \end{code}
 
-The following commuting diagram simmuarizes the simulation.
+The following commuting diagram simmuarises the simulation.
 
 % https://q.uiver.app/?q=WzAsNCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMxIDorOiBTdGF0ZUYgczIgOis6IGYpIGF8Il0sWzAsMiwifEZyZWUgKFN0YXRlRiAoczEsIHMyKSA6KzpmKSBhfCJdLFsyLDAsInxTdGF0ZVQgczEgKFN0YXRlVCBzMiAoRnJlZSBmKSkgYXwiXSxbMiwyLCJ8U3RhdGVUIChzMSwgczIpIChGcmVlIGYpIGF8Il0sWzIsMywifGZsYXR0ZW58IiwyLHsib2Zmc2V0Ijo1fV0sWzMsMiwifG5lc3RlZHwiLDIseyJvZmZzZXQiOjV9XSxbMCwyLCJ8aFN0YXRlc3wiXSxbMSwzLCJ8aFN0YXRlVHVwbGV8IiwyXSxbMCwxLCJ8c3RhdGVzMnN0YXRlfCIsMl1d
 \[\begin{tikzcd}

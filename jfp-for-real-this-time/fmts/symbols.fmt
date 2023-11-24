@@ -1,4 +1,7 @@
+% the default rendering of the following operations are too dense
 %format ++ = "+\!\!+"
+%format >> = ">\!\!>"
+%format >>= = ">\!\!>\!\!="
 
 %format mzero = "\Varid{\varnothing}"
 %format mplus = "(\talloblong)"

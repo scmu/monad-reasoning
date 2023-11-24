@@ -135,6 +135,7 @@ fun plus((c, sol): (int, list<int>), r: int): (int, list<int>)
 fun minus((c, sol): (int, list<int>), r: int): (int, list<int>)
   (c - 1, tail(sol))
 
+
 // --------------------------------------------------------
 
 pub fun main(n)
