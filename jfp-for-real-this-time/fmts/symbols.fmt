@@ -82,6 +82,7 @@
 %format sig = "\Varid{\sigma}"
 %format mu  = "\Varid{\mu}"
 %format eta  = "\Varid{\eta}"
+%format beta  = "\Varid{\beta}"
 %format alph  = "\Varid{\alpha}"
 %format return = "\Varid{\eta}"
 

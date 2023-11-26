@@ -89,15 +89,18 @@ states2state  = fold Var (alg1 # alg2 # fwd)
 
 \paragraph*{Correctness}\
 We have the following theorem showing the correctness of |states2state|:
-\begin{theorem}\label{thm:states-state}
+\begin{restatable}[]{theorem}{statesState}
+\label{thm:states-state}
 < hStates = nest . hState . states2state
-\end{theorem}
+\end{restatable}
 \noindent
 On the left-hand side, we write |hStates| for the composition of two
 consecutive state handlers:
 \begin{code}
 hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-hStates s = StateT (hState . runStateT (hState s))
+hStates x = StateT (hState . runStateT (hState x))
+hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
+hStates' t = StateT $ \ (s1, s2) -> alpha <$> runStateT (hState (runStateT (hState t) s1)) s2
 \end{code}
 On the right-hand side, we use the isomorphism |nest| to mediate
 between the two different carrier types. The definition of |nest| and
@@ -108,8 +111,8 @@ nest t      = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
 flatten     :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
 flatten t   = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
 \end{code}
-They use the isomorphism |alpha1| and its inverse |alpha| rearrange a
-nested tuple.
+where the isomorphism |alpha1| and its inverse |alpha| rearrange a
+nested tuple
 \begin{code}
 alpha   :: ((a, x), y) -> (a, (x, y))
 alpha ((a, x), y)   = (a, (x, y))
