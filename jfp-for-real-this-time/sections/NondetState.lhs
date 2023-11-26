@@ -400,11 +400,29 @@ We start with the definition of |queensGlobal| and reason as follows:
 
 Thus, the function |queensState| uses the two simulation functions in sequence.
 \begin{code}
+-- global
 queensState   :: Int -> [[Int]]
 queensState   = hNil
               . fmap fst . flip runStateT (0, []) . hState
               . (extractSS . hState . nondet2state) . comm2
               . local2global . queens
+
+-- local
+queensState'  :: Int -> [[Int]]
+queensState'  = hNil
+              . (extractSS . hState . nondet2state)
+              . fmap fst . flip runStateT (0, []) . hState
+              . queens
+
+-- global !
+queensState'' :: Int -> [[Int]]
+queensState'' = hNil
+              . extractSS' . hState
+              . fmap fst . flip runStateT (0, []) . hState
+              . comm2 . nondet2state . comm2
+              . local2global . queens
+    where
+              extractSS' x = resultsSS . snd <$> runStateT x (SS [] [])
 \end{code}
 % Similarly, we can develop a version of |queensStateR| based on |queensModify|,
 % which uses the undo semantics.

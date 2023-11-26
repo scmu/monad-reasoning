@@ -239,78 +239,85 @@ x5 y =
 %-------------------------------------------------------------------------------
 \subsection{Putting Everything Together}\
 %
-By now we have defined three simulations for encoding a high-level effect as a lower-level effect.
+We have defined three translations for encoding high-level effects as
+lower-level effects.
 \begin{itemize}
-  \item The function |nondet2state| simulates the high-level nondeterminism effect with the state effect
-  (Section \ref{sec:nondeterminism-state}).
-  \item The function |local2global| simulates the high-level local-state effect with global-state
-  semantics (Section \ref{sec:local-global}).
-  \item The function |states2state| simulates multiple state effects with a single-state semantics
-  (Section \ref{sec:multiple-states}).
+  \item The function |local2global| simulates the high-level
+  local-state semantics with global-state semantics for the
+  nondeterminism and state effects  (\Cref{sec:local-global}).
+  \item The function |nondet2state| simulates the high-level
+  nondeterminism effect with the state effect
+  (\Cref{sec:nondeterminism-state}).
+  \item The function |states2state| simulates multiple state effects
+  with a single state effect (\Cref{sec:multiple-states}).
 \end{itemize}
 
-Combining these simulations, we can encode the semantics for nondeterminism and state with
-just the state monad.
-An overview of this simulation is given in Figure \ref{fig:simulation}.
+Combining these simulations, we can encode the local-state semantics
+for nondeterminism and state with just one state effect. The ultimate
+simulation function |simulate| is defined as follows.
+\begin{code}
+simulate  :: Functor f
+          => Free (StateF s :+: NondetF :+: f) a
+          -> s -> Free f [a]
+simulate  = extract . hState . states2state . nondet2state . comm2 . local2global
+extract   :: Functor f
+          => StateT (SS (StateF s :+: f) a, s) (Free f) ()
+          -> s -> Free f [a]
+extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
+\end{code}
+An overview of this simulation is given in Figure
+\ref{fig:simulation}.
 
 \begin{figure}[h]
-% https://q.uiver.app/?q=WzAsOCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8Q29tcFNTIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIChTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDUsInxGcmVlIChTdGF0ZUYgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgOis6IGYpICgpfCJdLFswLDYsInxTdGF0ZVQgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgKEZyZWUgZikgKCl8Il0sWzAsNywifHMgLT4gRnJlZSBmIFthXXwiXSxbMCwxLCJ8bG9jYWwyZ2xvYmFsfCJdLFsxLDIsInxjb21tMnwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdLFszLDQsIlxcdGV4dHtkZWZpbml0aW9uIG9mIH0gfENvbXBTU3wiXSxbNCw1LCJ8c3RhdGVzMnN0YXRlfCJdLFs1LDYsInxoU3RhdGV8Il0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbNiw3LCJ8ZXh0cmFjdHwiLDAseyJjb2xvdXIiOlswLDAsNTBdLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkb3R0ZWQifX19LFswLDAsNTAsMV1dXQ==
+% https://q.uiver.app/#q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8RnJlZSAoU3RhdGVGIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIDorOiBTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSAoRnJlZSBmKSAoKXwiXSxbMCw2LCJ8cyAtPiBGcmVlIGYgW2FdfCJdLFswLDEsInxsb2NhbDJnbG9iYWx8Il0sWzEsMiwifGNvbW0yfCJdLFszLDQsInxzdGF0ZXMyc3RhdGV8Il0sWzQsNSwifGhTdGF0ZXwiXSxbNSw2LCJ8ZXh0cmFjdHwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdXQ==
 \[\begin{tikzcd}
-  {|Free (StateF s :+: NondetF :+: f) a|} \\
-  {|Free (StateF s :+: NondetF :+: f) a|} \\
-  {|Free (NondetF :+: StateF s :+: f) a|} \\
-  {|CompSS (SS (StateF s :+: f) a) (StateF s :+: f) ()|} \\
-  {|Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) ()|} \\
-  {|Free (StateF (SS (StateF s :+: f) a, s) :+: f) ()|} \\
-  {|StateT (SS (StateF s :+: f) a, s) (Free f) ()|} \\
-  {|s -> Free f [a]|}
-  \arrow["{|local2global|}", from=1-1, to=2-1]
-  \arrow["{|comm2|}", from=2-1, to=3-1]
-  \arrow["{|nondet2state|}", from=3-1, to=4-1]
-  \arrow["{\text{definition of } |CompSS|}", from=4-1, to=5-1]
-  \arrow["{|states2state|}", from=5-1, to=6-1]
-  \arrow["{|hState|}", from=6-1, to=7-1]
-  \arrow["{|simulate|}", shift left=25, color={rgb,255:red,128;green,128;blue,128}, curve={height=-150pt}, dotted, from=1-1, to=6-1]
-  \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=7-1, to=8-1]
+	{|Free (StateF s :+: NondetF :+: f) a|} \\
+	{|Free (StateF s :+: NondetF :+: f) a|} \\
+	{|Free (NondetF :+: StateF s :+: f) a|} \\
+	{|Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) ()|} \\
+	{|Free (StateF (SS (StateF s :+: f) a, s) :+: f) ()|} \\
+	{|StateT (SS (StateF s :+: f) a, s) (Free f) ()|} \\
+	{|s -> Free f [a]|}
+	\arrow["{|local2global|}", from=1-1, to=2-1]
+	\arrow["{|comm2|}", from=2-1, to=3-1]
+	\arrow["{|states2state|}", from=4-1, to=5-1]
+	\arrow["{|hState|}", from=5-1, to=6-1]
+	\arrow["{|extract|}", from=6-1, to=7-1]
+	\arrow["{|nondet2state|}", from=3-1, to=4-1]
 \end{tikzcd}\]
 \caption{The simulation.}
 \label{fig:simulation}
 \end{figure}
 
-We explain the steps here in detail.
-Broadly speaking, we use a simulation function |simulate| to interpret the semantics for state, nondeterminism
-and possibly other effects in terms of a state transformer,
-and afterwards a function |extract| that gets the result form the state transformer.
+In the |simulate| function, we first use the three previous
+simulations |local2global|, |nondet2state| and |states2state| to
+interpret the local-state semantics for state and nondeterminism in
+terms of only one state effect. Then, we use the handler |hState| to
+interpret the state effect into a state transformer. Finally, We use a
+function |extract| to extract the result form the state transformer.
 
-The simulation function is a composition of the different handlers we have defined:
-\begin{code}
-simulate  :: Functor f
-          => Free (StateF s :+: NondetF :+: f) a
-          -> StateT (SS (StateF s :+: f) a, s) (Free f) ()
-simulate  = hState . states2state . nondet2state . comm2 . local2global
-\end{code}
-First, |local2global| models the local-state semantics with a global state.
-Second, we use commutativity and associativity of the coproduct operator to change
-the order of state and nondeterminism.
+% First, |local2global| models the local-state semantics with a global
+% state.  Second, we use commutativity and associativity of the
+% coproduct operator to change the order of state and nondeterminism.
 
-Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
-Then, we use the definition of |CompSS| to represent it as a free monad so that the
-|states2state| simulation can combine the two state effects into a single state.
-Finally, |hState| handles this state effect and translates it to the state transformer |StateT|.
+% Next, |nondet2state| transforms the nondeterminism effect into a
+% simulation with state.  Then, we use the definition of |CompSS| to
+% represent it as a free monad so that the |states2state| simulation can
+% combine the two state effects into a single state.  Finally, |hState|
+% handles this state effect and translates it to the state transformer
+% |StateT|.
 
-Additionally, the |extract| function extracts the final result from the state monad transformer
-into a more readable form.
-\begin{code}
-extract   :: (Functor f)
-          => StateT (SS (StateF s :+: f) a, s) (Free f) ()
-          -> (s -> Free f [a])
-extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
-\end{code}
+% Additionally, the |extract| function extracts the final result from
+% the state monad transformer into a more readable form.
 
-To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|,
-or, in a more elaborate form:
-< hLocal = extract . hState . states2state . nondet2state . comm2 . local2global
-The proof of this simulation can be found in \Cref{app:final-simulate}.
+We have the following theorem showing that the |simulate| function exactly
+behaves the same as the local-state semantics given by |hLocal|.
+\begin{restatable}[]{theorem}{finalSimulate}
+\label{thm:final-simulate}
+< simulate = hLocal
+\end{restatable}
+
+The proof can be found in \Cref{app:final-simulate}.
 
 %if False
 \begin{code}
@@ -332,7 +339,7 @@ prog =
       (do x <- get1; return x)
 
 tt :: [Int]
-tt = hNil $ (extract . simulate) prog 0
+tt = hNil $ (simulate) prog 0
 -- [5, 0]
 tt' :: [Int]
 tt' = hNil $ hLocal prog 0
@@ -342,13 +349,13 @@ tt' = hNil $ hLocal prog 0
 
 \paragraph*{N-queens with Only State}\
 %
-Using the simulation methods shown in Figure \ref{fig:simulation},
-we can simulate the backtracking algorithm of the n-queens problem
-of \Cref{sec:motivation-and-challenges} with only state.
-The function |queensSim| shows this simulation for the n-queens example.
+With |simulate|, we can implement the backtracking algorithm of the
+n-queens problem in \Cref{sec:motivation-and-challenges} with only
+one state effect as follows.
+
 \begin{code}
 queensSim  :: Int -> [[Int]]
-queensSim  = hNil . flip extract (0, []) . simulate . queens
+queensSim  = hNil . flip simulate (0, []) . queens
 \end{code}
 
 % Furthermore, we can replace the simulation |local2global| in the definition of |simulate|
