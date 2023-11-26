@@ -1,5 +1,4 @@
 %if False
-% Wenhao: Just to make my Haskell plugin work
 \begin{code}
 \end{code}
 %endif

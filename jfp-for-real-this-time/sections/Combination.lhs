@@ -171,73 +171,37 @@ The following commuting diagram simmuarises the simulation.
 %if False
 % NOTE: some test code to assit in writing proofs
 \begin{code}
+t :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: (StateF s :+: f)) () -> s -> Free f [a]
+t = extract . hStates'
 
-extractqwq x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
-extractSSqwq :: Functor f1 => StateT (SS f2 a1) f1 a2 -> f1 [a1]
-extractSSqwq x = resultsSS . snd <$> runStateT x (SS [] [])
+input :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: (StateF s :+: f)) ()
+input = undefined
 
-qwq :: (Functor f) => StateT (SS (StateF s :+: f) a) (StateT s (Free f)) () -> (s -> Free f [a])
-qwq = extract . flatten
+step1 :: Functor f => Free (StateF s :+: f) ((), SS (StateF s :+: f) a)
+step1 = runStateT (hState input) (SS [] [])
 
-qwq' :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
-qwq' = extractSS
+_hStates :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
+_hStates = flip (runStateT . hState)
 
-sar :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
-sar t =
-  \s -> fmap (resultsSS . snd . fst) $ (flip runStateT s . hState) $ runStateT (hState t) (SS [] [])
-  -- resultsSS . snd :: ((), SS (StateF s :+: f) a) -> [a]
-  -- hState :: Free (StateF s :+: f) ((), SS (StateF s :+: f) a) -> StateT s (Free f) ((), SS (StateF s :+: f) a)
-  -- runStateT :: StateT s (Free f) ((), SS (StateF s :+: f) a) -> s -> Free f (((), SS (StateF s :+: f) a), s)
+fhStates :: Functor f => s -> Free (StateF s :+: f) a -> Free f a
+fhStates s = fmap fst . _hStates s
 
-sar' :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
-sar' t =
-  \s -> fmap fst . (flip runStateT s . hState) $ fmap (resultsSS . snd) $ runStateT (hState t) (SS [] [])
-  -- resultsSS . snd :: ((), SS (StateF s :+: f) a) -> [a]
-  -- hState :: Free (StateF s :+: f) [a] -> StateT s (Free f) [a]
-  -- runStateT :: Free (StateF s :+: f) [a] -> StateT s (Free f) [a]
+t1 s = fmap (resultsSS . snd . fst) step2
+  where
+    step2 = _hStates s step1
 
-www :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
-www s = flip runStateT s . hState
-----------------------------------------------------------------
 
-x0 :: a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x0 x = Var x
+t2 :: Functor f => t -> Free f [a]
+t2 s = fhStates s . fmap (resultsSS . snd) $ step1
 
-x1 :: Functor f => (s1 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x1 k = Op (Inl (Get k))
-
-x2 :: Functor f => s1 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x2 s k = Op (Inl (Put s k))
-
-x3 :: Functor f => (s2 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x3 k =
-  let tmp =
-          StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-          $ runStateT (hState (runStateT (StateT $ \s -> Op $ (Inl (Get ((\k -> runStateT k s) . hState . k)))) s1)) s2
-  in Op (Inr (Inl (Get k)))
-
-fwdS op           = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
-algS (Get     k)  = StateT $ \s -> runStateT (k s) s
-algS (Put s'  k)  = StateT $ \s -> runStateT k s'
-
-x4 :: Functor f => s2 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x4 s k =
-  let tmp =
-        StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
-          $ runStateT (hState (runStateT (fwdS (Inl (Put s (hState k)))) s1)) s2
-  in Op (Inr (Inl (Put s k)))
-
-x5 :: Functor f => f (Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x5 y =
-  let tmp =
-        StateT $ \ (s1, s2) -> Op (fmap (fmap (\ ((a, x), y) -> (a, (x, y))) . (\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
-  in let tmp2 = StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap (\t -> StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState t) s1)) s2) y)
-  in Op (Inr (Inr y))
+t3 :: Functor f => t -> Free f [a]
+t3 s = fmap (resultsSS . snd) . fhStates s $ step1
 \end{code}
 %endif
 
 %-------------------------------------------------------------------------------
 \subsection{Putting Everything Together}\
+\label{sec:final-simulate}
 %
 We have defined three translations for encoding high-level effects as
 lower-level effects.
