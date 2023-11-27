@@ -8,8 +8,8 @@
 \subsection{Only State and Nondeterminism}
 \label{app:runnd-hnd}
 
-This section shows that the |runND| function in Section \ref{sec:sim-nondet-state} is equivalent
-to the nondeterminism handler |hND| in Section \ref{sec:free-monads-and-their-folds}.
+This section shows that the |runND| function of Section \ref{sec:sim-nondet-state} is equivalent
+to the nondeterminism handler |hND| of Section \ref{sec:free-monads-and-their-folds}.
 
 \begin{theorem}\label{eq:runnd-hnd}
 |runND = hND|
@@ -46,8 +46,6 @@ For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|.
 <    results (S [x] [])
 < = {-~  definition of |results|  -}
 <    [x]
-% < = {-~  definition of |return|  -}
-% <    return x
 < = {-~  definition of |genND|  -}
 <    genND x
 
@@ -441,8 +439,6 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q); return ((), SS (p'++q') []) }
 < = {-~  evaluation of |snd, resultsSS|  -}
 <    do { p' <- extractSS (hState p); q' <- extractSS (hState q); return (p'++q') }
-% < = {-~  definition of |(.)|  -}
-% <    do { p' <- ((extractSS . hState) p); q' <- ((extractSS . hState) q); return (p' ++ q')}
 < = {-~  definition of |liftM2|  -}
 <    liftM2 (++) ((extractSS . hState) p) ((extractSS . hState) q)
 < = {-~  definition of |algNDf|  -}
@@ -484,7 +480,11 @@ is called \emph{extract-alg2-ext}\label{eq:extract-alg-2-f}.
 < = {-~  definition of |fmap|  -}
 <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inr y)
 \end{proof}
-
+Part of the above proof also shows:
+\begin{equation*}
+|extractSS (hState (fwd y))| = |fwdNDf (fmap (extractSS . hState) y)|
+\end{equation*}
+We call this property \emph{extract-fwd}\label{eq:extract-fwd}.
 
 In this proof we have also used the pop-extract property of |SS|, which is similar to the pop-extract of |S| (Theorem \ref{eq:pop-extract}).
 \begin{theorem}[pop-extract of |SS|]\label{eq:pop-extract-f}
@@ -569,9 +569,6 @@ Assume by induction that |p1| and |p2| satisfy this theorem.
 < = {-~  Law (\ref{eq:monad-assoc}) with |do|-notation  -}
 <    do { p2' <- extractSS (hState p2); p1' <- extractSS (hState p1);
 <      runStateT (hState popSS) (SS (xs++p1'++p2') stack) }
-% < = {-~  definition of |let|  -}
-% <    do { p2' <- extractSS (hState p2); p1' <- extractSS (hState p1);
-% <      let p' = (p1' ++ p2') in runStateT (hState popSS) (SS (xs++p') stack) }
 < = {-~  definition of |liftM2|  -}
 <    do { p' <- liftM2 (++) (extractSS (hState p2)) (extractSS (hState p1));
 <      runStateT (hState popSS) (SS (xs++p') stack) }
@@ -583,11 +580,16 @@ Finally, we use equational reasoning techniques to prove the third item.
 < = {-~  definition of |fwd|  -}
 <    runStateT (hState (Op (Inr x))) (SS xs stack)
 < = {-~  definition of |hState|  -}
-\todo{}
-
-
-
-
+<    runStateT (StateT (\s -> Op (fmap (\y -> runStateT (hState y s)) x))) (SS xs stack)
+< = {-~  definition of |runStateT|  -}
+<    Op (fmap (\y -> runStateT (hState y (SS xs stack))) x) 
+< = {-~  induction hypothesis -}
+<   Op (fmap (\y -> do { p' <- extractSS (hState y); runStateT (hState popSS) (SS (xs++p') stack) }) x)
+< = {-~  definition of |>>=| -}
+<   do { p' <- Op (fmap (\y -> extractSS (hState y)) x); runStateT (hState popSS) (SS (xs++p') stack) }
+< = {-~  definition of |fwdNDf| -}
+<   do { p' <- fwdNDf (fmap (\y -> extractSS (hState y)) x); runStateT (hState popSS) (SS (xs++p') stack) }
+< = {-~  Theorem \ref{eq:runndf-hndf}: extract-fwd -}
 < =  do { p' <- extractSS (hState (fwd x)); runStateT (hState popSS) (SS (xs++p') stack) }
 
 Note that the above two proofs of theorems \ref{eq:runndf-hndf} and \ref{eq:pop-extract-f} are mutually recursive. However, only the
