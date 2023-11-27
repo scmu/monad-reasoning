@@ -80,7 +80,6 @@ We have the following law for |Undo|:
 \begin{alignat}{2}
     &\mbox{\bf plus-minus}:\quad &
       |(`minus` x) . (`plus` x)| ~=~ & |id| \label{eq:plus-minus} \mbox{~~.}
-      \\
 \end{alignat}
 
 % In general, we define a |modify| function as follows.
@@ -95,7 +94,7 @@ We have the following law for |Undo|:
 % global-state semantics by using |modify bwd| to roll back the updates.
 %
 In order to make sure that every state update is given in the form of
-modification which can be restored, we define a new typeclass
+a modification which can be restored, we define a new typeclass
 |MModify| which restricts the |put| operation of |MState| to |update|
 and |restore|.
 \begin{code}
@@ -194,6 +193,10 @@ holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
 that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
 % \end{theorem}
+
+The proof of this theorem can be found in Appendix~\ref{app:modify-local-global}.
+The proof structure is very similar to that in
+\Cref{app:local-global}.
 
 % Observe that, unlike |putR|, the interpretation of |modifyR| in
 % |modify2global| does not hold onto a copy of the old state.
