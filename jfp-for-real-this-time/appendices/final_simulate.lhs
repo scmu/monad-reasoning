@@ -98,11 +98,11 @@ following calculation.
 < = {-~    -}
 <    (fmap (fmap fst) . runStateT . hState . extractSS . hState) t
 
-Note that in the above calculation, we use the parametricity of free
-monads which is formally stated as follows:
+Note that in the above calculation, we use the
+parametricity~\citep{Reynolds83, Wadler89} of free monads which is
+formally stated as follows:
 < fmap f . g = g . fmap f
 for any |g :: forall a . Free F a -> Free G a| with two functors |F|
 and |G|.
-\wenhao{Do we prove it or is there any reference?}
 
 \end{proof}
