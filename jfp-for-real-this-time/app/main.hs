@@ -7,7 +7,7 @@ import LocalGlobal
 import NondetState
 import Combination
 import MutableState
-import qualified Stack2 as SC
+-- import qualified Stack2 as SC
 
 import Control.DeepSeq (NFData(rnf))
 import Data.Time
@@ -16,21 +16,23 @@ import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 import qualified FusionLocal as Fl
 import qualified FusionGlobal as Fg
 import QueensMT (queensMT)
+import Undo
 
 
 -- queensStateLocal = hNil . flip local (0, []) . queens
 --   where local = fmap (fmap (fmap fst) . runNDf) . runStateT . hState
 
 funlist =
-  [ 
+  [
   -- , (queensNaive, "queensNaive")
-    (queensMT, "queensMT")        
-  -- , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
-  -- , (queensGlobal, "queensGlobal")      -- local2global
-  -- , (queensModify, "queensModify")      -- queensR
-  -- , (queensState, "queensState")        -- local2global & nondet2state
+    (queensMT, "queensMT")
+  , (queensLocal, "queensLocal")        -- local-state semantics, no simulation
+  , (queensGlobal, "queensGlobal")      -- local2global
+  , (queensLocalM, "queensLocalM")      --
+  , (queensGlobalM, "queensGlobalM")    --
+  , (queensState, "queensState")        -- local2global & nondet2state
   --  (queensStateR, "queensStateR")      -- queensR & nondet2state
-  -- , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
+  , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
   -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
   -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
   -- , (queensStack, "queensStack")        -- local2global & nondet2stack
@@ -38,10 +40,10 @@ funlist =
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
   -- , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
-  , (Fl.queensLocal, "F.queensLocal")
-  , (Fg.queensModify, "F.queensModify")
-  , (Fg.queensStateR, "F.queensStateR")
-  , (Fg.queensStackR, "F.queensStackR")
+  , (Fl.queensLocal,  "F.queensLocal")
+  , (Fg.queensGlobal, "F.queensGlobal")
+  , (Fg.queensState,  "F.queensState")
+  -- , (Fg.queensStackR, "F.queensStackR")
   ]
 
 nlist = [10]
@@ -77,7 +79,7 @@ testall n ((f,name):xs) = do
   return ((name, diffUTCTime end start / num):ts)
 
 main = do
-  ts <- testall 11 funlist
+  ts <- testall 7 funlist
   putStrLn ""
   printList ts
 
@@ -132,7 +134,7 @@ printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 -- queensStack[R] is still a little slower than queensState
 -- but queensStack[R]2 is even faster than queensLocal
 
-{- 
+{-
 n=9
 queensLocal     0.0723872s
 queensGlobal    0.128872s

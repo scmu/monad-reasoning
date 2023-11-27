@@ -627,7 +627,7 @@ local2global = fold Var alg
 % commutativity and associativity of the coproduct operator |(:+:)|
 % and omit the |comm2| in the definition of |hGlobal|.
 
-A correct translation then preserves the meaning when going 
+A correct translation then preserves the meaning when going
 from local to global state semantics:
 \begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal
@@ -636,7 +636,15 @@ Here, the |hGlobal| and |hLocal| handlers both eliminate all
 nondeterminsm and state effects in the program.
 
 \begin{proof}
-Both the left-hand side and the right-hand side of the equation consist of 
+%format genLHS = "\Varid{gen}_{\Varid{LHS}}"
+%format genRHS = "\Varid{gen}_{\Varid{RHS}}"
+%format algSLHS = "\Varid{alg}_{\Varid{LHS}}^{\Varid{S}}"
+%format algSRHS = "\Varid{alg}_{\Varid{RHS}}^{\Varid{S}}"
+%format algNDLHS = "\Varid{alg}_{\Varid{LHS}}^{\Varid{ND}}"
+%format algNDRHS = "\Varid{alg}_{\Varid{RHS}}^{\Varid{ND}}"
+%format fwdLHS = "\Varid{fwd}_{\Varid{LHS}}"
+%format fwdRHS = "\Varid{fwd}_{\Varid{RHS}}"
+Both the left-hand side and the right-hand side of the equation consist of
 function compositions involving one or more folds.
 We apply fold fusion separately on both sides to contract each
 into a single fold:
@@ -671,15 +679,15 @@ fusion rule~\ref{eq:fusion-post}:
 \end{eqnarray*}
 where |local2global = fold Var alg|. The problem is that we will not find an
 appropriate |alg'| such that |alg' (fmap hGlobal t)| restores the state for any
-|t| of type |(StateF s :+: NondetF :+: f) (Free (StateF s :+: NonDetF :+: f)
-a)|. 
+|t| of type |(StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f)
+a)|.
 
 Fortunately, we do not need such an |alg'|. As we have already pointed out, we
 can assume that the subterms of |t| have already been transformed by
 |local2global|, and thus all occurrences of |Put| appear in the |putR|
 constellation.
 
-We can incorporate this assumption by using the alternativee fusion rule~\ref{eq:fusion-post-strong}:
+We can incorporate this assumption by using the alternative fusion rule~\ref{eq:fusion-post-strong}:
 \begin{eqnarray*}
     |hGlobal . fold Var alg| & = & |fold (hGlobal . Var) alg'| \\
      \Leftarrow \qquad
@@ -701,12 +709,14 @@ back to its initial value.
 
 We elaborate each of these steps in Appendix \ref{app:local-global}.
 \end{proof}
-%
+
+
 Observe that, because the local-state semantics discards the
 side-effects of |m| in |side m|, we also have the following:
 \begin{equation*}
 |hLocal . local2global = hLocal|
 \end{equation*}
+\wenhao{I think we can discard this observation.}
 
 % %-------------------------------------------------------------------------------
 %if False

@@ -6,6 +6,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Combination where
 
@@ -19,7 +20,7 @@ import Background
 import Overview
 import LocalGlobal (local2global, hLocal, comm2)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
-import Control.Monad.State.Lazy hiding (fail, mplus, mzero)
+import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put)
 
 \end{code}
 %endif
@@ -35,12 +36,12 @@ nondeterminism and state with a single state effect.
 \subsection{Modeling Two States with One State}
 \label{sec:multiple-states}
 
-When we combine the two simulation steps from the two previous section, we end
+When we combine the two simulation steps from the two previous sections, we end
 up with a computation that features two state effects. The first state effect
 is the one present originally, and the second state effect keeps track of the
 results and the stack of remaining branches to simulate the nondeterminism.
 
-When we have such a computation of type |Free (StateF s1 :+: StateF s2 :+: f) a|
+For a computation of type |Free (StateF s1 :+: StateF s2 :+: f) a|
 that features two state effects,
 % \begin{enumerate}
 %   \item A representation using and effect functor with two state functors |StateF s1 :+: StateF s2|,
@@ -59,7 +60,7 @@ that features two state effects,
 % hStateTuple = hState
 % \end{code}
 % \end{enumerate}
-% 
+%
 we can actually go to a slightly more primitive representation
 |Free (StateF (s1, s2) :+: f) a| that features only a single state effect.
 
@@ -69,71 +70,64 @@ The |states2state| function defines this simulation using a |fold|:
 states2state  :: Functor f
               => Free (StateF s1 :+: StateF s2 :+: f) a
               -> Free (StateF (s1, s2) :+: f) a
-states2state  = fold gen (alg1 # alg2 # fwd)
+states2state  = fold Var (alg1 # alg2 # fwd)
   where
-    gen :: Functor f => a -> Free (StateF (s1, s2) :+: f) a
-    gen = return
-
-    alg1  :: Functor f  => StateF s1 (Free (StateF (s1, s2) :+: f) a)
-                        -> Free (StateF (s1, s2) :+: f) a
-    alg1 (Get k)      = get' >>= \(s1,  _)   -> k s1
-    alg1 (Put s1' k)  = get' >>= \(_,   s2)  -> put' (s1', s2) k
-
-    alg2  :: Functor f  => StateF s2 (Free (StateF (s1, s2) :+: f) a)
-                        -> Free (StateF (s1, s2) :+: f) a
-    alg2 (Get k)      = get' >>= \(_,   s2)  -> k s2
-    alg2 (Put s2' k)  = get' >>= \(s1,  _)   -> put' (s1, s2') k
-
-    fwd  :: Functor f   => f (Free (StateF (s1, s2) :+: f) a)
-                        -> Free (StateF (s1, s2) :+: f) a
+    alg1 (Get k)      = get >>= \(s1,  _)   -> k s1
+    alg1 (Put s1' k)  = get >>= \(_,   s2)  -> put (s1', s2) >> k
+    alg2 (Get k)      = get >>= \(_,   s2)  -> k s2
+    alg2 (Put s2' k)  = get >>= \(s1,  _)   -> put (s1, s2') >> k
     fwd op            = Op (Inr op)
 \end{code}
-Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
-\begin{code}
-get'        :: Functor f => Free (StateF s :+: f) s
-get'        = Op (Inl (Get return))
+% Here, |get'| and |put'| are smart constructors for getting the state and putting a new state.
+% \begin{code}
+% get'        :: Functor f => Free (StateF s :+: f) s
+% get'        = Op (Inl (Get return))
 
-put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
-put' sts k  = Op (Inl (Put sts k))
-\end{code}
+% put'        :: s -> Free (StateF s :+: f) a -> Free (StateF s :+: f) a
+% put' sts k  = Op (Inl (Put sts k))
+% \end{code}
 
-\paragraph*{Correctness}
-To prove the simulation correct we have to prove the following theorem:
-\begin{theorem}\label{thm:states-state}
+\paragraph*{Correctness}\
+We have the following theorem showing the correctness of |states2state|:
+\begin{restatable}[]{theorem}{statesState}
+\label{thm:states-state}
 < hStates = nest . hState . states2state
-\end{theorem}
+\end{restatable}
 \noindent
-Here, |hStates| is the composition of two consecutive state handlers:
+On the left-hand side, we write |hStates| for the composition of two
+consecutive state handlers:
 \begin{code}
 hStates :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT s1 (StateT s2 (Free f)) a
-hStates t = StateT $ \s1 -> hState $ runStateT (hState t) s1
+hStates x = StateT (hState . runStateT (hState x))
+hStates' :: Functor f => Free (StateF s1 :+: StateF s2 :+: f) a -> StateT (s1, s2) (Free f) a
+hStates' t = StateT $ \ (s1, s2) -> alpha <$> runStateT (hState (runStateT (hState t) s1)) s2
 \end{code}
-Moreover, the |nest| function mediates between 
-the two different carrier types:
+On the right-hand side, we use the isomorphism |nest| to mediate
+between the two different carrier types. The definition of |nest| and
+its inverse |flatten| are defined as follows:
 \begin{code}
-nest     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
-nest t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
-\end{code}
-Here, |alpha1| rearranges a nested tuple.
-\begin{code}
-alpha :: ((a, x), y) -> (a, (x, y))
-alpha ((a, x), y) = (a, (x, y))
-
-alpha1 :: (a, (x, y)) -> ((a, x), y)
-alpha1 (a, (x, y)) = ((a, x), y)
-\end{code}
-We prove the theorem in terms of the lemma:
-\begin{lemma}
-< flatten . hStates = hState . states2state
-\end{lemma}
-Here, |flatten| is the inverse of |nest|:
-\begin{code}
-flatten :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
+nest        :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
+nest t      = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
+flatten     :: Functor f =>  StateT s1 (StateT s2 (Free f)) a -> StateT (s1, s2) (Free f) a
 flatten t   = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
 \end{code}
-The proof of the |nest|/|flatten| isomorphism can be found in \ref{app:flatten-nest}
-and the proof of the theorem is written out in Appendix \Cref{app:states-state-sim}.
-The theorem is a trivial corollary of the lemma.
+where the isomorphism |alpha1| and its inverse |alpha| rearrange a
+nested tuple
+\begin{code}
+alpha   :: ((a, x), y) -> (a, (x, y))
+alpha ((a, x), y)   = (a, (x, y))
+alpha1  :: (a, (x, y)) -> ((a, x), y)
+alpha1 (a, (x, y))  = ((a, x), y)
+\end{code}
+The proof of \Cref{thm:states-state} can be found in
+\Cref{app:states-state}. Instead of proving it directly, we show the
+correctness of the isomorphism of |nest| and |flatten|, and prove the
+following equation:
+< flatten . hStates = hState . states2state
+% The proof of the |nest| / |flatten| isomorphism can be found in
+% \Cref{app:flatten-nest} and the proof of the theorem is written out in
+% \Cref{app:states-state-sim}.  The theorem is a trivial
+% corollary of the lemma.
 
 % The function |alpha| is .
 % https://q.uiver.app/?q=WzAsMixbMCwwLCJ8KChhLHgpLHkpfCJdLFsyLDAsInwoYSwgKHgseSkpfCJdLFswLDEsInxhbHBoYXwiLDAseyJvZmZzZXQiOi0zfV0sWzEsMCwifGFscGhhMXwiLDAseyJvZmZzZXQiOi0zfV1d
@@ -150,12 +144,12 @@ The theorem is a trivial corollary of the lemma.
 % as well:
 % < hStates = nested . hStateTuple . states2state
 % Here, |nested| is defined as follows:
-% \begin{code} 
+% \begin{code}
 % nested     :: Functor f =>  StateT (s1, s2) (Free f) a -> StateT s1 (StateT s2 (Free f)) a
 % nested t   = StateT $ \ s1 -> StateT $ \ s2 -> alpha1 <$> runStateT t (s1, s2)
 % \end{code}
 
-The following commuting diagram simmuarizes the simulation.
+The following commuting diagram simmuarises the simulation.
 
 % https://q.uiver.app/?q=WzAsNCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMxIDorOiBTdGF0ZUYgczIgOis6IGYpIGF8Il0sWzAsMiwifEZyZWUgKFN0YXRlRiAoczEsIHMyKSA6KzpmKSBhfCJdLFsyLDAsInxTdGF0ZVQgczEgKFN0YXRlVCBzMiAoRnJlZSBmKSkgYXwiXSxbMiwyLCJ8U3RhdGVUIChzMSwgczIpIChGcmVlIGYpIGF8Il0sWzIsMywifGZsYXR0ZW58IiwyLHsib2Zmc2V0Ijo1fV0sWzMsMiwifG5lc3RlZHwiLDIseyJvZmZzZXQiOjV9XSxbMCwyLCJ8aFN0YXRlc3wiXSxbMSwzLCJ8aFN0YXRlVHVwbGV8IiwyXSxbMCwxLCJ8c3RhdGVzMnN0YXRlfCIsMl1d
 \[\begin{tikzcd}
@@ -177,146 +171,117 @@ The following commuting diagram simmuarizes the simulation.
 %if False
 % NOTE: some test code to assit in writing proofs
 \begin{code}
+t :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: (StateF s :+: f)) () -> s -> Free f [a]
+t = extract . hStates'
 
-extractqwq x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
-extractSSqwq :: Functor f1 => StateT (SS f2 a1) f1 a2 -> f1 [a1]
-extractSSqwq x = resultsSS . snd <$> runStateT x (SS [] [])
+input :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: (StateF s :+: f)) ()
+input = undefined
 
-qwq :: (Functor f) => StateT (SS (StateF s :+: f) a) (StateT s (Free f)) () -> (s -> Free f [a])
-qwq = extract . flatten
+step1 :: Functor f => Free (StateF s :+: f) ((), SS (StateF s :+: f) a)
+step1 = runStateT (hState input) (SS [] [])
 
-qwq' :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
-qwq' = extractSS
+_hStates :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
+_hStates = flip (runStateT . hState)
 
-sar :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
-sar t =
-  \s -> fmap (resultsSS . snd . fst) $ (flip runStateT s . hState) $ runStateT (hState t) (SS [] [])
-  -- resultsSS . snd :: ((), SS (StateF s :+: f) a) -> [a]
-  -- hState :: Free (StateF s :+: f) ((), SS (StateF s :+: f) a) -> StateT s (Free f) ((), SS (StateF s :+: f) a)
-  -- runStateT :: StateT s (Free f) ((), SS (StateF s :+: f) a) -> s -> Free f (((), SS (StateF s :+: f) a), s)
+fhStates :: Functor f => s -> Free (StateF s :+: f) a -> Free f a
+fhStates s = fmap fst . _hStates s
 
-sar' :: Functor f => Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) () -> s -> Free f [a]
-sar' t =
-  \s -> fmap fst . (flip runStateT s . hState) $ fmap (resultsSS . snd) $ runStateT (hState t) (SS [] [])
-  -- resultsSS . snd :: ((), SS (StateF s :+: f) a) -> [a]
-  -- hState :: Free (StateF s :+: f) [a] -> StateT s (Free f) [a]
-  -- runStateT :: Free (StateF s :+: f) [a] -> StateT s (Free f) [a]
+t1 s = fmap (resultsSS . snd . fst) step2
+  where
+    step2 = _hStates s step1
 
-www :: Functor f => s -> Free (StateF s :+: f) a -> Free f (a, s)
-www s = flip runStateT s . hState
-----------------------------------------------------------------
 
-x0 :: a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x0 x = Var x
+t2 :: Functor f => t -> Free f [a]
+t2 s = fhStates s . fmap (resultsSS . snd) $ step1
 
-x1 :: Functor f => (s1 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x1 k = Op (Inl (Get k))
-
-x2 :: Functor f => s1 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x2 s k = Op (Inl (Put s k))
-
-x3 :: Functor f => (s2 -> Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x3 k =
-  let tmp =
-          StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y)))
-          $ runStateT (hState (runStateT (StateT $ \s -> Op $ (Inl (Get ((\k -> runStateT k s) . hState . k)))) s1)) s2
-  in Op (Inr (Inl (Get k)))
-
-fwdS op           = StateT $ \s -> Op $ fmap (\k -> runStateT k s) op
-algS (Get     k)  = StateT $ \s -> runStateT (k s) s
-algS (Put s'  k)  = StateT $ \s -> runStateT k s'
-
-x4 :: Functor f => s2 -> Free (StateF s1 :+: StateF s2 :+: f) a -> Free (StateF s1 :+: StateF s2 :+: f) a
-x4 s k =
-  let tmp =
-        StateT $ \ (s1, s2) -> fmap (\ ((a, x), y) -> (a, (x, y)))
-          $ runStateT (hState (runStateT (fwdS (Inl (Put s (hState k)))) s1)) s2
-  in Op (Inr (Inl (Put s k)))
-
-x5 :: Functor f => f (Free (StateF s1 :+: StateF s2 :+: f) a) -> Free (StateF s1 :+: StateF s2 :+: f) a
-x5 y =
-  let tmp =
-        StateT $ \ (s1, s2) -> Op (fmap (fmap (\ ((a, x), y) -> (a, (x, y))) . (\k -> runStateT k s2) . hState . (\k -> runStateT k s1) . hState) y)
-  in let tmp2 = StateT $ \s -> Op $ fmap (\k -> runStateT k s) (fmap (\t -> StateT $ \ (s1, s2)  ->  fmap (\ ((a, x), y) -> (a, (x, y))) $ runStateT (hState (runStateT (hState t) s1)) s2) y)
-  in Op (Inr (Inr y))
+t3 :: Functor f => t -> Free f [a]
+t3 s = fmap (resultsSS . snd) . fhStates s $ step1
 \end{code}
 %endif
 
 %-------------------------------------------------------------------------------
 \subsection{Putting Everything Together}\
+\label{sec:final-simulate}
 %
-By now we have defined three simulations for encoding a high-level effect as a lower-level effect.
+We have defined three translations for encoding high-level effects as
+lower-level effects.
 \begin{itemize}
-  \item The function |nondet2state| simulates the high-level nondeterminism effect with the state effect
-  (Section \ref{sec:nondeterminism-state}).
-  \item The function |local2global| simulates the high-level local-state effect with global-state
-  semantics (Section \ref{sec:local-global}).
-  \item The function |states2state| simulates multiple state effects with a single-state semantics
-  (Section \ref{sec:multiple-states}).
+  \item The function |local2global| simulates the high-level
+  local-state semantics with global-state semantics for the
+  nondeterminism and state effects  (\Cref{sec:local-global}).
+  \item The function |nondet2state| simulates the high-level
+  nondeterminism effect with the state effect
+  (\Cref{sec:nondeterminism-state}).
+  \item The function |states2state| simulates multiple state effects
+  with a single state effect (\Cref{sec:multiple-states}).
 \end{itemize}
 
-Combining these simulations, we can encode the semantics for nondeterminism and state with
-just the state monad.
-An overview of this simulation is given in Figure \ref{fig:simulation}.
+Combining these simulations, we can encode the local-state semantics
+for nondeterminism and state with just one state effect. The ultimate
+simulation function |simulate| is defined as follows.
+\begin{code}
+simulate  :: Functor f
+          => Free (StateF s :+: NondetF :+: f) a
+          -> s -> Free f [a]
+simulate  = extract . hState . states2state . nondet2state . comm2 . local2global
+extract   :: Functor f
+          => StateT (SS (StateF s :+: f) a, s) (Free f) ()
+          -> s -> Free f [a]
+extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
+\end{code}
+An overview of this simulation is given in Figure
+\ref{fig:simulation}.
 
 \begin{figure}[h]
-% https://q.uiver.app/?q=WzAsOCxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8Q29tcFNTIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIChTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhKSA6KzogU3RhdGVGIHMgOis6IGYpICgpfCJdLFswLDUsInxGcmVlIChTdGF0ZUYgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgOis6IGYpICgpfCJdLFswLDYsInxTdGF0ZVQgKFNTIChTdGF0ZUYgcyA6KzogZikgYSwgcykgKEZyZWUgZikgKCl8Il0sWzAsNywifHMgLT4gRnJlZSBmIFthXXwiXSxbMCwxLCJ8bG9jYWwyZ2xvYmFsfCJdLFsxLDIsInxjb21tMnwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdLFszLDQsIlxcdGV4dHtkZWZpbml0aW9uIG9mIH0gfENvbXBTU3wiXSxbNCw1LCJ8c3RhdGVzMnN0YXRlfCJdLFs1LDYsInxoU3RhdGV8Il0sWzAsNSwifHNpbXVsYXRlfCIsMCx7Im9mZnNldCI6LTUsImN1cnZlIjotNSwiY29sb3VyIjpbMCwwLDUwXSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiZG90dGVkIn19fSxbMCwwLDUwLDFdXSxbNiw3LCJ8ZXh0cmFjdHwiLDAseyJjb2xvdXIiOlswLDAsNTBdLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJkb3R0ZWQifX19LFswLDAsNTAsMV1dXQ==
+% https://q.uiver.app/#q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8RnJlZSAoU3RhdGVGIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIDorOiBTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSAoRnJlZSBmKSAoKXwiXSxbMCw2LCJ8cyAtPiBGcmVlIGYgW2FdfCJdLFswLDEsInxsb2NhbDJnbG9iYWx8Il0sWzEsMiwifGNvbW0yfCJdLFszLDQsInxzdGF0ZXMyc3RhdGV8Il0sWzQsNSwifGhTdGF0ZXwiXSxbNSw2LCJ8ZXh0cmFjdHwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdXQ==
 \[\begin{tikzcd}
-  {|Free (StateF s :+: NondetF :+: f) a|} \\
-  {|Free (StateF s :+: NondetF :+: f) a|} \\
-  {|Free (NondetF :+: StateF s :+: f) a|} \\
-  {|CompSS (SS (StateF s :+: f) a) (StateF s :+: f) ()|} \\
-  {|Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) ()|} \\
-  {|Free (StateF (SS (StateF s :+: f) a, s) :+: f) ()|} \\
-  {|StateT (SS (StateF s :+: f) a, s) (Free f) ()|} \\
-  {|s -> Free f [a]|}
-  \arrow["{|local2global|}", from=1-1, to=2-1]
-  \arrow["{|comm2|}", from=2-1, to=3-1]
-  \arrow["{|nondet2state|}", from=3-1, to=4-1]
-  \arrow["{\text{definition of } |CompSS|}", from=4-1, to=5-1]
-  \arrow["{|states2state|}", from=5-1, to=6-1]
-  \arrow["{|hState|}", from=6-1, to=7-1]
-  \arrow["{|simulate|}", shift left=25, color={rgb,255:red,128;green,128;blue,128}, curve={height=-150pt}, dotted, from=1-1, to=6-1]
-  \arrow["{|extract|}", color={rgb,255:red,128;green,128;blue,128}, dotted, from=7-1, to=8-1]
+	{|Free (StateF s :+: NondetF :+: f) a|} \\
+	{|Free (StateF s :+: NondetF :+: f) a|} \\
+	{|Free (NondetF :+: StateF s :+: f) a|} \\
+	{|Free (StateF (SS (StateF s :+: f) a) :+: StateF s :+: f) ()|} \\
+	{|Free (StateF (SS (StateF s :+: f) a, s) :+: f) ()|} \\
+	{|StateT (SS (StateF s :+: f) a, s) (Free f) ()|} \\
+	{|s -> Free f [a]|}
+	\arrow["{|local2global|}", from=1-1, to=2-1]
+	\arrow["{|comm2|}", from=2-1, to=3-1]
+	\arrow["{|states2state|}", from=4-1, to=5-1]
+	\arrow["{|hState|}", from=5-1, to=6-1]
+	\arrow["{|extract|}", from=6-1, to=7-1]
+	\arrow["{|nondet2state|}", from=3-1, to=4-1]
 \end{tikzcd}\]
 \caption{The simulation.}
 \label{fig:simulation}
 \end{figure}
 
-We explain the steps here in detail.
-Broadly speaking, we use a simulation function |simulate| to interpret the semantics for state, nondeterminism
-and possibly other effects in terms of a state transformer,
-and afterwards a function |extract| that gets the result form the state transformer.
+In the |simulate| function, we first use the three previous
+simulations |local2global|, |nondet2state| and |states2state| to
+interpret the local-state semantics for state and nondeterminism in
+terms of only one state effect. Then, we use the handler |hState| to
+interpret the state effect into a state transformer. Finally, We use a
+function |extract| to extract the result form the state transformer.
 
-The simulation function is a composition of the different handlers we have defined:
-\begin{code}
-simulate  :: Functor f
-          => Free (StateF s :+: NondetF :+: f) a
-          -> StateT (SS (StateF s :+: f) a, s) (Free f) ()
-simulate  = hState . states2state . nondet2state . comm2 . local2global
-\end{code}
-First, |local2global| models the local-state semantics with a global state.
-Second, we use commutativity and associativity of the coproduct operator to change
-the order of state and nondeterminism.
+% First, |local2global| models the local-state semantics with a global
+% state.  Second, we use commutativity and associativity of the
+% coproduct operator to change the order of state and nondeterminism.
 
-Next, |nondet2state| transforms the nondeterminism effect into a simulation with state.
-Then, we use the definition of |CompSS| to represent it as a free monad so that the
-|states2state| simulation can combine the two state effects into a single state.
-Finally, |hState| handles this state effect and translates it to the state transformer |StateT|.
+% Next, |nondet2state| transforms the nondeterminism effect into a
+% simulation with state.  Then, we use the definition of |CompSS| to
+% represent it as a free monad so that the |states2state| simulation can
+% combine the two state effects into a single state.  Finally, |hState|
+% handles this state effect and translates it to the state transformer
+% |StateT|.
 
-Additionally, the |extract| function extracts the final result from the state monad transformer
-into a more readable form.
-\begin{code}
-extract   :: (Functor f)
-          => StateT (SS (StateF s :+: f) a, s) (Free f) ()
-          -> (s -> Free f [a])
-extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
-\end{code}
+% Additionally, the |extract| function extracts the final result from
+% the state monad transformer into a more readable form.
 
-To show that this simulation is correct, we need to prove that |extract . simulate = hLocal|,
-or, in a more elaborate form:
-< hLocal = extract . hState . states2state . nondet2state . comm2 . local2global
-The proof of this simulation can be found in \Cref{app:final-simulate}.
+We have the following theorem showing that the |simulate| function exactly
+behaves the same as the local-state semantics given by |hLocal|.
+\begin{restatable}[]{theorem}{finalSimulate}
+\label{thm:final-simulate}
+< simulate = hLocal
+\end{restatable}
+
+The proof can be found in \Cref{app:final-simulate}.
 
 %if False
 \begin{code}
@@ -338,7 +303,7 @@ prog =
       (do x <- get1; return x)
 
 tt :: [Int]
-tt = hNil $ (extract . simulate) prog 0
+tt = hNil $ (simulate) prog 0
 -- [5, 0]
 tt' :: [Int]
 tt' = hNil $ hLocal prog 0
@@ -348,13 +313,13 @@ tt' = hNil $ hLocal prog 0
 
 \paragraph*{N-queens with Only State}\
 %
-Using the simulation methods shown in Figure \ref{fig:simulation},
-we can simulate the backtracking algorithm of the n-queens problem
-of \Cref{sec:motivation-and-challenges} with only state.
-The function |queensSim| shows this simulation for the n-queens example.
+With |simulate|, we can implement the backtracking algorithm of the
+n-queens problem in \Cref{sec:motivation-and-challenges} with only
+one state effect as follows.
+
 \begin{code}
 queensSim  :: Int -> [[Int]]
-queensSim  = hNil . flip extract (0, []) . simulate . queens
+queensSim  = hNil . flip simulate (0, []) . queens
 \end{code}
 
 % Furthermore, we can replace the simulation |local2global| in the definition of |simulate|

@@ -292,8 +292,8 @@ queensLocalM = hNil . flip hLocalM (0, []) . queensM
 %if False
 % Just for testing code:
 \begin{code}
-hModify1  :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
-hModify1  =  fold genS (algS # fwdS)
+hModify11  :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
+hModify11  =  fold genS (algS # fwdS)
   where
     genS x               s = Var (x, s)
     algS :: (Undo s r) => ModifyF s r (s -> p) -> s -> p

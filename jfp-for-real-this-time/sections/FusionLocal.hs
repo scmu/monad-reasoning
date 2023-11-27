@@ -26,6 +26,3 @@ fhLocal = fmap (fmap (fmap fst) . unMList). fmap (runCod genMList) . runStateT
 
 queensLocal :: Int -> [[Int]]
 queensLocal = run . flip fhLocal (0, []) . queens
-
--- >>> queensLocal 4
--- [[3,1,4,2],[2,4,1,3]]

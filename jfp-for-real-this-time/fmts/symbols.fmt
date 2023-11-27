@@ -1,4 +1,7 @@
+% the default rendering of the following operations are too dense
 %format ++ = "+\!\!+"
+%format >> = ">\!\!>"
+%format >>= = ">\!\!>\!\!="
 
 %format mzero = "\Varid{\varnothing}"
 %format mplus = "(\talloblong)"
@@ -79,6 +82,7 @@
 %format sig = "\Varid{\sigma}"
 %format mu  = "\Varid{\mu}"
 %format eta  = "\Varid{\eta}"
+%format beta  = "\Varid{\beta}"
 %format alph  = "\Varid{\alpha}"
 %format return = "\Varid{\eta}"
 
@@ -107,6 +111,7 @@
 %format nondet2stateS = "\Varid{nondet2state_S}"
 
 %format resultsSS = "\Varid{results_{SS}}"
+%format stackSS = "\Varid{stack_{SS}}"
 %format residueSS = "\Varid{residue_{SS}}"
 %format CompSS = "\Varid{Comp_{SS}}"
 % format getSS = "\Varid{get_{SS}}"

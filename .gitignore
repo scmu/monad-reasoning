@@ -41,3 +41,8 @@ paper/response/Corrected\.tex
 *.out
 
 mpc2019/paper/der-monad\.pdf
+
+# --------------------------------
+.stack-work
+.vscode
+*.gz

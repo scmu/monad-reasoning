@@ -25,7 +25,9 @@ In this section, we prove the following theorem in \Cref{sec:undo}:
 
 \modifyLocalGlobal*
 
-The proofs are similar to those in \Cref{app:local-global}.
+The proof structure is very similar to that in
+\Cref{app:local-global}. We start with the following preliminary
+fusion.
 
 \paragraph*{Preliminary}
 It is easy to see that |runStateT . hState| can be fused into a single
@@ -94,12 +96,17 @@ We calculate as follows:
     fold genRHS (algSRHS # algNDRHS # fwdRHS)
 \end{spec}
 This last step is valid provided that the fusion conditions are satisfied:
-\begin{eqnarray*}
-|hL . genS| & = & |genRHS| \\
-|hL . (algS # fwdS)| & = & |(algSRHS # algNDRHS # fwdRHS) . fmap hL|
-\end{eqnarray*}
+\[\ba{rclr}
+|hL . genS| & = & |genRHS| &\refa{} \\
+|hL . (algS # fwdS)| & = & |(algSRHS # algNDRHS # fwdRHS) . fmap hL| &\refb{}
+\ea\]
 
-We calculate for the first fusion condition:
+For the first fusion condition \refa{}, we define |genRHS| as follows
+< genRHS :: Functor f => a -> (s -> Free f [a])
+< genRHS x = \s -> Var [x]
+
+We show that \refa{} is satisfied by the following calculation.
+
 <   hL (genS x)
 < = {-~ definition of |genS| -}
 <   hL (\s -> Var (x, s))
@@ -111,31 +118,27 @@ We calculate for the first fusion condition:
 <   \s -> fmap (fmap fst) (Var [(x,s)])
 < = {-~ definition of |fmap| (twice) -}
 <   \s -> Var [x]
-< = {-~ define |genRHS x = \s -> Var [x]| -}
+< = {-~ definition of |genRHS|  -}
 < = genRHS x
 
-We conclude that the first fusion condition is satisfied by:
-
-< genRHS :: Functor f => a -> (s -> Free f [a])
-< genRHS x = \s -> Var [x]
-
 By a straightforward case analysis on the two cases |Inl| and |Inr|,
-the second fusion condition decomposes into two separate conditions:
+the second fusion condition \refb{} decomposes into two separate
+conditions:
 \[\ba{rclr}
-|hL . algS| & = & |algSRHS . fmap hL| &\refa{} \\
-|hL . fwdS| & = & |(algNDRHS # fwdRHS) . fmap hL| &\refb{}
+|hL . algS| & = & |algSRHS . fmap hL| &\refc{} \\
+% |hL . fwdS| & = & |(algNDRHS # fwdRHS) . fmap hL| &\refd{}
+|hL . fwdS . Inl|& = & |algNDRHS . fmap hL| &\refd{}\\
+|hL . fwdS . Inr|& = & |fwdRHS . fmap hL| &\refe{}
 \ea\]
 
-The first subcondition \refa{} is met by taking:
-
+For the subcondition \refc{}, we define |algSRHS| as follows.
 < algSRHS :: Undo s r => StateF s (s -> p) -> (s -> p)
 < algSRHS (MGet k)        = \ s -> k s s
 < algSRHS (MUpdate r k)   = \ s -> k (s `plus` r)
 < algSRHS (MRestore r k)  = \ s -> k (s `plus` r)
 
-Given this defintion of |algSRHS| we establish that the subcondition
-holds, when we apply both sides of the equation to any |t :: StateF s
-(s -> Free (NondetF :+: f) (a, s))|.
+We prove its correctness by a case analysis on the shape of input |t
+:: StateF s (s -> Free (NondetF :+: f) (a, s))|.
 
 \vspace{.5\baselineskip}
 \noindent \mbox{\underline{case |t = Get k|}}
@@ -201,14 +204,14 @@ holds, when we apply both sides of the equation to any |t :: StateF s
 < = {-~  definition of |hL| -}
 < = algSRHS (fmap hL (MRestore r k))
 
-For the second subcondition \refb{}, we again do a straightforward
-case analysis to split it up in two further subconditions:
-\[\ba{rclr}
-|hL . fwdS . Inl|& = & |algNDRHS . fmap hL| &\refc{}\\
-|hL . fwdS . Inr|& = & |fwdRHS . fmap hL| &\refd{}
-\ea\]
+% For the second subcondition \refb{}, we again do a straightforward
+% case analysis to split it up in two further subconditions:
+% \[\ba{rclr}
+% |hL . fwdS . Inl|& = & |algNDRHS . fmap hL| &\refc{}\\
+% |hL . fwdS . Inr|& = & |fwdRHS . fmap hL| &\refd{}
+% \ea\]
 
-The first one \refc{} is met by
+For the subcondition \refd{}, we define |algNDRHS| as follows.
 < algNDRHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
 < algNDRHS Fail      = \ s -> Var []
 < algNDRHS (Or p q)  = \ s -> liftM2 (++) (p s) (q s)
@@ -227,6 +230,9 @@ f) (a, s))| with |Functor f|, we calculate:
 <   \s -> fmap (fmap fst) (hNDf (Op (Inl (fmap ($ s) op))))
 < = {-~ definition of |hNDf| -}
 <   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) op)))
+%if False
+$
+%endif
 
 We proceed by a case analysis on |op|:
 
@@ -242,6 +248,9 @@ We proceed by a case analysis on |op|:
 <   algNDRHS Fail
 < = {- definition of |fmap| -}
 <   algNDRHS (fmap hL fail)
+%if False
+$
+%endif
 
 \noindent \mbox{\underline{case |op = Or p q|}}
 <   \s -> fmap (fmap fst) (algNDf (fmap hNDf (fmap ($ s) (Or p q))))
@@ -264,12 +273,12 @@ We proceed by a case analysis on |op|:
 % < algNDRHS Fail      = \ s -> Var []
 % < algNDRHS (Or p q)  = \ s -> liftM2 (++) (p s) (q s)
 
-The last subcondition \refd{} is met by
+For the last subcondition \refe{}, we define |fwdRHS| as follows.
 < fwdRHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
 < fwdRHS op = \s -> Op (fmap ($s) op)
 
-To show its correctness, given |op :: f (s -> Free (NondetF :+: f) (a, s))|
-with |Functor f|, we calculate:
+To show its correctness, given input |op :: f (s -> Free (NondetF :+:
+f) (a, s))|, we calculate:
 
 <   hL (fwdS (Inr op))
 < = {-~ definition of |fwdS| -}
@@ -326,7 +335,11 @@ We calculate as follows:
 This last step is valid provided that the fusion conditions are satisfied:
 \[\ba{rclr}
 |hGlobalM . Var| & = & |genLHS| &\refa{}\\
-|hGlobalM . alg . fmap local2globalM| & = & |(algSLHS # algNDLHS # fwdLHS) . fmap hGlobalM . fmap local2globalM| &\refb{}
+\ea\]
+\vspace{-\baselineskip}
+\[\ba{rlr}
+   &|hGlobalM . alg . fmap local2globalM| \\
+= & |(algSLHS # algNDLHS # fwdLHS) . fmap hGlobalM . fmap local2globalM| &\refb{}
 \ea\]
 
 The first subcondition \refa{} is met by
@@ -360,7 +373,7 @@ For the first subcondition \refc{}, we can define |algSLHS| as follows.
 < algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
 < algSLHS (MGet k)        =  \s -> k s s
 < algSLHS (MUpdate r k)   = \ s -> k (s `plus` r)
-< algSLHS (MRestore r k)  = \ s -> k (s `plus` r)
+< algSLHS (MRestore r k)  = \ s -> k (s `minus` r)
 
 We prove it by a case analysis on the shape of input |op :: ModifyF s
 r (Free (ModifyF s r :+: NondetF :+: f) a)|.
@@ -368,8 +381,13 @@ r (Free (ModifyF s r :+: NondetF :+: f) a)|.
 For brevity, we omit the last common part |fmap local2globalM| of the
 equation \refc{}. Instead, we assume that |op| is in the codomain of
 |fmap local2globalM|.
-
-We proceed by a case analysis on |op|.
+%
+Moreover, we also use the condition in \Cref{thm:modify-local-global}
+that the input program does not use the |restore| operation.
+%
+We only need to consider the case that |op| is of form |MGet k| or
+|MUpdate r k| where |restore| is also not used in the continuation
+|k|.
 
 \vspace{0.5\lineskip}
 
@@ -633,6 +651,223 @@ We observe that the following equations hold trivially.
 
 Therefore, the main theorem (\Cref{thm:modify-local-global}) holds.
 
+\subsection{Key Lemma: State Restoration}
+
+Similar to \Cref{app:local-global}, we have a key lemma saying that
+|local2globalM| restores the initial state after a computation.
+
+\begin{lemma}[State is Restored] \label{lemma:modify-state-restore} \ \\
+For any program |p :: Free (ModifyF s r :+: NondetF :+: f) a| that do
+not use the operation |OP (Inl MRestore _ _)|, we have
+\[\ba{ll}
+  &|hModify1 (hNDf (local2globalM p)) s| \\
+= &|do (x, _) <- hModify1 (hNDf (local2globalM p)) s; return (x, s)|
+\ea\]
+\end{lemma}
+
+\begin{proof}
+The proof follows the same structure of \Cref{lemma:state-restore}.
+%
+We proceed by induction on |t|.
+% In the following proofs, we assume implicit commutativity and associativity of
+% the coproduct operator |(:+:)| (\Cref{sec:transforming-between-local-and-global-state}).
+% We assume the smart constructors |getOp, putOp, orOp, failOp|, which are wrappers around
+% constructors |Get, Put, Or, Fail|, respectively, automatically insert correct |Op, Inl, Inr|
+% constructors based on the context to make the term well-typed in the following proof.
+
+\noindent \mbox{\underline{case |t = Var y|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Var y)))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Var y))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Var y)) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (Var [y]) s
+< = {-~  definition of |hModify1|  -}
+<    Var ([y], s)
+< = {-~  monad law -}
+<    do (x,_) <- Var ([y], s); Var (x, s)
+< = {-~  definition of |local2globalM, hNDf, comm2, hModify1| and |return|  -}
+<    do (x,_) <- hModify1 (hNDf (comm2 (local2globalM (Var y)))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inl (MGet k))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inl (MGet k)))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Op (Inl (MGet (local2globalM . k)))))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Op (Inr (Inl (MGet (comm2 . local2globalM . k)))))) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (Op (Inl (MGet (hNDf . comm2 . local2globalM . k)))) s
+< = {-~  definition of |hModify1|  -}
+<    (hModify1 . hNDf . comm2 . local2globalM . k) s s
+< = {-~  definition of |(.)|  -}
+<    (hModify1 (hNDf (comm2 (local2globalM (k s))))) s
+< = {-~  induction hypothesis  -}
+<    do (x, _) <- hModify1 (comm2 (hNDf (local2globalM (k s)))) s; return (x, s)
+< = {-~  definition of |local2globalM, comm2, hNDf, hModify1|  -}
+<    do (x, _) <- hModify1 (hNDf (local2globalM (Op (Inl (MGet k))))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inl Fail))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl Fail)))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Op (Inr (Inl Fail))))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Op (Inl Fail))) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (Var []) s
+< = {-~  definition of |hModify1|  -}
+<    Var ([], s)
+< = {-~  monad law -}
+<    do (x, _) <- Var ([], s); Var (x, s)
+< = {-~  definition of |local2globalM, comm2, hNDf, hModify1|  -}
+<    do (x, _) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl Fail)))))) s; return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inl (MUpdate r k))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inl (Put t k)))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 ((update r `mplus` side (restore r)) >> local2globalM k))) s
+< = {-~  definition of |mplus|, |update|, |restore|, |side| and |(>>=)|  -}
+<    hModify1 (hNDf (comm2 (
+<      Op (Inr (Inl (Or  (Op (Inl (MUpdate r (local2globalM k))))
+<                        (Op (Inl (MRestore r (Op (Inr (Inl Fail)))))))))))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (
+<      Op (Inl (Or  (Op (Inr (Inl (MUpdate r (comm2 (local2globalM k))))))
+<                   (Op (Inr (Inl (MRestore r (Op (Inl Fail)))))))))) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (
+<      liftM2 (++)  (Op (Inl (MUpdate r (hNDf (comm2 (local2globalM k))))))
+<                   (Op (Inl (MRestore r (Var []))))) s
+< = {-~  definition of |liftM2| -}
+<    hModify1  (do  x <- Op (Inl (MUpdate r (hNDf (comm2 (local2globalM k)))))
+<                   y <- Op (Inl (MRestore r (Var [])))
+<                   Var (x ++ y)
+<             ) s
+< = {-~  Lemma~\ref{lemma:dist-hModify1} -}
+<    do  (x,s1) <- hModify1 (Op (Inl (MUpdate r (hNDf (comm2 (local2globalM k)))))) s
+<        (y,s2) <- hModify1 (Op (Inl (MRestore r (Var [])))) s1
+<        Var (x ++ y,s2)
+< = {-~  definition of |hModify1| -}
+<    do  (x,s1) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r)
+<        (y,s2) <- Var ([], s1 `minus` r)
+<        Var (x ++ y,s2)
+< = {-~  monad laws -}
+<    do  (x,s1) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r)
+<        Var (x ++ [], s1 `minus` r)
+< = {-~  right unit of |(++)| -}
+<    do  (x,s1) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r)
+<        Var (x, s1 `minus` r)
+< = {-~  induction hypothesis -}
+<    do  (x,s1) <- do { (x, _) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r) ; return (x, s `plus` r)}
+<        Var (x, s1 `minus` r)
+< = {-~  monad laws  -}
+<    do  (x, _) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r)
+<        Var (x, (s `plus` r) `minus` r)
+< = {-~  \Cref{eq:plus-minus}  -}
+<    do  (x, _) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r)
+<        Var (x, s)
+< = {-~  monad laws  -}
+<    do  (x, _) <- do { (x, _) <- hModify1 (hNDf (comm2 (local2globalM k))) (s `plus` r); return (x, s) }
+<        Var (x,s)
+< = {-~  deriviation in reverse  -}
+<    do  (x, _) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inl (MUpdate r k)))))) s
+<        Var (x,s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inl (Or p q)))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl (Or p q))))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Op (Inr (Inl (Or (local2globalM p) (local2globalM q))))))) s
+< = {-~  definition of |comm2|  -}
+<    hModify1 (hNDf (Op (Inl (Or (comm2 (local2globalM p)) (comm2 (local2globalM q)))))) s
+< = {-~  definition of |hNDf|  -}
+<    hModify1 (liftM2 (++) (hNDf (comm2 (local2globalM p))) (hNDf (comm2 (local2globalM q)))) s
+< = {-~  definition of |liftM2|  -}
+<    hModify1 (do  x <- hNDf (comm2 (local2globalM p))
+<                  y <- hNDf (comm2 (local2globalM q))
+<                  Var (x++y)
+<            ) s
+< = {-~  Lemma~\ref{lemma:dist-hModify1}  -}
+<    do  (x,s1) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+<        (y,s2) <- hModify1 (hNDf (comm2 (local2globalM q))) s1
+<        hModify1 (Var (x++y)) s2
+< = {-~  induction hypothesis  -}
+<    do  (x,s1) <- do { (x,_) <- hModify1 (hNDf (comm2 (local2globalM p))) s; return (x,s) }
+<        (y,s2) <- do { (y,_) <- hModify1 (hNDf (comm2 (local2globalM q))) s1; return (y,s1) }
+<        hModify1 (Var (x++y)) s2
+< = {-~  monad laws  -}
+<    do  (x,_) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+<        (y,_) <- hModify1 (hNDf (comm2 (local2globalM q))) s1
+<        hModify1 (Var (x++y)) s
+< = {-~  definition of |hModify1| -}
+<    do  (x,_) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+<        (y,_) <- hModify1 (hNDf (comm2 (local2globalM q))) s
+<        return (x++y, s)
+< = {-~  monad laws  -}
+<    do  (x, _) <- (
+<          do  (x,_) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+<              (y,_) <- hModify1 (hNDf (comm2 (local2globalM q))) s1
+<              return (x++y, s)
+<          )
+<        return (x, s)
+< = {-~  derivation in reverse (similar to before)  -}
+<    do  (x, _) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl (Or p q))))))) s
+<        return (x, s)
+% < = {-~  monad laws  -}
+% <    do  (x,s1) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+% <        (y,_) <- hModify1 (hNDf (comm2 (local2globalM q))) s1
+% <        hModify1 (Var (x++y)) s
+% < = {-~  definition of |hModify1| -}
+% <    do  (x,s1) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+% <        (y,_) <- hModify1 (hNDf (comm2 (local2globalM q))) s1
+% <        return (x++y, s)
+% < = {-~  monad laws  -}
+% <    do  (x, _) <- (
+% <           do (x, s1) <- hModify1 (hNDf (comm2 (local2globalM p))) s
+% <           do (y, s2) <- hModify1 (hNDf (comm2 (local2globalM q))) s1
+% <           return (x ++ y, s2)
+% <           )
+% <        return (x, s)
+% < = {-~  \Cref{lemma:dist-hModify1}  -}
+% <    do  (x, _) <- hModify1 (
+% <           do x <- (hNDf (comm2 (local2globalM p)))
+% <           do y <- (hNDf (comm2 (local2globalM q)))
+% <           return (x ++ y)
+% <           ) s
+% <        return (x, s)
+% < = {-~  definition of |liftM2|  -}
+% <    do  (x, _) <- hModify1 (
+% <           liftM2 (++) (hNDf (comm2 (local2globalM p))) (hNDf (comm2 (local2globalM q)))) s
+% <        return (x, s)
+% < = {-~  definition of |hNDf|  -}
+% <    do  (x, _) <- hModify1 (hNDf (
+% <           Op (Inr (Inl (Or (comm2 (local2globalM p)) (comm2 (local2globalM q))))))) s
+% <        return (x, s)
+% < = {-~  definition of |local2globalM| and |comm2|  -}
+% <    do  (x, _) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl (Or p q))))))) s
+% <        return (x, s)
+
+\noindent \mbox{\underline{case |t = Op (Inr (Inr y))|}}
+<    hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inr y)))))) s
+< = {-~  definition of |local2globalM|  -}
+<    hModify1 (hNDf (comm2 (Op (Inr (Inr (fmap local2globalM y)))))) s
+< = {-~  definition of |comm2|; |fmap| fusion  -}
+<    hModify1 (hNDf (Op (Inr (Inr (fmap (comm2 . local2globalM) y))))) s
+< = {-~  definition of |hNDf|; |fmap| fusion  -}
+<    hModify1 (Op (Inr (fmap (hNDf . comm2 . local2globalM) y))) s
+< = {-~  definition of |hModify1|; |fmap| fusion  -}
+<    Op (fmap (($s) . hModify1 . hNDf . comm2 . local2globalM) y)
+< = {-~  induction hypothesis  -}
+<    Op (fmap ((>>= \ (x,_) -> return (x,s)) . ($s) . hModify1 . hNDf . comm2 . local2globalM) y)
+< = {-~  |fmap| fission; definition of |(>>=)|  -}
+<    do  (x,_) <- Op (fmap (($s) . hModify1 . hNDf . comm2 . local2globalM) y)
+<        return(x,s)
+< = {-~  deriviation in reverse (similar to before)  -}
+<    do  (x,_) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inr y)))))) s
+<        return(x,s)
+
+\end{proof}
+
+
 \subsection{Auxiliary Lemmas}
 
 The derivations above made use of several auxliary lemmas.
@@ -726,73 +961,5 @@ We proceed by induction on |p|.
 <    Op ( (fmap (\x -> hModify1 x s) y)) >>= \ (x',s') -> hModify1 (k x') s'
 < = {-~  definition of |hModify1|  -}
 <    Op (Inr y) s >>= \ (x',s') -> hModify1 (k x') s'
-
-\end{proof}
-
-\begin{lemma}[State is Restored] \label{lemma:modify-state-restore} \ \\
-\[\ba{ll}
-  &|hModify1 (hNDf (local2globalM p)) s| \\
-= &|do (x, _) <- hModify1 (hNDf (local2globalM p)) s; return (x, s)|
-\ea\]
-\end{lemma}
-
-\begin{proof}
-The proof follows the same structure of \Cref{lemma:state-restore}.
-%
-We proceed by induction on |t|.
-% In the following proofs, we assume implicit commutativity and associativity of
-% the coproduct operator |(:+:)| (\Cref{sec:transforming-between-local-and-global-state}).
-% We assume the smart constructors |getOp, putOp, orOp, failOp|, which are wrappers around
-% constructors |Get, Put, Or, Fail|, respectively, automatically insert correct |Op, Inl, Inr|
-% constructors based on the context to make the term well-typed in the following proof.
-
-\noindent \mbox{\underline{case |t = Var y|}}
-<    hModify1 (hNDf (comm2 (local2globalM (Var y)))) s
-< = {-~  definition of |local2globalM|  -}
-<    hModify1 (hNDf (comm2 (Var y))) s
-< = {-~  definition of |comm2|  -}
-<    hModify1 (hNDf (Var y)) s
-< = {-~  definition of |hNDf|  -}
-<    hModify1 (Var [y]) s
-< = {-~  definition of |hModify1|  -}
-<    Var ([y], s)
-< = {-~  monad law -}
-<    do (x,_) <- Var ([y], s); Var (x, s)
-< = {-~  definition of |local2globalM, hNDf, comm2, hModify1| and |return|  -}
-<    do (x,_) <- hModify1 (hNDf (comm2 (local2globalM (Var y)))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = Op (Inl (MGet k))|}}
-<    hModify1 (hNDf (comm2 (local2globalM (Op (Inl (MGet k)))))) s
-< = {-~  definition of |local2globalM|  -}
-<    hModify1 (hNDf (comm2 (Op (Inl (MGet (local2globalM . k)))))) s
-< = {-~  definition of |comm2|  -}
-<    hModify1 (hNDf (Op (Inr (Inl (MGet (comm2 . local2globalM . k)))))) s
-< = {-~  definition of |hNDf|  -}
-<    hModify1 (Op (Inl (MGet (hNDf . comm2 . local2globalM . k)))) s
-< = {-~  definition of |hModify1|  -}
-<    (hModify1 . hNDf . comm2 . local2globalM . k) s s
-< = {-~  definition of |(.)|  -}
-<    (hModify1 (hNDf (comm2 (local2globalM (k s))))) s
-< = {-~  induction hypothesis  -}
-<    do (x, _) <- hModify1 (comm2 (hNDf (local2globalM (k s)))) s; return (x, s)
-< = {-~  definition of |local2globalM, comm2, hNDf, hModify1|  -}
-<    do (x, _) <- hModify1 (hNDf (local2globalM (Op (Inl (MGet k))))) s; return (x, s)
-
-\noindent \mbox{\underline{case |t = Op (Inr (Inl Fail))|}}
-<    hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl Fail)))))) s
-< = {-~  definition of |local2globalM|  -}
-<    hModify1 (hNDf (comm2 (Op (Inr (Inl Fail))))) s
-< = {-~  definition of |comm2|  -}
-<    hModify1 (hNDf (Op (Inl Fail))) s
-< = {-~  definition of |hNDf|  -}
-<    hModify1 (Var []) s
-< = {-~  definition of |hModify1|  -}
-<    Var ([], s)
-< = {-~  monad law -}
-<    do (x, _) <- Var ([], s); Var (x, s)
-< = {-~  definition of |local2globalM, comm2, hNDf, hModify1|  -}
-<    do (x, _) <- hModify1 (hNDf (comm2 (local2globalM (Op (Inr (Inl Fail)))))) s; return (x, s)
-
-TODO
 
 \end{proof}
