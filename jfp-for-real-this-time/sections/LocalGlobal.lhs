@@ -710,14 +710,6 @@ back to its initial value.
 We elaborate each of these steps in Appendix \ref{app:local-global}.
 \end{proof}
 
-
-Observe that, because the local-state semantics discards the
-side-effects of |m| in |side m|, we also have the following:
-\begin{equation*}
-|hLocal . local2global = hLocal|
-\end{equation*}
-\wenhao{I think we can discard this observation.}
-
 % %-------------------------------------------------------------------------------
 %if False
 % \subsection{The N-Queens Puzzle with Local or Global State}
