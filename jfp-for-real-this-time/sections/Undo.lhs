@@ -63,7 +63,7 @@ for any |x :: Int|.
 Then, we can just use |s `minus` r| to roll back the update, instead
 of copying the whole state like |putR| in the global-state semantics.
 
-\paragraph*{State Update and Restoration}\
+\paragraph*{State Updates and Restoration}\
 To characterise restorable state updates in general, we define a
 typeclass |Undo s r| with two operations |plus| and |minus| and
 implement |Undo (Int, [Int]) Int| as an instance using our previous
@@ -229,7 +229,7 @@ that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
 % \end{theorem}
 
-The proof of this theorem can be found in Appendix~\ref{app:modify-local-global}.
+The proof of this theorem can be found in \Cref{app:modify-local-global}.
 The proof structure is very similar to that in
 \Cref{app:local-global}.
 
