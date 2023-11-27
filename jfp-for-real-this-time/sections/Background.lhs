@@ -86,6 +86,9 @@ We sometimes use the operator |<$>| as an alias for |fmap|.
 
 < (<$>) :: Functor f => (a -> b) -> f a -> f b
 < (<$>) = fmap
+%if False
+$
+%endif
 
 % %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 % \paragraph{Applicatives}
