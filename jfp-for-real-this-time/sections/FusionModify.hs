@@ -64,20 +64,6 @@ instance TermAlgebra Identity NilF where
 run :: Identity a -> a
 run (Identity a) = a
 
--- newtype Id m a = Id { runId :: m a }
--- instance Monad m => Functor (Id m) where
---   fmap = liftM
--- instance Monad m => Applicative (Id m) where
---   pure = return
---   (<*>) = ap
--- instance Monad m => Monad (Id m) where
---   return x = Id $ return x
---   Id x >>= f = Id $ x >>= runId . f
-
--- instance TermAlgebra m f => TermAlgebra (Id m) (NilF :+: f) where
---   var = return
---   con (Inr op) = Id . con $ fmap runId op
-
 newtype MList m a = MList { unMList :: m [a] }
 
 instance Monad m => Functor (MList m) where
@@ -85,19 +71,6 @@ instance Monad m => Functor (MList m) where
 
 genMList :: Monad m => a -> MList m a
 genMList = \ x -> MList $ return [x]
--- instance Monad m => Applicative (MList m) where
---   pure = return
---   (<*>) = ap
--- instance Monad m => Monad (MList m) where
---   return x = MList $ return [x]
---   -- (MList m) >>= f = let t = join $ fmap (fmap join. sequence . fmap (unMList . f)) m in MList t
---   m >>= f = trace "no!" undefined
---   -- a little strange that you need to implement this
-
--- instance TermAlgebra [] (NondetF) where
---   var = return
---   con Fail = []
---   con (Or p q) = p ++ q
 
 instance (TermMonad m f) => TermAlgebra (Cod (MList m)) (NondetF :+: f) where
   var = return
@@ -113,7 +86,6 @@ instance (TermMonad m f, Undo s r) => TermAlgebra (StateT s m) (ModifyF s r :+: 
   con (Inl (MUpdate r  k))   = StateT $ \s -> runStateT k (s `plus` r)
   con (Inl (MRestore r  k))  = StateT $ \s -> runStateT k (s `minus` r)
   con (Inr op)               = StateT $ \s -> con $ fmap (\k -> runStateT k s) op
-
 
 ----------------------------------------------------------------
 

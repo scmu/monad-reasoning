@@ -31,6 +31,15 @@ fun hState(action)
     ctl get()  fn(s) resume(s)(s)
     ctl put(x) fn(s) resume(())(x)
 
+// fun hStateMu(action)(init)
+//   var s := init
+//   handle action
+//     return(x)  (x,s)
+//     ctl get()  resume(s)
+//     ctl put(x)
+//       s := x
+//       resume(())
+
 // --------------------------------------------------------
 //  Modify
 // --------------------------------------------------------
@@ -56,6 +65,9 @@ pub fun hLocal(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
 
 pub fun hGlobal(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
   hState{ hND(action) }(init).fst
+
+// pub fun hGlobalMu(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
+//   hStateMu{ hND(action) }(init).fst
 
 pub fun local2global(action: () -> <nd,state<a>,state<a>|e> b) : <nd,state<a>|e> b
   handle action
@@ -178,6 +190,9 @@ pub fun queensLocal(n)
 pub fun queensGlobal(n)
   hGlobal({local2global{queens(n)}}, (0, []))
 
+// pub fun queensGlobalMu(n)
+//   hGlobalMu({local2global{queens(n)}}, (0, []))
+
 pub fun queensGlobal'(n)
   hGlobal({queensG(n)}, (0, []))
 
@@ -206,22 +221,33 @@ pub fun testOne(q, n, times)
 pub fun benchmark(n, times)
   println("queensLocal:\t" ++ testOne(queensLocal, n, times).show)
   println("queensGlobal:\t" ++ testOne(queensGlobal, n, times).show)
+  // println("queensGlobalMu:\t" ++ testOne(queensGlobalMu, n, times).show)
   println("queensGlobal':\t" ++ testOne(queensGlobal', n, times).show)
   println("queensLocalM:\t" ++ testOne(queensLocalM, n, times).show)
   println("queensGlobalM:\t" ++ testOne(queensGlobalM, n, times).show)
   println("queensGlobalM':\t" ++ testOne(queensGlobalM', n, times).show)
 
 fun main()
-  benchmark(8,5)
+  benchmark(9, 1)
 
 pub fun showll( xs : list<list<int>> ) : string
   xs.show-list fn(x)
     x.show-list(show)
 
 // koka -O2 -o main main.kk && chmod a+x main && ./main
+
+// benchmark(8, 5)
 // queensLocal:    0.015691400000000001
 // queensGlobal:   0.043013000000000003
 // queensGlobal':  0.02282639999999999
 // queensLocalM:   0.014081399999999999
 // queensGlobalM:  0.034255600000000011
 // queensGlobalM': 0.020026200000000015
+
+// benchmark(9, 1)
+// queensLocal:    0.072947000000000012
+// queensGlobal:   0.216891
+// queensGlobal':  0.11644300000000002
+// queensLocalM:   0.066618999999999984
+// queensGlobalM:  0.16036900000000004
+// queensGlobalM': 0.093148999999999926

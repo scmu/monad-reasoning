@@ -82,7 +82,7 @@ queensLocal' :: Int -> [[Int]]
 queensLocal' n = hNil . flip hLocal (initial n) . queens' $ n
 
 queensGlobal' :: Int -> [[Int]]
-queensGlobal' = hNil . flip hGlobal (initial n) . queens'
+queensGlobal' n = hNil . flip hGlobal (initial n) . queens' $ n
 \end{code}
 
 \paragraph*{Mutable Stacks for Simulating Nondeterminism}\

@@ -46,7 +46,6 @@ queens n = loop where
              if c >= n then return sol
              else do  r <- choose [1..n]
                       guard (safe r 1 sol)
-                      -- modifyR (`plus` r) (`minus` r)
                       s <- get
                       putR (s `plus` r)
                       loop

@@ -319,7 +319,35 @@ queensGlobalM = hNil . flip hGlobalM (0, []) . local2globalM . queensM
 
 queensLocalM :: Int -> [[Int]]
 queensLocalM = hNil . flip hLocalM (0, []) . queensM
+
+queensStateM  :: Int -> [[Int]]
+queensStateM  = hNil
+              . fmap fst . flip runStateT (0, []) . hModify
+              . (extractSS . hState . nondet2state) . comm2
+              . local2globalM . queensM
 \end{code}
+
+%if False
+\begin{code}
+queensF :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
+queensF n = loop where
+  loop = do  (c, sol) <- mget
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      update r `mplus` side (restore r)
+                      loop
+
+queensGlobalF :: Int -> [[Int]]
+queensGlobalF = hNil . flip hGlobalM (0, []) . queensF
+
+queensStateF  :: Int -> [[Int]]
+queensStateF  = hNil
+              . fmap fst . flip runStateT (0, []) . hModify
+              . (extractSS . hState . nondet2state) . comm2
+              . queensF
+\end{code}
+%endif
 
 % By \Cref{thm:modify-local-global}, we have
 % < hGlobalM (local2globalM (queensM n)) = hLocalM (queensM n)

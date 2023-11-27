@@ -1,5 +1,6 @@
 %if False
 \begin{code}
+module BenchmarkTable where
 \end{code}
 %endif
 
