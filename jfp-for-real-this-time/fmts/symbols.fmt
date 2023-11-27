@@ -245,3 +245,7 @@
 %format queensStateR = "\Varid{queens_{State,R}}"
 %format queensSim = "\Varid{queens_{Sim}}"
 %format queensSimR = "\Varid{queens_{Sim,R}}"
+%format queensLocalM = "\Varid{queens_{LocalM}}"
+%format queensGlobalM = "\Varid{queens_{GlobalM}}"
+%format queensStateM = "\Varid{queens_{StateM}}"
+%format queensStateMFused = "\Varid{queens_{StateMFused}}"

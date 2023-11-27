@@ -36,9 +36,9 @@ funlist =
   , (queensStateM, "queensStateM")      -- local2globalM & nondet2state
   , (queensStateF, "queensStateF")    -- local2globalM fused & nondet2state
   , (queensSim, "queensSim")            -- local2global & nondet2state & states2state
-  -- , (queensSimR, "queensSimR")          -- queensR & nondet2state & states2state
-  -- , (queensStackBFS, "queensStackBFS")  -- like a BFS using stack
-  -- , (queensStack, "queensStack")        -- local2global & nondet2stack
+  , (queensStack, "queensStack")        -- local2global & nondet2stack
+  , (queensGlobalMu, "queensGlobalMu")
+  , (queensGlobalMuStack, "queensGlobalMuStack")
   -- , (queensStackR, "queensStackR")      -- queensR & nondet2stack -- using stack2 now
   -- , (SC.queensStack, "queensStack2")        -- local2global & nondet2stack
   -- , (SC.queensStackR, "queensStack2R")      -- queensR & nondet2stack
@@ -47,7 +47,6 @@ funlist =
   , (Fg.queensGlobal, "F.queensGlobal")
   , (Fm.queensGlobalM, "F.queensGlobalM")
   , (Fg.queensState,  "F.queensState")
-  -- , (Fg.queensStackR, "F.queensStackR")
   ]
 
 perform f n = do
@@ -81,7 +80,7 @@ testall n ((f,name):xs) = do
   return ((name, diffUTCTime end start / num):ts)
 
 main = do
-  ts <- testall 11 funlist
+  ts <- testall 12 funlist
   putStrLn ""
   printList ts
 
@@ -90,20 +89,23 @@ printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 
 
 -- n = 10
--- queensMT        0.0159434s
--- queensLocal     0.3363114s ★
--- queensGlobal    0.6448028s
--- queensLocalM    0.2914026s ★
--- queensGlobalM   0.51313s
--- queensGlobalF   0.4399704s
--- queensState     0.417572s
--- queensStateM    0.4051286s
--- queensStateF    0.3268356s ★
--- queensSim       0.661626s
--- F.queensLocal   0.0133942s
--- F.queensGlobal  0.0345506s
--- F.queensGlobalM 0.0669316s
--- F.queensState   0.0274124s
+-- queensMT        0.0122222s
+-- queensLocal     0.3275548s  ★
+-- queensGlobal    0.6488206s
+-- queensLocalM    0.2867866s  ★
+-- queensGlobalM   0.4487162s
+-- queensGlobalF   0.3942596s
+-- queensState     0.39743s
+-- queensStateM    0.3536948s
+-- queensStateF    0.326635s   ★
+-- queensSim       0.69273s
+-- queensStack     0.4540698s
+-- queensGlobalMu  0.4060986s
+-- queensGlobalMuStack     0.342446s ★
+-- F.queensLocal   0.014083s
+-- F.queensGlobal  0.028159s
+-- F.queensGlobalM 0.0513738s
+-- F.queensState   0.0252112s
 
 -- n = 11
 -- queensMT        0.0710824s
@@ -121,3 +123,21 @@ printList ((name, t):xs) = do putStrLn (name ++ "\t" ++ show t); printList xs
 -- F.queensGlobalM 0.3171104s
 -- F.queensState   0.212495s
 
+-- n = 12 (kind of weird)
+-- queensMT        0.366614s
+-- queensLocal     8.9482628s
+-- queensGlobal    20.030433s
+-- queensLocalM    8.4324936s
+-- queensGlobalM   13.4539672s
+-- queensGlobalF   12.1672966s
+-- queensState     15.7590202s
+-- queensStateM    15.128459s
+-- queensStateF    13.8944918s
+-- queensSim       23.7126634s
+-- queensStack     16.6357214s
+-- queensGlobalMu  12.7517254s
+-- queensGlobalMuStack     14.4487524s
+-- F.queensLocal   0.357336s
+-- F.queensGlobal  0.687762s
+-- F.queensGlobalM 1.705822s
+-- F.queensState   5.4011924s
