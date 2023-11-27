@@ -15,6 +15,7 @@ import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
 
 import qualified FusionLocal as Fl
 import qualified FusionGlobal as Fg
+import qualified FusionModify as Fm
 import QueensMT (queensMT)
 import Undo
 
@@ -42,6 +43,7 @@ funlist =
   -- , (queensStateLocal, "queensStateLocal")      -- local-state semantics, nondet2state
   , (Fl.queensLocal,  "F.queensLocal")
   , (Fg.queensGlobal, "F.queensGlobal")
+  , (Fm.queensGlobalM, "F.queensGlobalM")
   , (Fg.queensState,  "F.queensState")
   -- , (Fg.queensStackR, "F.queensStackR")
   ]

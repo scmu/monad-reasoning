@@ -1,5 +1,8 @@
 module main
 
+import std/time/timer
+import std/time/duration
+
 // --------------------------------------------------------
 //  Nondeterminism
 // --------------------------------------------------------
@@ -135,19 +138,90 @@ fun plus((c, sol): (int, list<int>), r: int): (int, list<int>)
 fun minus((c, sol): (int, list<int>), r: int): (int, list<int>)
   (c - 1, tail(sol))
 
+// --------------------------------------------------------
+// to avoid intermediate structures
+pub fun queensG(n: int) : <div, nd, state<(int, list<int>)>> list<int>
+  fun loop()
+    val (c, sol) = get()
+    if c >= n then return sol
+    else
+      val r = chooseList (list (1, n))
+      guard (safe(r, 1, sol))
+      val s = get()
+      if mplus() then put(plus(s, r))
+      else
+        put(s)
+        mzero()
+      loop()
+  loop()
+
+pub fun queensMG(n: int) : <div, nd, modify<(int, list<int>), int>> list<int>
+  fun loop()
+    val (c, sol) = mget()
+    if c >= n then return sol
+    else
+      val r = chooseList (list (1, n))
+      guard (safe(r, 1, sol))
+      if mplus() then update(r)
+      else
+        restore(r)
+        mzero()
+      loop()
+  loop()
+
 
 // --------------------------------------------------------
 
-pub fun main(n)
-  print("hLocal: ")
-  hLocal({queens(n)}, (0, [])).showll.println
-  print("hGlobal: ")
-  hGlobal({local2global{queens(n)}}, (0, [])).showll.println
-  print("hLocalM: ")
-  hLocalM(plus, minus, {queensM(n)}, (0, [])).showll.println
-  print("hGlobalM: ")
-  hGlobal(plus, minus, {local2globalM{queensM(n)}}, (0, [])).showll.println
+pub fun queensLocal(n)
+  hLocal({queens(n)}, (0, []))
 
-fun showll( xs : list<list<int>> ) : string
+pub fun queensGlobal(n)
+  hGlobal({local2global{queens(n)}}, (0, []))
+
+pub fun queensGlobal'(n)
+  hGlobal({queensG(n)}, (0, []))
+
+pub fun queensLocalM(n)
+  hLocalM(plus, minus, {queensM(n)}, (0, []))
+
+pub fun queensGlobalM(n)
+  hGlobal(plus, minus, {local2globalM{queensM(n)}}, (0, []))
+
+pub fun queensGlobalM'(n)
+  hGlobal(plus, minus, {queensMG(n)}, (0, []))
+
+pub fun runAll(n)
+  print("queensLocal: ")
+  queensLocal(n).showll.println
+  print("queensGlobal: ")
+  queensGlobal(n).showll.println
+  print("queensLocalM: ")
+  queensLocalM(n).showll.println
+  print("queensGlobalM: ")
+  queensGlobalM(n).showll.println
+
+pub fun testOne(q, n, times)
+  elapsed{for(1, times, fn(_) {q(n); ()})}.fst.fraction / times.float64
+
+pub fun benchmark(n, times)
+  println("queensLocal:\t" ++ testOne(queensLocal, n, times).show)
+  println("queensGlobal:\t" ++ testOne(queensGlobal, n, times).show)
+  println("queensGlobal':\t" ++ testOne(queensGlobal', n, times).show)
+  println("queensLocalM:\t" ++ testOne(queensLocalM, n, times).show)
+  println("queensGlobalM:\t" ++ testOne(queensGlobalM, n, times).show)
+  println("queensGlobalM':\t" ++ testOne(queensGlobalM', n, times).show)
+
+fun main()
+  benchmark(8,5)
+
+pub fun showll( xs : list<list<int>> ) : string
   xs.show-list fn(x)
     x.show-list(show)
+
+// koka -O2 -o main main.kk && chmod a+x main && ./main
+// queensLocal:    0.015691400000000001
+// queensGlobal:   0.043013000000000003
+// queensGlobal':  0.02282639999999999
+// queensLocalM:   0.014081399999999999
+// queensGlobalM:  0.034255600000000011
+// queensGlobalM': 0.020026200000000015

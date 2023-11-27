@@ -1,16 +1,28 @@
 {-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving, MultiParamTypeClasses, TypeOperators, UndecidableInstances, FunctionalDependencies, FlexibleContexts, GADTs, KindSignatures, RankNTypes, QuantifiedConstraints #-}
 
-module TermAlg where
+module FusionModify where
 
-import Control.Monad (liftM, ap, liftM2, join)
-import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
-import Data.Functor.Identity (Identity (Identity))
-import Debug.Trace
-import Control.Monad.List
-
-import Background
+import Prelude hiding (fail, or)
+import Background hiding (queens)
 import Overview
-import Undo
+import LocalGlobal (side, local2global)
+import Undo hiding (queensM)
+-- import Combination (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
+-- import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt)
+--               , getInfoSt, putInfoSt)
+-- import MutableState (Stack(Stack, results, size, stack), Index, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt))
+-- import TermAlg
+
+import Control.Monad (liftM, ap, liftM2)
+import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
+import Data.Array.ST
+import Control.Monad.ST
+import Control.Monad.ST.Trans (STT, runSTT)
+import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
+import Data.STRef
+import Data.Functor.Identity (Identity (Identity))
+
+----------------------------------------------------------------
 
 class Functor f => TermAlgebra h f | h -> f where
   var :: forall a . a -> h a
@@ -95,41 +107,40 @@ instance (TermMonad m f) => TermAlgebra (Cod (MList m)) (NondetF :+: f) where
       con' (Inl (Or (MList p) (MList q))) = MList $ do x <- p; y <- q; return (x ++ y)
       con' (Inr op) = MList . con . fmap unMList $ op
 
-instance (TermMonad m f) => TermAlgebra (StateT s m) (StateF s :+: f) where
+instance (TermMonad m f, Undo s r) => TermAlgebra (StateT s m) (ModifyF s r :+: f) where
   var = return
-  con (Inl (Get     k))  = StateT $ \s -> runStateT (k s) s
-  con (Inl (Put s'  k))  = StateT $ \s -> runStateT k s'
-  con (Inr op)           = StateT $ \s -> con $ fmap (\k -> runStateT k s) op
+  con (Inl (MGet     k))     = StateT $ \s -> runStateT (k s) s
+  con (Inl (MUpdate r  k))   = StateT $ \s -> runStateT k (s `plus` r)
+  con (Inl (MRestore r  k))  = StateT $ \s -> runStateT k (s `minus` r)
+  con (Inr op)               = StateT $ \s -> con $ fmap (\k -> runStateT k s) op
 
--- newtype StateT' s m a = StateT' { runStateT' :: s -> m (a, s) }
 
--- instance (Functor m) => Functor (StateT' s m) where
---     fmap f m = StateT' $ \ s ->
---         fmap (\ ~(a, s') -> (f a, s')) $ runStateT' m s
---     {-# INLINE fmap #-}
+----------------------------------------------------------------
 
--- instance (Functor m, Monad m) => Applicative (StateT' s m) where
---     pure a = StateT' $ \ s -> return (a, s)
---     {-# INLINE pure #-}
---     StateT' mf <*> StateT' mx = StateT' $ \ s -> do
---         ~(f, s') <- mf s
---         ~(x, s'') <- mx s'
---         return (f x, s'')
---     {-# INLINE (<*>) #-}
---     m *> k = m >>= \_ -> k
---     {-# INLINE (*>) #-}
+instance (Monad m, TermAlgebra m (NondetF :+: g), Functor g) => MNondet m where
+  mzero = con (Inl Fail)
+  mplus x y = con (Inl $ Or x y)
 
--- instance (Monad m) => Monad (StateT' s m) where
---     return a = StateT' $ \ s -> return (a, s)
---     {-# INLINE return #-}
---     m >>= k  = StateT' $ \ s -> do
---         ~(a, s') <- runStateT' m s
---         runStateT' (k a) s'
---     {-# INLINE (>>=) #-}
+instance (Undo s r, Monad m, TermAlgebra m (f :+: ModifyF s r :+: g), Functor f, Functor g)
+  => MModify s r m where
+  mget = con (Inr . Inl $ MGet return)
+  update r = con (Inr . Inl $ MUpdate r (return ()))
+  restore r = con (Inr . Inl $ MRestore r (return ()))
 
--- instance (TermMonad m f, Undo s r) => TermAlgebra (StateT' s m) (ModifyF s r :+: f) where
---   var = return
---   con (Inl (MGet     k))     = StateT' $ \s -> runStateT' (k s) s
---   con (Inl (MUpdate r  k))   = StateT' $ \s -> runStateT' k (s `plus` r)
---   con (Inl (MRestore r  k))  = StateT' $ \s -> runStateT' k (s `minus` r)
---   con (Inr op)               = StateT' $ \s -> con $ fmap (\k -> runStateT' k s) op
+modifyR :: (MModify s r m, MNondet m) => r -> m ()
+modifyR r = update r `mplus` side (restore r)
+
+queensM :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
+queensM n = loop where
+  loop = do  (c, sol) <- mget
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      modifyR r
+                      loop
+
+fhGlobalM :: Cod (MList (StateT s Identity)) a -> s -> Identity [a]
+fhGlobalM = fmap (fmap fst) . runStateT . unMList . runCod genMList
+
+queensGlobalM :: Int -> [[Int]]
+queensGlobalM = run . flip fhGlobalM (0, []) . queensM
