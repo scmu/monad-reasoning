@@ -1,4 +1,4 @@
-\section{Modeling Nondeterminism With State}
+\section{Modeling Nondeterminism with State}
 \label{sec:nondeterminism-state}
 
 %if False
@@ -23,18 +23,22 @@ import LocalGlobal
 \end{code}
 %endif
 
-In the previous section, we have mapped the local-state semantics, which is a
-high-level combination of state and nondeterminism, onto the global-state
-semantics, which is a more low-level combination of state and nondeterminism.
-This section takes on the resulting nondeterminism component, which is itself a
-relatively high-level effect that can be mapped onto a more low-level
-implementation in terms of state. Indeed, while nondeterminism is typically
-modelled using the |List| monad, many efficient nondeterministic systems, such
-as Prolog, use a lower-level state-based implementation to simulate this
-effect.
+In the previous section, we have translated the local-state semantics,
+a high-level combination of the state and nondeterminism effects, to
+the global-state semantics, a more low-level combination of the state
+and nondeterminism effects.
+%
+In this section, we further translate the resulting nondeterminism
+component, which is itself a relatively high-level effect, to a more
+low-level implementation with the state effect.
+%
+Our translation coincides with the fact that, while nondeterminism is
+typically modelled using the |List| monad, many efficient
+nondeterministic systems, such as Prolog, use a more low-level
+state-based implementation to implement the nondeterminism mechanism.
 
-This section shows how the simulation works, and proves it correct using
-equational reasoning techniques.
+% This section shows how the simulation works, and proves it correct using
+% equational reasoning techniques.
 
 % %-------------------------------------------------------------------------------
 % \subsection{Interpreting Nondeterministic Programs with List}
@@ -99,27 +103,31 @@ equational reasoning techniques.
 \subsection{Simulating Nondeterministic Programs with State}
 \label{sec:sim-nondet-state}
 
-To simulate nondeterminism we use a type of state |S a| that is a essentially a tuple of:
-\begin{enumerate}
+To simulate nondeterminism, we use states of type |S a| that is a
+essentially a tuple of: \begin{enumerate}
 \item
-the |results| found so far |[a]|, and
+a list of the |results| found so far, and
 \item
-a stack of yet to be explored branches, which we call the
-residual computations or the |stack|.
+a list of yet to be explored branches, which we call a |stack|.
 \end{enumerate}
-The branches in the stack are represented by computations in the monad over the
-state signature.
+The branches in the stack are represented by computations in the form
+of free monads over the |StateF| signature.
+%
+The type |S a| is formally defined as follows:
 \begin{code}
 type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], stack :: [Comp (S a) ()]}
 \end{code}
-To simulate a nondeterministic computation |Free NondetF a| with this state wrapper,
-we define three helper functions in Figure \ref{fig:pop-push-append}:
+%
+% To simulate a nondeterministic computation |Free NondetF a| with this
+% state wrapper,
+We define three auxiliary functions in \Cref{fig:pop-push-append} to
+interact with the stack:
 \begin{itemize}
 \item
 The function |popS| removes and executes the top element of the stack.
 \item
-The function |pushS| adds a branch to the stack.
+The function |pushS| pushes a branch into the stack.
 \item
 The function |appendS| adds a result to the given results.
 \end{itemize}
@@ -134,37 +142,41 @@ popS = do
   S xs stack <- get
   case stack of
     []       -> return ()
-    op : ps  -> do
-      put (S xs ps); op
+    p : ps   -> do
+      put (S xs ps); p
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop}
-\end{subfigure}%
+\end{subfigure}
+%
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-pushS   :: Comp (S a) ()
-        -> Comp (S a) ()
-        -> Comp (S a) ()
+pushS   ::  Comp (S a) ()
+        ->  Comp (S a) ()
+        ->  Comp (S a) ()
 pushS q p = do
   S xs stack <- get
-  put (S xs (q : stack)); p
+  put (S xs (q : stack))
+  p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push}
-\end{subfigure}%
+\end{subfigure}
+%
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}
-appendS   :: a
-          -> Comp (S a) ()
-          -> Comp (S a) ()
+appendS  ::  a
+         ->  Comp (S a) ()
+         ->  Comp (S a) ()
 appendS x p = do
- S xs stack <- get
- put (S (xs ++ [x]) stack); p
+  S xs stack <- get
+  put (S (xs ++ [x]) stack)
+  p
 \end{code}
 \caption{Appending a result.}
 \label{fig:append}
 \end{subfigure}%
-\caption{Helper functions |popS|, |pushS| and |appendS|.}
+\caption{Auxiliary functions |popS|, |pushS| and |appendS|.}
 \label{fig:pop-push-append}
 \end{figure}
 
@@ -187,90 +199,99 @@ appendS x p = do
 % \end{minipage}
 %endif
 
-Now, everything is in place to define a simulation function |nondet2stateS| that
-interprets every nondeterministic computation as a state-wrapped program.
+Now, everything is in place to define a simulation function
+|nondet2stateS| that interprets nondeterministic programs
+represented by the free monad |Free NondetF a| as state-wrapped
+programs represented by the free monad |Free (StateF (S a)) ()|.
+% (i.e., |Comp (S a) ()|).
 \begin{code}
-nondet2stateS :: Free NondetF a -> Comp (S a) ()
+nondet2stateS :: Free NondetF a -> Free (StateF (S a)) ()
 nondet2stateS = fold gen alg
   where
     gen x         = appendS x popS
     alg Fail      = popS
     alg (Or p q)  = pushS q p
 \end{code}
-The generator of this handler records a new result and then pops the next
-branch from the stack stack and proceeds with it. Likewise, failure
-simply pops and proceeds with the next branch. Lastly, a choice pushes
-the second branch on the stack and proceeds with the first branch.
+The generator of this handler records a new result and then pops the
+next branch from the stack and proceeds with it. Likewise, for failure
+the handler simply pops and proceeds with the next branch. For
+nondeterministic choices, the handler pushes the second branch on the
+stack and proceeds with the first branch.
 
 To extract the final result from the |S| wrapper, we define the |extractS| function.
 \begin{code}
 extractS :: State (S a) () -> [a]
 extractS x = results . snd $ runState x (S [] [])
 \end{code}
-At last, |runND| wraps everything up to handle a nondeterministic
-computation to a list of results.
+Finally, we define the function |runND| which wraps everything up to
+handle a nondeterministic computation to a list of results.
+%
+It uses the state handler |hState'| in
+\Cref{sec:free-monads-and-their-folds}.
 \begin{code}
 runND :: Free NondetF a -> [a]
 runND = extractS . hState' . nondet2stateS
 \end{code}
 
-To prove this simulation correct, we show that the
-|runND| function is equivalent to the nondeterminism handler |hND| defined in Section \ref{sec:free-monads-and-their-folds}.
+We have the following theorem showing the correctness of the
+simulation via the equivalence of the |runND| function
+and the nondeterminism handler |hND| defined in
+\Cref{sec:free-monads-and-their-folds}.
 
-\begin{theorem}
-|runND = hND|
-\end{theorem}
+\begin{restatable}[]{theorem}{nondetStateS}
+\label{thm:nondet2stateS}
+< runND = hND
+\end{restatable}
 
-For the proof it is convenient to expand the definition of |runND| again,
-and to add parentheses for grouping:
+The proof can be found in \Cref{app:runnd-hnd}.
+%
+The main idea is again to use fold fusion and the universal property
+of folds.
+%
+Consider the expanded form
 < (extractS . hState') . nondet2stateS = hND
-As both |nondet2stateS| and |hND| are folds,
-we can use the fold fusion law for postcomposition as defined in
-Equation \ref{eq:fusion-post} to show that the two sides of the equation
-are equal.
-Hence, we have to prove the following two equations.
+As both |nondet2stateS| and |hND| are folds, we fuse the left-hand
+side into a single fold with \Cref{eq:fusion-post} and then show the
+two folds on both sides are equivalent by proving the equivalence of
+their generators and algebras.
+%
+For the latter we only need to prove the following two equations:
 \begin{enumerate}
-    % \item |extractS . gen = genND|
-    % \item |extractS . alg = algND . fmap extractS|
     \item |(extractS . hState') . gen = genND|
     \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
 \end{enumerate}
-The full proof of this theorem is added in Appendix \ref{app:runnd-hnd}.
+where |gen| and |alg| are from the definition of |nondet2stateS|, and
+|genND| and |algND| are from the definition of |hND|.
 
 %-------------------------------------------------------------------------------
 \subsection{Combining the Simulation with Other Effects}
 \label{sec:combining-the-simulation-with-other-effects}
 
-We can generalize the above simulation to work in combination with other effects.
-Adding this \emph{modularity} has an impact on several definitions, as well as on
-the implementation and proof.
+The |nondet2stateS| function only considers nondeterminism as the only
+effect. In this section, we generalise it to work in combination with
+other effects. One immediate benefit is that we can use it in
+together with our previous simulation |local2global| in
+\Cref{sec:local2global}.
+% \emph{modularity} has an impact on several definitions, as well as
+% on the implementation and proof.
 
-Firstly, we augment the signature in the computation type
-with an additional component |f| for the additional effects.
+Firstly, we need to augment the signature in the computation type with
+an additional functor |f| for other effects.
+%
+The computation type essentially changes from |Free (StateF s) a| to
+|Free (StateF s :+: f) a|.
+%
+We define the state type |SS f a| as follows:
 \begin{code}
 type CompSS s f a = Free (StateF s :+: f) a
 data SS f a = SS { resultsSS :: [a], stackSS :: [CompSS (SS f a) f ()] }
 \end{code}
 
-As a consequence, the |nondet2state| handler requires a forwarding
-algebra |fwd| to deal with |f|.
-
-\begin{code}
-nondet2state  :: Functor f => Free (NondetF :+: f) a -> CompSS (SS f a) f ()
-nondet2state = fold gen (alg # fwd)
-  where
-    gen x         = appendSS x popSS
-    alg Fail      = popSS
-    alg (Or p q)  = pushSS q p
-    fwd y         = Op (Inr y)
-\end{code}
-
-The helper functions |popSS|, |pushSS| and |appendSS|
-(Figure \ref{fig:pop-push-append-SS}) are very similar to the
-previous definitions, but adapted to the new state-wrapper type.
-Similarly, |get| and |put s| are smart constructors for getting
-the stating and putting a new state, adapted from their previous definitions
-to take the coproduct operator into account.
+Similarly, we define three auxiliary functions the helper functions
+|popSS|, |pushSS| and |appendSS| in \Cref{fig:pop-push-append-SS} to
+interact with the stack. They are almost the same as those in
+\Cref{fig:pop-push-append} but adapted to the new state-wrapper type
+|SS f a|.
 
 % \begin{minipage}[t][][t]{0.5\textwidth}
 % \begin{code}
@@ -302,8 +323,8 @@ popSS = do
   SS xs stack <- get
   case stack of
     []       -> return ()
-    op : ps  -> do
-      put (SS xs ps); op
+    p : ps   -> do
+      put (SS xs ps); p
 \end{code}
 \caption{Popping from the stack.}
 \label{fig:pop-ss}
@@ -316,41 +337,60 @@ pushSS  :: Functor f
   -> CompSS (SS f a) f ()
 pushSS q p = do
   SS xs stack <- get
-  put (SS xs (q : stack)); p
+  put (SS xs (q : stack))
+  p
 \end{code}
 \caption{Pushing to the stack.}
 \label{fig:push-ss}
 \end{subfigure}
 \begin{subfigure}[t]{0.35\linewidth}
 \begin{code}
-appendSS  :: Functor f => a
+appendSS  :: Functor f
+  => a
   -> CompSS (SS f a) f ()
   -> CompSS (SS f a) f ()
 appendSS x p = do
   SS xs stack <- get
-  put (SS (xs ++ [x]) stack); p
+  put (SS (xs ++ [x]) stack)
+  p
 \end{code}
-\caption{Appending a solution.}
+\caption{Appending a result.}
 \label{fig:append-ss}
 \end{subfigure}%
-\caption{Helper functions |popSS|, |pushSS| and |appendSS|.}
+\caption{Auxiliary functions |popSS|, |pushSS| and |appendSS|.}
 \label{fig:pop-push-append-SS}
 \end{figure}
 
-Finally, |runNDf| put everything together:
-it transforms the non-determinism effect into the state effect and forwards
-|f|. Then it uses the, now modular, state handler to interpret the
-state effect. Lastly, it extracts the results from the state.
+
+The simulation function |nondet2state| is also very similar to
+|nondet2stateS| except for requiring a forwarding algebra |fwd| to
+deal with the additional effects in |f|.
+
+% nondet2state  :: Functor f => Free (NondetF :+: f) a -> CompSS (SS f a) f ()
+\begin{code}
+nondet2state  :: Functor f => Free (NondetF :+: f) a -> Free (StateF (SS f a) :+: f) ()
+nondet2state = fold gen (alg # fwd)
+  where
+    gen x         = appendSS x popSS
+    alg Fail      = popSS
+    alg (Or p q)  = pushSS q p
+    fwd y         = Op (Inr y)
+\end{code}
+
+The function |runNDf| puts everything together: it translates the
+nondeterminism effect into the state effect and forwards other
+effects, handles the state effect, and extracts the results from the
+final state.
+%
 \begin{code}
 runNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
 runNDf = extractSS . hState . nondet2state
-
 extractSS :: Functor f => StateT (SS f a) (Free f) () -> Free f [a]
-extractSS x = resultsSS . snd <$> runStateT x (SS [] [])
+extractSS x = resultsSS .  snd <$> runStateT x (SS [] [])
 \end{code}
 
-We can again show that this modular |runNDf| function is equivalent to the
-modular nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
+% We can again show that this modular |runNDf| function is equivalent to the
+% modular nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
 % For that, we compare with the version of the nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
 % \begin{code}
 % hNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
@@ -362,21 +402,35 @@ modular nondeterminism handler |hNDf| defined in \ref{sec:combining-effects}.
 %     fwdNDf op        = Op op
 % \end{code}
 % We prove that this handler |hNDf| and the |runNDf| function are equal.
-\begin{theorem}\label{thm:nondet-state}
-|runNDf = hNDf|
-\end{theorem}
-The proof proceeds essentially in the same way as in the non-modular setting.
-The main difference, due to the modularity, is an additional proof case for the forwarding
-algebra.
+
+We have the following theorem showing that the simulation |runNDf| is
+equivalent to the modular nondeterminism handler |hNDf| in
+\Cref{sec:combining-effects}.
+
+\begin{restatable}[]{theorem}{nondetState}
+\label{thm:nondet-state}
+< runNDf = hNDf
+\end{restatable}
+
+The proof proceeds essentially in the same way as in the non-modular
+setting.  The main difference, due to the modularity, is an additional
+proof case for the forwarding algebra.
 \begin{equation*}
 |(extractSS . hState) . fwd = fwdNDf . fmap (extractSS . hState)|
 \end{equation*}
-The full proof
-is included in \Cref{app:in-combination-with-other-effects}.
+The full proof can be found in \Cref{app:in-combination-with-other-effects}.
 
 %-------------------------------------------------------------------------------
 %if False
 \subsection{Using State to Simulate Nondeterminism in N-queens}
+
+\begin{code}
+queensState   :: Int -> [[Int]]
+queensState   = hNil
+              . fmap fst . flip runStateT (0, []) . hState
+              . runNDf . comm2
+              . local2global . queens
+\end{code}
 
 We revisit the n-queens example of \Cref{sec:motivation-and-challenges}.
 We can apply the simulation function |nondet2state| to the n-queens problem
@@ -401,8 +455,8 @@ We start with the definition of |queensGlobal| and reason as follows:
 Thus, the function |queensState| uses the two simulation functions in sequence.
 \begin{code}
 -- global
-queensState   :: Int -> [[Int]]
-queensState   = hNil
+queensState0  :: Int -> [[Int]]
+queensState0  = hNil
               . fmap fst . flip runStateT (0, []) . hState
               . (extractSS . hState . nondet2state) . comm2
               . local2global . queens
