@@ -70,10 +70,10 @@ local2trail :: (Functor f, Undo s r)
 local2trail = fold Var (alg1 # alg2 # fwd)
   where
     alg1 (MUpdate r k)  = do pushStack (Left r); update r; k
-    alg1 oth        = Op . Inl $ oth
-    alg2 (Or p q)   = Op . Inr . Inl $ Or (do pushStack (Right ()); p) (do undoTrail; q)
-    alg2 oth        = Op . Inr . Inl $ oth
-    fwd op          = Op . Inr . Inr . Inr $ op
+    alg1 p              = Op . Inl $ p
+    alg2 (Or p q)       = (do pushStack (Right ()); p) `mplus` (do undoTrail; q)
+    alg2 p              = Op . Inr . Inl $ p
+    fwd p               = Op . Inr . Inr . Inr $ p
     undoTrail = do  top <- popStack;
                     case top of
                       Nothing -> return ()
@@ -140,6 +140,38 @@ queensSimT :: Int -> [[Int]]
 queensSimT = hNil . flip simulateT (0, []) . queensM
 \end{code}
 
+%if False
+% some testing code for proofs
+\begin{code}
+_hGlobalM  :: (Functor f, Undo s r)
+           => Free (ModifyF s r :+: NondetF :+: f) a -> (s -> Free f [a])
+_hGlobalM  = fmap (fmap fst) . runStateT . hModify . hNDf . comm2
+
+_hGlobalT :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
+_hGlobalT = fmap (fmap fst . flip runStateT (Stack []) . hState) . hGlobalM . local2trail
+
+_fusedhLocalM  :: (Functor f, Undo s r)
+               => Free (ModifyF s r :+: NondetF :+: f) a -> (s -> Free f [a])
+_fusedhLocalM = fold genRHS (algSRHS # algNDRHS # fwdRHS)
+  where
+    genRHS :: Functor f => a -> (s -> Free f [a])
+    genRHS x = \s -> Var [x]
+    algSRHS :: Undo s r => ModifyF s r (s -> p) -> (s -> p)
+    algSRHS (MGet k)        = \ s -> k s s
+    algSRHS (MUpdate r k)   = \ s -> k (s `plus` r)
+    algSRHS (MRestore r k)  = \ s -> k (s `plus` r)
+    algNDRHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+    algNDRHS Fail      = \ s -> Var []
+    algNDRHS (Or p q)  = \ s -> liftM2 (++) (p s) (q s)
+    fwdRHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+    fwdRHS op = \s -> Op (fmap ($s) op)
+
+runStack :: Functor f => Free (StateF (Stack s) :+: f) b -> Free f b
+runStack = fmap fst . flip runStateT (Stack []) . hState
+-- runStack :: Functor f => (a -> Free (StateF (Stack s) :+: f) b) -> a -> Free f b
+-- runStack = fmap (fmap fst . flip runStateT (Stack []) . hState)
+\end{code}
+%endif
 
 
 

@@ -30,7 +30,7 @@ The proof structure is very similar to that in
 fusion.
 
 \paragraph*{Preliminary}
-It is easy to see that |runStateT . hState| can be fused into a single
+It is easy to see that |runStateT . hModify| can be fused into a single
 fold defined as follows:
 \begin{code}
 hModify1  :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
@@ -81,6 +81,7 @@ We elaborate each of these steps below.
 \end{proof}
 
 \subsection{Fusing the Right-Hand Side}
+\label{app:modify-fusing-rhs}
 We calculate as follows:
 \begin{spec}
     hLocalM
@@ -132,7 +133,7 @@ conditions:
 \ea\]
 
 For the subcondition \refc{}, we define |algSRHS| as follows.
-< algSRHS :: Undo s r => StateF s (s -> p) -> (s -> p)
+< algSRHS :: Undo s r => ModifyF s r (s -> p) -> (s -> p)
 < algSRHS (MGet k)        = \ s -> k s s
 < algSRHS (MUpdate r k)   = \ s -> k (s `plus` r)
 < algSRHS (MRestore r k)  = \ s -> k (s `plus` r)
