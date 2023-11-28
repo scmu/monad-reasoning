@@ -141,3 +141,156 @@ as established in the following calculation:
 <   \s -> Var [x]
 < = {-~ definition of |genLHS| -}
 <   genLHS x
+
+
+We can split the second fusion condition \refb{} in three
+subconditions:
+\[\ba{rlr}
+  & |fmap runStack . hGlobalM . alg1 . fmap local2trail| \\
+= & |algSLHS . fmap (fmap runStack . hGlobalM) . fmap local2trail| &\refc{}\\
+  & |fmap runStack . hGlobalM . hGlobalM . alg2 . fmap local2trail| \\
+= & |algNDLHS . fmap (fmap runStack . hGlobalM) . fmap local2trail| &\refd{}\\
+  & |fmap runStack . hGlobalM . hGlobalM . fwd . fmap local2trail| \\
+= & |fwdLHS . fmap (fmap runStack . hGlobalM) . fmap local2trail| &\refe{}
+\ea\]
+
+For brevity, we omit the last common part |fmap local2globalM| of
+these equations. Instead, we assume that the input is in the codomain
+of |fmap local2globalM|.
+
+For the first subcondition \refc{}, we define |algSLHS| as follows.
+< algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
+< algSLHS (MGet k)        =  \s -> k s s
+< algSLHS (MUpdate r k)   = \ s -> k (s `plus` r)
+< algSLHS (MRestore r k)  = \ s -> k (s `minus` r)
+
+We prove it by a case analysis on the shape of input |op :: ModifyF s
+r (Free (ModifyF s r :+: NondetF :+: f) a)|.
+%
+We use the condition in \Cref{thm:modify-local-global} that the input
+program does not use the |restore| operation.
+%
+We only need to consider the case that |op| is of form |MGet k| or
+|MUpdate r k| where |restore| is also not used in the continuation
+|k|.
+
+\vspace{0.5\lineskip}
+
+\noindent \mbox{\underline{case |op = MGet k|}}
+
+In the corresponding case of \Cref{app:modify-fusing-lhs}, we have
+calculated that |hGlobalM (Op (Inl (MGet k))) = \s -> (hGlobalM . k) s
+s| \refs{}.
+
+<   fmap runStack $ hGlobalM (alg1 (Inl (MGet k)))
+< = {-~ definition of |alg1| -}
+<   fmap runStack $ hGlobalM (Op (Inl (MGet k)))
+< = {-~ Equation \refs{} -}
+<   fmap runStack $ \s -> (hGlobalM . k) s s
+< = {-~ definition of |fmap| -}
+<   \s -> runStack $ (hGlobalM . k) s s
+< = {-~ definition of |fmap| -}
+<   \s -> (fmap runStack . hGlobalM . k) s s
+< = {-~ definition of |algSLHS| -}
+<   algSLHS (MGet (fmap runStack . hGlobalM . k))
+< = {-~ definition of |fmap| -}
+<   algSLHS (fmap (fmap runStack . hGlobalM) (MGet k))
+
+\noindent \mbox{\underline{case |op = MUpdate r k|}}
+%
+From |op| is in the codomain of |fmap local2globalM| we obtain |k| is
+in the codomain of |local2globalM|.
+
+<   fmap runStack . hGlobalM $ alg1 (Inl (MUpdate r k))
+< = {-~ definition of |alg1| -}
+<   fmap runStack . hGlobalM $ pushStack (Left r) >> update r >> k
+< = {-~ definition of |pushStack| -}
+<   fmap runStack . hGlobalM $ do
+<     Stack xs <- get
+<     put (Stack (Left r : xs))
+<     update r >> k
+< = {-~ definition of |get|, |put|, and |update| -}
+<   fmap runStack . hGlobalM $
+<     Op . Inr . Inr . Inl $ Get (\ (Stack xs) ->
+<       Op . Inr . Inr . Inl $ Put (Stack (Left r : xs)) (
+<         Op . Inl $ MUpdate r k))
+< = {-~ definition of |hGlobalM| -}
+<   fmap runStack . fmap (fmap fst) . hModify1 . hNDf . comm2 $
+<     Op . Inr . Inr . Inl $ Get (\ (Stack xs) ->
+<       Op . Inr . Inr . Inl $ Put (Stack (Left r : xs)) (
+<         Op . Inl $ MUpdate r k))
+< = {-~ definition of |comm2| -}
+<   fmap runStack . fmap (fmap fst) . hModify1 . hNDf $
+<     Op . Inr . Inr . Inl $ Get (\ (Stack xs) ->
+<       Op . Inr . Inr . Inl $ Put (Stack (Left r : xs)) (
+<         Op . Inr . Inl $ MUpdate r (comm2 k)))
+< = {-~ definition of |hNDf| -}
+<   fmap runStack . fmap (fmap fst) . hModify1 $
+<     Op . Inr . Inl $ Get (\ (Stack xs) ->
+<       Op . Inr . Inl $ Put (Stack (Left r : xs)) (
+<         Op . Inl $ MUpdate r (hNDf . comm2 $ k)))
+< = {-~ definition of |hModify1| -}
+% I omited a bit more steps here
+<   fmap runStack . fmap (fmap fst) $ \s ->
+<     Op . Inl $ Get (\ (Stack xs) ->
+<       Op . Inl $ Put (Stack (Left r : xs)) (
+<         (hModify1 . hNDf . comm2 $ k) (s `plus` r)))
+< = {-~ definition of |fmap (fmap fst)| -}
+<   fmap runStack $ \s ->
+<     Op . Inl $ Get (\ (Stack xs) ->
+<       Op . Inl $ Put (Stack (Left r : xs)) (
+<         (fmap (fmap fst) . hModify1 . hNDf . comm2 $ k) (s `plus` r)))
+< = {-~ definition of |fmap| -}
+<   \s -> runStack $
+<     Op . Inl $ Get (\ (Stack xs) ->
+<       Op . Inl $ Put (Stack (Left r : xs)) (
+<         (fmap (fmap fst) . hModify1 . hNDf . comm2 $ k) (s `plus` r)))
+< = {-~ definition of |hGlobalM| -}
+<   \s -> runStack $
+<     Op . Inl $ Get (\ (Stack xs) ->
+<       Op . Inl $ Put (Stack (Left r : xs)) (
+<         (hGlobalM k) (s `plus` r)))
+< = {-~ definition of |runStack| -}
+<   \s -> fmap fst . flip hState1 (Stack []) $
+<     Op . Inl $ Get (\ (Stack xs) ->
+<       Op . Inl $ Put (Stack (Left r : xs)) (
+<         (hGlobalM k) (s `plus` r)))
+< = {-~ definition of |hState1| -}
+<   \s -> fmap fst $ (\t ->
+<     (\ (Stack xs) -> \ _ ->
+<       ((fmap hState1 . hGlobalM $ k) (s `plus` r)) (Stack (Left r : xs))
+<     ) t t
+<   ) (Stack [])
+< = {-~ function application -}
+<   \s -> fmap fst $
+<     (\ (Stack xs) -> \ _ ->
+<       ((fmap hState1 . hGlobalM $ k) (s `plus` r)) (Stack (Left r : xs))
+<     ) (Stack []) (Stack [])
+< = {-~ function application -}
+<   \s -> fmap fst $
+<     (\ _ ->
+<       ((fmap hState1 . hGlobalM $ k) (s `plus` r)) (Stack (Left r : []))
+<     ) (Stack [])
+< = {-~ function application -}
+<   \s -> fmap fst $
+<     ((fmap hState1 . hGlobalM $ k) (s `plus` r)) (Stack (Left r : []))
+< = {-~ function application -}
+<   \s -> fmap fst $
+<     ((fmap hState1 . hGlobalM $ k) (s `plus` r)) (Stack (Left r : []))
+< = {-~ definition of |flip| and reformulation -}
+<   \s -> (fmap (fmap fst . flip hState1 (Stack [Left r])) . hGlobalM $ k) (s `plus` r)
+< = {-~ \Cref{lemma:initial-stack-is-ignored} -}
+<   \s -> (fmap (fmap fst . flip hState1 (Stack [])) . hGlobalM $ k) (s `plus` r)
+< = {-~ definition of |runStack| -}
+<   \s -> (fmap runStack . hGlobalM $ k) (s `plus` r)
+< = {-~ definition of |algSLHS| -}
+<   algSLHS (MUpdate r (fmap runStack . hGlobalM $ k))
+< = {-~ definition of |fmap| -}
+<   algSLHS (fmap (fmap runStack . hGlobalM) (MUpdate r k))
+
+\subsection{Lemmas}
+
+\begin{lemma}[Initial stack is ignored]~ \label{lemma:initial-stack-is-ignored}
+<    fmap fst . flip hState1 st . flip hGlobalM s . local2trail
+< =  fmap fst . flip hState1 (Stack []) . flip hGlobalM s . local2trail
+\end{lemma}

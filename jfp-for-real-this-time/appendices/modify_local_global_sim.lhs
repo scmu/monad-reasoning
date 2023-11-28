@@ -316,6 +316,7 @@ $
 % < fwdRHS op = \s -> Op (fmap ($s) op)
 
 \subsection{Fusing the Left-Hand Side}
+\label{app:modify-fusing-lhs}
 
 % We proceed in the same fashion with fusing left-hand side,
 % discovering the definitions that we need to satisfy the fusion
@@ -370,6 +371,10 @@ subconditions:
 |hGlobalM . alg . Inr . Inr . fmap local2globalM| & = & |fwdLHS . fmap hGlobalM . fmap local2globalM| &\refe{}
 \ea\]
 
+For brevity, we omit the last common part |fmap local2globalM| of
+these equations. Instead, we assume that the input is in the codomain
+of |fmap local2globalM|.
+
 For the first subcondition \refc{}, we can define |algSLHS| as follows.
 < algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
 < algSLHS (MGet k)        =  \s -> k s s
@@ -379,12 +384,8 @@ For the first subcondition \refc{}, we can define |algSLHS| as follows.
 We prove it by a case analysis on the shape of input |op :: ModifyF s
 r (Free (ModifyF s r :+: NondetF :+: f) a)|.
 %
-For brevity, we omit the last common part |fmap local2globalM| of the
-equation \refc{}. Instead, we assume that |op| is in the codomain of
-|fmap local2globalM|.
-%
-Moreover, we also use the condition in \Cref{thm:modify-local-global}
-that the input program does not use the |restore| operation.
+We use the condition in \Cref{thm:modify-local-global} that the input
+program does not use the |restore| operation.
 %
 We only need to consider the case that |op| is of form |MGet k| or
 |MUpdate r k| where |restore| is also not used in the continuation
@@ -409,9 +410,11 @@ We only need to consider the case that |op| is of form |MGet k| or
 < = {-~ definition of |hModify1| -}
 <   fmap (fmap fst) (\s -> (hModify1 . hNDf . comm2 . k) s s)
 < = {-~ definition of |fmap| -}
-<   (\s -> fmap fst ((hModify1 . hNDf . comm2 . k) s s))
+<   \s -> fmap fst ((hModify1 . hNDf . comm2 . k) s s)
 < = {-~ definition of |fmap| -}
-<   (\s -> ((fmap (fmap fst) . hModify1 . hNDf . comm2 . k) s s))
+<   \s -> ((fmap (fmap fst) . hModify1 . hNDf . comm2 . k) s s)
+< = {-~ definition of |hGlobalM| -}
+<   \s -> (hGlobalM . k) s s
 < = {-~ definition of |algSLHS| -}
 <   algSLHS (MGet (hGlobalM . k))
 < = {-~ definition of |fmap| -}
