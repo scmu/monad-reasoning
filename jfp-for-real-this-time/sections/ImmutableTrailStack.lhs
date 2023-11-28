@@ -19,6 +19,8 @@ import Control.Monad.ST.Trans.Internal (liftST, STT(..), unSTT)
 import LocalGlobal hiding (ModifyF)
 import Undo
 import Debug.Trace
+import NondetState
+import Combination
 
 \end{code}
 %endif
@@ -93,6 +95,19 @@ The n-queens example using the trail stack:
 queensGlobalT :: Int -> [[Int]]
 queensGlobalT = hNil . flip hGlobalT (0, []) . queensM
 \end{code}
+
+We can further combine it with |nondet2state| (hidden in |runNDf|).
+\begin{code}
+queensStateT  :: Int -> [[Int]]
+queensStateT  = hNil
+              . fmap fst . flip runStateT (Stack []) . hState
+              . fmap fst . flip runStateT (0, []) . hModify
+              . runNDf . comm2
+              . local2trail . queensM
+\end{code}
+
+% We cannot combine it with |states2state|, because |hModify|
+% doesn't work with it.
 
 
 

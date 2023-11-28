@@ -323,7 +323,7 @@ queensLocalM = hNil . flip hLocalM (0, []) . queensM
 queensStateM  :: Int -> [[Int]]
 queensStateM  = hNil
               . fmap fst . flip runStateT (0, []) . hModify
-              . (extractSS . hState . nondet2state) . comm2
+              . runNDf . comm2
               . local2globalM . queensM
 \end{code}
 
