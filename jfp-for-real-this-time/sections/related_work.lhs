@@ -22,10 +22,10 @@ Prolog is a prominent example of a system that exposes nondeterminism with local
 state to the user, but is itself implemented in terms of a single, global state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph{Warren Abstract Machine}
+\paragraph*{Warren Abstract Machine}
 The folklore idea of undoing modifications upon backtracking is a key feature
 of many Prolog implementations, in particular those based on the Warren 
-Abstract Machine (WAM) \cite{}.
+Abstract Machine (WAM) \cite{monadicbacktracking}.
 The WAM's global state is the program heap and Prolog programs modify this heap
 during unification only in a very specific manner: following the union-find
 algorithm, they overwrite cells that contain self-references with pointers to
@@ -36,7 +36,7 @@ The WAM has a special stack, called the trail stack, for storing these addresses
 and the process of restoring those cells is called \emph{untrailing}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph{The 4-Port Box Model}
+\paragraph*{The 4-Port Box Model}
 While trailing happens under the hood, there is a folklore Prolog programming
 pattern for observing and intervening at different point in the control flow of a
 procedure call, known as the \emph{4-port box model}.
@@ -65,7 +65,7 @@ There are many works on reasoning and modelling side effects.
 Here, we cover those that have most directly inspired this paper. 
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph{Axiomatic Reasoning}
+\paragraph*{Axiomatic Reasoning}
 
 Gibbons and Hinze \cite{Gibbons11} proposed to reason axiomatically about
 programs with effects and provided an axiomatic characterization of
@@ -81,7 +81,7 @@ depart from the axiomatic reasoning approach; instead we use proof
 techniques based on algebraic effects and handlers.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph{Algebraic Effects}
+\paragraph*{Algebraic Effects}
 Our formulation of implementing local state with global state is directly 
 inspired by the effect handlers approach of \citet{Plotkin09}.
 By making the free monad explicit our proofs benefit directly from the induction
@@ -100,15 +100,22 @@ higher-level effect in terms of a lower-level one.
 
 
 \citet{Wu15} first presented fusion as a technique for optimizing compositions
-of effect handlers. More recently \citet{YangW21} have used them for reasoning;
+of effect handlers. They use a specific form of fusion known as fold--build
+fusion or short-cut fusion~\citep{shortcut}. To enable this kind of fusion they
+transform the handler algebras to use the codensity monad as their carrier.
+Their approach is not directly usable because it does not fuse non-handler functions,
+and we derive simpler algebras (not obfuscated by the condisity monad) than those they do.
+
+More recently \citet{YangW21} have used the fusion approach of \citet{Wu15} (but with
+the continuation monad rather than the condensity monad) for reasoning;
 they remark that, although handlers are composable, the
 semantics of these composed handlers are not always obvious and that
 determining the correct order of composition to arrive at a desired
 semantics is nontrivial.
-They propose a technique based on modular handlers \cite{Schrijvers19} which
+They propose a technique based on modular handlers \citep{Schrijvers19} which
 considers conditions under which the fusion of these modular handlers
 respect not only the laws of each of the handler's algebraic theories,
 but also additional interaction laws. Using this technique they
-provide succinct proofs of the correctness of local and global state
-handlers, each constructed from a fusion of state and nondeterminism
+provide succinct proofs of the correctness of local state
+handlers, constructed from a fusion of state and nondeterminism
 handlers.
