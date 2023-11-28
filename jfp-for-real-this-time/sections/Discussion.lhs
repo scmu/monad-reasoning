@@ -102,7 +102,7 @@ a stack containing the remaining branches with an immutable list.
 With mutable states, we can also implement a more efficient version of
 it by implementing a stack with a mutable array.
 
-\subsection{Trail Stacks} \label{sec:trail-stack}
+\subsection{Trail Stacks}
 %
 %Both of |local2global| and |local2globalM|, our previous simulations
 %of local-state semantics and global-state semantics, rely on using

@@ -21,7 +21,7 @@ import Undo
 
 %-------------------------------------------------------------------------------
 
-In this section, we prove the following theorem in \Cref{sec:undo}:
+In this section, we prove the following theorem in \Cref{sec:undo}.
 
 \modifyLocalGlobal*
 

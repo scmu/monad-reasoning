@@ -81,14 +81,24 @@ local2trail = fold Var (alg1 # alg2 # fwd)
                       Just (Left r) -> do restore r; undoTrail
 \end{code}
 
-
-We have the following theorem showing its correctness.
-< hLocal = hGlobalT
-where
+Now, we can combine the simulation |local2trail| with the global
+semantics provided by |hGlobalM|, and handle the trail stack at the
+end.
 \begin{code}
 hGlobalT :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
 hGlobalT = fmap (fmap fst . flip runStateT (Stack []) . hState) . hGlobalM . local2trail
 \end{code}
+
+We have the following theorem showing its correctness by the
+equivalence between |hGlobalT| and the local-state semantics given by
+|hLocal|.
+\begin{restatable}[]{theorem}{localTrail}
+\label{thm:local2trail}
+Given |Functor f| and |Undo s r|, the equation
+< hGlobalT = hLocalM
+holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
+that do not use the operation |Op (Inl MRestore _ _)|.
+\end{restatable}
 
 The n-queens example using the trail stack:
 \begin{code}
