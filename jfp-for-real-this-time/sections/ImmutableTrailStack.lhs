@@ -28,8 +28,8 @@ import Combination
 \section{Trail Stack}
 \label{sec:trail-stack}
 
-The trail stack contains elements of type |Either s ()|.  The |Left s|
-means a state of type |s|; the |Right ()| means a time stamp.
+The trail stack contains elements of type |Either r ()|.  The |Left r|
+means a delta of type |r|; the |Right ()| means a time stamp.
 
 We can easily implement the |Stack| data type with lists.
 \begin{code}
