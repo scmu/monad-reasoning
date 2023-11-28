@@ -21,7 +21,7 @@ import Background
 import Overview
 import LocalGlobal (local2global, hLocal, comm2, side)
 import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
-import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, guard)
+import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, guard, State)
 
 \end{code}
 %endif
@@ -63,9 +63,11 @@ for any |x :: Int|.
 Then, we can just use |s `minus` r| to roll back the update, instead
 of copying the whole state like |putR| in the global-state semantics.
 
-In general, we define a type-class |Undo s r| and implement |Undo
-(Int, [Int]) Int| as an instance using the previously defined |plus|
-and |minus|.
+\paragraph*{State Updates and Restoration}\
+To characterise restorable state updates in general, we define a
+typeclass |Undo s r| with two operations |plus| and |minus| and
+implement |Undo (Int, [Int]) Int| as an instance using our previous
+definitions of operations.
 %
 \begin{spec}
 class Undo s r where
@@ -76,7 +78,7 @@ instance Undo (Int, [Int]) Int where
   minus (c, sol) r  = (c-1, tail sol)
 \end{spec}
 %
-We have the following law for |Undo|:
+Instances of |Undo| should satisfy the following law:
 \begin{alignat}{2}
     &\mbox{\bf plus-minus}:\quad &
       |(`minus` x) . (`plus` x)| ~=~ & |id| \label{eq:plus-minus} \mbox{~~.}
@@ -92,13 +94,19 @@ We have the following law for |Undo|:
 % where every |fwd| is accompanied with a left inverse |bwd| such that
 % |bwd . fwd = id|, we can simulate its local-state semantics with
 % global-state semantics by using |modify bwd| to roll back the updates.
-%
-In order to make sure that every state update is given in the form of
-a modification which can be restored, we define a new typeclass
-|MModify| which restricts the |put| operation of |MState| to |update|
-and |restore|.
+
+% Then, in order to make sure that every state update is given in the
+% form of a modification which can be restored, we define a new
+% typeclass |MModify| which restricts the |put| operation of |MState| to
+% |update| and |restore|.
+Then, we define a new subclass |MModify s r m| of |Monad m| and |Undo
+s r| to capture the interfaces of state updates and restoration.
+It has three operations: a |mget| operation that reads and returns the
+state (similar to the |get| operation of |MState|), a |update r|
+operation that updates the state with the delta |r|, and a |restore r|
+operations that restores the update introduced by the delta |r|.
 \begin{code}
-class Monad m => MModify s r m | m -> s, m -> r where
+class (Monad m, Undo s r) => MModify s r m | m -> s, m -> r where
     mget     :: m s
     update   :: r -> m ()
     restore  :: r -> m ()
@@ -106,13 +114,38 @@ class Monad m => MModify s r m | m -> s, m -> r where
 %
 The two operations |update| and |restore| satisfy the following law:
 \begin{alignat}{2}
+    &\mbox{\bf mget-mget}:\quad &
+    |mget >>= (\s -> mget >>= k s)| &= |mget >>= (\s -> k s s)|
+    ~~\mbox{,} \label{eq:get-get} \\
+    &\mbox{\bf update-get}:~ &
+    |get >>= \s -> update r >> return (s `plus` r)|
+    &=
+    |update r >> get|
+    ~~\mbox{,} \label{eq:update-get}\\
+    &\mbox{\bf restore-get}:~ &
+    |get >>= \s -> restore r >> return (s `minus` r)|
+    &=
+    |restore r >> get|
+    ~~\mbox{,} \label{eq:restore-get}\\
     &\mbox{\bf update-restore}:\quad &
-    |update r >> restore r| &= |return ()|~~\mbox{.} \label{eq:update-restore}
+    |update r >> restore r| &= |return ()|
+    ~~\mbox{.} \label{eq:update-restore}
 \end{alignat}
+%
+% As in \Cref{sec:state}, we can also implement the state monad as an
+% instance of |MModify|.
+% \begin{code}
+% instance MModify s r (State s) where
+%   mget = State (\s -> (s,s))
+%   update = undefined
+%   restore = undefined
+% \end{code}
 
-We also define a new functor |ModifyF| representing the syntax, and
-implement the free monad |Free (ModifyF s r :+: f)| as an instance of
-|MModify s r|.
+As what we did for nondeterminism and state effects in
+\Cref{sec:free-monads-and-their-folds}, we define a new signature
+|ModifyF| representing the syntax of state updates and restoration,
+and implement the free monad |Free (ModifyF s r :+: f)| as an instance
+of |MModify s r|.
 \begin{code}
 data ModifyF s r a = MGet (s -> a) | MUpdate r a | MRestore r a
 \end{code}
@@ -126,14 +159,16 @@ instance Functor (ModifyF s r) where
 \end{code}
 %endif
 \begin{code}
-instance Functor f => MModify s r (Free (ModifyF s r :+: f)) where
+instance (Functor f, Undo s r) => MModify s r (Free (ModifyF s r :+: f)) where
   mget       =  Op (Inl (MGet return))
   update r   =  Op (Inl (MUpdate r (return ())))
   restore r  =  Op (Inl (MRestore r (return ())))
 \end{code}
 
-
-We can implement a handler for |ModifyF| straightforwardly as follows.
+% We can implement a handler for |ModifyF| straightforwardly as follows.
+The following handler |hModify| maps this free monad to the |StateT|
+monad transformer using the operations |plus| and |minus| provided by
+|Undo s r|.
 \begin{code}
 hModify :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> StateT s (Free f) a
 hModify = fold gen (alg # fwd)
@@ -145,8 +180,8 @@ hModify = fold gen (alg # fwd)
     fwd y               = StateT $ \s -> Op (fmap (\k -> runStateT k s) y)
 \end{code}
 %
-It is easy to check that the update-restore law holds contextually up
-to interpretation with |hModify|.
+It is easy to check that the four laws hold contextually up to
+interpretation with |hModify|.
 
 Similar to \Cref{sec:local-state} and \Cref{sec:global-state}, the
 local-state and global-state semantics with modify are given by
@@ -194,7 +229,7 @@ that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
 % \end{theorem}
 
-The proof of this theorem can be found in Appendix~\ref{app:modify-local-global}.
+The proof of this theorem can be found in \Cref{app:modify-local-global}.
 The proof structure is very similar to that in
 \Cref{app:local-global}.
 
@@ -284,7 +319,35 @@ queensGlobalM = hNil . flip hGlobalM (0, []) . local2globalM . queensM
 
 queensLocalM :: Int -> [[Int]]
 queensLocalM = hNil . flip hLocalM (0, []) . queensM
+
+queensStateM  :: Int -> [[Int]]
+queensStateM  = hNil
+              . fmap fst . flip runStateT (0, []) . hModify
+              . runNDf . comm2
+              . local2globalM . queensM
 \end{code}
+
+%if False
+\begin{code}
+queensF :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
+queensF n = loop where
+  loop = do  (c, sol) <- mget
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      update r `mplus` side (restore r)
+                      loop
+
+queensGlobalF :: Int -> [[Int]]
+queensGlobalF = hNil . flip hGlobalM (0, []) . queensF
+
+queensStateF  :: Int -> [[Int]]
+queensStateF  = hNil
+              . fmap fst . flip runStateT (0, []) . hModify
+              . (extractSS . hState . nondet2state) . comm2
+              . queensF
+\end{code}
+%endif
 
 % By \Cref{thm:modify-local-global}, we have
 % < hGlobalM (local2globalM (queensM n)) = hLocalM (queensM n)

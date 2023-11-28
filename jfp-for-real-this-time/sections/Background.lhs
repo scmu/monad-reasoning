@@ -86,6 +86,9 @@ We sometimes use the operator |<$>| as an alias for |fmap|.
 
 < (<$>) :: Functor f => (a -> b) -> f a -> f b
 < (<$>) = fmap
+%if False
+$
+%endif
 
 % %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 % \paragraph{Applicatives}
@@ -399,7 +402,7 @@ The function |s `plus` r| updates the state with a new queen placed on
 row |r| in the next column.
 %if False
 \begin{code}
-class Undo s r where
+class Undo s r | s -> r where
   plus :: s -> r -> s
   minus :: s -> r -> s
 instance Undo (Int, [Int]) Int where

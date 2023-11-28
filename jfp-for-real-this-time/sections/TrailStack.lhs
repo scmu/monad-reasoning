@@ -76,7 +76,7 @@ queensTrail = hNil . flip (fmap (fmap fst . runhStack ()) . hGlobal . local2trai
 The following version which uses |ModifyF| is more efficient.
 
 \begin{code}
-local2trailM :: (Functor f)
+local2trailM :: (Functor f, Undo s r)
              => Free (ModifyF s r :+: NondetF :+: f) a -- local state
              -> Free (ModifyF s r :+: NondetF :+: StackF (Either r ()) () :+: f) a -- global state and stack
 local2trailM = fold Var (alg1 # alg2 # fwd)
@@ -106,7 +106,7 @@ theorems as follows (with different typeclass conditions).
 tM :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
 tM = fmap (fmap fst . runhStack ()) . hGlobalM . local2trailM
 
-tMu :: (Functor f, MUndo st r, MIM st s)
+tMu :: (Functor f, MUndo st r, MIM st s, Undo s r)
     => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
 tMu = fmap (fmap fst . runhStack ()) . hGlobalMu . local2trailM
 \end{code}

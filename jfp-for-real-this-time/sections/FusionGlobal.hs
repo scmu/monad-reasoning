@@ -6,7 +6,7 @@ import Prelude hiding (fail, or)
 import Background hiding (queens)
 import Overview
 import LocalGlobal (side, local2global)
-import Undo
+import Undo hiding (queensM)
 -- import Combination (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop))
 -- import Stack2 (Stack, Index, growStack, emptyStack, pushStack, popStack, StackF(Push, Pop, GetSt, PutSt)
 --               , getInfoSt, putInfoSt)
@@ -46,7 +46,6 @@ queens n = loop where
              if c >= n then return sol
              else do  r <- choose [1..n]
                       guard (safe r 1 sol)
-                      -- modifyR (`plus` r) (`minus` r)
                       s <- get
                       putR (s `plus` r)
                       loop
@@ -56,6 +55,7 @@ fhGlobal = fmap (fmap fst) . runStateT . unMList . runCod genMList
 
 queensGlobal :: Int -> [[Int]]
 queensGlobal = run . flip fhGlobal (0, []) . queens
+
 
 ------------------------------------------------------------------------------
 -- nondet2state

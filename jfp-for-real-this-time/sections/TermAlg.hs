@@ -10,6 +10,7 @@ import Control.Monad.List
 
 import Background
 import Overview
+import Undo
 
 class Functor f => TermAlgebra h f | h -> f where
   var :: forall a . a -> h a
@@ -99,3 +100,36 @@ instance (TermMonad m f) => TermAlgebra (StateT s m) (StateF s :+: f) where
   con (Inl (Get     k))  = StateT $ \s -> runStateT (k s) s
   con (Inl (Put s'  k))  = StateT $ \s -> runStateT k s'
   con (Inr op)           = StateT $ \s -> con $ fmap (\k -> runStateT k s) op
+
+-- newtype StateT' s m a = StateT' { runStateT' :: s -> m (a, s) }
+
+-- instance (Functor m) => Functor (StateT' s m) where
+--     fmap f m = StateT' $ \ s ->
+--         fmap (\ ~(a, s') -> (f a, s')) $ runStateT' m s
+--     {-# INLINE fmap #-}
+
+-- instance (Functor m, Monad m) => Applicative (StateT' s m) where
+--     pure a = StateT' $ \ s -> return (a, s)
+--     {-# INLINE pure #-}
+--     StateT' mf <*> StateT' mx = StateT' $ \ s -> do
+--         ~(f, s') <- mf s
+--         ~(x, s'') <- mx s'
+--         return (f x, s'')
+--     {-# INLINE (<*>) #-}
+--     m *> k = m >>= \_ -> k
+--     {-# INLINE (*>) #-}
+
+-- instance (Monad m) => Monad (StateT' s m) where
+--     return a = StateT' $ \ s -> return (a, s)
+--     {-# INLINE return #-}
+--     m >>= k  = StateT' $ \ s -> do
+--         ~(a, s') <- runStateT' m s
+--         runStateT' (k a) s'
+--     {-# INLINE (>>=) #-}
+
+-- instance (TermMonad m f, Undo s r) => TermAlgebra (StateT' s m) (ModifyF s r :+: f) where
+--   var = return
+--   con (Inl (MGet     k))     = StateT' $ \s -> runStateT' (k s) s
+--   con (Inl (MUpdate r  k))   = StateT' $ \s -> runStateT' k (s `plus` r)
+--   con (Inl (MRestore r  k))  = StateT' $ \s -> runStateT' k (s `minus` r)
+--   con (Inr op)               = StateT' $ \s -> con $ fmap (\k -> runStateT' k s) op

@@ -547,7 +547,8 @@ relevant to mutable states as extensions, i.e., no proofs.}
 We have the following programs.
 \begin{code}
 queensGlobalMu :: Int -> [[Int]]
-queensGlobalMu = hNil . flip hGlobalMu (0, []) . local2globalM . queensM
+-- queensGlobalMu = hNil . flip hGlobalMu (0, []) . local2globalM . queensM
+queensGlobalMu = hNil . flip hGlobalMu (0, []) . queensF
 \end{code}
 
 We can further combine it with the |nondet2stack| defined in
@@ -558,7 +559,8 @@ queensGlobalMuStack =
     hNil
   . flip runhModifyMu (0, [])
   . runNDSK . comm2
-  . local2globalM . queensM
+  -- . local2globalM . queensM
+  . queensF
 \end{code}
 
 
