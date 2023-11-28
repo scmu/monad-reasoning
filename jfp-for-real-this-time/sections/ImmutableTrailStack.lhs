@@ -106,12 +106,29 @@ queensStateT  = hNil
               . local2trail . queensM
 \end{code}
 
-% We cannot combine it with |states2state|, because |hModify|
-% doesn't work with it.
+Then even further combined with |states2state|, we get the |simulateT|.
+\begin{code}
+simulateT      :: (Functor f, Undo s r)
+               => Free (ModifyF s r :+: NondetF :+: f) a
+               -> s -> Free f [a]
+simulateT x s  = extract . hState . states2state
+               . fmap fst . flip runStateT s . hModify
+               . comm2 . nondet2state . comm2
+               . local2trail $ x
+    where
+      extract x = resultsSS . fst . snd <$> runStateT x (SS [] [], Stack [])
+\end{code}
+%
+Note that our initial state is |(SS [], [], Stack [])|, which
+essentially contains an empty results list, an empty stack of
+branches (which Prolog calls the choicepoint stack), and an empty
+trail stack.
 
-
-
-
+Use |simulateT| to solve n-queens:
+\begin{code}
+queensSimT :: Int -> [[Int]]
+queensSimT = hNil . flip simulateT (0, []) . queensM
+\end{code}
 
 
 
