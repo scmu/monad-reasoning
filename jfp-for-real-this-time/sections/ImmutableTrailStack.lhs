@@ -235,11 +235,15 @@ test4 p s t ys =
   do  ((x, s'), t') <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) t
       return (x, t' == extend t ys, s' == fplus s ys)
 
-test5 s t r k =
-   do  ((_, s1), t1) <- hState1 ((hModify1 . hNDf . comm2 $ do
-         Stack xs <- get
-         put (Stack (Left r : xs))) s) t
-       hState1 ((hModify1 . hNDf . comm2 . local2trail $ k) (s1 `plus` r)) t1
+test5 s t y ys =
+   Op . fmap (\k -> do
+     ((x, _), _) <- hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t
+     return ((x, fplus s ys), extend t ys) ) $ y
+
+test5' s t y ys =
+   do
+     ((x, _), _) <- Op . fmap (\k -> hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t) $ y
+     return ((x, fplus s ys), extend t ys)
 \end{code}
 %endif
 

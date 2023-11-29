@@ -773,6 +773,29 @@ We proceed by induction on |p|.
 
 \noindent \mbox{\underline{case |t = Op . Inr . Inr $ y|}}
 
+<   hState1 ((hModify1 . hNDf . comm2) (local2trail (Op . Inr . Inr $ y)) s) t
+< = {-~ definition of |local2trail| -}
+<   hState1 ((hModify1 . hNDf . comm2) (Op . Inr . Inr . Inr . fmap local2trail $ y) s) t
+< = {-~ definition of |comm2| and |hNDf| -}
+<   hState1 (hModify1 (Op . Inr . Inr . fmap (hNDf . comm2 . local2trail) $ y) s) t
+< = {-~ definition of |hModify1| and function application -}
+<   hState1 (Op . Inr . fmap (($s) . hModify1 . hNDf . comm2 . local2trail) $ y) t
+< = {-~ definition of |hState1| and function application -}
+<   Op . fmap (($t) . hState1 . ($s) . hModify1 . hNDf . comm2 . local2trail) $ y
+< = {-~ reformulation -}
+<   Op . fmap (\k -> hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t) $ y
+< = {-~ by induction hypothesis on |y|, for some |ys| the equation holds -}
+<   Op . fmap (\k -> do
+<     ((x,_),_) <- hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t
+<     return ((x, fplus s ys), extend t ys) ) $ y
+< = {-~ definition of free monad -}
+<   do  ((x, _), _) <- Op . fmap (\k ->
+<         hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t) $ y
+<       return ((x, fplus s ys), extend t ys)
+< = {-~ similar derivation in reverse -}
+<   do  ((x,_),_) <- hState1 ((hModify1 . hNDf . comm2) (local2trail (Op . Inr . Inr $ y)) s) t
+<       return ((x, fplus s ys), extend t ys)
+
 \end{proof}
 
 \begin{lemma}[Initial stack is ignored]~ \label{lemma:initial-stack-is-ignored}
