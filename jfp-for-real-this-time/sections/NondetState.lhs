@@ -25,7 +25,7 @@ import LocalGlobal
 
 In the previous section, we have translated the local-state semantics,
 a high-level combination of the state and nondeterminism effects, to
-the global-state semantics, a more low-level combination of the state
+the global-state semantics, a lower-level combination of the state
 and nondeterminism effects.
 %
 In this section, we further translate the resulting nondeterminism
@@ -34,7 +34,7 @@ low-level implementation with the state effect.
 %
 Our translation coincides with the fact that, while nondeterminism is
 typically modelled using the |List| monad, many efficient
-nondeterministic systems, such as Prolog, use a more low-level
+nondeterministic systems, such as Prolog, use a lower-level
 state-based implementation to implement the nondeterminism mechanism.
 
 % This section shows how the simulation works, and proves it correct using

@@ -241,7 +241,7 @@ in a similar style to the translation |local2global| in
 The translation |local2globalM| still uses the mechanism of
 nondeterminism to store the deltas used by previous updates.
 %
-In \Cref{sec:trail-stack} we will show a more low-level simulation of
+In \Cref{sec:trail-stack} we will show a lower-level simulation of
 local-state semantics without relying on nondeterminism.
 %
 \begin{code}

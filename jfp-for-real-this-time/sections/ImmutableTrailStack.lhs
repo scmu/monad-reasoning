@@ -33,7 +33,7 @@ The simulations |local2global| in \Cref{sec:local2global} and
 high-level nondeterminism operations to store the previous
 states or modifications (deltas) to the state.
 %
-We can do this in a more low-level and efficient way by storing them
+We can do this in a lower-level and more efficient way by storing them
 in a trail stack following the Warren Abstract Machine
 ~\citep{AitKaci91}.
 %
