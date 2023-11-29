@@ -595,12 +595,11 @@ For the last subcondition \refe{}, we can define |fwdLHS| as follows.
 < fwdLHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
 < fwdLHS op = \s -> Op (fmap ($ s) op)
 
-We prove it by a case analysis on the shape of input |op :: f
-(Free (ModifyF s r :+: NondetF :+: f) a)|.
-%
-For brevity, we omit the last common part |fmap local2globalM| of the
-equation \refc{}. Instead, we assume that |op| is in the codomain of
-|fmap local2globalM|.
+We prove it by the following calculation for input |op :: f (Free
+(ModifyF s r :+: NondetF :+: f) a)|.
+% by a case analysis on the shape of input |op :: f
+% (Free (ModifyF s r :+: NondetF :+: f) a)|.
+
 
 <   hGlobalM (alg (Inr (Inr op)))
 < = {-~ definition of |alg| -}

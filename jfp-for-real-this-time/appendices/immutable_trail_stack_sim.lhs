@@ -434,6 +434,52 @@ From |op| is in the codomain of |fmap local2globalM| we obtain |p| and
 <   algNDLHS (fmap (fmap runStack . hGobalM) (Or p q))
 
 
+For the last subcondition \refe{}, we can define |fwdLHS| as follows.
+< fwdLHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
+< fwdLHS op = \s -> Op (fmap ($ s) op)
+
+We prove it by the following calculation for input |op :: f (Free
+(ModifyF s r :+: NondetF :+: f) a)|.
+%
+In the corresponding case of \Cref{app:modify-fusing-lhs}, we have
+calculated that |hGlobalM (Op (Inr (Inr op))) = \s -> Op (fmap ($ s)
+(fmap hGlobalM op))| \refs{}.
+
+<   fmap runStack $ hGlobalM (fwd op)
+< = {-~ definition of |fwd| -}
+<   fmap runStack $ hGlobalM (Op . Inr . Inr . Inr $ op)
+< = {-~ Equation \refs{} -}
+<   fmap runStack $ \s -> Op (fmap ($ s) (fmap hGlobalM (Inr op)))
+< = {-~ fmap fusion -}
+<   fmap runStack $ \s -> Op (fmap (($s) . hGlobalM) (Inr op))
+< = {-~ reformulation -}
+<   fmap runStack $ \s -> Op (fmap (\ x -> hGlobalM x s) (Inr op))
+< = {-~ definition of |fmap| -}
+<   \s -> runStack $ Op (fmap (\ x -> hGlobalM x s) (Inr op))
+< = {-~ definition of |runStack| -}
+<   \s -> fmap fst . flip hState1 (Stack []) $
+<     Op (fmap (\ x -> hGlobalM x s) (Inr op))
+< = {-~ definition of |hState1| -}
+<   \s -> fmap fst $ (\ t ->
+<     Op (fmap ($t) . fmap (hState1) $ fmap (\ x -> hGlobalM x s) op)) (Stack [])
+< = {-~ fmap fusion and reformulation -}
+<   \s -> fmap fst $ (\ t ->
+<     Op (fmap (\ x -> hState1 (hGlobalM x s) t) op)) (Stack [])
+< = {-~ function application -}
+<   \s -> fmap fst $
+<     Op (fmap (\ x -> hState1 (hGlobalM x s) (Stack [])) op)
+< = {-~ definition of |fmap| -}
+<   \s -> Op (fmap (\ x -> fmap fst (hState1 (hGlobalM x s) (Stack []))) op)
+< = {-~ reformulation -}
+<   \s -> Op (fmap (\ x -> fmap (fmap fst . flip hState1 (Stack [])) . hGlobalM $ x s ) op)
+< = {-~ reformulation -}
+<   \s -> Op (fmap (\ x -> (fmap runStack . hGlobalM $ x) s ) op)
+< = {-~ fmap fission -}
+<   \s -> Op (fmap ($ s) (fmap (fmap runStack . hGlobalM) op))
+< = {-~ definition of |fwdLHS|  -}
+<   fwdLHS (fmap (fmap runStack . hGlobalM) op)
+
+
 \subsection{Lemmas}
 
 \begin{lemma}[Initial stack is ignored]~ \label{lemma:initial-stack-is-ignored}
