@@ -143,6 +143,14 @@ queensSimT = hNil . flip simulateT (0, []) . queensM
 %if False
 % some testing code for proofs
 \begin{code}
+undoTrail :: (Functor f, Functor g, Undo s r)
+  => Free (ModifyF s r :+: (g :+: (StateF (Stack (Either r ())) :+: f))) ()
+undoTrail = do  top <- popStack;
+                case top of
+                  Nothing -> return ()
+                  Just (Right ()) -> return ()
+                  Just (Left r) -> do restore r; undoTrail
+
 hState1 :: Functor f => Free (StateF s :+: f) a -> (s -> Free f (a, s))
 hState1  =  fold genS (algS # fwdS)
   where
@@ -151,8 +159,8 @@ hState1  =  fold genS (algS # fwdS)
     algS (Put s k)  _  = k s
     fwdS y          s  = Op (fmap ($s) y)
 
-_hModify1  :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
-_hModify1  =  fold genS (algS # fwdS)
+hModify1  :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> (s -> Free f (a, s))
+hModify1  =  fold genS (algS # fwdS)
   where
     genS x               s = Var (x, s)
     algS :: (Undo s r) => ModifyF s r (s -> p) -> s -> p
@@ -163,7 +171,7 @@ _hModify1  =  fold genS (algS # fwdS)
 
 _hGlobalM  :: (Functor f, Undo s r)
            => Free (ModifyF s r :+: NondetF :+: f) a -> (s -> Free f [a])
-_hGlobalM  = fmap (fmap fst) . _hModify1 . hNDf . comm2
+_hGlobalM  = fmap (fmap fst) . hModify1 . hNDf . comm2
 
 _hGlobalT :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
 _hGlobalT = fmap (fmap fst . flip runStateT (Stack []) . hState) . hGlobalM . local2trail
@@ -188,6 +196,28 @@ runStack :: Functor f => Free (StateF (Stack s) :+: f) b -> Free f b
 runStack = fmap fst . flip hState1 (Stack [])
 -- runStack :: Functor f => (a -> Free (StateF (Stack s) :+: f) b) -> a -> Free f b
 -- runStack = fmap (fmap fst . flip runStateT (Stack []) . hState)
+
+test1 p q = do
+  -- x <- pushStack (Right ()) >> hNDf (comm2 p)
+  -- y <- undoTrail >> hNDf (comm2 q)
+  hNDf (comm2 (pushStack (Right ())))
+  x <- hNDf (comm2 p)
+  hNDf (comm2 undoTrail)
+  y <- hNDf (comm2 q)
+  return (x ++ y)
+
+test2 p q s = do
+    pushStack (Right ())
+    (x, s1) <- hModify1 (hNDf (comm2 p)) s
+    (_, s2) <- hModify1 undoTrail s1
+    (y, s3) <- hModify1 (hNDf (comm2 q)) s2
+    return (x ++ y, s3)
+
+test3 p q s =
+   \s -> do
+     x <- runStack (hGlobalM p s)
+     y <- runStack (hGlobalM q s)
+     return (x ++ y)
 \end{code}
 %endif
 

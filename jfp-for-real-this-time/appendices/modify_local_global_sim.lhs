@@ -372,8 +372,11 @@ subconditions:
 \ea\]
 
 For brevity, we omit the last common part |fmap local2globalM| of
-these equations. Instead, we assume that the input is in the codomain
-of |fmap local2globalM|.
+these equations in the following proofs. Instead, we assume that the
+input is in the codomain of |fmap local2globalM|.
+%
+Also, we use the condition in \Cref{thm:modify-local-global} that the
+input program does not use the |restore| operation.
 
 For the first subcondition \refc{}, we can define |algSLHS| as follows.
 < algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
@@ -384,12 +387,9 @@ For the first subcondition \refc{}, we can define |algSLHS| as follows.
 We prove it by a case analysis on the shape of input |op :: ModifyF s
 r (Free (ModifyF s r :+: NondetF :+: f) a)|.
 %
-We use the condition in \Cref{thm:modify-local-global} that the input
-program does not use the |restore| operation.
-%
-We only need to consider the case that |op| is of form |MGet k| or
-|MUpdate r k| where |restore| is also not used in the continuation
-|k|.
+Note that we only need to consider the case that |op| is of form |MGet
+k| or |MUpdate r k| where |restore| is also not used in the
+continuation |k|.
 
 \vspace{0.5\lineskip}
 
@@ -503,7 +503,6 @@ in the codomain of |local2globalM|.
 <   algSLHS (fmap hGlobalM (MUpdate r k))
 
 
-% Let's consider the second subcondition \refd{}. It has also two cases:
 For the second subcondition \refd{}, we can define |algNDLHS| as
 follows.
 < algNDLHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
@@ -512,12 +511,6 @@ follows.
 
 We prove it by a case analysis on the shape of input |op :: NondetF
 (Free (ModifyF s r :+: NondetF :+: f) a)|.
-%
-For brevity, we omit the last common part |fmap local2globalM| of the
-equation \refc{}. Instead, we assume that |op| is in the codomain of
-|fmap local2globalM|.
-
-We proceed by a case analysis on |op|.
 
 \noindent \mbox{\underline{case |op = Fail|}}
 <   hGlobalM (alg (Inr (Inl Fail)))
@@ -541,6 +534,9 @@ We proceed by a case analysis on |op|.
 <  algNDRHS (fmap hGlobalM Fail)
 
 \noindent \mbox{\underline{case |op = Or p q|}}
+From |op| is in the codomain of |fmap local2globalM| we obtain |p| and
+|q| are in the codomain of |local2globalM|.
+
 <   hGlobalM (alg (Inr (Inl (Or p q))))
 < = {-~ definition of |alg| -}
 <   hGlobalM (Op (Inr (Inl (Or p q))))
@@ -564,7 +560,7 @@ We proceed by a case analysis on |op|.
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- hModify1 (hNDf (comm2 p)) s0
 <                               (y, s2) <- hModify1 (hNDf (comm2 q)) s1
 <                               Var (x ++ y, s2)))
-< = {-~ Lemma \ref{lemma:modify-state-restore} (|p| and |q| are in the codomain of |local2globalM|) -}
+< = {-~ \Cref{lemma:modify-state-restore}  -}
 <   fmap (fmap fst) (\s0-> (do  (x, s1) <- do {(x,_) <- hModify1 (hNDf (comm2 p)) s0; return (x, s0)}
 <                               (y, s2) <- do {(y,_) <- hModify1 (hNDf (comm2 q)) s1; return (x, s1)}
 <                               Var (x ++ y, s2)))
@@ -595,9 +591,7 @@ We proceed by a case analysis on |op|.
 < = {-~ definition of |fmap| -}
 <   algNDLHS (fmap hGobal (Or p q))
 
-% Finally, the last subcondition:
-For the second subcondition \refe{}, we can define |algNDLHS| as
-follows.
+For the last subcondition \refe{}, we can define |fwdLHS| as follows.
 < fwdLHS :: Functor f => f (s -> Free f [a]) -> (s -> Free f [a])
 < fwdLHS op = \s -> Op (fmap ($ s) op)
 
@@ -664,8 +658,8 @@ Similar to \Cref{app:local-global}, we have a key lemma saying that
 For any program |p :: Free (ModifyF s r :+: NondetF :+: f) a| that do
 not use the operation |OP (Inl MRestore _ _)|, we have
 \[\ba{ll}
-  &|hModify1 (hNDf (local2globalM p)) s| \\
-= &|do (x, _) <- hModify1 (hNDf (local2globalM p)) s; return (x, s)|
+  &|hModify1 (hNDf (comm2 (local2globalM p))) s| \\
+= &|do (x, _) <- hModify1 (hNDf (comm2 (local2globalM p))) s; return (x, s)|
 \ea\]
 \end{lemma}
 

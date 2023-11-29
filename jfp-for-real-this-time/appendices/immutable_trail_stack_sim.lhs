@@ -81,8 +81,15 @@ $
 
 \subsection{Fusing the Left-Hand Side}
 
+
+As in \Cref{app:local-global}, we fuse |runStateT . hState|
+into |hState1|.
+%
 For brevity, we define
-< runStack = fmap fst . flip runStateT (Stack []) . hState
+< runStack = fmap fst . flip hState1 (Stack [])
+%
+The left-hand side is simplified to
+< fmap runStack . hGlobalM . local2trail
 
 We calculate as follows:
 \begin{spec}
@@ -90,9 +97,9 @@ We calculate as follows:
  = {-~  definition of |local2trail| -}
     fmap runStack . hGlobalM . fold Var (alg1 # alg2 # fwd)
       where
-        alg1 (MUpdate r k)  = do pushStack (Left r); update r; k
+        alg1 (MUpdate r k)  = pushStack (Left r) >> update r >> k
         alg1 p              = Op . Inl $ p
-        alg2 (Or p q)       = (do pushStack (Right ()); p) `mplus` (do undoTrail; q)
+        alg2 (Or p q)       = (pushStack (Right ()) >> p) `mplus` (undoTrail >> q)
         alg2 p              = Op . Inr . Inl $ p
         fwd p               = Op . Inr . Inr . Inr $ p
         undoTrail = do  top <- popStack;
@@ -132,10 +139,10 @@ as established in the following calculation:
 < = {-~ definition of |fmap| -}
 <   \s -> runStack $ Var [x]
 < = {-~ definition of |runStack| -}
-<   \s -> fmap fst . flip runStateT (Stack []) . hState $ Var [x]
-< = {-~ definition of |hState| -}
-<   \s -> fmap fst . flip runStateT (Stack []) $ StateT (\ s -> Var ([x], s)
-< = {-~ definition of |runStateT| -}
+<   \s -> fmap fst . flip hState1 (Stack []) $ Var [x]
+< = {-~ definition of |hState1| -}
+<   \s -> fmap fst $ (\ s -> Var ([x], s)) (Stack [])
+< = {-~ function application -}
 <   \s -> fmap fst (Var ([x], Stack []))
 < = {-~ definition of |fmap| -}
 <   \s -> Var [x]
@@ -160,7 +167,7 @@ of |fmap local2globalM|.
 
 For the first subcondition \refc{}, we define |algSLHS| as follows.
 < algSLHS :: (Functor f, Undo s r) => ModifyF s r (s -> Free f [a]) -> (s -> Free f [a])
-< algSLHS (MGet k)        =  \s -> k s s
+< algSLHS (MGet k)        = \ s -> k s s
 < algSLHS (MUpdate r k)   = \ s -> k (s `plus` r)
 < algSLHS (MRestore r k)  = \ s -> k (s `minus` r)
 
@@ -177,12 +184,12 @@ We only need to consider the case that |op| is of form |MGet k| or
 \vspace{0.5\lineskip}
 
 \noindent \mbox{\underline{case |op = MGet k|}}
-
+%
 In the corresponding case of \Cref{app:modify-fusing-lhs}, we have
 calculated that |hGlobalM (Op (Inl (MGet k))) = \s -> (hGlobalM . k) s
 s| \refs{}.
 
-<   fmap runStack $ hGlobalM (alg1 (Inl (MGet k)))
+<   fmap runStack $ hGlobalM (alg1 (MGet k))
 < = {-~ definition of |alg1| -}
 <   fmap runStack $ hGlobalM (Op (Inl (MGet k)))
 < = {-~ Equation \refs{} -}
@@ -201,7 +208,7 @@ s| \refs{}.
 From |op| is in the codomain of |fmap local2globalM| we obtain |k| is
 in the codomain of |local2globalM|.
 
-<   fmap runStack . hGlobalM $ alg1 (Inl (MUpdate r k))
+<   fmap runStack . hGlobalM $ alg1 (MUpdate r k)
 < = {-~ definition of |alg1| -}
 <   fmap runStack . hGlobalM $ pushStack (Left r) >> update r >> k
 < = {-~ definition of |pushStack| -}
@@ -230,7 +237,6 @@ in the codomain of |local2globalM|.
 <       Op . Inr . Inl $ Put (Stack (Left r : xs)) (
 <         Op . Inl $ MUpdate r (hNDf . comm2 $ k)))
 < = {-~ definition of |hModify1| -}
-% I omited a bit more steps here
 <   fmap runStack . fmap (fmap fst) $ \s ->
 <     Op . Inl $ Get (\ (Stack xs) ->
 <       Op . Inl $ Put (Stack (Left r : xs)) (
@@ -288,9 +294,164 @@ in the codomain of |local2globalM|.
 < = {-~ definition of |fmap| -}
 <   algSLHS (fmap (fmap runStack . hGlobalM) (MUpdate r k))
 
+
+For the second subcondition \refd{}, we can define |algNDLHS| as
+follows.
+< algNDLHS :: Functor f => NondetF (s -> Free f [a]) -> (s -> Free f [a])
+< algNDLHS Fail      = \s -> Var []
+< algNDLHS (Or p q)  = \s -> liftM2 (++) (p s) (q s)
+
+We prove it by a case analysis on the shape of input |op :: NondetF
+(Free (ModifyF s r :+: NondetF :+: f) a)|.
+
+\noindent \mbox{\underline{case |op = Fail|}}
+%
+In the corresponding case of \Cref{app:modify-fusing-lhs}, we have
+calculated that |hGlobalM (Op (Inr (Inl Fail))) = \s -> Var []| \refs{}.
+
+<   fmap runStack $ hGlobalM (alg2 (Fail))
+< = {-~ definition of |alg2| -}
+<   fmap runStack $ hGlobalM (Op (Inr (Inl Fail)))
+< = {-~ Equation \refs{} -}
+<   fmap runStack $ \s -> Var []
+< = {-~ definition of |fmap| -}
+<   \s -> runStack $ Var []
+< = {-~ definition of |runStack| -}
+<   \s -> fmap fst . flip hState1 (Stack []) $ Var []
+< = {-~ definition of |hState1| -}
+<   \s -> fmap fst $ Var ([], Stack [])
+< = {-~ definition of |fmap| -}
+<   \s -> Var []
+< = {-~ definition of |algNDRHS|  -}
+<  algNDRHS Fail
+< = {-~ definition of |fmap| -}
+<  algNDRHS (fmap (fmap runStack . hGlobalM) Fail)
+
+
+\noindent \mbox{\underline{case |op = Or p q|}}
+%
+From |op| is in the codomain of |fmap local2globalM| we obtain |p| and
+|q| are in the codomain of |local2globalM|.
+
+<   fmap runStack . hGlobalM $ alg2 (Or p q)
+< = {-~ definition of |alg2| -}
+<   fmap runStack . hGlobalM $ (pushStack (Right ()) >> p) `mplus` (undoTrail >> q)
+< = {-~ definition of |mplus| -}
+<   fmap runStack . hGlobalM $ Op . Inr . Inl $ Or
+<     (pushStack (Right ()) >> p) (undoTrail >> q)
+< = {-~ definition of |hGlobalM| -}
+<   fmap runStack . fmap (fmap fst) . hModify1 . hNDf . comm2 $ Op . Inr . Inl $ Or
+<     (pushStack (Right ()) >> p) (undoTrail >> q)
+< = {-~ definition of |comm2| -}
+<   fmap runStack . fmap (fmap fst) . hModify1 . hNDf $ Op . Inl $ Or
+<     (pushStack (Right ()) >> comm2 p) (undoTrail >> comm2 q)
+< = {-~ definition of |hNDf| and |liftM2| -}
+<   fmap runStack . fmap (fmap fst) . hModify1 $ do
+<     x <- hNDf (comm2 (pushStack (Right ()))) >> hNDf (comm2 p)
+<     y <- hNDf (comm2 undoTrail) >> hNDf (comm2 q)
+<     return (x ++ y)
+< = {-~ monad law -}
+<   fmap runStack . fmap (fmap fst) . hModify1 $ do
+<     hNDf (comm2 (pushStack (Right ())))
+<     x <- hNDf (comm2 p)
+<     hNDf (comm2 undoTrail)
+<     y <- hNDf (comm2 q)
+<     return (x ++ y)
+< = {-~ definition of |hModify1| and \Cref{lemma:dist-hModify1} -}
+<   fmap runStack . fmap (fmap fst) $ \s -> do
+<     _ <- hModify1 (hNDf (comm2 (pushStack (Right ())))) s
+<     (x, s1) <- hModify1 (hNDf (comm2 p)) s
+<     (_, s2) <- hModify1 (hNDf (comm2 undoTrail)) s1
+<     (y, s3) <- hModify1 (hNDf (comm2 q)) s2
+<     return (x ++ y, s3)
+< = {-~ definition of |fmap| (twice) -}
+<   fmap runStack $ \s -> do
+<     _ <- hModify1 (hNDf (comm2 (pushStack (Right ())))) s
+<     (x, s1) <- hModify1 (hNDf (comm2 p)) s
+<     (_, s2) <- hModify1 (hNDf (comm2 undoTrail)) s1
+<     (y,  _) <- hModify1 (hNDf (comm2 q)) s2
+<     return (x ++ y)
+< = {-~ definition of |fmap| and |runStack| -}
+<   \s -> fmap fst . flip hState1 (Stack []) $ do
+<     _ <- hModify1 (hNDf (comm2 (pushStack (Right ())))) s
+<     (x, s1) <- hModify1 (hNDf (comm2 p)) s
+<     (_, s2) <- hModify1 (hNDf (comm2 undoTrail)) s1
+<     (y,  _) <- hModify1 (hNDf (comm2 q)) s2
+<     return (x ++ y)
+< = {-~ definition of |hState1| and \Cref{lemma:dist-hState1} -}
+<   \s -> fmap fst $ (\t -> do
+<     (_, t1) <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) t
+<     ((x, s1), t2) <- hState1 (hModify1 (hNDf (comm2 p)) s) t1
+<     ((_, s2), t3) <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s1) t2
+<     ((y,  _), t4) <- hState1 (hModify1 (hNDf (comm2 q)) s2) t3
+<     return (x ++ y, t4) ) (Stack [])
+< = {-~ function application -}
+<   \s -> fmap fst $ do
+<     (_, t1) <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) (Stack [])
+<     ((x, s1), t2) <- hState1 (hModify1 (hNDf (comm2 p)) s) t1
+<     ((_, s2), t3) <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s1) t2
+<     ((y,  _), t4) <- hState1 (hModify1 (hNDf (comm2 q)) s2) t3
+<     return (x ++ y, t4)
+< = {-~ definition of |fmap| -}
+<   \s -> do
+<     (_, t1) <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) (Stack [])
+<     ((x, s1), t2) <- hState1 (hModify1 (hNDf (comm2 p)) s) t1
+<     ((_, s2), t3) <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s1) t2
+<     ((y,  _),  _) <- hState1 (hModify1 (hNDf (comm2 q)) s2) t3
+<     return (x ++ y)
+< = {-~ \Cref{lemma:state-stack-restore} -}
+<   \s -> do
+<     (_,  t1) <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) (Stack [])
+<     ((x, s1), t2) <- hState1 (hModify1 (hNDf (comm2 p)) s) t1
+<     ((_,  _),  _) <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s1) t2
+<     ((y,  _),  _) <- hState1 (hModify1 (hNDf (comm2 q)) s) t1
+<     return (x ++ y)
+< = {-~ monad law and \Cref{lemma:initial-stack-is-ignored} -}
+<   \s -> do
+<     ((x, _), _)   <- hState1 (hModify1 (hNDf (comm2 p)) s) (Stack [])
+<     ((y,  _),  _) <- hState1 (hModify1 (hNDf (comm2 q)) s) (Stack [])
+<     return (x ++ y)
+< = {-~ definition of |runStack| -}
+<   \s -> do
+<     (x, _) <- runStack (hModify1 (hNDf (comm2 p)) s)
+<     (y, _) <- runStack (hModify1 (hNDf (comm2 q)) s)
+<     return (x ++ y)
+< = {-~ definition of |hGlobalM| -}
+<   \s -> do
+<     x <- runStack (hGlobalM p s)
+<     y <- runStack (hGlobalM q s)
+<     return (x ++ y)
+< = {-~ definition of |fmap| -}
+<   \s -> do
+<     x <- (fmap runStack . hGobalM) p s
+<     y <- (fmap runStack . hGobalM) q s
+<     return (x ++ y))
+< = {-~ definition of |liftM2| -}
+<   \s -> liftM2 (++) ((fmap runStack . hGobalM) p s) ((fmap runStack . hGobalM) q s)
+< = {-~ definition of |algNDLHS|  -}
+<   algNDLHS (Or ((fmap runStack . hGobalM) p) ((fmap runStack . hGobalM) q))
+< = {-~ definition of |fmap| -}
+<   algNDLHS (fmap (fmap runStack . hGobalM) (Or p q))
+
+
 \subsection{Lemmas}
 
 \begin{lemma}[Initial stack is ignored]~ \label{lemma:initial-stack-is-ignored}
+<    fmap fst (hState1 (hGlobalM (local2trail p) s) t)
+< =  fmap fst (hState1 (hGlobalM (local2trail p) s) (Stack []))
+or
 <    fmap fst . flip hState1 st . flip hGlobalM s . local2trail
 < =  fmap fst . flip hState1 (Stack []) . flip hGlobalM s . local2trail
+\end{lemma}
+
+\begin{lemma}[State and stack are restored]~ \label{lemma:state-stack-restore}
+<     ((_, s1),  t1) <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) t
+<     ((x, s2), t2) <- hState1 (hModify1 (hNDf (comm2 p)) s1) t1
+<     ((_, s3), t3) <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s2) t2
+<     return (s3, t3)
+< =
+<     ((_, s1), t1) <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) (Stack [])
+<     ((x, s1), t2) <- hState1 (hModify1 (hNDf (comm2 p)) s1) t1
+<     ((_, s2), t3) <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s1) t2
+<     return (s, t)
 \end{lemma}
