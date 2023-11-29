@@ -297,7 +297,7 @@ can encode programs with both state and nondeterminism as effects
 using the data type |Free (StateF :+: NondetF) a|.  The coproduct also
 has a neutral element |NilF|, representing the empty effect set.
 \begin{code}
-data NilF a
+data NilF a -- no constructors
 \end{code}
 %if False
 \begin{code}

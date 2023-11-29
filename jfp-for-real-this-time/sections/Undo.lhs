@@ -112,18 +112,18 @@ class (Monad m, Undo s r) => MModify s r m | m -> s, m -> r where
     restore  :: r -> m ()
 \end{code}
 %
-The two operations |update| and |restore| satisfy the following law:
+The three operations satisfy the following laws:
 \begin{alignat}{2}
     &\mbox{\bf mget-mget}:\quad &
     |mget >>= (\s -> mget >>= k s)| &= |mget >>= (\s -> k s s)|
     ~~\mbox{,} \label{eq:get-get} \\
     &\mbox{\bf update-get}:~ &
-    |get >>= \s -> update r >> return (s `plus` r)|
+    |mget >>= \s -> update r >> return (s `plus` r)|
     &=
     |update r >> get|
     ~~\mbox{,} \label{eq:update-get}\\
     &\mbox{\bf restore-get}:~ &
-    |get >>= \s -> restore r >> return (s `minus` r)|
+    |mget >>= \s -> restore r >> return (s `minus` r)|
     &=
     |restore r >> get|
     ~~\mbox{,} \label{eq:restore-get}\\
@@ -131,6 +131,10 @@ The two operations |update| and |restore| satisfy the following law:
     |update r >> restore r| &= |return ()|
     ~~\mbox{.} \label{eq:update-restore}
 \end{alignat}
+The first law for |mget| corresponds to that for |get|. The second
+and third law respecively capture the impact of |update| and |restore|
+on |mget|. Finally, the fourth law expresses that |restore| undoes the effect of
+|update|.
 %
 % As in \Cref{sec:state}, we can also implement the state monad as an
 % instance of |MModify|.
