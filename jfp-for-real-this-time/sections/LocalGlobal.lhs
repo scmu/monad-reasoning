@@ -350,7 +350,7 @@ comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 \end{code}
 % By incorporating |comm2| in the definition of |hGlobal|, |hLocal| and |hGlobal| have exactly the same signature.
 
-As for |hLocal|, in the case where the remaining signature is empty (|f = NilF|), we get:
+In the case where the remaining signature is empty (|f = NilF|), we get:
 %
 < fmap hNil . hGlobal :: Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
 %
@@ -566,8 +566,8 @@ Those two programs do not behave in the same way when |s /= t|.
 Hence, only provided that \textbf{all} occurences of |put| in a program are replaced by |putR|
 can we simulate local-state semantics. The replacement itself as well as the correctness statement
 that incorporates this requirement can be easily epressed with effect handlers. As we will explain
-below, taking this global replacement into account in the correctness proof, also has impact on the
-correctness proof. In particular, it requires using a non-standard fusion rule.
+below we need to articulate this global replacement in the
+correctness proof. This requires using the {\bf fusion-post'} rule rather than the more widely used {\bf fusion-post} rule.
 
 %\paragraph*{Proving the |putR| Operation Correct}
 % \label{sec:putr}
@@ -608,8 +608,8 @@ failOp    = (Op . Inr . Inl) Fail
 % Here, we use a continuation-based representation, from which we can always recover the
 % representation of |putR| by setting the continuation to |return|.
 
-Firstly, the translation function |local2global| that replaces every every |Put| into
-a |putR| and leaves the rest of the program untouched, is just an effect handler.
+We realize the globale replacement of |Put| with
+a |putR| with the effect handler |local2global|:
 \begin{code}
 local2global  :: Functor f
               => Free (StateF s :+: NondetF :+: f) a
@@ -627,7 +627,7 @@ local2global = fold Var alg
 % commutativity and associativity of the coproduct operator |(:+:)|
 % and omit the |comm2| in the definition of |hGlobal|.
 
-A correct translation then preserves the meaning when going
+With this replacement we preserve the meaning when switching
 from local to global state semantics:
 \begin{theorem}\label{thm:local-global}
 < hGlobal . local2global = hLocal

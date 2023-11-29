@@ -28,7 +28,7 @@ reasoning with effects and motivates our translations from high-level
 effects to low-level effects.
 % For a more extensive treatment we refer to the work of % % %
 % \citep{Gibbons11}.
-We discuss the two paramount effects of this paper: state and
+We discuss the two central effects of this paper: state and
 nondeterminism.
 % Furthermore, this section explains how to arbitrarily combine %
 % effects using free monads and the coproduct operator.
