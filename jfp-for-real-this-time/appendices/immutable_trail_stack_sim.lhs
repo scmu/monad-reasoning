@@ -485,23 +485,13 @@ calculated that |hGlobalM (Op (Inr (Inr op))) = \s -> Op (fmap ($ s)
 <   \s -> Op (fmap ($ s) (fmap (fmap runStack . hGlobalM) op))
 < = {-~ definition of |fwdLHS|  -}
 <   fwdLHS (fmap (fmap runStack . hGlobalM) op)
-
+%if False
+$
+%endif
 
 \subsection{Lemmas}
 
-\begin{lemma}[undoTrail undos]~ \label{lemma:undoTrail-undos}
-|t = Stack (ys ++ [Right ()] ++ xs')| and |Right ()| does not appear in |ys|
-
-<    do  ((_, s'), t') <- hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
-<        return (s', t')
-< =
-<    do  ((_,  _),  _) <- hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
-<        return (fminus s ys, Stack ([Right ()] ++ xs'))
-\end{lemma}
-
-\begin{lemma}[Trail stack tracks state]~
-% Idea: local2trail p does not leave any Right (), and leaves all Left
-% r that it uses
+\begin{lemma}[Trail stack tracks state]~ \label{trail-stack-tracks-state}
 For |t :: Stack (Either r ())|, |s :: s|, and |p :: Free (ModifyF s r
 :+: NondetF :+: f) a| which does not use the |restore| operation, we
 have
@@ -738,28 +728,16 @@ We proceed by induction on |p|.
 < = {-~ \Cref{lemma:undoTrail-undos}  -}
 <   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
 <                            (local2trail p) s) (Stack (Right ()))
-<       ((_,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
-<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
 <       ((y, s4), t4)  <-  hState1 ((hModify1 . hNDf . comm2)
 <                            (local2trail q) (fminus (fplus s ys) ys)) (Stack xs)
 <       return ((x ++ y, s4), t4)
 < = {-~ \Cref{eq:plus-minus} gives |fminus (fplus s ys) ys = s|  -}
 <   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
 <                            (local2trail p) s) (Stack (Right ()))
-<       ((_,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
-<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
 <       ((y, s4), t4)  <-  hState1 ((hModify1 . hNDf . comm2)
 <                            (local2trail q) s) (Stack xs)
 <       return ((x ++ y, s4), t4)
 < = {-~ by induction hypothesis on |p|, for some |ys'| the equation holds  -}
-<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
-<                            (local2trail p) s) (Stack (Right ()))
-<       ((_,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
-<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
-<       ((y,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
-<                            (local2trail q) s) (Stack [])
-<       return ((x ++ y, fplus s ys'), extend (Stack xs) ys')
-< = {-~ monad law  -}
 <   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
 <                            (local2trail p) s) (Stack (Right ()))
 <       ((y,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
@@ -795,8 +773,114 @@ We proceed by induction on |p|.
 < = {-~ similar derivation in reverse -}
 <   do  ((x,_),_) <- hState1 ((hModify1 . hNDf . comm2) (local2trail (Op . Inr . Inr $ y)) s) t
 <       return ((x, fplus s ys), extend t ys)
+%if False
+$
+%endif
+\end{proof}
+
+
+\begin{lemma}[undoTrail undos]~ \label{lemma:undoTrail-undos}
+For |t = Stack (ys ++ (Right () : xs))| and |ys = [Left r1, ..., Left
+r_n]|, we have
+<    hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
+< =
+<    return (([()], fminus s ys), Stack xs)
+\end{lemma}
+
+\begin{proof}~
+
+We first calculate as follows:
+
+<   hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
+< = {-~ definition of |undoTrail| -}
+<   hState1 ((hModify1 . hNDf . comm2) (do
+<     top <- popStack
+<     case top of
+<       Nothing -> return ()
+<       Just (Right ()) -> return ()
+<       Just (Left r) -> do restore r; undoTrail
+<   ) s) t
+< = {-~ definition of |popStack| -}
+<   hState1 ((hModify1 . hNDf . comm2) (do
+<     top <- do  Stack xs <- get
+<                case xs of
+<                  []       -> return Nothing
+<                  (x:xs')  -> do put (Stack xs'); return (Just x)
+<     case top of
+<       Nothing -> return ()
+<       Just (Right ()) -> return ()
+<       Just (Left r) -> do restore r; undoTrail
+<   ) s) t
+< = {-~ monad law and case split -}
+<   hState1 ((hModify1 . hNDf . comm2) (do
+<     Stack xs <- get
+<     case xs of
+<       []                -> return ()
+<       (Right () : xs')  -> do put (Stack xs'); return ()
+<       (Left r   : xs')  -> do put (Stack xs'); restore r; undoTrail
+<   ) s) t
+< = {-~ definition of |get| -}
+<   hState1 ((hModify1 . hNDf . comm2) (Op . Inr . Inr . Inl . Get $ \ (Stack xs) ->
+<     case xs of
+<       []                -> return ()
+<       (Right () : xs')  -> do put (Stack xs'); return ()
+<       (Left r   : xs')  -> do put (Stack xs'); restore r; undoTrail
+<   ) s) t
+< = {-~ definition of |hNDf| and |comm2| -}
+<   hState1 (hModify1 (Op . Inr . Inl . Get $ \ (Stack xs) ->
+<     case xs of
+<       []                -> return [()]
+<       (Right () : xs')  -> hNDf . comm2 $ do put (Stack xs'); return ()
+<       (Left r   : xs')  -> hNDf . comm2 $ do put (Stack xs'); restore r; undoTrail
+<   ) s) t
+< = {-~ definition of |hModify1| and function application -}
+<   hState1 (Op . Inl . Get $ \ (Stack xs) ->
+<     case xs of
+<       []                -> return ([()], s)
+<       (Right () : xs')  -> hModify1 (hNDf . comm2 $ do put (Stack xs'); return ()) s
+<       (Left r   : xs')  -> hModify1 (hNDf . comm2 $ do put (Stack xs'); restore r; undoTrail) s
+<   ) t
+< = {-~ definition of |hState1| and function application; let |t = Stack (ys ++ (Right () : xs)) -}
+<     case (ys ++ (Right () : xs)) of
+<       []                -> return (([()], s), t)
+<       (Right () : xs')  -> return (([()], s), Stack xs')
+<       (Left r   : xs')  -> hState1 (hModify1 (hNDf . comm2 $
+<                              do put (Stack xs'); restore r; undoTrail) s) t
+
+Then, we proceed by an induction on the structure of |ys|.
+
+\noindent \mbox{\underline{case |ys = []|}}
+<   case (ys ++ (Right () : xs)) of
+<     []                -> return (([()], s), t)
+<     (Right () : xs')  -> return (([()], s), Stack xs')
+<     (Left r   : xs')  -> hState1 (hModify1 (hNDf . comm2 $
+<                            do put (Stack xs'); restore r; undoTrail) s) t
+< = {-~ case split -}
+<   return (([()], s), Stack xs)
+< = {-~ definition of |fminus| -}
+<   return (([()], fminus s []), Stack xs)
+
+\noindent \mbox{\underline{case |ys = (Left r : ys')|}}
+<   case (ys ++ (Right () : xs)) of
+<     []                -> return (([()], s), t)
+<     (Right () : xs')  -> return (([()], s), Stack xs')
+<     (Left r   : xs')  -> hState1 (hModify1 (hNDf . comm2 $
+<                            do put (Stack xs'); restore r; undoTrail) s) t
+< = {-~ case split -}
+<   hState1 (hModify1 (hNDf . comm2 $
+<     do put (Stack (ys' ++ (Right () : xs))); restore r; undoTrail) s) t
+< = {-~ definition of |hState1, hModify1, hNDf, comm2| and reformulation -}
+<   hState1 ((hModify1 . hNDf . comm2) undoTrail (s `minus` r))
+<     (Stack (ys' ++ (Right () : xs)))
+< = {-~ induction hypothesis on |ys'| -}
+<   return (([()], fminus (s `minus` r) ys'), Stack xs)
+< = {-~ definition of |fminus|  -}
+<   return (([()], fminus s (Left r : ys')), Stack xs)
+< = {-~ definition of |ys|  -}
+<   return (([()], fminus s ys), Stack xs)
 
 \end{proof}
+
 
 \begin{lemma}[Initial stack is ignored]~ \label{lemma:initial-stack-is-ignored}
 For any program |p :: Free (ModifyF s r :+: NondetF :+: f) a| that do

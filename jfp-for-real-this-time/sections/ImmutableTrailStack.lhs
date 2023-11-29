@@ -218,32 +218,49 @@ test2 p q s = do
     (y, s3) <- hModify1 (hNDf (comm2 q)) s2
     return (x ++ y, s3)
 
-test3 p s t =
- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) t
+--  Stack xs <- get
+--  case xs of
+--    []       -> return Nothing
+--    (x:xs')  -> do put (Stack xs'); return (Just x)
 
-test3' p s t ys =
-  do ((x, s), Stack xs) <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) (Stack []); return ((x, s), Stack (xs ++ ys))
 
-extend :: Stack s -> [s] -> Stack s
-extend (Stack xs) ys = Stack (ys ++ xs)
-fplus :: Undo s r => s -> [Either r b] -> s
-fplus s ys = foldr (\ (Left r) s -> s `plus` r) s ys
-fminus :: Undo s r => s -> [Either r b] -> s
-fminus s ys = foldl (\ s (Left r) -> s `minus` r) s ys
+test3 :: (Functor f, Undo s r) => s -> Stack (Either r ()) -> Free f (([()], s), Stack (Either r ()))
+test3 s t =
+   hState1 ((hModify1 . hNDf . comm2) (do
+     top <- popStack
+     case top of
+       Nothing -> return ()
+       Just (Right ()) -> return ()
+       Just (Left r) -> do restore r; undoTrail
+   ) s) t
 
-test4 p s t ys =
-  do  ((x, s'), t') <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) t
-      return (x, t' == extend t ys, s' == fplus s ys)
+test3' :: (Functor f, Undo s r) => s -> Stack (Either r ()) -> Free f (([()], s), Stack (Either r ()))
+test3' s t =
+   hState1 (hModify1 (do
+     [top] <- hNDf . comm2 $ popStack
+     case top of
+       Nothing -> return [()]
+       Just (Right ()) -> return [()]
+       Just (Left r) ->  hNDf . comm2 $ do restore r; undoTrail
+   ) s) t
 
-test5 s t y ys =
-   Op . fmap (\k -> do
-     ((x, _), _) <- hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t
-     return ((x, fplus s ys), extend t ys) ) $ y
+test4 s t =
+   hState1 ((hModify1 . hNDf . comm2) (do
+     Stack xs <- get
+     case xs of
+       []       -> return ()
+       (Right () : xs')  -> do put (Stack xs'); return ()
+       (Left r   : xs')  -> do put (Stack xs'); restore r; undoTrail
+   ) s) t
 
-test5' s t y ys =
-   do
-     ((x, _), _) <- Op . fmap (\k -> hState1 ((hModify1 . hNDf . comm2) (local2trail k) s) t) $ y
-     return ((x, fplus s ys), extend t ys)
+test4' s t =
+   hState1 (hModify1 (Op . Inr . Inl . Get $ \ (Stack xs) ->
+     case xs of
+       []                -> return [()]
+       (Right () : xs')  -> hNDf . comm2 $ do put (Stack xs'); return ()
+       (Left r   : xs')  -> hNDf . comm2 $ do put (Stack xs'); restore r; undoTrail
+   ) s) t
+
 \end{code}
 %endif
 
