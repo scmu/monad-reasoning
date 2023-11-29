@@ -57,7 +57,12 @@ instance (Functor f, Functor g, Functor h)
   => MState s (Free (f :+: g :+: StateF s :+: h)) where
     get      = Op . Inr . Inr . Inl $ Get return
     put x    = Op . Inr . Inr . Inl $ Put x (return ())
+
 \end{code}
+% instance (Functor f, Functor h)
+%   => MState s (Free (f :+: StateF s :+: h)) where
+%     get      = Op . Inr . Inl $ Get return
+%     put x    = Op . Inr . Inl $ Put x (return ())
 
 
 The following translation |local2trail| simulates the local-state
@@ -213,11 +218,26 @@ test2 p q s = do
     (y, s3) <- hModify1 (hNDf (comm2 q)) s2
     return (x ++ y, s3)
 
-test3 p q s =
-   \s -> do
-     x <- runStack (hGlobalM p s)
-     y <- runStack (hGlobalM q s)
-     return (x ++ y)
+test3 p s t =
+ hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) t
+
+test3' p s t ys =
+  do ((x, s), Stack xs) <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) (Stack []); return ((x, s), Stack (xs ++ ys))
+
+extend :: Stack s -> [s] -> Stack s
+extend (Stack xs) ys = Stack (ys ++ xs)
+fplus :: Undo s r => s -> [Either r b] -> s
+fplus s ys = foldr (\ (Left r) s -> s `plus` r) s ys
+
+test4 p s t ys =
+  do  ((x, s'), t') <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) t
+      return (x, t' == extend t ys, s' == fplus s ys)
+
+test5 s t r k =
+   do  ((_, s1), t1) <- hState1 ((hModify1 . hNDf . comm2 $ do
+         Stack xs <- get
+         put (Stack (Left r : xs))) s) t
+       hState1 ((hModify1 . hNDf . comm2 . local2trail $ k) (s1 `plus` r)) t1
 \end{code}
 %endif
 

@@ -26,11 +26,21 @@
 %format s1'
 %format s2'
 
+%format t0
+%format t1
+%format t2
+%format t1'
+%format t2'
+
 %format k1
 %format k2
 
 %format h1
 %format h2
+
+%format r1
+%format r2
+%format r_n
 
 %format `times` = "\mathbin{\times}"
 %format times = "(\mathbin{\times})"
