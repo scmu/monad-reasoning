@@ -38,8 +38,8 @@ We discuss extensions of our simulations and show benchmarks.
 \wenhao{Do we want to show some code about extensions with mutable
 states?}
 
-One main advantage of using low-level effects is to make better use of
-low-level features such as mutable states.
+Low-level effects allow us to make better use of low-level features
+such as mutable states.
 %
 In this section, we discuss two potential optimisations enabled
 by mutable states.
@@ -58,9 +58,7 @@ states so that we can implement more efficient versions of state
 modification operations which only need to modify part of the mutable
 states.
 %
-In addition to using mutable states, another option is to use
-in-place update~\citep{LorenzenLS23} which also enables efficient
-state updates and restoration.
+
 
 %if False
 \begin{code}
@@ -102,32 +100,8 @@ a stack containing the remaining branches with an immutable list.
 With mutable states, we can also implement a more efficient version of
 it by implementing a stack with a mutable array.
 
-\subsection{Trail Stacks}
-%
-%Both of |local2global| and |local2globalM|, our previous simulations
-%of local-state semantics and global-state semantics, rely on using
-%high-level nondeterminism operations to store the previous states or
-%modifications, respectively.
-The simulation |local2globalM| still relies on using the high-level
-nondeterminism operations to store the previous modifications (deltas)
-to the state.
-%
-We can do this in a more low-level and efficient way by storing them
-in a (global and mutable) trail stack following the Warren Abstract
-Machine~\citep{AitKaci91}.
-%
-The idea is to use a trail stack to contain elements of type |Either r
-()|, where |r| is the type of deltas to the states. The |Left x| means
-an update to the state with the delta |x|, and the |Right ()| means a
-time stamp.
-%
-Whenever we update the state, we push the delta into the trail stack.
-%
-When we enter a nondeterministic branch, we push a time stamp.
-%
-When we leave the branch, we keep popping the trail stack and
-restoring the updates until we reach the latest time stamp.
 
+%if False
 \subsection{Benchmark}
 \label{sec:benchmark}
 
@@ -197,3 +171,5 @@ Benchmark            & n=10  & n=11 & n=12  &  &  \\
 % \caption{Results of C++ implementation.}
 % \label{tbl:benchmarks-c++}
 % \end{table}
+
+%endif

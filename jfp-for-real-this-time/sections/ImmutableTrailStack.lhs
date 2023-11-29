@@ -28,8 +28,28 @@ import Combination
 \section{Trail Stack}
 \label{sec:trail-stack}
 
-The trail stack contains elements of type |Either r ()|.  The |Left r|
-means a delta of type |r|; the |Right ()| means a time stamp.
+The simulations |local2global| in \Cref{sec:local2global} and
+|local2globalM| in \Cref{sec:undo} still rely on using the
+high-level nondeterminism operations to store the previous
+states or modifications (deltas) to the state.
+%
+We can do this in a more low-level and efficient way by storing them
+in a trail stack following the Warren Abstract Machine
+~\citep{AitKaci91}.
+%
+For example, for the modification-based version |local2globalM|,
+%
+The idea is to use a trail stack to contain elements of type |Either r
+()|, where |r| is the type of deltas to the states. The |Left x| means
+an update to the state with the delta |x|, and the |Right ()| means a
+time stamp.
+%
+Whenever we update the state, we push the delta into the trail stack.
+%
+When we enter a nondeterministic branch, we push a time stamp.
+%
+When we leave the branch, we keep popping the trail stack and
+restoring the updates until we reach the latest time stamp.
 
 We can easily implement the |Stack| data type with lists.
 \begin{code}
@@ -98,7 +118,7 @@ We have the following theorem showing its correctness by the
 equivalence between |hGlobalT| and the local-state semantics given by
 |hLocal|.
 \begin{restatable}[]{theorem}{localTrail}
-\label{thm:local2trail}
+\label{thm:trail-local-global}
 Given |Functor f| and |Undo s r|, the equation
 < hGlobalT = hLocalM
 holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
@@ -232,16 +252,6 @@ test3 s t =
        Nothing -> return ()
        Just (Right ()) -> return ()
        Just (Left r) -> do restore r; undoTrail
-   ) s) t
-
-test3' :: (Functor f, Undo s r) => s -> Stack (Either r ()) -> Free f (([()], s), Stack (Either r ()))
-test3' s t =
-   hState1 (hModify1 (do
-     [top] <- hNDf . comm2 $ popStack
-     case top of
-       Nothing -> return [()]
-       Just (Right ()) -> return [()]
-       Just (Left r) ->  hNDf . comm2 $ do restore r; undoTrail
    ) s) t
 
 test4 s t =

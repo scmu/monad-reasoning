@@ -195,6 +195,7 @@
 %format putR = "\Varid{put_{R}}"
 %format modifyR = "\Varid{modify_{R}}"
 %format queensR = "\Varid{queens_{R}}"
+%format queensM = "\Varid{queens_{M}}"
 %format queensStack = "\Varid{queens_{Stack}}"
 %format queensStackR = "\Varid{queens_{Stack,R}}"
 %format queensMT = "\Varid{queens_{MT}}"

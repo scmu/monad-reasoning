@@ -266,6 +266,7 @@ where |gen| and |alg| are from the definition of |nondet2stateS|, and
 %-------------------------------------------------------------------------------
 \subsection{Combining the Simulation with Other Effects}
 \label{sec:combining-the-simulation-with-other-effects}
+\label{sec:nondet2state}
 
 The |nondet2stateS| function only considers nondeterminism as the only
 effect. In this section, we generalise it to work in combination with

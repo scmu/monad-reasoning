@@ -20,8 +20,11 @@ import LocalGlobal
 
 %-------------------------------------------------------------------------------
 
-This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|,
-where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:local-global}.
+% This section shows that the function |hGlobal . local2global| is equivalent to |hLocal|,
+% where |hGlobal|, |local2global| and |hLocal| are defined in Section \ref{sec:local-global}.
+This section proves the following theorem in \Cref{sec:local2global}.
+
+\localGlobal*
 
 \paragraph*{Preliminary}
 It is easy to see that |runStateT . hState| can be fused into a single fold defined as follows:

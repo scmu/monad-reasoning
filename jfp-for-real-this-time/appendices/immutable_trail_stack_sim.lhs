@@ -28,7 +28,7 @@ into |hModify1| and use it instead in the following proofs.
 %format fwdLHS = "\Varid{fwd}_{\Varid{LHS}}"
 %format fwdRHS = "\Varid{fwd}_{\Varid{RHS}}"
 \subsection{Main Proof Structure}
-The main proof structure of \Cref{thm:local2trail} is as follows.
+The main proof structure of \Cref{thm:trail-local-global} is as follows.
 \begin{proof}
 The left-hand side is expanded to
 
@@ -80,6 +80,7 @@ $
 
 
 \subsection{Fusing the Left-Hand Side}
+\label{sec:trail-fusing-lhs}
 
 
 As in \Cref{app:local-global}, we fuse |runStateT . hState|
@@ -475,8 +476,27 @@ calculated that |hGlobalM (Op (Inr (Inr op))) = \s -> Op (fmap ($ s)
 $
 %endif
 
+\subsection{Equating the Fused Sides}
+
+We observe that the following equations hold trivially.
+\begin{eqnarray*}
+|genLHS| & = & |genRHS| \\
+|algSLHS| & = & |algSRHS| \\
+|algNDLHS| & = & |algNDRHS| \\
+|fwdLHS| & = & |fwdRHS|
+\end{eqnarray*}
+
+Therefore, the main theorem (\Cref{thm:trail-local-global}) holds.
+
+
 \subsection{Lemmas}
 
+In this section, we prove the lemmas used in \Cref{sec:trail-fusing-lhs}.
+
+The following lemma shows the relationship between the state and trail
+stack. Intuitively, the trail stack contains all the deltas (updates)
+that have not been restored in the program. Previous elements in the
+trail stack do not influence the result and state of programs.
 \begin{lemma}[Trail stack tracks state]~ \label{lemma:trail-stack-tracks-state}
 For |t :: Stack (Either r ())|, |s :: s|, and |p :: Free (ModifyF s r
 :+: NondetF :+: f) a| which does not use the |restore| operation, we
@@ -497,13 +517,11 @@ extend :: Stack s -> [s] -> Stack s
 extend (Stack xs) ys = Stack (ys ++ xs)
 fplus :: Undo s r => s -> [Either r b] -> s
 fplus s ys = foldr (\ (Left r) s -> s `plus` r) s ys
-fminus :: Undo s r => s -> [Either r b] -> s
-fminus s ys = foldl (\ s (Left r) -> s `minus` r) s ys
 \end{spec}
 \end{lemma}
 
 Note that an immediate corollary of
-\Cref{lemma:trail-stack-tracks-state} is that in addition to replace
+\Cref{lemma:trail-stack-tracks-state} is that in addition to replacing
 the stack |t| with the empty stack |Stack []|, we can also replace it
 with any other stack. The following equation holds.
 %
@@ -767,11 +785,19 @@ $
 \end{proof}
 
 
-\begin{lemma}[undoTrail undos]~ \label{lemma:undoTrail-undos}
+The following lemma shows that the |undoTrail| function restores all
+the updates in the trail stack until it reaches a time stamp |Right ()|.
+\begin{lemma}[UndoTrail undos]~ \label{lemma:undoTrail-undos}
 For |t = Stack (ys ++ (Right () : xs))| and |ys = [Left r1, ..., Left r_n]|, we have
 <    hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
 < =
 <    return (([()], fminus s ys), Stack xs)
+
+The function |fminus| is defined as follows:
+\begin{spec}
+fminus :: Undo s r => s -> [Either r b] -> s
+fminus s ys = foldl (\ s (Left r) -> s `minus` r) s ys
+\end{spec}
 \end{lemma}
 
 \begin{proof}~
@@ -883,6 +909,13 @@ Then, we proceed by an induction on the structure of |ys|.
 % % < =  fmap fst (hState1 (hGlobalM (local2trail p) s) (Stack []))
 % \end{lemma}
 
+The following lemma is obvious from
+\Cref{lemma:trail-stack-tracks-state} and \Cref{lemma:undoTrail-undos}.
+%
+It shows that we can restore the previous state and stack by pushing a
+time stamp on the trail stack and use the function |undoTrail|
+afterwards.
+
 \begin{lemma}[State and stack are restored]~ \label{lemma:state-stack-restore}
 For |t :: Stack (Either r ())|, |s :: s|, and |p :: Free (ModifyF s r
 :+: NondetF :+: f) a| which does not use the |restore| operation, we
@@ -898,9 +931,7 @@ have
 \end{lemma}
 
 \begin{proof}~
-This lemma is obvious from \Cref{lemma:trail-stack-tracks-state} and
-\Cref{lemma:undoTrail-undos}. We briefly show its derivation. Suppose
-|t = Stack xs|.
+Suppose |t = Stack xs|. We calculate as follows.
 
 <  do  ((_, s1), t1)  <- hState1 ((hModify1 . hNDf . comm2) (pushStack (Right ())) s) (Stack xs)
 <      ((x, s2), t2)  <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s1) t1

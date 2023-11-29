@@ -629,9 +629,10 @@ local2global = fold Var alg
 
 With this replacement we preserve the meaning when switching
 from local to global state semantics:
-\begin{theorem}\label{thm:local-global}
+\begin{restatable}[]{theorem}{localGlobal}
+\label{thm:local-global}
 < hGlobal . local2global = hLocal
-\end{theorem}
+\end{restatable}
 Here, the |hGlobal| and |hLocal| handlers both eliminate all
 nondeterminsm and state effects in the program.
 
