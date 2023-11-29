@@ -360,10 +360,10 @@ From |op| is in the codomain of |fmap local2globalM| we obtain |p| and
 <     return (x ++ y)
 < = {-~ definition of |hModify1| and \Cref{lemma:dist-hModify1} -}
 <   fmap runStack . fmap (fmap fst) $ \s -> do
-<     _ <- hModify1 (hNDf (comm2 (pushStack (Right ())))) s
-<     (x, s1) <- hModify1 (hNDf (comm2 p)) s
-<     (_, s2) <- hModify1 (hNDf (comm2 undoTrail)) s1
-<     (y, s3) <- hModify1 (hNDf (comm2 q)) s2
+<     _        <- hModify1 (hNDf (comm2 (pushStack (Right ())))) s
+<     (x, s1)  <- hModify1 (hNDf (comm2 p)) s
+<     (_, s2)  <- hModify1 (hNDf (comm2 undoTrail)) s1
+<     (y, s3)  <- hModify1 (hNDf (comm2 q)) s2
 <     return (x ++ y, s3)
 < = {-~ definition of |fmap| (twice) -}
 <   fmap runStack $ \s -> do
@@ -489,13 +489,13 @@ calculated that |hGlobalM (Op (Inr (Inr op))) = \s -> Op (fmap ($ s)
 
 \subsection{Lemmas}
 
-\begin{lemma}[undoTrail undos]~
+\begin{lemma}[undoTrail undos]~ \label{lemma:undoTrail-undos}
 |t = Stack (ys ++ [Right ()] ++ xs')| and |Right ()| does not appear in |ys|
 
 <    do  ((_, s'), t') <- hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
 <        return (s', t')
 < =
-<    do  ((_, s'), t') <- hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
+<    do  ((_,  _),  _) <- hState1 ((hModify1 . hNDf . comm2) undoTrail s) t
 <        return (fminus s ys, Stack ([Right ()] ++ xs'))
 \end{lemma}
 
@@ -522,7 +522,7 @@ extend (Stack xs) ys = Stack (ys ++ xs)
 fplus :: Undo s r => s -> [Either r b] -> s
 fplus s ys = foldr (\ (Left r) s -> s `plus` r) s ys
 fminus :: Undo s r => s -> [Either r b] -> s
-fminus s ys = foldr (\ (Left r) s -> s `minus` r) s ys
+fminus s ys = foldl (\ s (Left r) -> s `minus` r) s ys
 \end{spec}
 \end{lemma}
 
@@ -616,7 +616,7 @@ We proceed by induction on |p|.
 <     hNDf . comm2 $ update r
 <     hNDf . comm2 . local2trail $ k
 <   ) s) t
-< = {-~ definition of |hModify1| and function application -}
+< = {-~ definition of |hModify1|, \Cref{lemma:dist-hModify1} and function application -}
 <   hState1 (do
 <     (_, s1) <- (hModify1 . hNDf . comm2 $ pushStack (Left r)) s
 <     (_, s2) <- (hModify1 . hNDf . comm2 $ update r) s1
@@ -633,7 +633,7 @@ We proceed by induction on |p|.
 <     (_, s1) <- (hModify1 . hNDf . comm2 $ pushStack (Left r)) s
 <     (hModify1 . hNDf . comm2 . local2trail $ k) (s1 `plus` r)
 <   ) t
-< = {-~ definition of |hState1| and function application -}
+< = {-~ definition of |hState1|, \Cref{lemma:dist-hState1}, and function application -}
 <   do  ((_, s1), t1) <- hState1 ((hModify1 . hNDf . comm2 $ pushStack (Left r)) s) t
 <       hState1 ((hModify1 . hNDf . comm2 . local2trail $ k) (s1 `plus` r)) t1
 < = {-~ definition of |pushStack| -}
@@ -663,6 +663,115 @@ We proceed by induction on |p|.
 <                      (local2trail (Op (Inl (MUpdate r k)))) s) (Stack [])
 <       return ((x, fplus s ys'), extend t ys')
 
+
+\noindent \mbox{\underline{case |t = Op . Inr . Inl $ Or p q|}}
+
+<   hState1 ((hModify1 . hNDf . comm2) (local2trail (Op . Inr . Inl $ Or p q)) s) t
+< = {-~ definition of |local2trail| -}
+<   hState1 ((hModify1 . hNDf . comm2) (
+<     (pushStack (Right ()) >> local2trail p) `mplus` (undoTrail >> local2trail q)) s) t
+< = {-~ definition of |mplus| -}
+<   hState1 ((hModify1 . hNDf . comm2) (Op . Inr . Inl $ Or
+<     (pushStack (Right ()) >> local2trail p)
+<     (undoTrail >> local2trail q)) s) t
+< = {-~ definition of |hNDf|, |comm2|, and |liftM2| -}
+<   hState1 (hModify1 (do
+<     x <- hNDf (comm2 (pushStack (Right ()))) >> hNDf (comm2 (local2trail p))
+<     y <- hNDf (comm2 undoTrail) >> hNDf (comm2 (local2trail q))
+<     return (x ++ y)
+<   ) s) t
+< = {-~ monad law -}
+<   hState1 (hModify1 (do
+<     hNDf (comm2 (pushStack (Right ())))
+<     x <- hNDf (comm2 (local2trail p))
+<     hNDf (comm2 undoTrail)
+<     y <- hNDf (comm2 (local2trail q))
+<     return (x ++ y)
+<   ) s) t
+< = {-~ definition of |hModify1|, \Cref{lemma:dist-hModify1}, and function application -}
+<   hState1 (do
+<     (_, s1)  <- hModify1 (hNDf (comm2 (pushStack (Right ())))) s
+<     (x, s2)  <- hModify1 (hNDf (comm2 (local2trail p))) s1
+<     (_, s3)  <- hModify1 (hNDf (comm2 undoTrail)) s2
+<     (y, s4)  <- hModify1 (hNDf (comm2 (local2trail q))) s3
+<     return (x ++ y, s4)
+<   ) t
+< = {-~ definition of |hState1|, \Cref{lemma:dist-hState1}, and function application -}
+<   do  ((_, s1), t1)  <- hState1 (hModify1 (hNDf (comm2 (pushStack (Right ())))) s) t
+<       ((x, s2), t2)  <- hState1 (hModify1 (hNDf (comm2 (local2trail p))) s1) t1
+<       ((_, s3), t3)  <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s2) t2
+<       ((y, s4), t4)  <- hState1 (hModify1 (hNDf (comm2 (local2trail q))) s3) t3
+<       return ((x ++ y, s4), t4)
+< = {-~ definition of |pushStack| -}
+<   do  ((_, s1), t1)  <- hState1 (hModify1 (hNDf (comm2 (do
+<         Stack xs <- get
+<         put (Stack (Right () : xs))))) s) t
+<       ((x, s2), t2)  <- hState1 (hModify1 (hNDf (comm2 (local2trail p))) s1) t1
+<       ((_, s3), t3)  <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s2) t2
+<       ((y, s4), t4)  <- hState1 (hModify1 (hNDf (comm2 (local2trail q))) s3) t3
+<       return ((x ++ y, s4), t4)
+< = {-~ definition of |hState1, hModify1, hNDf, comm2, get, put|; let |t = Stack xs| -}
+<   do  ((_, s1), t1)  <- return (([()], s), Stack (Right () : xs))
+<       ((x, s2), t2)  <- hState1 (hModify1 (hNDf (comm2 (local2trail p))) s1) t1
+<       ((_, s3), t3)  <- hState1 (hModify1 (hNDf (comm2 undoTrail)) s2) t2
+<       ((y, s4), t4)  <- hState1 (hModify1 (hNDf (comm2 (local2trail q))) s3) t3
+<       return ((x ++ y, s4), t4)
+< = {-~ monad law -}
+<   do  ((x, s2), t2)  <-  hState1 (hModify1 (hNDf (comm2
+<                            (local2trail p))) s) (Stack (Right () : xs))
+<       ((_, s3), t3)  <-  hState1 (hModify1 (hNDf (comm2 undoTrail)) s2) t2
+<       ((y, s4), t4)  <-  hState1 (hModify1 (hNDf (comm2 (local2trail q))) s3) t3
+<       return ((x ++ y, s4), t4)
+< = {-~ reformulation -}
+<   do  ((x, s2), t2)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail p) s) (Stack (Right () : xs))
+<       ((_, s3), t3)  <-  hState1 ((hModify1 . hNDf . comm2) undoTrail s2) t2
+<       ((y, s4), t4)  <-  hState1 ((hModify1 . hNDf . comm2) (local2trail q) s3) t3
+<       return ((x ++ y, s4), t4)
+< = {-~ by induction hypothesis on |p|, for some |ys| the equation holds  -}
+<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail p) s) (Stack (Right ()))
+<       ((_, s3), t3)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
+<       ((y, s4), t4)  <-  hState1 ((hModify1 . hNDf . comm2) (local2trail q) s3) t3
+<       return ((x ++ y, s4), t4)
+< = {-~ \Cref{lemma:undoTrail-undos}  -}
+<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail p) s) (Stack (Right ()))
+<       ((_,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
+<       ((y, s4), t4)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail q) (fminus (fplus s ys) ys)) (Stack xs)
+<       return ((x ++ y, s4), t4)
+< = {-~ \Cref{eq:plus-minus} gives |fminus (fplus s ys) ys = s|  -}
+<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail p) s) (Stack (Right ()))
+<       ((_,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
+<       ((y, s4), t4)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail q) s) (Stack xs)
+<       return ((x ++ y, s4), t4)
+< = {-~ by induction hypothesis on |p|, for some |ys'| the equation holds  -}
+<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail p) s) (Stack (Right ()))
+<       ((_,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            undoTrail (fplus s ys)) (extend (Stack (Right () : xs)) ys)
+<       ((y,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail q) s) (Stack [])
+<       return ((x ++ y, fplus s ys'), extend (Stack xs) ys')
+< = {-~ monad law  -}
+<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail p) s) (Stack (Right ()))
+<       ((y,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail q) s) (Stack [])
+<       return ((x ++ y, fplus s ys'), extend (Stack xs) ys')
+< = {-~ similar derivation in reverse  -}
+<   do  ((x,  _),  _)  <-  hState1 ((hModify1 . hNDf . comm2)
+<                            (local2trail (Op . Inr . Inl $ Or p q)) s) (Stack [])
+<       return ((x, fplus s ys'), extend t ys')
+
+
+\noindent \mbox{\underline{case |t = Op . Inr . Inr $ y|}}
 
 \end{proof}
 

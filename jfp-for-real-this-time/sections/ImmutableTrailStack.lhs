@@ -228,6 +228,8 @@ extend :: Stack s -> [s] -> Stack s
 extend (Stack xs) ys = Stack (ys ++ xs)
 fplus :: Undo s r => s -> [Either r b] -> s
 fplus s ys = foldr (\ (Left r) s -> s `plus` r) s ys
+fminus :: Undo s r => s -> [Either r b] -> s
+fminus s ys = foldl (\ s (Left r) -> s `minus` r) s ys
 
 test4 p s t ys =
   do  ((x, s'), t') <- hState1 ((hModify1 . hNDf . comm2) (local2trail p) s) t
