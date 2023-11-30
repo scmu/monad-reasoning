@@ -25,7 +25,7 @@ import Combination
 \end{code}
 %endif
 
-\section{Trail Stack}
+\section{Modelling Local State with Trail Stack}
 \label{sec:trail-stack}
 
 The simulations |local2global| in \Cref{sec:local2global} and

@@ -5,11 +5,13 @@
 \section{Proofs for Get Laws in Local-State Semantics}
 \label{app:local-law}
 
-In this section we prove two equations relevant to the interaction of nondeterminism and state in the local-state semantics.
+In this section we prove two equations about the interaction of
+nondeterminism and state in the local-state semantics.
 
-\begin{theorem}
-|get >> mzero = mzero|
-\end{theorem}
+% \begin{theorem}
+\noindent
+\Cref{eq:get-right-identity}: |get >> mzero = mzero|
+% \end{theorem}
 
 
 \begin{proof}~
@@ -49,9 +51,11 @@ In this section we prove two equations relevant to the interaction of nondetermi
 % < = {-~  Law (\ref{eq:monad-ret-bind}): return-bind and definition of |(>>)|  -}
 % <    mzero
 
-\begin{theorem}
+% \begin{theorem}
+\noindent
+\Cref{eq:get-left-dist}:
 |get >>= (\x -> k1 x `mplus` k2 x) = (get >>= k1) `mplus` (get >>= k2)|
-\end{theorem}
+% \end{theorem}
 
 \begin{proof}~
 
