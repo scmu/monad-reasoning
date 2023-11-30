@@ -28,37 +28,36 @@ import Combination
 \section{Modelling Local State with Trail Stack}
 \label{sec:trail-stack}
 
-The simulations |local2global| in \Cref{sec:local2global} and
-|local2globalM| in \Cref{sec:undo} still rely on using the
-high-level nondeterminism operations to store the previous
-states or modifications (deltas) to the state and implement state
-restoration.
+In order
+to trigger the restoration of the previous state, the simulations |local2global| in \Cref{sec:local2global} and |local2globalM|
+in \Cref{sec:undo} introduce a call to |or| and to |fail|
+at every modification of the state.
 %
-We can do this in a lower-level and more efficient way by storing them
-in a trail stack following the Warren Abstract Machine
-~\citep{AitKaci91}.
+The Warren Abstract Machine~\citep{AitKaci91} does this in a more efficient and
+lower-level way: it uses a \emph{trail stack} to batch consecutive restorative steps.
 %
 For example, for the modification-based version |local2globalM|,
 %
-the idea is to use a trail stack to contain elements of type |Either r
-()|, where |r| is the type of deltas to the states. The |Left x| means
-an update to the state with the delta |x|, and the |Right ()| means a
-time stamp.
+we can model this idea with a trail stack to contain elements of type |Either r
+()|, where |r| is the type of deltas to the states. Each |Left x| entry represents
+an update to the state with the delta |x|, and each |Right ()| is a
+marker.
 %
-Whenever we update the state, we push the delta into the trail stack.
+When we enter a left branch, we push a marker on the trail stack.
 %
-When we enter a nondeterministic branch, we push a time stamp.
+For every update we perform in that branch, we push the corresponding
+delta on the trail stack, on top of the marker.
 %
-When we leave the branch, we keep popping the trail stack and
-restoring the updates until we reach the latest time stamp.
+When we backtrack to the right branch, we unwind the trail stack down to the
+marker and restore all deltas along the way. This process is known as ``untrailing''.
 
-We can easily implement the |Stack| data type with lists.
+We can easily model the |Stack| data type with Haskell lists.
 \begin{code}
 newtype Stack s = Stack [s]
 \end{code}
 
-We define the pop and push operations for stacks using the state
-operations.
+We thread the stack through the computation using the state effect and define primitive pop and push operations  
+as follows.
 % -- popStack :: Functor f => Free (StateF (Stack s) :+: f) (Maybe s)
 % -- pushStack :: Functor f => s -> Free (StateF (Stack s) :+: f) ()
 \begin{code}
@@ -86,8 +85,8 @@ instance (Functor f, Functor g, Functor h)
 %     put x    = Op . Inr . Inl $ Put x (return ())
 
 
-The following translation |local2trail| simulates the local-state
-semantics with global-state semantics using a trail stack.
+With this in place, the following translation function |local2trail| simulates the
+local-state semantics with global-state semantics by means of the trail stack.
 
 \begin{code}
 local2trail :: (Functor f, Undo s r)
@@ -102,10 +101,14 @@ local2trail = fold Var (alg1 # alg2 # fwd)
     fwd p               = Op . Inr . Inr . Inr $ p
     undoTrail = do  top <- popStack;
                     case top of
-                      Nothing -> return ()
-                      Just (Right ()) -> return ()
-                      Just (Left r) -> do restore r; undoTrail
+                      Nothing          -> return ()
+                      Just (Right ())  -> return ()
+                      Just (Left r)    -> restore r >> undoTrail
 \end{code}
+As already informally explained above, this translation functions
+introduces code to push a marker in the left branch of a choice, and 
+the untrailing in the right branch. Whenever an update happens, it is also
+recorded on the trail stack. All other operations remain as is.
 
 Now, we can combine the simulation |local2trail| with the global
 semantics provided by |hGlobalM|, and handle the trail stack at the
@@ -115,9 +118,8 @@ hGlobalT :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s
 hGlobalT = fmap (fmap fst . flip runStateT (Stack []) . hState) . hGlobalM . local2trail
 \end{code}
 
-We have the following theorem showing its correctness by the
-equivalence between |hGlobalT| and the local-state semantics given by
-|hLocal|.
+The following theorem establishes the correctness of |hGlobalT| with respect to
+the local-state semantics given by |hLocal|.
 \begin{restatable}[]{theorem}{localTrail}
 \label{thm:trail-local-global}
 Given |Functor f| and |Undo s r|, the equation
@@ -125,6 +127,8 @@ Given |Functor f| and |Undo s r|, the equation
 holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
 that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
+The proof can be found in Appendix~\ref{app:immutable-trail-stack};
+it uses the same fold fusion strategy as in the previous section.
 
 The n-queens example using the trail stack:
 \begin{code}
