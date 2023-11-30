@@ -33,8 +33,25 @@ to trigger the restoration of the previous state, the simulations |local2global|
 in \Cref{sec:undo} introduce a call to |or| and to |fail|
 at every modification of the state.
 %
-The Warren Abstract Machine~\citep{AitKaci91} does this in a more efficient and
+The Warren Abstract Machine (WAM)~\citep{AitKaci91} does this in a more efficient and
 lower-level way: it uses a \emph{trail stack} to batch consecutive restorative steps.
+%
+In this section, we first make use of the idea of trail stacks to
+implement a lower-level translation from local-state semantics to
+global-state semantics for the modifcation-based version of state
+effects in \Cref{sec:undo} which does not require extra calls to
+nondeterminism operations.
+%
+Then, we combine this simulation with other simulations
+% the simulation of nondeterminism
+% in \Cref{sec:nondeterminism-state} and the simulation of multiple
+% states in \Cref{sec:multiple-states}
+to obtain another ultimate simulation function which uses two stacks,
+a choicepoint stack and a trail stack, simultaneously.
+
+
+\subsection{Simulating Local State with Global State and Trail Stack}
+
 %
 For example, for the modification-based version |local2globalM|,
 %
@@ -72,20 +89,19 @@ pushStack :: MState (Stack s) m => s -> m ()
 pushStack x = do
   Stack xs <- get
   put (Stack (x:xs))
+\end{code}
 
+We also need to define a new instance of |MState| in order to
+correctly use state operations for the trail stack.
+\begin{code}
 instance (Functor f, Functor g, Functor h)
   => MState s (Free (f :+: g :+: StateF s :+: h)) where
     get      = Op . Inr . Inr . Inl $ Get return
     put x    = Op . Inr . Inr . Inl $ Put x (return ())
-
 \end{code}
-% instance (Functor f, Functor h)
-%   => MState s (Free (f :+: StateF s :+: h)) where
-%     get      = Op . Inr . Inl $ Get return
-%     put x    = Op . Inr . Inl $ Put x (return ())
 
 
-With this in place, the following translation function |local2trail| simulates the
+With these in place, the following translation function |local2trail| simulates the
 local-state semantics with global-state semantics by means of the trail stack.
 
 \begin{code}
@@ -105,21 +121,22 @@ local2trail = fold Var (alg1 # alg2 # fwd)
                       Just (Right ())  -> return ()
                       Just (Left r)    -> restore r >> undoTrail
 \end{code}
-As already informally explained above, this translation functions
+As already informally explained above, this translation function
 introduces code to push a marker in the left branch of a choice, and 
-the untrailing in the right branch. Whenever an update happens, it is also
+untrail in the right branch. Whenever an update happens, it is also
 recorded on the trail stack. All other operations remain as is.
 
 Now, we can combine the simulation |local2trail| with the global
 semantics provided by |hGlobalM|, and handle the trail stack at the
 end.
 \begin{code}
-hGlobalT :: (Functor f, Undo s r) => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
-hGlobalT = fmap (fmap fst . flip runStateT (Stack []) . hState) . hGlobalM . local2trail
+hGlobalT  :: (Functor f, Undo s r)
+          => Free (ModifyF s r :+: NondetF :+: f) a -> s -> Free f [a]
+hGlobalT  = fmap (fmap fst . flip runStateT (Stack []) . hState) . hGlobalM . local2trail
 \end{code}
 
 The following theorem establishes the correctness of |hGlobalT| with respect to
-the local-state semantics given by |hLocal|.
+the local-state semantics given by |hLocal| defined in \Cref{sec:local-state}.
 \begin{restatable}[]{theorem}{localTrail}
 \label{thm:trail-local-global}
 Given |Functor f| and |Undo s r|, the equation
@@ -128,8 +145,10 @@ holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
 that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
 The proof can be found in Appendix~\ref{app:immutable-trail-stack};
-it uses the same fold fusion strategy as in the previous section.
+it uses the same fold fusion strategy as in the proofs of other theorems.
 
+%if False
+%
 The n-queens example using the trail stack:
 \begin{code}
 queensGlobalT :: Int -> [[Int]]
@@ -145,26 +164,109 @@ queensStateT  = hNil
               . runNDf . comm2
               . local2trail . queensM
 \end{code}
+%endif
 
-Then even further combined with |states2state|, we get the |simulateT|.
+\subsection{Putting Everything Together, Again}
+
+We can further combine the simulation |local2trail| with the
+simulation |nondet2state| of nondeterminism in
+\Cref{sec:nondeterminism-state} and the simulation |state2state| of
+multiple states in \Cref{sec:multiple-states}.
+% \begin{itemize} \item The function |nondet2state| simulates the
+% high-level nondeterminism effect with the state effect
+% (\Cref{sec:nondeterminism-state}).  \item The function
+% |states2state| simulates multiple state effects with a single state
+% effect (\Cref{sec:multiple-states}).  \end{itemize}
+%
+The result simulation encodes the local-state semantics with one
+modification-based state and two stacks, a choicepoint stack generated
+by |nondet2state| and a trail stack generated by |local2trail|.
+%
+This has a close relationship to the WAM of Prolog.
+%
+The modifcation-based state models the state of the program.
+%
+The choicepoint stack stores the remaining branches to implement the
+nondeterministic searching.
+%
+The trail stack stores the privous state updates to implement the
+backtracking.
+
+The combined simulation function |simulateT| is defined
+as follows:
+% old definition:
+% simulateT x s  = extract . hState . states2state
+%                . fmap fst . flip runStateT s . hModify
+%                . comm2 . nondet2state . comm2
+%                . local2trail $ x
+% type of extractT:
+% extractT :: Functor f => StateT (SS g a, Stack b) (Free f) () -> (Free f) [a]
 \begin{code}
 simulateT      :: (Functor f, Undo s r)
                => Free (ModifyF s r :+: NondetF :+: f) a
                -> s -> Free f [a]
-simulateT x s  = extract . hState . states2state
+simulateT x s  = extractT . hState
                . fmap fst . flip runStateT s . hModify
+               . comm2 . states2state . rotate3
                . comm2 . nondet2state . comm2
                . local2trail $ x
-    where
-      extract x = resultsSS . fst . snd <$> runStateT x (SS [] [], Stack [])
 \end{code}
-%
-Note that our initial state is |(SS [], [], Stack [])|, which
-essentially contains an empty results list, an empty stack of
-branches (which Prolog calls the choicepoint stack), and an empty
-trail stack.
 
-Use |simulateT| to solve n-queens:
+It uses the auxiliary function |extractT| to get the final results,
+and |rotate3| to reorder the signatures.
+%
+Note that the initial state used by |extractT| is |(SS [] [], Stack
+[])|, which essentially contains an empty results list, an empty
+choicepoint stack, and an empty trail stack.
+\begin{code}
+extractT x = resultsSS . fst . snd <$> runStateT x (SS [] [], Stack [])
+
+rotate3  :: (Functor f1, Functor f2, Functor f3, Functor f4)
+         => Free (f1 :+: f2 :+: f3 :+: f4) a -> Free (f2 :+: f3 :+: f1 :+: f4) a
+rotate3 (Var x)                   = Var x
+rotate3 (Op (Inl k))              = (Op . Inr . Inr . Inl)  (fmap rotate3 k)
+rotate3 (Op (Inr (Inl k)))        = (Op . Inl)              (fmap rotate3 k)
+rotate3 (Op (Inr (Inr (Inl k))))  = (Op . Inr . Inl)        (fmap rotate3 k)
+rotate3 (Op (Inr (Inr (Inr k))))  = (Op . Inr . Inr . Inr)  (fmap rotate3 k)
+\end{code}
+
+\Cref{fig:simulation-trail} illustrates each step of this simulation.
+The state type |St s r f a| is defined as |SS (ModifyF s r :+: StateF (Stack
+(Either r ())) :+: f) a|.
+%
+\begin{figure}[h]
+% https://q.uiver.app/#q=WzAsNixbMCwwLCJ8RnJlZSAoTW9kaWZ5RiBzIHIgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKE1vZGlmeUYgcyByIDorOiBOb25kZXRGIDorOiBTdGF0ZUYgKFN0YWNrIChFaXRoZXIgciAoKSkpIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChNb2RpZnlGIHMgciA6KzogU3RhdGVGIChTdCBzIHIgZiBhKSA6KzogU3RhdGVGIChTdGFjayAoRWl0aGVyIHIgKCkpKSA6KzogZikgKCl8Il0sWzAsMywifEZyZWUgKE1vZGlmeUYgcyByIDorOiBTdGF0ZUYgKFN0IHMgciBmIGEsIFN0YWNrIChFaXRoZXIgciAoKSkpIDorOiBmKSAoKXwiXSxbMCw0LCJ8RnJlZSAoU3RhdGVGIChTdCBzIHIgZiBhLCBTdGFjayAoRWl0aGVyIHIgKCkpKSA6KzogZikgKCl8Il0sWzAsNSwifEZyZWUgZiBbYV18Il0sWzAsMSwifGxvY2FsMnRyYWlsfCJdLFsxLDIsInxjb21tMiAuIG5vbmRldDJzdGF0ZSAuIGNvbW0yfCJdLFszLDQsInxmbWFwIGZzdCAuIGZsaXAgcnVuU3RhdGVUIHMgLiBoTW9kaWZ5fCJdLFsyLDMsInxjb21tMiAuIHN0YXRlczJzdGF0ZSAuIHJvdGF0ZTN8Il0sWzQsNSwifGV4dHJhY3RUIC4gaFN0YXRlfCJdXQ==
+\[\begin{tikzcd}
+	{|Free (ModifyF s r :+: NondetF :+: f) a|} \\
+	{|Free (ModifyF s r :+: NondetF :+: StateF (Stack (Either r ())) :+: f) a|} \\
+	{|Free (ModifyF s r :+: StateF (St s r f a) :+: StateF (Stack (Either r ())) :+: f) ()|} \\
+	{|Free (ModifyF s r :+: StateF (St s r f a, Stack (Either r ())) :+: f) ()|} \\
+	{|Free (StateF (St s r f a, Stack (Either r ())) :+: f) ()|} \\
+	{|Free f [a]|}
+	\arrow["{|local2trail|}", from=1-1, to=2-1]
+	\arrow["{|comm2 . nondet2state . comm2|}", from=2-1, to=3-1]
+	\arrow["{|fmap fst . flip runStateT s . hModify|}", from=4-1, to=5-1]
+	\arrow["{|comm2 . states2state . rotate3|}", from=3-1, to=4-1]
+	\arrow["{|extractT . hState|}", from=5-1, to=6-1]
+\end{tikzcd}\]
+\caption{An overview of the |simulateT| function.}
+\label{fig:simulation-trail}
+\end{figure}
+
+In the |simulateT| function, we first use our three simulations
+|local2trail|, |nondet2state| and |states2state| (together with some
+reordering of signatures) to interpret the local-state semantics for
+state and nondeterminism in terms of a modification-based state and a
+general state containing two stacks. Then, we use the handler
+|hModify| to interpret the modification-based state effect, and use
+the handler |hState| to interpret the two stacks. Finally, we use the
+function |extractT| to get the final results.
+
+\paragraph*{N-queens with Two Stacks}\
+%
+With |simulateT|, we can implement the backtracking algorithm of the
+n-queens problem with one modification-based state and two stacks.
+
 \begin{code}
 queensSimT :: Int -> [[Int]]
 queensSimT = hNil . flip simulateT (0, []) . queensM

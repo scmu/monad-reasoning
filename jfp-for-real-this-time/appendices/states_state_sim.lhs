@@ -103,7 +103,13 @@ For all |t :: Free (StateF s1 :+: StateF s2 :+: f) a|, we show the equation
 
 Now we only need to show that for any input |t :: Free (StateF s1 :+:
 StateF s2 :+: f) a|, the equation |hStates' t = (hState .
-states2state) t| holds.  We proceed by induction on |t|.
+states2state) t| holds.
+%
+We can proceed with either fold fusion, as what we have done in the
+proofs of other theorems, or a direct structural induction on the
+input |t|. Here we opt for the latter to show that the algebraic
+structures of free monads and folds make the equational reasoning
+proofs easier in both styles.
 %
 % For the base case where |t = Var x|, we calculate as follows.
 

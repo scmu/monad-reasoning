@@ -221,7 +221,7 @@ low-level effects.
 
 Combining them, we can encode the local-state semantics
 for nondeterminism and state with just one state effect. The ultimate
-simulation function |simulate| is defined as follows.
+simulation function |simulate| is defined as follows:
 \begin{code}
 simulate  :: Functor f
           => Free (StateF s :+: NondetF :+: f) a
@@ -239,7 +239,7 @@ extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
 % An overview of this simulation is given in Figure
 % \ref{fig:simulation}.
 \Cref{fig:simulation} illustrates each step of this simulation.
-
+%
 \begin{figure}[h]
 % https://q.uiver.app/#q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8RnJlZSAoU3RhdGVGIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIDorOiBTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSAoRnJlZSBmKSAoKXwiXSxbMCw2LCJ8cyAtPiBGcmVlIGYgW2FdfCJdLFswLDEsInxsb2NhbDJnbG9iYWx8Il0sWzEsMiwifGNvbW0yfCJdLFszLDQsInxzdGF0ZXMyc3RhdGV8Il0sWzQsNSwifGhTdGF0ZXwiXSxbNSw2LCJ8ZXh0cmFjdHwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdXQ==
 \[\begin{tikzcd}
@@ -265,7 +265,7 @@ In the |simulate| function, we first use our three simulations
 |local2global|, |nondet2state| and |states2state| to interpret the
 local-state semantics for state and nondeterminism in terms of only
 one state effect. Then, we use the handler |hState| to interpret the
-state effect into a state monad transformer. Finally, We use the
+state effect into a state monad transformer. Finally, we use the
 function |extract| to get the final results.
 
 % First, |local2global| models the local-state semantics with a global
@@ -319,7 +319,7 @@ tt' = hNil $ hLocal prog 0
 \end{code}
 %endif
 
-\paragraph*{Solving N-queens with Only One State}\
+\paragraph*{N-queens with Only One State}\
 %
 With |simulate|, we can implement the backtracking algorithm of the
 n-queens problem in \Cref{sec:motivation-and-challenges} with only

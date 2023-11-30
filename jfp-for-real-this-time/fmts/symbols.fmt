@@ -238,6 +238,7 @@
 %format alg1
 %format alg2
 %format comm2 = "\Varid{(\Leftrightarrow)}"
+%format rotate3 = "\Varid{(\circlearrowleft)}"
 
 %format alpha = "\alpha"
 %format alpha1 = "\alpha^{-1}"
@@ -245,6 +246,8 @@
 %format CompCut = "\Varid{Comp_{Cut}}"
 %format resultsCut = "\Varid{results_{Cut}}"
 %format stackCut = "\Varid{stack_{Cut}}"
+
+%format simulate = "\Varid{simulate_T}"
 
 % format Stnq = "\Varid{State_{nqueens}}"
 %format queensLocal = "\Varid{queens_{Local}}"

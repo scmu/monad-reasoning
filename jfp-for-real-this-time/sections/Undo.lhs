@@ -29,7 +29,7 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, gu
 %-------------------------------------------------------------------------------
 % \section{Optimisation with Undo}
 % \section{Modification-based State}
-\section{Modelling Local State with Global State and Undo}
+\section{Modelling Local State with Undo}
 \label{sec:undo}
 
 % backtracking in local state
@@ -364,7 +364,7 @@ queensM n = loop where
                       loop
 \end{code}
 
-We can interpret it using |hLocalM| or |hGlobalM| composed with
+We can interpret it using either |hLocalM| or |hGlobalM| composed with
 |local2globalM|.
 \begin{code}
 queensLocalM :: Int -> [[Int]]
@@ -374,6 +374,7 @@ queensGlobalM :: Int -> [[Int]]
 queensGlobalM = hNil . flip hGlobalM (0, []) . local2globalM . queensM
 \end{code}
 
+%if False
 We can also further combine it with the |nondet2state| in
 \Cref{sec:nondet2state}.
 \begin{code}
@@ -383,6 +384,7 @@ queensStateM  = hNil
               . runNDf . comm2
               . local2globalM . queensM
 \end{code}
+%endif
 
 %if False
 \begin{code}
