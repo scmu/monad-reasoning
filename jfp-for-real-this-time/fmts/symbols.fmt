@@ -262,3 +262,5 @@
 %format queensGlobalT = "\Varid{queens_{GlobalT}}"
 %format queensStateM = "\Varid{queens_{StateM}}"
 %format queensStateMFused = "\Varid{queens_{StateMFused}}"
+
+%format undoTrail = "\Varid{untrail}"
