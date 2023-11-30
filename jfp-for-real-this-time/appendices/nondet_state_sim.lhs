@@ -1,46 +1,65 @@
+import Data.Bitraversable (Bitraversable)
 %if False
 \begin{code}
 \end{code}
 %endif
-\section{Simulating Nondeterminism with State: The Proofs}
+\section{Proofs for Simulating Nondeterminism with State}
 \label{app:nondet-state}
+
+In this secton, we prove the theorems in
+\Cref{sec:nondeterminism-state}.
+
 %-------------------------------------------------------------------------------
-\subsection{Only State and Nondeterminism}
+\subsection{Only Nondeterminism}
 \label{app:runnd-hnd}
 
-This section shows that the |runND| function of Section \ref{sec:sim-nondet-state} is equivalent
-to the nondeterminism handler |hND| of Section \ref{sec:free-monads-and-their-folds}.
+This section proves the following theorem in
+\Cref{sec:sim-nondet-state}.
 
-\begin{theorem}\label{eq:runnd-hnd}
-|runND = hND|
-\end{theorem}
+\nondetStateS*
+
 \begin{proof}
 We start with expanding the definition of |runND|:
 < extractS . hState' . nondet2stateS = hND
-Both |nondet2stateS| and |hND| are written as a fold.
-We can use the universal property of fold to show that the two sides of the equation
-are equal.
-For this, we use the fold fusion law for postcomposition as defined in
-Equation \ref{eq:fusion-post}.
 
-We have to prove the following two equations.
-\begin{enumerate}
-    \item |(extractS . hState') . gen = genND|
-    \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
-\end{enumerate}
+Both |nondet2stateS| and |hND| are written as folds.
+%
+We use the fold fusion law {\bf fusion-post'}~(\ref{eq:fusion-post-strong}) to
+fuse the left-hand side.
+%
+Since the right-hand side is already a fold, to prove the equation we
+just need to check the components of the fold |hND| satisfy the
+conditions of the fold fusion, i.e., the following two equations:
 
-The first equation is simple to prove with equational reasoning.
-For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|.
+\[\ba{rl}
+    &|(extractS . hState') . gen = genND| \\
+    &|(extractS . hState') . alg . fmap nondet2stateS|\\
+ |=|&  |algND . fmap (extractS . hState') . fmap nondet2stateS|
+\ea\]
+
+For brevity, we omit the last common part |fmap nondet2stateS| of
+the second equation in the following proof. Instead, we assume that
+the input is in the codomain of |fmap nondet2stateS|.
+
+% \begin{enumerate}
+%     \item |(extractS . hState') . gen = genND|
+%     \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
+% \end{enumerate}
+
+% The first equation is simple to prove with equational reasoning.
+% For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|.
+For the first equation, we calculate as follows:
+
 <    extractS (hState' (gen x))
 < = {-~  definition of |gen|  -}
 <    extractS (hState' (appendS x popS))
 < = {-~  definition of |extractS|  -}
 <    results . snd $ runState (hState' (appendS x popS)) (S [] [])
-< = {-~  Lemma \ref{eq:eval-append}  -}
+< = {-~  \Cref{eq:eval-append}  -}
 <    results . snd $ runState (hState' popS) (S ([] ++ [x]) [])
 < = {-~  definition of |(++)|  -}
 <    results . snd $ runState (hState' popS) (S [x] [])
-< = {-~  Lemma \ref{eq:eval-pop1}  -}
+< = {-~  \Cref{eq:eval-pop1}  -}
 <    results . snd $ ((), S [x] [])
 < = {-~  definition of |snd|  -}
 <    results (S [x] [])
@@ -49,10 +68,8 @@ For all input |x|, we need to prove that |extractS (hState' (gen x)) = genND x|.
 < = {-~  definition of |genND|  -}
 <    genND x
 
-The property that |extractS . hState' . gen = return| is called
-\emph{extract-gen}\label{eq:extract-gen}.
 
-For the second equation that we have to prove, we do a case analysis.
+For the second equation, we proceed with a case analysis on the input.
 
 \noindent \mbox{\underline{case |Fail|}}
 
@@ -61,7 +78,7 @@ For the second equation that we have to prove, we do a case analysis.
 <    extractS (hState' popS)
 < = {-~  definition of |extractS|  -}
 <    results . snd $ runState (hState' popS) (S [] [])
-< = {-~  Lemma \ref{eq:eval-pop1}  -}
+< = {-~  \Cref{eq:eval-pop1}  -}
 <    results . snd $ ((), S [] [])
 < = {-~  evaluation of |results|, |snd|  -}
 <    []
@@ -70,8 +87,6 @@ For the second equation that we have to prove, we do a case analysis.
 < = {-~  definition of |fmap|  -}
 <    (algND . fmap (extractS . hState')) Fail
 
-The property that |extractS (hState' (alg Fail)) = []| is called
-\emph{extract-alg1}\label{eq:extract-alg-1}.
 
 \noindent \mbox{\underline{case |Or p q|}}
 
@@ -80,17 +95,17 @@ The property that |extractS (hState' (alg Fail)) = []| is called
 <    extractS (hState' (pushS q p))
 < = {-~  definition of |extract|  -}
 <    results . snd $ runState (hState' (pushS q p)) (S [] [])
-< = {-~  Lemma \ref{eq:eval-push}  -}
+< = {-~  \Cref{eq:eval-push}  -}
 <    results . snd $ runState (hState' p) (S [] [q])
-< = {-~  Theorem \ref{eq:pop-extract}: pop-extract for |p|  -}
+< = {-~  \Cref{eq:pop-extract}  -}
 <    results . snd $ runState (hState' popS) (S ([] ++ extractS (hState' p)) [q])
 < = {-~  definition of |(++)|  -}
 <    results . snd $ runState (hState' popS) (S (extractS (hState' p)) [q])
-< = {-~  Lemma \ref{eq:eval-pop2}  -}
+< = {-~  \Cref{eq:eval-pop2}  -}
 <    results . snd $ runState (hState' q) (S (extractS (hState' p)) [])
-< = {-~  Theorem \ref{eq:pop-extract}: pop-extract for |q|  -}
+< = {-~  \Cref{eq:pop-extract}  -}
 <    results . snd $ runState (hState' popS) (S (extractS (hState' p) ++ extractS (hState' q)) [])
-< = {-~  Lemma \ref{eq:eval-pop1}  -}
+< = {-~  \Cref{eq:eval-pop1}  -}
 <    results . snd $ ((), S (extractS (hState' p) ++ extractS (hState' q)) [])
 < = {-~  evaluation of |results, snd|  -}
 <    extractS (hState' p) ++ extractS (hState' q)
@@ -98,28 +113,59 @@ The property that |extractS (hState' (alg Fail)) = []| is called
 <    algND (Or ((extractS . hState') p) ((extractS . hState') q))
 < = {-~  definition of |fmap|  -}
 <    (algND . fmap (extractS . hState')) (Or p q)
+%if False
+$
+%endif
 
-
-The property that |extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
-is called \emph{extract-alg2}\label{eq:extract-alg-2}.
 \end{proof}
 
+In the above proof we have used several lemmas. Now we prove them.
 
-In this proof we have used the property pop-extract, which states the following:
-\begin{theorem}[pop-extract]\label{eq:pop-extract}
+\begin{lemma}[pop-extract]\label{eq:pop-extract}
 ~
 % <    runState (runSTND p) (q, stack) = runState (runSTND popND) (q `mplus` extract p, stack)
 <    runState (hState' p) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' p)) stack)
-holds for all |p| in the range of the function |nondet2stateS|.
-\end{theorem}
+holds for all |p| in the codomain of the function |nondet2stateS|.
+\end{lemma}
 
 \begin{proof} ~
+%
+We prove this lemma by structural induction on |p :: Free (StateF (S
+a)) ()|.
+%
+For each inductive case of |p|, we not only assume this lemma holds
+for its sub-terms (this is the standard induction hypothesis), but
+also assume \Cref{thm:nondet2stateS} holds for |p| and its sub-terms.
+This is sound because in the proof of \Cref{thm:nondet2stateS}, for
+|(extractS .  hState' . nondet2stateS) p = hND p|, we only apply
+\Cref{eq:pop-extract} to the sub-terms of |p|, which is already
+included in the induction hypothesis so there is no circular argument.
+
+We will use several useful properties proved in the proof of
+\Cref{thm:nondet2stateS} in the following proof. We list them
+here for easy reference:
+%
+\begin{itemize}
+\item {extract-gen}:
+|extractS . hState' . gen = return|.
+\item {extract-alg1}:
+|extractS (hState' (alg Fail)) = []|. We refer to it as \emph{extract-alg1}.
+\item {extract-alg2}:
+|extractS (hState' (alg (Or p q))) = extractS (hState' p) ++ extractS (hState' q)|
+\end{itemize}
+
 % The key element to have this property is to
 % only utilize a subset of terms with type |Comp (S a) ()|, namely those
 % that are generated by the fold of the |nondet2stateS| function,
 % so for which this property is true.
-We need to prove that for all |p| generated by |nondet2stateS|, the equation holds.
-As |nondet2stateS| is a fold, we only need to show the following two equations:
+
+We proceed by structural induction on |p|.
+%
+Note that for all |p| in the codomain of |nondet2stateS|, it is either
+generated by the |gen| or the |alg| of |nondet2stateS|.  Thus, we only
+need to prove the following two equations where |p = gen x| or |p =
+alg x| and |x| is in the codomain of |fmap nondet2stateS|.
+%
 \begin{enumerate}
     \item |runState (hState' (gen x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)|
     \item |runState (hState' (alg x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (alg x))) stack)|
@@ -128,21 +174,23 @@ As |nondet2stateS| is a fold, we only need to show the following two equations:
 % (1) the generator of |nondet2stateS| only generates programs of this subset;
 % and (2) the algebra preserves this property.
 
-First, we use equational reasoning to prove the first item.
+For the case |p = gen x|, we calculate as follows:
 % <    runState (hState' (gen x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)
 
 <    runState (hState' (gen x)) (S xs stack)
 < = {-~  definition of |gen|  -}
 <    runState (hState' (appendS x popS)) (S xs stack)
-< = {-~  Lemma \ref{eq:eval-append}  -}
+< = {-~  \Cref{eq:eval-append}  -}
 <    runState (hState' popS) (S (xs ++ [x]) stack)
 < = {-~  definition of |return|  -}
 <    runState (hState' popS) (S (xs ++ return x) stack)
-< = {-~  Theorem \ref{eq:runnd-hnd}: extract-gen  -}
+< = {-~  extract-gen  -}
 <    runState (hState' popS) (S (xs ++ extractS (hState' (gen x))) stack)
 
-Then, we use equational reasoning with case analysis and structural induction on |x| to prove the second item.
+% Then, we use equational reasoning with case analysis and structural induction on |x| to prove the second item.
 % <    runState (hState' (alg x)) (S xs stack) = runState (hState' popS) (S (xs ++ extractS (hState' (alg x))) stack)
+
+For the case |p = alg x|, we proceed with a case analysis on |x|.
 
 \noindent \mbox{\underline{case |Fail|}}
 
@@ -151,33 +199,35 @@ Then, we use equational reasoning with case analysis and structural induction on
 <    runState (hState' (popS)) (S xs stack)
 < = {-~  definition of |[]|  -}
 <    runState (hState' popS) (S (xs ++ []) stack)
-< = {-~  Theorem \ref{eq:runnd-hnd}: extract-alg1  -}
+< = {-~  extract-alg1  -}
 <    runState (hState' popS) (S (xs ++ extractS (hState' (alg Fail))) stack)
 
 \noindent \mbox{\underline{case |Or p1 p2|}}
 
-Assume by induction that |p1| and |p2| satisfy this theorem.
+% Assume by induction that |p1| and |p2| satisfy this theorem.
 
 <    runState (hState' (alg (Or p1 p2))) (S xs stack)
 < = {-~  definition of |alg|  -}
 <    runState (hState' (pushS p2 p1)) (S xs stack)
-< = {-~  Lemma \ref{eq:eval-push}  -}
+< = {-~  \Cref{eq:eval-push}  -}
 <    runState (hState' p1) (S xs (p2:stack))
-< = {-~  induction hypothesis: pop-extract of |p1|  -}
+< = {-~  induction hypothesis  -}
 <    runState (hState' popS) (S (xs ++ extractS (hState' p1)) (p2:stack))
-< = {-~  Lemma \ref{eq:eval-pop2}  -}
+< = {-~  \Cref{eq:eval-pop2}  -}
 <    runState (hState' p2) (S (xs ++ extractS (hState' p1)) stack)
-< = {-~  induction hypothesis: pop-extract of |p2|  -}
+< = {-~  induction hypothesis  -}
 <    runState (hState' popS) (S (xs ++ extractS (hState' p1) ++ extractS (hState' p2)) stack)
-< = {-~  Theorem \ref{eq:runnd-hnd}: extract-alg2  -}
+< = {-~  extract-alg2  -}
 <    runState (hState' popS) (S (xs ++ hState' (alg (Or p1 p2))) stack)
 
-Note that the above two proofs of theorems \ref{eq:runnd-hnd} and \ref{eq:pop-extract} are mutually recursive. However, only the
-second proof uses induction. As we work inductively on (smaller) subterms,
-the proofs do work out.
+% Note that the above two proofs of theorems \ref{thm:nondet2stateS} and \ref{eq:pop-extract} are mutually recursive. However, only the
+% second proof uses induction. As we work inductively on (smaller) subterms,
+% the proofs do work out.
 \end{proof}
 
-We also have the following lemmas, which were used in the above proof:
+% We also have the following lemmas, which were used in the above proof:
+The following four lemmas characterise the behaviours of stack
+operations.
 
 \begin{lemma}[evaluation-append]\label{eq:eval-append}~
 < runState (hState' (appendS x p)) (S xs stack) = runState (hState' p) (S (xs ++ [x]) stack)
@@ -338,7 +388,7 @@ We also have the following lemmas, which were used in the above proof:
 \end{proof}
 
 %-------------------------------------------------------------------------------
-\subsection{In Combination with Other Effects}
+\subsection{Combining with Other Effects}
 \label{app:in-combination-with-other-effects}
 
 This section shows that the |runNDf| function in
@@ -369,11 +419,11 @@ For all input |x|, we need to prove that |extractSS (hState (gen x)) = genNDf x|
 <    extractSS (hState (appendSS x popSS))
 < = {-~  definition of |extractSS|  -}
 <    resultsSS . snd <$> runStateT (hState (appendSS x popSS)) (SS [] [])
-< = {-~  Lemma \ref{eq:eval-append-f}  -}
+< = {-~  \Cref{eq:eval-append-f}  -}
 <    resultsSS . snd <$> runStateT (hState popSS) (SS ([] ++ [x]) [])
 < = {-~  definition of |(++)|  -}
 <    resultsSS . snd <$> runStateT (hState popSS) (SS [x] [])
-< = {-~  Lemma \ref{eq:eval-pop1-f}  -}
+< = {-~  \Cref{eq:eval-pop1-f}  -}
 <    resultsSS . snd <$> return ((), SS [x] [])
 < = {-~  evaluation of |snd, resultsSS|  -}
 <    return [x]
@@ -397,7 +447,7 @@ For the second item that we have to prove, we do a case analysis.
 <    extractSS (hState popSS)
 < = {-~  definition of |extractSS|  -}
 <    resultsSS . snd <$> runStateT (hState popSS) (SS [] [])
-< = {-~  Lemma \ref{eq:eval-pop1-f}  -}
+< = {-~  \Cref{eq:eval-pop1-f}  -}
 <    resultsSS . snd <$> return ((), SS [] [])
 < = {-~  evaluation of |snd, resultsSS|  -}
 <    return []
@@ -421,13 +471,13 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 <    extractSS (hState (pushSS q p))
 < = {-~  definition of |extractSS|  -}
 <    resultsSS . snd <$> runStateT (hState (pushSS q p)) (SS [] [])
-< = {-~  Lemma \ref{eq:eval-push-f}  -}
+< = {-~  \Cref{eq:eval-push-f}  -}
 <    resultsSS . snd <$> runStateT (hState p) (SS [] [q])
 < = {-~  Theorem \ref{eq:pop-extract-f}: pop-extract for |p|  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState popSS) (SS ([]++p') [q]) }
 < = {-~  definition of |(++)|  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState popSS) (SS p' [q]) }
-< = {-~  Lemma \ref{eq:eval-pop2-f}  -}
+< = {-~  \Cref{eq:eval-pop2-f}  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); runStateT (hState q) (SS p' []) }
 < = {-~  Theorem \ref{eq:pop-extract-f}: pop-extract for |q|  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p);
@@ -435,7 +485,7 @@ The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extra
 < = {-~  Law (\ref{eq:monad-assoc}) for |do|-notation  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q);
 <      runStateT (hState popSS) (SS (p'++q') []) }
-< = {-~  Lemma \ref{eq:eval-pop1-f}  -}
+< = {-~  \Cref{eq:eval-pop1-f}  -}
 <    resultsSS . snd <$> do { p' <- extractSS (hState p); q' <- extractSS (hState q); return ((), SS (p'++q') []) }
 < = {-~  evaluation of |snd, resultsSS|  -}
 <    do { p' <- extractSS (hState p); q' <- extractSS (hState q); return (p'++q') }
@@ -525,7 +575,7 @@ First, we use equational reasoning to prove the first item.
 <    runStateT (hState (gen x)) (SS xs stack)
 < = {-~  definition of |gen|  -}
 <    runStateT (hState (appendSS x popSS)) (SS xs stack)
-< = {-~  Lemma \ref{eq:eval-append-f}  -}
+< = {-~  \Cref{eq:eval-append-f}  -}
 <    runStateT (hState popSS) (SS (xs ++ [x]) stack)
 < = {-~  definition of |etal|  -}
 <    runStateT (hState popSS) (SS (xs ++ return x) stack)
@@ -557,11 +607,11 @@ Assume by induction that |p1| and |p2| satisfy this theorem.
 <    runStateT (hState (alg (Or p1 p2))) (SS xs stack)
 < = {-~  definition of |alg|  -}
 <    runStateT (hState (pushSS p2 p1)) (SS xs stack)
-< = {-~  Lemma \ref{eq:eval-push-f}  -}
+< = {-~  \Cref{eq:eval-push-f}  -}
 <    runStateT (hState p1) (SS xs (p2:stack))
 < = {-~  induction hypothesis: pop-extract of |p1|  -}
 <    do { p1' <- extractSS (hState p1); runStateT (hState popSS) (SS (xs++p1') (p2:stack)) }
-< = {-~  Lemma \ref{eq:eval-pop2-f}  -}
+< = {-~  \Cref{eq:eval-pop2-f}  -}
 <    do { p1' <- extractSS (hState p1); runStateT (hState p2) (SS (xs++p1') stack) }
 < = {-~  induction hypothesis: pop-extract of |p2|  -}
 <    do { p2' <- extractSS (hState p2); do { p1' <- extractSS (hState p1);

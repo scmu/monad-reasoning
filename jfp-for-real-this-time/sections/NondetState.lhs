@@ -25,16 +25,16 @@ import LocalGlobal
 
 In the previous section, we have translated the local-state semantics,
 a high-level combination of the state and nondeterminism effects, to
-the global-state semantics, a lower-level combination of the state
+the global-state semantics, a low-level combination of the state
 and nondeterminism effects.
 %
 In this section, we further translate the resulting nondeterminism
-component, which is itself a relatively high-level effect, to a more
-low-level implementation with the state effect.
+component, which is itself a relatively high-level effect, to a
+lower-level implementation with the state effect.
 %
 Our translation coincides with the fact that, while nondeterminism is
 typically modelled using the |List| monad, many efficient
-nondeterministic systems, such as Prolog, use a lower-level
+nondeterministic systems, such as Prolog, use a low-level
 state-based implementation to implement the nondeterminism mechanism.
 
 % This section shows how the simulation works, and proves it correct using
@@ -100,37 +100,38 @@ state-based implementation to implement the nondeterminism mechanism.
 % can be found in Appendix \ref{app:universality-nondeterminism}.
 % 
 %-------------------------------------------------------------------------------
-\subsection{Simulating Nondeterministic Programs with State}
+\subsection{Simulating Nondeterminism with State}
 \label{sec:sim-nondet-state}
 
-To simulate nondeterminism, we use states of type |S a| that is a
-essentially a tuple of: \begin{enumerate}
+The main idea of simulating nondeterminism with state is to explictly
+manage
+\begin{enumerate}
 \item
 a list of the |results| found so far, and
 \item
 a list of yet to be explored branches, which we call a |stack|.
 \end{enumerate}
-The branches in the stack are represented by computations in the form
-of free monads over the |StateF| signature.
+
+This stack corresponds to the choicepoint stack in Prolog.
 %
-The type |S a| is formally defined as follows:
+When entering one branch, we can push other branches to the stack.
+When leaving the branch, we collect its result and pop a new branch
+from the stack to continue.
+
+We define a new type |S a| consisting of the |results| and |stack|.
 \begin{code}
 type Comp s a = Free (StateF s) a
 data S a = S { results :: [a], stack :: [Comp (S a) ()]}
 \end{code}
 %
-% To simulate a nondeterministic computation |Free NondetF a| with this
-% state wrapper,
-We define three auxiliary functions in \Cref{fig:pop-push-append} to
-interact with the stack:
-\begin{itemize}
-\item
-The function |popS| removes and executes the top element of the stack.
-\item
-The function |pushS| pushes a branch into the stack.
-\item
-The function |appendS| adds a result to the given results.
-\end{itemize}
+The branches in the stack are represented by computations in the form
+of free monads over the |StateF| signature.
+%
+We do not allow branches to use other effects here to show the idea
+more clearly.  In \Cref{sec:nondet2state} we will consider the more
+general case where branches can have any effects abstracted by a
+functor |f|.
+
 
 \noindent
 \begin{figure}[t]
@@ -180,6 +181,22 @@ appendS x p = do
 \label{fig:pop-push-append}
 \end{figure}
 
+For brevity, instead of defining a new stack effect capturing the
+stack operations like pop and push, we implement stack operations with
+the state effect.
+%
+We define three auxiliary functions in \Cref{fig:pop-push-append} to
+interact with the stack in |S a|:
+\begin{itemize}
+\item
+The function |popS| removes and executes the top element of the stack.
+\item
+The function |pushS| pushes a branch into the stack.
+\item
+The function |appendS| adds a result to the current results.
+\end{itemize}
+
+
 % TOM: The following have already been defined earlier in section 3, named get and put without the S
 % Furthermore, we define smart constructors |getS| and |putS s| for getting
 % the current state and putting a new state.
@@ -226,7 +243,7 @@ extractS x = results . snd $ runState x (S [] [])
 Finally, we define the function |runND| which wraps everything up to
 handle a nondeterministic computation to a list of results.
 %
-It uses the state handler |hState'| in
+The state handler |hState'| is defined in
 \Cref{sec:free-monads-and-their-folds}.
 \begin{code}
 runND :: Free NondetF a -> [a]
@@ -245,21 +262,34 @@ and the nondeterminism handler |hND| defined in
 
 The proof can be found in \Cref{app:runnd-hnd}.
 %
-The main idea is again to use fold fusion and the universal property
-of folds.
+The main idea is again to use fold fusion.
 %
 Consider the expanded form
 < (extractS . hState') . nondet2stateS = hND
-As both |nondet2stateS| and |hND| are folds, we fuse the left-hand
-side into a single fold with \Cref{eq:fusion-post} and then show the
-two folds on both sides are equivalent by proving the equivalence of
-their generators and algebras.
+%
+Both |nondet2stateS| and |hND| are written as folds.
+%
+We use the fold fusion law {\bf fusion-post'}~(\ref{eq:fusion-post-strong}) to
+fuse the left-hand side into a single fold.
+%
+Since the right-hand side is already a fold, to prove the equation we
+just need to check the components of the fold |hND| satisfy the
+conditions of the fold fusion, i.e., the following two equations:
+%
+% As both |nondet2stateS| and |hND| are folds, we fuse the left-hand
+% side into a single fold with the fusion law {\bf
+% fusion-post'}~(\ref{eq:fusion-post-strong}) and then show the two folds on
+% both sides are equivalent by proving the equivalence of their
+% components.
 %
 For the latter we only need to prove the following two equations:
-\begin{enumerate}
-    \item |(extractS . hState') . gen = genND|
-    \item |(extractS . hState') . alg = algND . fmap (extractS . hState')|
-\end{enumerate}
+% \begin{enumerate}
+\[\ba{rl}
+    &|(extractS . hState') . gen = genND| \\
+    &|(extractS . hState') . alg . fmap nondet2stateS|\\
+ |=|&  |algND . fmap (extractS . hState') . fmap nondet2stateS|
+\ea\]
+% \end{enumerate}
 where |gen| and |alg| are from the definition of |nondet2stateS|, and
 |genND| and |algND| are from the definition of |hND|.
 
