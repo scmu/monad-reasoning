@@ -269,7 +269,7 @@ Consider the expanded form
 %
 Both |nondet2stateS| and |hND| are written as folds.
 %
-We use the fold fusion law {\bf fusion-post'}~(\ref{eq:fusion-post-strong}) to
+We use the law {\bf fusion-post'}~(\ref{eq:fusion-post-strong}) to
 fuse the left-hand side into a single fold.
 %
 Since the right-hand side is already a fold, to prove the equation we

@@ -61,10 +61,13 @@ that features two state effects,
 % \end{code}
 % \end{enumerate}
 %
-we can actually go to a slightly more primitive representation
-|Free (StateF (s1, s2) :+: f) a| that features only a single state effect.
+we can go to a slightly more primitive representation
+|Free (StateF (s1, s2) :+: f) a| featuring only a single state
+effect that is a pair of the previous two states.
 
-The |states2state| function defines this simulation using a |fold|:
+The handler |states2state| implements the simulation by projecting
+different |get| and |put| operations to different components of the
+pair of states.
 
 \begin{code}
 states2state  :: Functor f
@@ -87,7 +90,7 @@ states2state  = fold Var (alg1 # alg2 # fwd)
 % put' sts k  = Op (Inl (Put sts k))
 % \end{code}
 
-\paragraph*{Correctness}\
+% \paragraph*{Correctness}\
 We have the following theorem showing the correctness of |states2state|:
 \begin{restatable}[]{theorem}{statesState}
 \label{thm:states-state}
@@ -204,7 +207,7 @@ t3 s = fmap (resultsSS . snd) . fhStates s $ step1
 \label{sec:final-simulate}
 %
 We have defined three translations for encoding high-level effects as
-lower-level effects.
+low-level effects.
 \begin{itemize}
   \item The function |local2global| simulates the high-level
   local-state semantics with global-state semantics for the
@@ -216,7 +219,7 @@ lower-level effects.
   with a single state effect (\Cref{sec:multiple-states}).
 \end{itemize}
 
-Combining these simulations, we can encode the local-state semantics
+Combining them, we can encode the local-state semantics
 for nondeterminism and state with just one state effect. The ultimate
 simulation function |simulate| is defined as follows.
 \begin{code}
@@ -224,13 +227,18 @@ simulate  :: Functor f
           => Free (StateF s :+: NondetF :+: f) a
           -> s -> Free f [a]
 simulate  = extract . hState . states2state . nondet2state . comm2 . local2global
+\end{code}
+Similar to the |extractSS| function in \Cref{sec:nondet2state}, we use
+the |extract| function to get the final results from the final state.
+\begin{code}
 extract   :: Functor f
           => StateT (SS (StateF s :+: f) a, s) (Free f) ()
           -> s -> Free f [a]
 extract x s = resultsSS . fst . snd <$> runStateT x (SS [] [], s)
 \end{code}
-An overview of this simulation is given in Figure
-\ref{fig:simulation}.
+% An overview of this simulation is given in Figure
+% \ref{fig:simulation}.
+\Cref{fig:simulation} illustrates each step of this simulation.
 
 \begin{figure}[h]
 % https://q.uiver.app/#q=WzAsNyxbMCwwLCJ8RnJlZSAoU3RhdGVGIHMgOis6IE5vbmRldEYgOis6IGYpIGF8Il0sWzAsMSwifEZyZWUgKFN0YXRlRiBzIDorOiBOb25kZXRGIDorOiBmKSBhfCJdLFswLDIsInxGcmVlIChOb25kZXRGIDorOiBTdGF0ZUYgcyA6KzogZikgYXwiXSxbMCwzLCJ8RnJlZSAoU3RhdGVGIChTUyAoU3RhdGVGIHMgOis6IGYpIGEpIDorOiBTdGF0ZUYgcyA6KzogZikgKCl8Il0sWzAsNCwifEZyZWUgKFN0YXRlRiAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSA6KzogZikgKCl8Il0sWzAsNSwifFN0YXRlVCAoU1MgKFN0YXRlRiBzIDorOiBmKSBhLCBzKSAoRnJlZSBmKSAoKXwiXSxbMCw2LCJ8cyAtPiBGcmVlIGYgW2FdfCJdLFswLDEsInxsb2NhbDJnbG9iYWx8Il0sWzEsMiwifGNvbW0yfCJdLFszLDQsInxzdGF0ZXMyc3RhdGV8Il0sWzQsNSwifGhTdGF0ZXwiXSxbNSw2LCJ8ZXh0cmFjdHwiXSxbMiwzLCJ8bm9uZGV0MnN0YXRlfCJdXQ==
@@ -249,16 +257,16 @@ An overview of this simulation is given in Figure
 	\arrow["{|extract|}", from=6-1, to=7-1]
 	\arrow["{|nondet2state|}", from=3-1, to=4-1]
 \end{tikzcd}\]
-\caption{The simulation.}
+\caption{An overview of the |simulate| function.}
 \label{fig:simulation}
 \end{figure}
 
-In the |simulate| function, we first use the three previous
-simulations |local2global|, |nondet2state| and |states2state| to
-interpret the local-state semantics for state and nondeterminism in
-terms of only one state effect. Then, we use the handler |hState| to
-interpret the state effect into a state transformer. Finally, We use a
-function |extract| to extract the result form the state transformer.
+In the |simulate| function, we first use our three simulations
+|local2global|, |nondet2state| and |states2state| to interpret the
+local-state semantics for state and nondeterminism in terms of only
+one state effect. Then, we use the handler |hState| to interpret the
+state effect into a state monad transformer. Finally, We use the
+function |extract| to get the final results.
 
 % First, |local2global| models the local-state semantics with a global
 % state.  Second, we use commutativity and associativity of the
@@ -280,7 +288,7 @@ behaves the same as the local-state semantics given by |hLocal|.
 \label{thm:final-simulate}
 < simulate = hLocal
 \end{restatable}
-
+%
 The proof can be found in \Cref{app:final-simulate}.
 
 %if False
@@ -311,7 +319,7 @@ tt' = hNil $ hLocal prog 0
 \end{code}
 %endif
 
-\paragraph*{N-queens with Only State}\
+\paragraph*{Solving N-queens with Only One State}\
 %
 With |simulate|, we can implement the backtracking algorithm of the
 n-queens problem in \Cref{sec:motivation-and-challenges} with only
