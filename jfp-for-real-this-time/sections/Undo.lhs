@@ -132,16 +132,16 @@ The three operations satisfy the following laws:
     &\mbox{\bf mget-mget}:\quad &
     |mget >>= (\s -> mget >>= k s)| &= |mget >>= (\s -> k s s)|
     ~~\mbox{,} \label{eq:mget-mget} \\
-    &\mbox{\bf update-get}:~ &
+    &\mbox{\bf update-mget}:~ &
     |mget >>= \s -> update r >> return (s `plus` r)|
     &=
-    |update r >> get|
-    ~~\mbox{,} \label{eq:update-get}\\
-    &\mbox{\bf restore-get}:~ &
+    |update r >> mget|
+    ~~\mbox{,} \label{eq:update-mget}\\
+    &\mbox{\bf restore-mget}:~ &
     |mget >>= \s -> restore r >> return (s `minus` r)|
     &=
-    |restore r >> get|
-    ~~\mbox{,} \label{eq:restore-get}\\
+    |restore r >> mget|
+    ~~\mbox{,} \label{eq:restore-mget}\\
     &\mbox{\bf update-restore}:\quad &
     |update r >> restore r| &= |return ()|
     ~~\mbox{.} \label{eq:update-restore}
