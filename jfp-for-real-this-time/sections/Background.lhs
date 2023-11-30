@@ -40,7 +40,7 @@ nondeterminism.
 % been available in the low-level style.
 % 
 % Existing systems such as the Warren Abstract Machine (WAM) for Prolog or
-% constraint-based systems in general \cite{AICPub641:1983,hassan91}
+% constraint-based systems in general \cite{AICPub641:1983,AitKaci91}
 % offer a high-level programming interface to programmers, but
 % use a low-level state-based
 % representation under the hood that allow clever system-level optimizations.

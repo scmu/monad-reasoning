@@ -39,7 +39,7 @@ inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on the high-level interaction between the nondeterminism and state
 effects which we call \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
-\citep{AICPub641:1983,hassan91}, we show how these can be simulated in terms of the low-level
+\citep{AICPub641:1983,AitKaci91}, we show how these can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimizations like exploiting mutable state
 for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing

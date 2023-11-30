@@ -306,11 +306,11 @@ together with our previous simulation |local2global| in
 % \emph{modularity} has an impact on several definitions, as well as
 % on the implementation and proof.
 
-Firstly, we need to augment the signature in the computation type with
-an additional functor |f| for other effects.
+Firstly, we need to augment the signature in the computation type for
+branches with an additional functor |f| for other effects.
 %
-The computation type essentially changes from |Free (StateF s) a| to
-|Free (StateF s :+: f) a|.
+The computation type is essentially changed from |Free (StateF s) a|
+to |Free (StateF s :+: f) a|.
 %
 We define the state type |SS f a| as follows:
 \begin{code}
@@ -318,32 +318,9 @@ type CompSS s f a = Free (StateF s :+: f) a
 data SS f a = SS { resultsSS :: [a], stackSS :: [CompSS (SS f a) f ()] }
 \end{code}
 
-Similarly, we define three auxiliary functions the helper functions
-|popSS|, |pushSS| and |appendSS| in \Cref{fig:pop-push-append-SS} to
-interact with the stack. They are almost the same as those in
-\Cref{fig:pop-push-append} but adapted to the new state-wrapper type
-|SS f a|.
-
-% \begin{minipage}[t][][t]{0.5\textwidth}
-% \begin{code}
-% get :: Functor f => CompSS s f s
-% get = Op (Inl (Get return))
-% \end{code}
-% \end{minipage}
-% \begin{minipage}[t][][t]{0.5\textwidth}
-% \begin{code}
-% put :: Functor f => s -> CompSS s f ()
-% put s = Op (Inl (Put s (return ())))
-% \end{code}
-% \end{minipage}
-% \begin{code}
-% instance Functor f => MState s (Free (StateF s :+: f)) where
-%   get    = Op (Inl (Get return))
-%   put s  = Op (Inl (Put s (return ())))
-% \end{code}
 
 \noindent
-\begin{figure}[h]
+\begin{figure}[t]
 \noindent
 \small
 \begin{subfigure}[t]{0.3\linewidth}
@@ -392,6 +369,31 @@ appendSS x p = do
 \label{fig:pop-push-append-SS}
 \end{figure}
 
+\vspace{-\baselineskip}
+
+We also modify the three auxiliary functions in \Cref{fig:pop-push-append}
+to |popSS|, |pushSS| and |appendSS| in \Cref{fig:pop-push-append-SS}.
+%
+They are almost the same as the previous versions apart from being
+adapted to use the new state-wrapper type |SS f a|.
+
+% \begin{minipage}[t][][t]{0.5\textwidth}
+% \begin{code}
+% get :: Functor f => CompSS s f s
+% get = Op (Inl (Get return))
+% \end{code}
+% \end{minipage}
+% \begin{minipage}[t][][t]{0.5\textwidth}
+% \begin{code}
+% put :: Functor f => s -> CompSS s f ()
+% put s = Op (Inl (Put s (return ())))
+% \end{code}
+% \end{minipage}
+% \begin{code}
+% instance Functor f => MState s (Free (StateF s :+: f)) where
+%   get    = Op (Inl (Get return))
+%   put s  = Op (Inl (Put s (return ())))
+% \end{code}
 
 The simulation function |nondet2state| is also very similar to
 |nondet2stateS| except for requiring a forwarding algebra |fwd| to
@@ -410,8 +412,9 @@ nondet2state = fold gen (alg # fwd)
 
 The function |runNDf| puts everything together: it translates the
 nondeterminism effect into the state effect and forwards other
-effects, handles the state effect, and extracts the results from the
-final state.
+effects using |nondet2state|, then handles the state effect using
+|hState|, and finally extracts the results from the final state
+using |extractSS|.
 %
 \begin{code}
 runNDf :: Functor f => Free (NondetF :+: f) a -> Free f [a]
@@ -446,9 +449,14 @@ equivalent to the modular nondeterminism handler |hNDf| in
 The proof proceeds essentially in the same way as in the non-modular
 setting.  The main difference, due to the modularity, is an additional
 proof case for the forwarding algebra.
-\begin{equation*}
-|(extractSS . hState) . fwd = fwdNDf . fmap (extractSS . hState)|
-\end{equation*}
+%
+\[\ba{rl}
+    &|(extractSS . hState) . fwd . fmap nondet2stateS|\\
+ |=|&  |fwdNDf . fmap (extractSS . hState) . fmap nondet2stateS|
+\ea\]
+% \begin{equation*}
+% |(extractSS . hState) . fwd = fwdNDf . fmap (extractSS . hState)|
+% \end{equation*}
 The full proof can be found in \Cref{app:in-combination-with-other-effects}.
 
 %-------------------------------------------------------------------------------

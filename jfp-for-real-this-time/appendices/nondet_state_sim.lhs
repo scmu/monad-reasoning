@@ -412,12 +412,15 @@ fuse the left-hand side.
 %
 Since the right-hand side is already a fold, to prove the equation we
 just need to check the components of the fold |hND| satisfy the
-conditions of the fold fusion, i.e., the following two equations:
+conditions of the fold fusion. The conditions can be splitted into
+the following three equations:
 
 \[\ba{rl}
-    &|(extractSS . hState) . gen = genND| \\
+    &|(extractSS . hState) . gen = genNDf| \\
     &|(extractSS . hState) . alg . fmap nondet2stateS|\\
- |=|&  |algND . fmap (extractSS . hState) . fmap nondet2stateS|
+ |=|&  |algNDf . fmap (extractSS . hState) . fmap nondet2stateS| \\
+    &|(extractSS . hState) . fwd . fmap nondet2stateS|\\
+ |=|&  |fwdNDf . fmap (extractSS . hState) . fmap nondet2stateS|
 \ea\]
 
 For brevity, we omit the last common part |fmap nondet2stateS| of
@@ -450,10 +453,10 @@ For the first equation, we calculate as follows:
 
 For the second equation, we proceed with a case analysis on the input.
 
-\noindent \mbox{\underline{case |Inl Fail|}}
+\noindent \mbox{\underline{case |Fail|}}
 
-<    extractSS (hState ((alg # fwd) (Inl Fail)))
-< = {-~  definition of |(#)|  -}
+% <    extractSS (hState (alg #  (Inl Fail)))
+% < = {-~  definition of |(#)|  -}
 <    extractSS (hState (alg Fail))
 < = {-~  definition of |alg|  -}
 <    extractSS (hState popSS)
@@ -469,15 +472,15 @@ For the second equation, we proceed with a case analysis on the input.
 <    algNDf Fail
 < = {-~  definition of |fmap|  -}
 <    (algNDf . fmap (extractSS . hState)) Fail
-< = {-~  definition of |(#)|  -}
-<    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl Fail)
+% < = {-~  definition of |(#)|  -}
+% <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl Fail)
 
 % The property that |extractSS (hState (alg Fail)) = Var []| is called \emph{extract-alg1-ext}\label{eq:extract-alg-1-f}.
 
 \noindent \mbox{\underline{case |Inl (Or p q)|}}
 
-<    extractSS (hState ((alg # fwd) (Inl (Or p q))))
-< = {-~  definition of |(#)|  -}
+% <    extractSS (hState ((alg # fwd) (Inl (Or p q))))
+% < = {-~  definition of |(#)|  -}
 <    extractSS (hState (alg (Or p q)))
 < = {-~  definition of |alg|  -}
 <    extractSS (hState (pushSS q p))
@@ -509,16 +512,18 @@ For the second equation, we proceed with a case analysis on the input.
 <    algNDf (Or ((extractSS . hState) p) ((extractSS . hState) q))
 < = {-~  definition of |fmap|  -}
 <    (algNDf . fmap (extractSS . hState)) (Or p q)
-< = {-~  definition of |(#)|  -}
-<    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl (Or p q))
+% < = {-~  definition of |(#)|  -}
+% <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inl (Or p q))
 
 % The property that |extractSS (hState (alg (Or p q))) = liftM2 (++) (extractSS (hState p)) (extractSS (hState q))|
 % is called \emph{extract-alg2-ext}\label{eq:extract-alg-2-f}.
 
-\noindent \mbox{\underline{case |Inr y|}}
+For the last equation, we calculate as follows:
 
-<    extractSS (hState ((alg#fwd) (Inr y)))
-< = {-~  definition of |(#)|  -}
+% \noindent \mbox{\underline{case |y|}}
+
+% <    extractSS (hState ((alg#fwd) (Inr y)))
+% < = {-~  definition of |(#)|  -}
 <    extractSS (hState (fwd y))
 < = {-~  definition of |fwd|  -}
 <    extractSS (hState (Op (Inr y)))
@@ -539,10 +544,10 @@ For the second equation, we proceed with a case analysis on the input.
 <    fwdNDf (fmap extractSS (fmap hState y))
 < = {-~  Law (\ref{eq:functor-composition})  -}
 <    fwdNDf (fmap (extractSS . hState) y)
-< = {-~  definition of |(#)|  -}
-<    (algNDf # fwdNDf) (Inr (fmap (extractSS . hState) y))
-< = {-~  definition of |fmap|  -}
-<    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inr y)
+% < = {-~  definition of |(#)|  -}
+% <    (algNDf # fwdNDf) (Inr (fmap (extractSS . hState) y))
+% < = {-~  definition of |fmap|  -}
+% <    ((algNDf # fwdNDf) . fmap (extractSS . hState)) (Inr y)
 
 % Part of the above proof also shows:
 % \begin{equation*}
