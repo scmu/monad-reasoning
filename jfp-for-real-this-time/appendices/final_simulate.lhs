@@ -2,7 +2,7 @@
 \begin{code}
 \end{code}
 %endif
-\section{Proof for the Final Simulation}
+\section{Proofs for the Final Simulation}
 \label{app:final-simulate}
 
 In this section, we prove the correctness of the final simulation in

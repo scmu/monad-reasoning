@@ -213,8 +213,7 @@ immutable states for the clarity of presentation and simplicity of
 proofs. The |plus| and |minus| operations also take immutable
 arguments. To be more efficient, we can use mutable states to
 implement in-place updates or use the technique of functional but
-in-place update~\citep{LorenzenLS23}. We will discuss mutable states
-in \Cref{sec:mutable-states}.
+in-place update~\citep{LorenzenLS23}. We leave them as future work.
 
 Similar to \Cref{sec:local-state} and \Cref{sec:global-state}, the
 local-state and global-state semantics of |ModifyF| and |NondetF| are
