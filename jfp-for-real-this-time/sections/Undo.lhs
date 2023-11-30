@@ -28,22 +28,24 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, gu
 
 %-------------------------------------------------------------------------------
 % \section{Optimisation with Undo}
-\section{Modification-based State}
+% \section{Modification-based State}
+\section{Modelling Local State with Global State and Undo}
 \label{sec:undo}
 
 % backtracking in local state
 
 In \Cref{sec:local2global}, we give a translation |local2global| which
-simulates local states with global states by replacing |put| with its
+simulates local state with global state by replacing |put| with its
 state-restoring version |putR|.  The |putR| operation makes the
 implicit copying of the local-state semantics explicit in the
-global-state semantics. However, this copying can be rather costly if
-the state is big (e.g., a long array), and especially wasteful if the
-modifications made to that state are small (e.g., a single entry in
-the array).
+global-state semantics. However, this copying still exists and can be
+rather costly if the state is big (e.g., a long array), and especially
+wasteful if the modifications made to that state are small (e.g., a
+single entry in the array).
 %
-One main advantage of low-level features like the global-state
-semantics is that they enable more fine-grained optimisations.
+Fortunately, low-level features like the global-state semantics
+give us more possibility to apply more fine-grained optimisation
+strategies.
 %
 As a result, instead of copying the whole state to implement the
 backtracking behaviour in the global-state semantics, we can just keep
@@ -53,37 +55,41 @@ necessary.
 %This is especially efficient when we have mutable states or in-place
 %update.
 In this section, we formalise this intuition with a translation from
-the local-state semantics to the global-state semantics for
-modification-based state and nondeterminism.
+the local-state semantics to the global-state semantics for restorable
+state updates.
 
 \subsection{State Update and Restoration}
 
-In order to formalise modification-based state effects, we first
-need to characterise restorable updates.
+We first need to characterise a specific subset of state effects where
+all state update operations can be undone. We call them
+modification-based state effects.
+%
+% We first need to characterise restorable updates.
 %
 For example, the |queens| program in
 \Cref{sec:motivation-and-challenges} uses the operation |s `plus` r|
 to update the state.
 %
-It is restorable as we can define its left inverse as follows:
+We can undo it using the following |`minus` r| operation which is
+essentially the left inverse of |`plus` r|.
+% It is restorable as we can define its left inverse as follows:
 \begin{spec}
 minus   :: (Int, [Int]) -> Int -> (Int, [Int])
 minus   (c, sol) r = (c-1, tail sol)
 \end{spec}
 %
-These two operators satisfy the equation |(`minus` x) . (`plus` x) = id|
-for any |x :: Int|.
+These two operators satisfy the equation |(`minus` r) . (`plus` r) = id|
+for any |r :: Int|.
 %
 % Then, instead of copying the whole state like what we did in the
 % simulation |local2global|, we can just use |s `minus` r| to roll back
 % the update.
 
-
 In general, we define a typeclass |Undo s r| with two operations
-|plus| and |minus|, where |s| is the type of |state| and |r| is the
-type of deltas.  We can implement the previous state update and
-restoration operations of n-queens as an instance |Undo (Int, [Int])
-Int| of the typeclass.
+|plus| and |minus| to characterise restorable state updates. Here, |s|
+is the type of states and |r| is the type of deltas.  We can
+implement the previous state update and restoration operations of
+n-queens as an instance |Undo (Int, [Int]) Int| of the typeclass.
 %
 \begin{spec}
 class Undo s r where
@@ -224,7 +230,7 @@ hGlobalM  :: (Functor f, Undo s r)
 hGlobalM  = fmap (fmap fst) . runStateT . hModify . hNDf . comm2
 \end{code}
 
-\subsection{Simulating Local State with Global State}
+\subsection{Simulating Local State with Global State and Undo}
 \label{sec:local2globalM}
 
 % To simulate the local-state semantics with global-state semantics,
@@ -255,9 +261,13 @@ local2globalM  = fold Var alg
     alg p               = Op p
 \end{code}
 
-The following theorem similar to \Cref{thm:local-global} shows the
-correctness of |local2globalM|.
+Compared to |local2global|, the main difference is that we do not need
+to copy and store the whole state. Instead, we store the delta |r| and
+undo the state update using |restore r| in the second branch.
 %
+The following theorem shows the correctness of |local2globalM|.
+%
+% \vspace{-\baselineskip}
 % \begin{theorem}
 \begin{restatable}[]{theorem}{modifyLocalGlobal}
 \label{thm:modify-local-global}
@@ -267,7 +277,7 @@ holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
 that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
 % \end{theorem}
-
+%
 The proof of this theorem can be found in \Cref{app:modify-local-global}.
 % The proof structure is very similar to that in
 % \Cref{app:local-global}.

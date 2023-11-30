@@ -31,7 +31,8 @@ import Combination
 The simulations |local2global| in \Cref{sec:local2global} and
 |local2globalM| in \Cref{sec:undo} still rely on using the
 high-level nondeterminism operations to store the previous
-states or modifications (deltas) to the state.
+states or modifications (deltas) to the state and implement state
+restoration.
 %
 We can do this in a lower-level and more efficient way by storing them
 in a trail stack following the Warren Abstract Machine
@@ -39,7 +40,7 @@ in a trail stack following the Warren Abstract Machine
 %
 For example, for the modification-based version |local2globalM|,
 %
-The idea is to use a trail stack to contain elements of type |Either r
+the idea is to use a trail stack to contain elements of type |Either r
 ()|, where |r| is the type of deltas to the states. The |Left x| means
 an update to the state with the delta |x|, and the |Right ()| means a
 time stamp.
