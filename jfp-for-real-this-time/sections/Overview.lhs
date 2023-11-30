@@ -425,8 +425,8 @@ hNDf  =  fold genNDf (algNDf # fwdNDf)
     fwdNDf op        = Op op
 \end{code}
 
-\wenhao{The naming convention is confusing, though I've been using it
-in proofs for a long time.}
+% \wenhao{The naming convention is confusing, though I've been using it
+% in proofs for a long time.}
 
 Also, the empty signature |NilF| has a trivial associated handler.
 \begin{code}

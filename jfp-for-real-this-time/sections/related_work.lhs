@@ -90,7 +90,7 @@ principle that Bauer and Pretnar established for effect handler programs
 While Lawvere theories were originally Plotkin's inspiration for studying 
 algebraic effects, the effect handlers community has for a long time paid little
 attention to them. 
-Yet, Luk\v{s}i\v{c} and Pretnar \cite{LuksicP20}
+Yet, \citet{LuksicP20}
 have investigated a framework for encoding axioms or effect theories in the type
 system: the type of an effectful function declares the operators used in the 
 function, as well as the equalities that handlers for these operators should
