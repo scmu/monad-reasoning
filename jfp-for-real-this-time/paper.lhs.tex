@@ -1,6 +1,6 @@
 \documentclass{jfp}
 
- \DeclareTextCommandDefault{\nobreakspace}{\leavevmode\nobreak\ } 
+ \DeclareTextCommandDefault{\nobreakspace}{\leavevmode\nobreak\ }
 \input{macros.tex}
 \let\Bbbk\undefined
 %include polycode.fmt
@@ -47,37 +47,64 @@
 \end{authgrp}
 
 \begin{abstract}
-  Just as of programming languages, some effects are considered to be
-  more low-level than others. Low-level effects usually allow a more
-  fine-grained control over program execution and resources, while
-  others offer a higher level of abstraction. It is usually desirable
-  to write programs using higher-level effects, and at the same time
-  still benefit from the optimisations enabled by lower-level effects.
+  % Just as of programming languages, some effects are considered to be
+  % more low-level than others.
+  % Some of the effects are high level; and some are low level.
 
-  This paper studies how higher-level effects can be simulated in
-  terms of low-level effects.
+  Some of the effects are considered to be higher-level than others.
   %
-  In particular, our contributions focus at the different interactions
-  between state and nondeterminism, known as the local-state and
-  global-state semantics.
+  High-level effects provide expressive and succinct abstraction of
+  programming concepts, while low-level effects allow more fine-grained
+  control over program execution and resources.
   %
-  We model state and nondeterminism with algebraic effects and
-  handlers, and simulate the high-level local-state semantics with a
-  single state effect via a sequence of translations.
+  It is desirable to write programs using the convenient abstraction
+  offered by high-level effects, and at the same time still benefit
+  from the optimisations enabled by low-level effects.
   %
-  We prove the correctness of translations by equational reasoning on
-  effect handlers.
+  One solution is to translate high-level effects to low-level ones.
+
+  This paper studies how high-level effects can be simulated in terms
+  of low-level effects.
   %
-%   We distinguish between local-state and global-state semantics and
-%   transform the higher-level nondeterminism to state.
+  In particular, we focus at the two different interactions between
+  state and nondeterminism, known as the local-state and global-state
+  semantics.
   %
-  Moreover, we demonstrate possible optimisations such as efficient
-  backtracking and mutable states.
+  We give translations from the high-level local-state semantics of to
+  the low-level global-state semantics, and even further to only one
+  low-level state effect.
   %
-%   We illustrate our simulations on the well-known n-queens example.
-%   prove all simulation functions correct using equational reasoning
-%   techniques.
-  \wenhao{TODO: fill in all contributions.}
+  We also show how to implement efficient backtracking in global-state
+  semantics by restricting to restorable state updates.
+  %
+  Moreoever, we simulate the local-state semantics with two low-level
+  stacks, a choicepoint stack and a trail stack, similar to the Warren
+  Abstract Machine of Prolog.
+  %
+  We model state and nondeterminism as algebraic effects, interpret
+  them and translate between them using effect handlers.
+  %
+  We prove the correctness of all our translations using program
+  calculation and the fusion laws of effect handlers.
+
+  %
+  % We model state and nondeterminism with algebraic effects and
+  % handlers, and simulate the high-level local-state semantics with a
+  % single state effect via a sequence of translations.
+  % %
+  % We prove the correctness of translations by equational reasoning on
+  % effect handlers.
+  % %
+  % %We distinguish between local-state and global-state semantics and
+  % %transform the higher-level nondeterminism to state.
+  % %
+  % Moreover, we demonstrate possible optimisations such as efficient
+  % backtracking and mutable states.
+  % %
+  % %We illustrate our simulations on the well-known n-queens example.
+  % %prove all simulation functions correct using equational reasoning
+  % %techniques.
+  % \wenhao{TODO: fill in all contributions.}
 \end{abstract}
 
 \maketitle
