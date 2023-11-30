@@ -256,7 +256,7 @@ and the nondeterminism handler |hND| defined in
 \Cref{sec:free-monads-and-their-folds}.
 
 \begin{restatable}[]{theorem}{nondetStateS}
-\label{thm:nondet2stateS}
+\label{thm:nondet-stateS}
 < runND = hND
 \end{restatable}
 
