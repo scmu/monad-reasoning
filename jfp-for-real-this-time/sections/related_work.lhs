@@ -18,7 +18,7 @@ Prolog is a prominent example of a system that exposes nondeterminism with local
 state to the user, but is itself implemented in terms of a single, global state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{Warren Abstract Machine}
+\paragraph*{Warren Abstract Machine}\
 The folklore idea of undoing modifications upon backtracking is a key feature
 of many Prolog implementations, in particular those based on the Warren 
 Abstract Machine (WAM) \cite{AICPub641:1983,AitKaci91}.
@@ -32,13 +32,13 @@ The WAM has a special stack, called the trail stack, for storing these addresses
 and the process of restoring those cells is called \emph{untrailing}.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{WAM Derivation and Correctness}
-
+\paragraph*{WAM Derivation and Correctness}\
+%
 Several authors have studied the derivation of the WAM from a specification
 of Prolog, and its correctness.
 
 \cite{DBLP:books/el/beierleP95/BorgerR95} start from an operational semantics
-of Prolog based on derivation trees refine this in successive steps to the WAM.
+of Prolog based on derivation trees and refine this in successive steps to the WAM.
 Their approach was later mechanized in Isabelle/HOL by \cite{10.5555/646523.694570}.
 \cite{wam} sketch how the WAM can be derived from a Prolog interpreter
 following the functional correspondence between evaluator and abstract
@@ -48,7 +48,7 @@ Neither of these approaches is based on an abstraction of
 effects that separates them from other aspects of Prolog.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{The 4-Port Box Model}
+\paragraph*{The 4-Port Box Model}\
 While trailing happens under the hood, there is a folklore Prolog programming
 pattern for observing and intervening at different point in the control flow of a
 procedure call, known as the \emph{4-port box model}.
@@ -70,7 +70,7 @@ and it has been our inspiration for expressing the state restoration with global
 state.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{Functional Models of Prolog}
+\paragraph*{Functional Models of Prolog}\
 Various authors have modelled (aspects of) Prolog in functional programming
 languages, often using monads to capture nondeterminism and state effects.
 Notably, \cite{prologinhaskell} develop an embedding of Prolog in Haskell.
@@ -90,8 +90,8 @@ There are many works on reasoning and modelling side effects.
 Here, we cover those that have most directly inspired this paper. 
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{Axiomatic Reasoning}
-
+\paragraph*{Axiomatic Reasoning}\
+%
 Gibbons and Hinze \cite{Gibbons11} proposed to reason axiomatically about
 programs with effects and provided an axiomatic characterization of
 local state semantics. Our earlier work in \cite{Pauwels19} was
@@ -106,7 +106,7 @@ depart from the axiomatic reasoning approach; instead we use proof
 techniques based on algebraic effects and handlers.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{Algebraic Effects}
+\paragraph*{Algebraic Effects}\
 Our formulation of implementing local state with global state is directly 
 inspired by the effect handlers approach of \citet{Plotkin09}.
 By making the free monad explicit our proofs benefit directly from the induction
@@ -146,8 +146,8 @@ handlers, constructed from a fusion of state and nondeterminism
 handlers.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-\paragraph*{Earlier Versions}
-
+\paragraph*{Earlier Versions}\
+%
 This paper refines and much expands on two earlier works of the last author.
 
 \cite{Pauwels19} has the same goal as \Cref{sec:local-global}: it uses
@@ -163,3 +163,4 @@ Another precursor is the work of \cite{Seynaeve20}, which establishes similar re
 those in \Cref{sec:sim-nondet-state}. However, instead of generic definitions for the free 
 monad and its fold, they use a specialized free monad for nondeterminism and explicitly recursive
 handler functions. As a consequence, their proofs use structural induction rather than fold fusion.
+Furthermore, they did not consider other effects either.

@@ -105,13 +105,17 @@ Now we only need to show that for any input |t :: Free (StateF s1 :+:
 StateF s2 :+: f) a|, the equation |hStates' t = (hState .
 states2state) t| holds.
 %
+Note that both sides use folds.
+%
 We can proceed with either fold fusion, as what we have done in the
 proofs of other theorems, or a direct structural induction on the
-input |t|. Here we opt for the latter to show that the algebraic
-structures of free monads and folds make the equational reasoning
-proofs easier in both styles.
+input |t|. Although using fold fusion makes the proof simpler than
+using structural induction, we opt for the latter here to show that
+the our methods of defining effects and translations based on
+algebraic effects and handlers also work well with structural
+induction.
 %
-% For the base case where |t = Var x|, we calculate as follows.
+%For the base case where |t = Var x|, we calculate as follows.
 
 \noindent \mbox{\underline{case |t = Var x|}}
 <    (hState . states2state) (Var x)
