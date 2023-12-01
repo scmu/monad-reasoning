@@ -13,12 +13,12 @@ The trade-off between ``high-level'' and ``low-level'' styles of programming is 
 In a high-level style of programming, we lean on abstractions to make our
 programs easier to read and write, and less error-prone.  We pay for this
 comfort by giving up precise control over the underlying machinery; we forego
-optimization opportunities or have to trust a (usually opaque) compiler to
-perform low-level optimizations for us. For performance-sensitive applications, compiler optimizations
+optimisation opportunities or have to trust a (usually opaque) compiler to
+perform low-level optimisations for us. For performance-sensitive applications, compiler optimisations
 are not reliable enough; instead we often resort to lower-level programming
 techniques ourselves.  Although they allow a
 fine-grained control over program execution and the implementation of
-optimization techniques, they tend to be harder to write and not compose very well.  This is an
+optimisation techniques, they tend to be harder to write and not compose very well.  This is an
 important trade-off to take into account when choosing an appropriate programming language
 for implementing an application.
 
@@ -34,21 +34,24 @@ simulation requires careful discipline and is quite error-prone.
 
 This article investigates how we can construct programs that are most
 naturally expressed with a high-level effect, but where we still want access to
-the optimization opportunities of a lower-level effect. In particular,
+the optimisation opportunities of a lower-level effect. In particular,
 inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on the high-level interaction between the nondeterminism and state
 effects which we call \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
 \citep{AICPub641:1983,AitKaci91}, we show how these can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
-allows us to incorporate typical optimizations like exploiting mutable state
+allows us to incorporate typical optimisations like exploiting mutable state
 for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing
 the state from scratch ~\citep{Schulte:ICLP:1999}.
 
-Our approach is based on algebraic effects and handlers ~\citep{Plotkin09} to
-cleanly separate the use of effects from their implementation. This way we can
-replace a high-level implementation with an implementation in terms of a
-low-level effect and incorporate optimizations.
+Our approach is based on algebraic effects and handlers
+~\citep{PlotkinP03, Plotkin09, Plotkin13} to cleanly separate the use
+of effects from their implementations. Effect handlers allow us to
+flexibly interprets high-level effects with low-level effects and
+incorporate optimisations.
+% replace a high-level implementation with an implementation in terms
+% of low-level effects and incorporate optimisations.
 
 Of particular interest is the way we reason about the correctness of our
 approach. There has been much debate in the literature on different equational

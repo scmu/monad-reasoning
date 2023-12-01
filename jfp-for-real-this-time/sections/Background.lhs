@@ -36,14 +36,14 @@ nondeterminism.
 % The main challenges addressed in this paper relate to the tension between writing
 % programs with high-level effects or with low-level effects.
 % Often, we choose the high-level alternative which is easier to understand and
-% to debug, but we miss out on opportunities for optimization that would have
+% to debug, but we miss out on opportunities for optimisation that would have
 % been available in the low-level style.
 % 
 % Existing systems such as the Warren Abstract Machine (WAM) for Prolog or
 % constraint-based systems in general \cite{AICPub641:1983,AitKaci91}
 % offer a high-level programming interface to programmers, but
 % use a low-level state-based
-% representation under the hood that allow clever system-level optimizations.
+% representation under the hood that allow clever system-level optimisations.
 % 
 % In this paper, we provide:
 % \begin{enumerate}
@@ -52,7 +52,7 @@ nondeterminism.
 % systems expose to their users,
 % \item
 % successive transformation steps from those high-level effects into the
-% low-level state effect in order to incorporate typical optimizations found in
+% low-level state effect in order to incorporate typical optimisations found in
 % those systems, and
 % \item
 % proofs based on equational reasoning to establish the correctness of those
