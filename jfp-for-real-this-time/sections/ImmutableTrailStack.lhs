@@ -262,39 +262,38 @@ general state containing two stacks. Then, we use the handler
 the handler |hState| to interpret the two stacks. Finally, we use the
 function |extractT| to get the final results.
 
-To show the idea of |simulateT| more clearly, we manually fuse it to
-the function |simulateTF| defined as follows. The state |WAM| contains
-the result list, a choicepoint stack, and a trail stack as used by WAMs.
-
+Finally, we can also fuse |simulateT| into a single
+handler.
 \begin{code}
-type Comp s f a = s -> Free f (a, s)
+type Comp f a s r = (WAM f a s r, s) -> Free f [a]
 data WAM f a s r = WAM  { results  :: [a]
-                        , cpStack  :: [Comp (WAM f a s r, s) f ()]
+                        , cpStack  :: [Comp f a s r] 
                         , trStack  :: [Either r ()]}
 
 simulateTF  :: (Functor f, Undo s r)
             => Free (ModifyF s r :+: NondetF :+: f) a
             -> s
             -> Free f [a]
-simulateTF  x s =  results . fst . snd <$>
-                   fold gen (alg1 # alg2 # fwd) x (WAM [] [] [], s)
+simulateTF  x s =  fold gen (alg1 # alg2 # fwd) x (WAM [] [] [], s)
   where
-    gen x                (WAM xs cp tr, s) =  case cp of
-                                                [] -> return ((), (WAM (xs++[x]) cp tr, s))
-                                                p:cp' -> p (WAM (xs++[x]) cp' tr, s)
+    gen x                (WAM xs cp tr, s) =  continue (xs++[x]) cp tr s
     alg1 (MGet k)        (WAM xs cp tr, s) =  k s (WAM xs cp tr, s)
     alg1 (MUpdate r k)   (WAM xs cp tr, s) =  k (WAM xs cp (Left r:tr), s `plus` r)
     alg1 (MRestore r k)  (WAM xs cp tr, s) =  k (WAM xs cp tr, s `minus` r)
-    alg2 Fail            (WAM xs cp tr, s) =  case cp of
-                                                [] -> return ((), (WAM xs cp tr, s))
-                                                p:cp' -> p (WAM xs cp' tr, s)
+    alg2 Fail            (WAM xs cp tr, s) =  continue xs cp tr s
     alg2 (Or p q)        (WAM xs cp tr, s) =  p (WAM xs (undoTrail q : cp) (Right () : tr), s)
     fwd op               (WAM xs cp tr, s) =  Op (fmap ($(WAM xs cp tr, s)) op)
     undoTrail q          (WAM xs cp tr, s) =  case tr of
                                                 [] -> q (WAM xs cp tr, s)
-                                                Right () : tr' -> q (WAM xs cp tr', s)
-                                                Left r : tr' -> undoTrail q (WAM xs cp tr', s `minus` r)
+                                                Right () : tr'  -> q (WAM xs cp tr', s)
+                                                Left r : tr'    -> undoTrail q (WAM xs cp tr', s `minus` r)
+    continue xs cp tr s                    =  case cp of 
+                                                []     -> return xs
+                                                p:cp'  -> p (WAM xs cp' tr, s)
+           
 \end{code}
+Here, the carrier type of the algebras is |Comp f a s r|. It differs from that of |simulateF|
+in that it also takes a trail stack as an input.
 
 \paragraph*{N-queens with Two Stacks}\
 %
