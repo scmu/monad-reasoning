@@ -51,6 +51,7 @@ a choicepoint stack and a trail stack, simultaneously.
 
 
 \subsection{Simulating Local State with Global State and Trail Stack}
+\label{sec:local2trail}
 
 %
 For example, for the modification-based version |local2globalM|,
@@ -126,7 +127,7 @@ introduces code to push a marker in the left branch of a choice, and
 untrail in the right branch. Whenever an update happens, it is also
 recorded on the trail stack. All other operations remain as is.
 
-Now, we can combine the simulation |local2trail| with the global
+Now, we can combine the simulation |local2trail| with the global-state
 semantics provided by |hGlobalM|, and handle the trail stack at the
 end.
 \begin{code}

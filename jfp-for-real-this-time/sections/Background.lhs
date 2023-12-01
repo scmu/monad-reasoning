@@ -180,6 +180,7 @@ One might expect additional laws such as idempotence or commutativity.
 As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on
 how the monad is used and how it should interact with other effects.
 We choose to present a minimal setting for nondeterminism here.}
+
 \begin{alignat}{2}
     &\mbox{\bf identity}:\quad &
       |mzero `mplus` m| ~=~ & |m| ~=~ |m `mplus` mzero|\mbox{~~,}

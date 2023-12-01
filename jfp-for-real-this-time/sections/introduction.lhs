@@ -90,7 +90,7 @@ fusion property of handlers ~\citep{Wu15,Gibbons00}.
 % \subsection{Contributions}
 % \label{sec:contributions}
 
-After introducing the reader to the appropriate background material and motivating the problem (\Cref{sec:background} 
+After introducing the reader to the appropriate background material and motivating the problem (\Cref{sec:background}
 and \Cref{sec:overview}),
 this paper makes the following contributions:
 
@@ -102,7 +102,7 @@ this paper makes the following contributions:
 		  a single state effect (\Cref{sec:combination}).
 	\item By only allowing incremental, reversible updates to the state we can avoid holding on to multiple copies of the state (\Cref{sec:undo}).
 	\item By storing the incremental updates in a trail stack state, we can restore them in batch when backtracking (\Cref{sec:trail-stack}).
-	\item We prove all simulations correct using equational reasoning techniques and the fusion law for handlers in particular 
+	\item We prove all simulations correct using equational reasoning techniques and the fusion law for handlers in particular
         (\Cref{app:local-global}, \Cref{app:nondet-state}, \Cref{app:states-state}, \Cref{app:final-simulate}, \Cref{app:modify-local-global} and \Cref{app:immutable-trail-stack}).
 \end{itemize}
 % \birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
@@ -110,5 +110,36 @@ this paper makes the following contributions:
 Finally, we discuss related work (\Cref{sec:related-work}) and
 conclude (\Cref{sec:conclusion}).
 %
+\Cref{tab:overview} gives an overview of the simulations of high-level
+effects with low-level effects we implemented and proved in the paper.
+%
 Throughout the paper, we use Haskell as a means to illustrate
 our findings with code.
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{ c||c||c }
+%  \hline
+ Translations & Descriptions & Correctness \\
+ \hline
+ |local2global| & local state to global state (\S\ref{sec:local2global}) &\Cref{thm:local-global}\\
+ |nondet2state| & nondeterminism to state (\S\ref{sec:nondet2state}) &\Cref{thm:nondet-state}\\
+ |states2state| & multiple states to a single state (\S\ref{sec:multiple-states}) &\Cref{thm:states-state}\\
+ |local2globalM| & local state to global state with reversible updates (\S\ref{sec:local2globalM}) &\Cref{thm:modify-local-global}\\
+ |local2trail| & local state to global state with trail stacks (\S\ref{sec:local2trail}) &\Cref{thm:trail-local-global}\\
+%  \hline
+\end{tabular}
+\end{center}
+\caption{Overview of translations from high-level effects to low-level effects in the paper.}
+\label{tab:overview}
+\end{table}
+
+%if False
+\begin{itemize}
+\item
+\item |nondet2state|: nondeterminism to state, \Cref{sec:nondet2state}
+\item |states2state|: multiple states to a single state, \Cref{sec:states2state}
+\item |local2globalM|: local-state semantics to global-state semantics using restorable updates
+\item |local2trail|: local-state semantics to global-state semantics using restorable updates and trail stacks
+\end{itemize}
+%endif
