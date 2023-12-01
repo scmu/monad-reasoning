@@ -79,23 +79,24 @@ but merely leverage the common properties of all implementations.
 % \subsection{Contributions}
 % \label{sec:contributions}
 
-After introducing the reader to the appropriate background material and motivating the problem (Section \ref{sec:background}),
+After introducing the reader to the appropriate background material and motivating the problem (\Cref{sec:background} 
+and \Cref{sec:overview}),
 this paper makes the following contributions:
 
 \begin{itemize}
-	\item We formally distinguish between local-state and global-state semantics.
-		  We define a simulation to model local state using global state (\Cref{sec:local-global}).
-	\item We define undo semantics to allow more efficient backtracking (\Cref{sec:local-global}).
-	\item We simulate nondeterminism using state (\Cref{sec:nondeterminism-state}).
-	\item We combine the previous simulations in a single simulation function where we model nondeterminism and state using
-		  a single state effect. As an extension, we work out mutable state as a possible optimization (\Cref{sec:combination}).
-	\item We illustrate the simulations and resulting optimizations using the n-queens puzzle as a running example throughout
-		  all sections.
-	\item We prove all simulations correct using equational reasoning techniques and the fusion law in particular (\Cref{app:universality-nondeterminism}, \Cref{app:nondet-state} and \Cref{app:local-global}).
+	\item We distinguish between local-state and global-state semantics,
+              and simulate the former in terms of the latter (\Cref{sec:local-global}).
+	\item We simulate nondeterminism using a state that consists of a choicepoint stack (\Cref{sec:nondeterminism-state}).
+	\item We combine the previous two simulations and merge the two states into
+		  a single state effect (\Cref{sec:combination}).
+	\item By only allowing incremental, reversible updates to the state we can avoid holding on to multiple copies of the state (\Cref{sec:undo}).
+	\item By only allowing incremental, reversible updates to the state we can avoid holding on to multiple copies of the state (\Cref{sec:trail-stack}).
+	\item We prove all simulations correct using equational reasoning techniques and the fusion law for handlers in particular 
+        (\Cref{app:local-global}, \Cref{app:nondet-state}, \Cref{app:states-state}, \Cref{app:final-simulate}, \Cref{app:modify-local-global} and \Cref{app:immutable-trail-stack}).
 \end{itemize}
 % \birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
 % Wenhao: I don't think the global state law (put-or) is new.
-Finally, we discuss related work (Section \ref{sec:related-work}) and conclude (Section \ref{sec:discussion})
+Finally, we discuss related work (\Cref{sec:related-work}) and conclude (\Cref{sec:conclusion})
 %
 Throughout the paper, we use Haskell as a means to illustrate
 our findings with code.
