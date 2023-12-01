@@ -4,6 +4,7 @@
 %endif
 
 \section{Conclusion and Future Work}
+\label{sec:conclusion}
 
 % The old conlusion:
 % This paper has shown the tradeoff between constructing programs using
@@ -25,23 +26,23 @@ effects for state and nondeterminism.
 %
 We started with the translation from the local-state semantics of
 state and nondeterminism to the global-state semantics. Then, we
-further showed how to translate nondeterminism to state, and translate
+further showed how to translate nondeterminism to state (a choicepoint stack), and translate
 multiple state effects into one state effect. Combining these results,
 we can simulate the local-state semantics, a high-level programming
 abstraction, with only one low-level state effect.
 %
 We also demonstrated that we can simulate the local-state semantics
-using a choicepoint stack and a trail stack in a similar style to the
+using a trail stack in a similar style to the
 Warren Abstract Machine of Prolog.
 %
-We define the effects and translations with algebraic effects and
-effect handlers, which are implemented as free monads and folds in
+We define the effects and their translations with algebraic effects and
+effect handlers respectively. These are implemented as free monads and folds in
 Haskell.
 %
-The correctness of all translations have been proved using the
-technique of program calculation, especially the fusion laws.
+The correctness of all these translations has been proved using the
+technique of program calculation, especially using the fusion properties.
 
-In future, we would like to explore the potential optimisations
+In future work, we would like to explore the potential optimisations
 enabled by mutable states. Mutable states fit the global-state
 semantics naturally. With mutable states, we can implement more
 efficient state update and restoration operations for the simulation
@@ -52,10 +53,8 @@ simulations |nondet2state| (\Cref{sec:nondet2state}) and |local2trail|
 %
 We would also like to consider the low-level simulations of other
 control-flow constructs used in logical programming languages such as
-the |cut| operator of Prolog which trims the search space.
+Prolog's |cut| operator for trimming the search space.
 %
 Since operators like |cut| are usually implemented as scoped
-effects~\citep{Pirog18,Wu14,YangPWBS22}, it would be interesting to
-extend our methods to scoped effects and other higher-order
-effects~\citep{BergS23}.
-
+or higher-order effects~\citep{Pirog18,Wu14,YangPWBS22,BergS23}, we would have to 
+adapt our approach accordingly.
