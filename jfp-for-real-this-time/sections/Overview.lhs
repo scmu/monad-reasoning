@@ -39,24 +39,14 @@ validation, it requires problem-specific knowledge. We can also make
 application-agnostic improvements at the more generic level of the effect
 implementation.
 
-For example, we could avoid making an explicit copy of the state at every branching
-point by evolving from local-state semantics to global-state semantics.
-Furthermore, we can model nondeterminism with state, which allows for a smoother
-undo semantics.
-Mutable state would also improve performance significantly.
-\wenhao{?}
-
-In the remainder of the paper, we define simulations for transforming
-high-level effects into lower-level effects that enable the above optimisations and
-establish the correctness of this approach.
-%
-In particular, we take the following steps:
-\Cref{sec:local-global} simulates local state with global state;
-\Cref{sec:nondeterminism-state} explains how to simulate nondeterminism with state; and
-\Cref{sec:combination} shows how we can group multiple states into a single
-state effect.
-
-The figure below shows how this influences the n-queens example in different sections.
+To expose these, we simulate the high-level local-state semantics to one
+that is entirely based on state alone. In the process we expose the duplication
+of states across nondeterminstic branches. We incrementally define this simulation;
+the figure below shows how this influences the n-queens example.
+In particular, we take the following steps: \Cref{sec:local-global} simulates
+local state with global state; \Cref{sec:nondeterminism-state} explains how to
+simulate nondeterminism with state; and \Cref{sec:combination} shows how we can
+group multiple states into a single state effect.
 
 % https://q.uiver.app/?q=WzAsMyxbMCwwLCJTdGF0ZSArIE5vbmRldGVybWluaXNtIl0sWzAsMSwiU3RhdGUgKyBTdGF0ZSJdLFswLDIsIlN0YXRlIl0sWzAsMSwiU2VjdGlvbiBcXHJlZnt9OiBOb25kZXRlcm1pbmlzbSAkXFxyaWdodGFycm93JCBTdGF0ZSIsMCx7ImxhYmVsX3Bvc2l0aW9uIjozMH1dLFsxLDIsIlNlY3Rpb24gXFxyZWZ7fSJdLFswLDEsIlNlY3Rpb24gXFxyZWZ7fTogTG9jYWwgc3RhdGUgJFxccmlnaHRhcnJvdyQgZ2xvYmFsIHN0YXRlIiwwLHsibGFiZWxfcG9zaXRpb24iOjcwfV1d
 % \[\begin{tikzcd}
