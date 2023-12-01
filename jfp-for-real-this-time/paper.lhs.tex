@@ -67,12 +67,12 @@
   high-level effects in terms of low-level effects.
   %
   In particular, we focus on the interaction between state and
-  nondeterminism known as the local-state, as provided by Prolog. We map
+  nondeterminism known as the local-state semantics, as provided by Prolog. We map
   this high-level semantics in successive steps
   onto a low-level composite state effect, similar to that managed by Prolog's Warren Abstract
   Machine.
   %
-  We first give a translations from the high-levellocal-state semantics to
+  We first give a translation from the high-level local-state semantics to
   the low-level global-state semantics, by explicitly restoring state updates on
   backtracking. Next, we eliminate nondeterminsm altogether in favor of a
   lower-level state containing a choicepoint stack.

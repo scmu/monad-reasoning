@@ -247,7 +247,7 @@
 %format resultsCut = "\Varid{results_{Cut}}"
 %format stackCut = "\Varid{stack_{Cut}}"
 
-%format simulate = "\Varid{simulate_T}"
+%format simulateT = "\Varid{simulate_T}"
 
 % format Stnq = "\Varid{State_{nqueens}}"
 %format queensLocal = "\Varid{queens_{Local}}"
