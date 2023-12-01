@@ -90,7 +90,7 @@ this paper makes the following contributions:
 	\item We combine the previous two simulations and merge the two states into
 		  a single state effect (\Cref{sec:combination}).
 	\item By only allowing incremental, reversible updates to the state we can avoid holding on to multiple copies of the state (\Cref{sec:undo}).
-	\item By only allowing incremental, reversible updates to the state we can avoid holding on to multiple copies of the state (\Cref{sec:trail-stack}).
+	\item By storing the incremental updates in a trail stack state, we can restore them in batch when backtracking (\Cref{sec:trail-stack}).
 	\item We prove all simulations correct using equational reasoning techniques and the fusion law for handlers in particular 
         (\Cref{app:local-global}, \Cref{app:nondet-state}, \Cref{app:states-state}, \Cref{app:final-simulate}, \Cref{app:modify-local-global} and \Cref{app:immutable-trail-stack}).
 \end{itemize}
