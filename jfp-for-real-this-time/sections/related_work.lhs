@@ -1,18 +1,14 @@
 \section{Related Work}
 \label{sec:related-work}
 
+There are various related works.
+
 %if False
 \begin{code}
 
 \end{code}
 %endif
 
-\tom{TODOs}
-
-\begin{itemize}
-\item Difference with MPC, TFP paper
-\item Work on functional models of logic programming and nondeterminism
-\end{itemize}
 
 %-------------------------------------------------------------------------------
 \subsection{Prolog}
@@ -72,6 +68,19 @@ debugging messages when each of the four ports are used:
 This technique was applied in the monadic setting by Hinze \cite{monadicbacktracking},
 and it has been our inspiration for expressing the state restoration with global
 state.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph*{Functional Models of Prolog}
+Various authors have modelled (aspects of) Prolog in functional programming
+languages, often using monads to capture nondeterminism and state effects.
+Notably, \cite{prologinhaskell} develop an embedding of Prolog in Haskell.
+
+Most attention has gone towards modelling the nondeterminsm or search aspect of
+Prolog, with various monads and monad transformers being proposed
+\citep{DBLP:conf/icfp/Hinze00,DBLP:conf/icfp/KiselyovSFS05}. Notably, \cite{DBLP:conf/ppdp/SchrijversWDD14} shows how
+Prolog's search can be exposed with a free monad and manipulated using handlers.
+
+None of these works consider mapping high-level to low-level representations of the effects.
 
 %-------------------------------------------------------------------------------
 \subsection{Reasoning About Side Effects}
@@ -135,3 +144,22 @@ but also additional interaction laws. Using this technique they
 provide succinct proofs of the correctness of local state
 handlers, constructed from a fusion of state and nondeterminism
 handlers.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph*{Earlier Versions}
+
+This paper refines and much expands on two earlier works of the last author.
+
+\cite{Pauwels19} has the same goal as \Cref{sec:local-global}: it uses
+the state-restoring version of put to simulate local state with global state.
+It differs from this work in that it relies on an axiomatic (i.e., law-based),
+as opposed to handler-based, semantics for local and global state. This means
+that handler fusion cannot be used as a reasoning technique. Moreover, it uses a rather heavy-handed
+syntactic approach to contextual equivalence, and it assumes
+that no other effects are invoked.
+
+
+Another precursor is the work of \cite{Seynaeve20}, which establishes similar results as
+those in \Cref{sec:sim-nondet-state}. However, instead of generic definitions for the free 
+monad and its fold, they use a specialized free monad for nondeterminism and explicitly recursive
+handler functions. As a consequence, their proofs use structural induction rather than fold fusion.
