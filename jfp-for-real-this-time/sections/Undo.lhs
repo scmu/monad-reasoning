@@ -245,7 +245,7 @@ in a similar style to the translation |local2global| in
 \Cref{sec:local2global}.
 %
 The translation |local2globalM| still uses the mechanism of
-nondeterminism to store the deltas used by previous updates.
+nondeterminism to restore previous state updates for backtracking.
 %
 In \Cref{sec:trail-stack} we will show a lower-level simulation of
 local-state semantics without relying on nondeterminism.

@@ -2,7 +2,7 @@
 \begin{code}
 \end{code}
 %endif
-\section{Proofs for Simulating Local State with Trail Stack}
+\section{Proofs for Modelling Local State with Trail Stack}
 \label{app:immutable-trail-stack}
 
 %-------------------------------------------------------------------------------

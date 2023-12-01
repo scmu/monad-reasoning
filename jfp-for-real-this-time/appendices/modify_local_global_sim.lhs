@@ -16,7 +16,7 @@ import Undo
 \end{code}
 %endif
 
-\section{Proofs for Simulating Local State with Global State using Undo}
+\section{Proofs for Modelling Local State with Undo}
 \label{app:modify-local-global}
 
 %-------------------------------------------------------------------------------

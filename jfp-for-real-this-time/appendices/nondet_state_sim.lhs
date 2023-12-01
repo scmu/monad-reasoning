@@ -3,7 +3,7 @@ import Data.Bitraversable (Bitraversable)
 \begin{code}
 \end{code}
 %endif
-\section{Proofs for Simulating Nondeterminism with State}
+\section{Proofs for Modelling Nondeterminism with State}
 \label{app:nondet-state}
 
 In this secton, we prove the theorems in

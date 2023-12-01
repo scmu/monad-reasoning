@@ -23,17 +23,37 @@ import Debug.Trace as DT
 \end{code}
 %endif
 
-\section{Overview}
+% \section{Overview}
+\section{Algebraic Effects and Handlers}
 \label{sec:overview}
 
-This section gives an overview of our approach to simulating state and
-nondeterminism in terms of only state and proving the correctness of
-simulations by equational reasoning.
+% This section gives an overview of our approach to simulating state
+% and nondeterminism in terms of only state and proving the
+% correctness of simulations by equational reasoning.
+This section introduces algebraic effects and handlers, the approach
+we use to define syntax, semantics, and simulations for effects.
+%
+Comparing to giving concrete monad implementations for effects,
+algebraic effects and handlers allow us to easily provide different
+interpretations for the same effects due to the clear separation of
+syntax and semantics.
+%
+As a result, we can smoothly specify translations from high-level
+effects to low-level effects as handlers of these high-level effects,
+and then compose them with the handlers of low-level effects to
+interpret high-level programs.
+%
+Algebraic effects and handlers also provide us with a modular way to
+combine our translations with other effects, and a useful tool, the
+fusion property, to prove the correctness of translations.
+% % We can also clearly
+
 
 %-------------------------------------------------------------------------------
+%if False
 \subsection{Approach}
 
-Although the second implementation of the n-queens problems is a noteworthy
+Although the backtracking implementation of the n-queens problems is a noteworthy
 improvement over the naive version by cleverly interleaving enumeration and
 validation, it requires problem-specific knowledge. We can also make
 application-agnostic improvements at the more generic level of the effect
@@ -78,14 +98,17 @@ group multiple states into a single state effect.
 	\arrow[from=3-2, to=5-3]
 	\arrow[from=3-2, to=5-4]
 \end{tikzcd}\]
+%endif
 
 %-------------------------------------------------------------------------------
 \subsection{Free Monads and Their Folds}
 \label{sec:free-monads-and-their-folds}
 
-Before taking the first step, we revise our key ingredients for
-simulating one effect in terms of another and establishing correctness: free
-monads, their folds and their fusion properties.
+% Before taking the first step, we revise our key ingredients for
+% simulating one effect in terms of another and establishing correctness: free
+% monads, their folds and their fusion properties.
+We implement algebraic effects and handlers as free monads and their folds.
+%  and use the fusion properties of folds for equational reasoning.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph*{Free Monads}\

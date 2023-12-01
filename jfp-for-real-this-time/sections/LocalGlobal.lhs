@@ -1,4 +1,4 @@
-\section{Modeling Local State With Global State}
+\section{Modelling Local State with Global State}
 \label{sec:local-global}
 
 %if False
@@ -754,27 +754,29 @@ We elaborate each of these steps in \Cref{app:local-global}.
 \end{proof}
 
 % %-------------------------------------------------------------------------------
-%if False
-% \subsection{The N-Queens Puzzle with Local or Global State}
-% \label{sec:n-queens-global}
-% \wenhao{paragraph or subsubsection?}
+\paragraph*{N-queens with Global-State Semantics}\
 %
-% Recall the backtracking algorithm |queens| for the n-queens example in
-% Section~\ref{sec:motivation-and-challenges}.
-% It runs in the local-state semantics because every branch maintains its own copy
-% of the state and has no influence on other branches.
-% The function |queensLocal| solves the n-queens problem using the handler |hLocal| for local-state semantics.
+Recall the backtracking algorithm |queens| for the n-queens example in
+\Cref{sec:motivation-and-challenges}.
+%
+It is initially designed to run in the local-state semantics because
+every branch maintains its own copy of the state and has no influence
+on other branches. We can handle it with |hLocal| as follows.
+%
 \begin{code}
 queensLocal :: Int -> [[Int]]
 queensLocal = hNil . flip hLocal (0, []) . queens
 \end{code}
 % % For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
 %
-% Using the simulation function |local2global|, we can also have a function |queensGlobal|
-% which solves the n-queens problem using the handler |hGlobal| for global-state semantics.
+With the simulation |local2global|, we can also translate |queens| to
+an equivalent program in global-state semantics and handle it with
+|hGlobal|.% The correctness is obvious from \Cref{thm:local-global}.
+% Using the simulation function |local2global|, we can also have a
+% function |queensGlobal| which solves the n-queens problem using the
+% handler |hGlobal| for global-state semantics.
 \begin{code}
 queensGlobal :: Int -> [[Int]]
 queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
 \end{code}
 % These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
-%endif

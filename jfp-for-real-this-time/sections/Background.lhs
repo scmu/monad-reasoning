@@ -205,7 +205,7 @@ instance of |MNondet|.
 %
 In contrast, \citet{Hutton08} reason directly in terms of a particular
 instance.  In the case of |MNondet|, the quintessential instance is
-that of lists, which extends the conventional |Monad| instance for lists.
+the list monad, which extends the conventional |Monad| instance for lists.
 
 \begin{minipage}{0.5\textwidth}
 \begin{code}
@@ -245,7 +245,7 @@ class Monad m => MState s m | m -> s where
       return x
 \end{code}
 %endif
-These operations are regulated by four laws:
+These operations are regulated by the following four laws:
 \begin{alignat}{2}
     &\mbox{\bf put-put}:\quad &
     |put s >> put s'| &= |put s'|~~\mbox{,} \label{eq:put-put}\\
@@ -260,13 +260,30 @@ These operations are regulated by four laws:
 %
 The standard instance of |MState| is the state monad |State s|.
 
+\begin{minipage}[t]{0.4\textwidth}
 \begin{code}
-newtype State s a = State { runState :: s -> (a, s) }
-
+newtype State s a =
+  State { runState :: s -> (a, s) }
 instance MState s (State s) where
   get    = State (\s -> (s, s))
   put s  = State (\ _ -> ((), s))
 \end{code}
+\end{minipage}
+\begin{minipage}[t]{0.6\textwidth}
+\begin{code}
+instance Monad (State s) where
+  return x = State (\s -> (x, s))
+  m >>= f  = State (\s ->  let (x, s') = runState m s
+                           in runState (f x) s')
+\end{code}
+\end{minipage}
+
+% \begin{code}
+% newtype State s a = State { runState :: s -> (a, s) }
+% instance MState s (State s) where
+%   get    = State (\s -> (s, s))
+%   put s  = State (\ _ -> ((), s))
+% \end{code}
 %if False
 \begin{code}
 instance Functor (State s) where
@@ -276,14 +293,14 @@ instance Applicative (State s) where
   pure  = return
   (<*>) = ap
 
-instance Monad (State s) where
-  return x = State (\s -> (x, s))
-  m >>= f  = State (\s -> let (x, s') = runState m s in runState (f x) s')
+-- instance Monad (State s) where
+--   return x = State (\s -> (x, s))
+--   m >>= f  = State (\s -> let (x, s') = runState m s in runState (f x) s')
 \end{code}
 %endif
 
 %-------------------------------------------------------------------------------
-\subsection{The n-queens Puzzle}
+\subsection{The N-queens Puzzle}
 \label{sec:motivation-and-challenges}
 
 
@@ -304,7 +321,7 @@ Using this representation, queens cannot be put on the same row or column.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph*{A Naive Algorithm}\
-We have the following native nondeterministic algorithm for n-queens.
+We have the following naive nondeterministic algorithm for n-queens.
 \begin{code}
 queensNaive :: MNondet m => Int -> m [Int]
 queensNaive n = choose (permutations [1..n]) >>= filtr valid
@@ -416,7 +433,15 @@ plus   (c, sol) r = (c+1, r:sol)
 \end{spec}
 %
 
-The above monadic version of |queens| is the starting point of this
-paper.  In the following sections, we investigate how low-level
-optimisations, such as those found in Prolog implementations and
-Constraint Programming systems, can be incorporated and shown correct.
+The above monadic version of |queens| essentially assume that each
+searching branch has its own state; we do not need to explicitly
+restore the state when backtracking.
+%
+Though this is a convenient high-level programming assumption for
+programmers, it may not be friendly to low-level implementations and
+optimisations.
+% is the starting point of this paper.
+In the following sections, we investigate how low-level implementation
+and optimisation techniques, such as those found in Prolog's Warren
+Abstract Machine and Constraint Programming systems, can be
+incorporated and proved correct.

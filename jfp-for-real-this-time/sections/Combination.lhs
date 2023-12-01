@@ -34,7 +34,7 @@ This section combines the results of the previous two sections to ultimately sim
 nondeterminism and state with a single state effect.
 
 %-------------------------------------------------------------------------------
-\subsection{Modeling Two States with One State}
+\subsection{Modelling Two States with One State}
 \label{sec:multiple-states}
 
 When we combine the two simulation steps from the two previous sections, we end
@@ -292,7 +292,7 @@ behaves the same as the local-state semantics given by |hLocal|.
 %
 The proof can be found in \Cref{app:final-simulate}.
 
-We can provide a more compact and direct definition of |simulate| by
+We provide a more compact and direct definition of |simulate| by
 fusing all the consecutive steps into a single handler:
 \begin{code}
 type Comp s f a = (CP f a s, s) -> Free f [a]
@@ -315,7 +315,7 @@ simulateF  x s =  fold gen (alg1 # alg2 # fwd) x (CP [] [], s)
                                            []      -> return xs
                                            (p:ps)  -> p (CP xs ps, s)
 \end{code}
-The common carrier of the above algebras is |Comp s f a|. This is a computation
+The common carrier of the above algebras |alg1 # alg2 # fwd| is |Comp s f a|. This is a computation
 that takes the current results, choicepoint stack and application state, and returns the list of all results.  The
 first two inputs are bundled in the |CP| type.
 

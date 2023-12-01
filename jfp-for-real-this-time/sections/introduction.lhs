@@ -46,10 +46,17 @@ for efficient backtracking based on \emph{trailing} as opposed to copying or rec
 the state from scratch ~\citep{Schulte:ICLP:1999}.
 
 Our approach is based on algebraic effects and handlers
-~\citep{PlotkinP03, Plotkin09, Plotkin13} to cleanly separate the use
-of effects from their implementations. Effect handlers allow us to
-flexibly interprets high-level effects with low-level effects and
-incorporate optimisations.
+~\citep{PlotkinP03, Plotkin09, Plotkin13} to cleanly separate the
+syntax and semantics of effects.
+%
+For programs written with high-level effects and interpreted by their
+handlers, we can define a general translation handler to transform
+these high-level effects to low-level effects, and then interpret the
+translated programs with the handlers of low-level effects.
+
+% use
+% of effects from their implementations. Effect handlers allow us to
+% flexibly interpret high-level effects with low-level effects.
 % replace a high-level implementation with an implementation in terms
 % of low-level effects and incorporate optimisations.
 
@@ -68,11 +75,12 @@ programming languages \citep{Felleisen94}, leading to more boilerplate and
 complication in the proofs: notions of contextual equivalence and explicit
 manipulation of program contexts. Hence, for that reason we return to the
 implementation-based reasoning approach, which we believe works well with
-algebraic effects and handlers. Indeed, we can prove all of our simulations
+algebraic effects and handlers. Indeed, we prove all of our simulations
 correct using equational reasoning techniques, exploiting in particular the
-fusion property of handlers ~\citep{Wu15}. Moreover, in part of our reasoning
-we use initial effect implementations, which we argue do not leak any implementation details
-but merely leverage the common properties of all implementations.
+fusion property of handlers ~\citep{Wu15,Gibbons00}.
+% Moreover, in part of our reasoning
+% we use initial effect implementations, which we argue do not leak any implementation details
+% but merely leverage the common properties of all implementations.
 
 %In particular, a purely functional programming style lets us reason about our programs equationally.
 %At first glance, it may seem that equational reasoning is made possible by the lack of side effects in functional programming.
@@ -99,7 +107,8 @@ this paper makes the following contributions:
 \end{itemize}
 % \birthe{Compared to the MPC paper, the contribution of formulating a global state law is missing.}
 % Wenhao: I don't think the global state law (put-or) is new.
-Finally, we discuss related work (\Cref{sec:related-work}) and conclude (\Cref{sec:conclusion})
+Finally, we discuss related work (\Cref{sec:related-work}) and
+conclude (\Cref{sec:conclusion}).
 %
 Throughout the paper, we use Haskell as a means to illustrate
 our findings with code.

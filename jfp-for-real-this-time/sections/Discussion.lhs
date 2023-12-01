@@ -109,7 +109,7 @@ As a running example, we have shown our simulations and optimisations
 on the n-queens example. Table~\ref{tbl:benchmarks-haskell} shows
 the benchmarks for all implementations of n-queens appeared in the
 paper. \footnote{The benchmarks are run using GHC 8.10.7 with the
-|-O2| optimization option turned on, on a MacBook Pro with a 2.3 GHz
+|-O2| optimisation option turned on, on a MacBook Pro with a 2.3 GHz
 Intel Core i5 processor and 16 GB RAM.}
 
 % for several implementation of n-queens in Haskell using fusion
@@ -117,7 +117,7 @@ Intel Core i5 processor and 16 GB RAM.}
 % mutable states so the |queensStackR| is slower? Or we just don't show
 % it?} Better benchmarks are acquired using an implementation in C++
 % (Table~\ref{tbl:benchmarks-c++}), which allows more fine-grained,
-% low-level optimizations.  The best results are achieved using the C++
+% low-level optimisations.  The best results are achieved using the C++
 % |queensStackR| implementation, which have a 8--11\% runtime
 % improvement over |queensLocal|.
 

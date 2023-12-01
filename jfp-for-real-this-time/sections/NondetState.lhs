@@ -1,4 +1,4 @@
-\section{Modeling Nondeterminism with State}
+\section{Modelling Nondeterminism with State}
 \label{sec:nondeterminism-state}
 
 %if False
@@ -134,7 +134,7 @@ functor |f|.
 
 
 \noindent
-\begin{figure}[t]
+\begin{figure}[ht]
 \small
 \begin{subfigure}[t]{0.3\linewidth}
 \begin{code}

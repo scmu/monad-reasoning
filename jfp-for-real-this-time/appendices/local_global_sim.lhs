@@ -15,7 +15,7 @@ import LocalGlobal
 \end{code}
 %endif
 
-\section{Proofs for Simulating Local State with Global State}
+\section{Proofs for Modelling Local State with Global State}
 \label{app:local-global}
 
 %-------------------------------------------------------------------------------
