@@ -549,3 +549,59 @@ series = {FPCA '93}
   biburl       = {https://dblp.org/rec/conf/esop/YangPWBS22.bib},
   bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
+
+@misc{wam,
+  title = "A Functional Derivation of the Warren Abstract Machine",
+  author = "Maciej Pirog and Jeremy Gibbons",
+  year = "2011",
+  note = "Unpublished",
+  url = "http://www.comlab.ox.ac.uk/jeremy.gibbons/publications/wam.pdf",
+}
+
+
+@article{AGER2005149,
+	abstract = {We extend our correspondence between evaluators and abstract machines from the pure setting of the λ-calculus to the impure setting of the computational λ-calculus. We show how to derive new abstract machines from monadic evaluators for the computational λ-calculus. Starting from (1) a generic evaluator parameterized by a monad and (2) a monad specifying a computational effect, we inline the components of the monad in the generic evaluator to obtain an evaluator written in a style that is specific to this computational effect. We then derive the corresponding abstract machine by closure-converting, CPS-transforming, and defunctionalizing this specific evaluator. We illustrate the construction with the identity monad, obtaining the CEK machine, and with a lifted state monad, obtaining a variant of the CEK machine with error and state. In addition, we characterize the tail-recursive stack inspection presented by Clements and Felleisen as a lifted state monad. This enables us to combine this stack-inspection monad with other monads and to construct abstract machines for languages with properly tail-recursive stack inspection and other computational effects. The construction scales to other monads---including one more properly dedicated to stack inspection than the lifted state monad---and other monadic evaluators.},
+	author = {Mads Sig Ager and Olivier Danvy and Jan Midtgaard},
+	doi = {https://doi.org/10.1016/j.tcs.2005.06.008},
+	issn = {0304-3975},
+	journal = {Theoretical Computer Science},
+	keywords = {-calculus, Interpreters, Abstract machines, Closure conversion, Transformation into continuation-passing style (CPS), Defunctionalization, Monads, Effects, Proper tail recursion, Stack inspection},
+	note = {Applied Semantics: Selected Topics},
+	number = {1},
+	pages = {149-172},
+	title = {A functional correspondence between monadic evaluators and abstract machines for languages with computational effects},
+	url = {https://www.sciencedirect.com/science/article/pii/S0304397505003439},
+	volume = {342},
+	year = {2005},
+	bdsk-url-1 = {https://www.sciencedirect.com/science/article/pii/S0304397505003439},
+	bdsk-url-2 = {https://doi.org/10.1016/j.tcs.2005.06.008}}
+
+
+@incollection{DBLP:books/el/beierleP95/BorgerR95,
+  author       = {Egon B{\"{o}}rger and
+                  Dean Rosenzweig},
+  editor       = {Christoph Beierle and
+                  Lutz Pl{\"{u}}mer},
+  title        = {The {WAM} - Definition and Compiler Correctness},
+  booktitle    = {Logic Programming: Formal Methods and Practical Applications, Studies
+                  in Computer Science and Artificial Intelligence},
+  pages        = {20--90},
+  publisher    = {Elsevier Science B.V./North-Holland},
+  year         = {1995},
+  timestamp    = {Mon, 05 Aug 2019 11:57:50 +0200},
+  biburl       = {https://dblp.org/rec/books/el/beierleP95/BorgerR95.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{10.5555/646523.694570,
+author = {Pusch, Cornelia},
+title = {Verification of Compiler Correctness for the WAM},
+year = {1996},
+isbn = {3540615873},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+booktitle = {Proceedings of the 9th International Conference on Theorem Proving in Higher Order Logics},
+pages = {347–361},
+numpages = {15},
+series = {TPHOLs '96}
+}

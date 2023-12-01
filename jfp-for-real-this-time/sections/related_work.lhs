@@ -25,7 +25,7 @@ state to the user, but is itself implemented in terms of a single, global state.
 \paragraph*{Warren Abstract Machine}
 The folklore idea of undoing modifications upon backtracking is a key feature
 of many Prolog implementations, in particular those based on the Warren 
-Abstract Machine (WAM) \cite{monadicbacktracking}.
+Abstract Machine (WAM) \cite{AICPub641:1983,AitKaci91}.
 The WAM's global state is the program heap and Prolog programs modify this heap
 during unification only in a very specific manner: following the union-find
 algorithm, they overwrite cells that contain self-references with pointers to
@@ -34,6 +34,22 @@ Undoing these modifications only requires knowledge of the modified cell's
 address, which can be written back in that cell during backtracking. 
 The WAM has a special stack, called the trail stack, for storing these addresses, 
 and the process of restoring those cells is called \emph{untrailing}.
+
+%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\paragraph*{WAM Derivation and Correctness}
+
+Several authors have studied the derivation of the WAM from a specification
+of Prolog, and its correctness.
+
+\cite{DBLP:books/el/beierleP95/BorgerR95} start from an operational semantics
+of Prolog based on derivation trees refine this in successive steps to the WAM.
+Their approach was later mechanized in Isabelle/HOL by \cite{10.5555/646523.694570}.
+\cite{wam} sketch how the WAM can be derived from a Prolog interpreter
+following the functional correspondence between evaluator and abstract
+machine~\cite{AGER2005149}. 
+
+Neither of these approaches is based on an abstraction of
+effects that separates them from other aspects of Prolog.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph*{The 4-Port Box Model}
@@ -53,7 +69,7 @@ debugging messages when each of the four ports are used:
 < (putStr "exit" `mplus` side (putStr "redo")) >>
 < return x
 
-This technique was applied in the monadic setting by Hinze \cite{},
+This technique was applied in the monadic setting by Hinze \cite{monadicbacktracking},
 and it has been our inspiration for expressing the state restoration with global
 state.
 
