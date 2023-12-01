@@ -51,49 +51,43 @@
   % more low-level than others.
   % Some of the effects are high level; and some are low level.
 
-  Some of the effects are considered to be higher-level than others.
+  Some effects are considered to be higher-level than others.
   %
   High-level effects provide expressive and succinct abstraction of
   programming concepts, while low-level effects allow more fine-grained
   control over program execution and resources.
   %
-  It is desirable to write programs using the convenient abstraction
+  Yet, often it is desirable to write programs using the convenient abstraction
   offered by high-level effects, and at the same time still benefit
   from the optimisations enabled by low-level effects.
   %
   One solution is to translate high-level effects to low-level ones.
 
-  This paper studies how high-level effects can be simulated in terms
-  of low-level effects.
+  This paper studies how algebraic effects and handlers allow us to simulate
+  high-level effects in terms of low-level effects.
   %
-  In particular, we focus at the two different interactions between
-  state and nondeterminism, known as the local-state and global-state
-  semantics.
+  In particular, we focus on the interaction between state and
+  nondeterminism known as the local-state, as provided by Prolog. We map
+  this high-level semantics in successive steps
+  onto a low-level composite state effect, similar to that managed by Prolog's Warren Abstract
+  Machine.
   %
-  We give translations from the high-level local-state semantics of to
-  the low-level global-state semantics, and even further to only one
-  low-level state effect.
+  We first give a translations from the high-levellocal-state semantics to
+  the low-level global-state semantics, by explicitly restoring state updates on
+  backtracking. Next, we eliminate nondeterminsm altogether in favor of a
+  lower-level state containing a choicepoint stack.
   %
-  We also show how to implement efficient backtracking in global-state
-  semantics by restricting to restorable state updates.
+  Then we avoid copying the state by restricting ourselves to incremental, reversible state updates.
+  We show how these updates can be stored on a trail stack with another state effect.
   %
-  Moreoever, we simulate the local-state semantics with two low-level
-  stacks, a choicepoint stack and a trail stack, similar to the Warren
-  Abstract Machine of Prolog.
-  %
-  We model state and nondeterminism as algebraic effects, interpret
-  them and translate between them using effect handlers.
-  %
-  We prove the correctness of all our translations using program
-  calculation and the fusion laws of effect handlers.
+  We prove the correctness of all our steps using program calculation where
+  the fusion laws of effect handlers play a central role.
 
   %
-  % We model state and nondeterminism with algebraic effects and
-  % handlers, and simulate the high-level local-state semantics with a
-  % single state effect via a sequence of translations.
-  % %
-  % We prove the correctness of translations by equational reasoning on
-  % effect handlers.
+  % We model state and nondeterminism with algebraic effects and handlers, and
+  % simulate the high-level local-state semantics with a single state effect
+  % via a sequence of translations.  % We prove the correctness of translations
+  % by equational reasoning on effect handlers.
   % %
   % %We distinguish between local-state and global-state semantics and
   % %transform the higher-level nondeterminism to state.
