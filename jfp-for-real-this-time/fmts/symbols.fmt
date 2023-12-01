@@ -248,6 +248,8 @@
 %format stackCut = "\Varid{stack_{Cut}}"
 
 %format simulateT = "\Varid{simulate_T}"
+%format simulateF = "\Varid{simulate_F}"
+%format simulateTF = "\Varid{simulate_{TF}}"
 
 % format Stnq = "\Varid{State_{nqueens}}"
 %format queensLocal = "\Varid{queens_{Local}}"

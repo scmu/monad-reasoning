@@ -18,8 +18,9 @@ import Data.STRef
 
 import Background
 import Overview
-import LocalGlobal (local2global, hLocal, comm2)
-import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState)
+import LocalGlobal (local2global, hLocal, comm2, side)
+import NondetState (runNDf, SS(..), nondet2state, extractSS, queensState,
+  popSS, appendSS, pushSS)
 import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put)
 
 \end{code}
@@ -290,6 +291,87 @@ behaves the same as the local-state semantics given by |hLocal|.
 \end{restatable}
 %
 The proof can be found in \Cref{app:final-simulate}.
+
+To show the idea of |simulate| more clearly, we manually fuse it to
+the function |simulateF| defined as follows. The state |CP| contains
+the result list and a choicepoint stack.
+
+\begin{code}
+
+type Comp s f a = s -> Free f (a, s)
+data CP f a s = CP { results :: [a], cpStack :: [Comp (CP f a s, s) f ()] }
+
+simulateF  :: Functor f
+           => Free (StateF s :+: NondetF :+: f) a
+           -> s
+           -> Free f [a]
+simulateF  x s =  results . fst . snd <$>
+                  fold gen (alg1 # alg2 # fwd) x (CP [] [], s)
+  where
+    gen x           (CP xs stack, s) =  case stack of
+                                           [] -> return ((), (CP (xs++[x]) stack, s))
+                                           p:ps -> p (CP (xs++[x]) ps, s)
+    alg1 (Get k)    (CP xs stack, s) =  k s (CP xs stack, s)
+    alg1 (Put t k)  (CP xs stack, s) =  k (CP xs (backtracking s : stack), t)
+    alg2 Fail       (CP xs stack, s) =  case stack of
+                                           [] -> return ((), (CP xs stack, s))
+                                           p:ps -> p (CP xs ps, s)
+    alg2 (Or p q)   (CP xs stack, s) =  p (CP xs (q:stack), s)
+    fwd op          (CP xs stack, s) =  Op (fmap ($(CP xs stack, s)) op)
+    backtracking s  (CP xs stack, _) =  case stack of
+                                          [] -> return ((), (CP xs stack, s))
+                                          p:ps -> p (CP xs ps, s)
+\end{code}
+
+%if False
+Manual fusion of |simulate|:
+\begin{code}
+hLocalFused :: Functor f
+            => Free (StateF s :+: NondetF :+: f) a
+            -> s -> Free f [a]
+hLocalFused = fold gen (alg1 # alg2 # fwd)
+  where
+    gen x s          = return [x]
+    alg1 (Get k) s   = k s s
+    alg1 (Put t k) _ = k t
+    alg2 Fail s      = return []
+    alg2 (Or p q) s  = liftM2 (++) (p s) (q s)
+    fwd op s         = Op (fmap ($s) op)
+
+hGlobalFused :: Functor f
+            => Free (StateF s :+: NondetF :+: f) a
+            -> s -> Free f [a]
+hGlobalFused = fmap (fmap fst) . fold gen (alg1 # alg2 # fwd)
+  where
+    gen x            s = return ([x], s)
+    alg1 (Get k)     s = k s s
+    alg1 (Put t k)   _ = k t
+    alg2 Fail        s = return ([], s)
+    alg2 (Or p q)    s = do (x, s1) <- p s; do (y, s2) <- q s1; return (x++y, s2)
+    fwd op           s = Op (fmap ($s) op)
+
+hGlobalL2GFused :: Functor f
+                => Free (StateF s :+: NondetF :+: f) a
+                -> s -> Free f [a]
+hGlobalL2GFused = fmap (fmap fst) . fold gen (alg1 # alg2 # fwd)
+  where
+    gen x            s = return ([x], s)
+    alg1 :: Functor f => StateF s (s -> Free f ([a], s)) -> s -> Free f ([a], s)
+    alg1 (Get k)     s = k s s
+    alg1 (Put t k)   s = do (x, _) <- k t; return (x, s)
+    alg2 Fail        s = return ([], s)
+    alg2 (Or p q)    s = do (x, s1) <- p s; do (y, s2) <- q s1; return (x++y, s2)
+    fwd op           s = Op (fmap ($s) op)
+
+-- popF = do
+--   SS xs stack <- get
+--   case stack of
+--     []       -> return ()
+--     p : ps   -> do
+--       put (SS xs ps); p
+
+\end{code}
+%endif
 
 %if False
 \begin{code}

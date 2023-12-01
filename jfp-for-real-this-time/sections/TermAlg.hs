@@ -4,7 +4,7 @@ module TermAlg where
 
 import Control.Monad (liftM, ap, liftM2, join)
 import Control.Monad.Trans.State.Lazy (StateT (StateT), runStateT)
-import Data.Functor.Identity (Identity (Identity))
+import Data.Functor.Identity (Identity (Identity, runIdentity))
 import Debug.Trace
 import Control.Monad.List
 
@@ -14,7 +14,7 @@ import Undo
 
 class Functor f => TermAlgebra h f | h -> f where
   var :: forall a . a -> h a
-  con :: forall a . f (h a) -> (h a)
+  con :: forall a . f (h a) -> h a
 
 -- instance Functor f => TermAlgebra (Free f) f where
 --   var = Var
@@ -47,10 +47,10 @@ runCod g m = unCod m g
 ------------------------------------------------------------------------------
 instance TermAlgebra Identity NilF where
   var = return
-  con = undefined
+  con = undefined -- no con needed
 
 run :: Identity a -> a
-run (Identity a) = a
+run = runIdentity
 
 -- newtype Id m a = Id { runId :: m a }
 -- instance Monad m => Functor (Id m) where
@@ -72,7 +72,7 @@ instance Monad m => Functor (MList m) where
   fmap f (MList m) = MList $ fmap (fmap f) m
 
 genMList :: Monad m => a -> MList m a
-genMList = \ x -> MList $ return [x]
+genMList x = MList $ return [x]
 -- instance Monad m => Applicative (MList m) where
 --   pure = return
 --   (<*>) = ap
@@ -100,6 +100,7 @@ instance (TermMonad m f) => TermAlgebra (StateT s m) (StateF s :+: f) where
   con (Inl (Get     k))  = StateT $ \s -> runStateT (k s) s
   con (Inl (Put s'  k))  = StateT $ \s -> runStateT k s'
   con (Inr op)           = StateT $ \s -> con $ fmap (\k -> runStateT k s) op
+
 
 -- newtype StateT' s m a = StateT' { runStateT' :: s -> m (a, s) }
 
