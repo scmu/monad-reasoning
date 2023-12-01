@@ -304,16 +304,16 @@ simulateF  :: Functor f
            -> Free f [a]
 simulateF  x s =  fold gen (alg1 # alg2 # fwd) x (CP [] [], s)
   where
-    gen x           (CP xs stack, s) =  continue (xs ++ [x]) stack s
-    alg1 (Get k)    (CP xs stack, s) =  k s (CP xs stack, s)
-    alg1 (Put t k)  (CP xs stack, s) =  k (CP xs (backtracking s : stack), t)
-    alg2 Fail       (CP xs stack, s) =  continue xs stack s
-    alg2 (Or p q)   (CP xs stack, s) =  p (CP xs (q:stack), s)
-    fwd op          (CP xs stack, s) =  Op (fmap ($(CP xs stack, s)) op)
-    backtracking s  (CP xs stack, _) =  continue xs stack s
-    continue xs stack s              =  case stack of 
-                                          []      -> return xs
-                                          (p:ps)  -> p (CP xs ps, s)
+    gen x           (CP xs stack, s)  =  continue (xs ++ [x]) stack s
+    alg1 (Get k)    (CP xs stack, s)  =  k s (CP xs stack, s)
+    alg1 (Put t k)  (CP xs stack, s)  =  k (CP xs (backtracking s : stack), t)
+    alg2 Fail       (CP xs stack, s)  =  continue xs stack s
+    alg2 (Or p q)   (CP xs stack, s)  =  p (CP xs (q:stack), s)
+    fwd op          (CP xs stack, s)  =  Op (fmap ($(CP xs stack, s)) op)
+    backtracking s  (CP xs stack, _)  =  continue xs stack s
+    continue xs stack s               =  case stack of 
+                                           []      -> return xs
+                                           (p:ps)  -> p (CP xs ps, s)
 \end{code}
 The common carrier of the above algebras is |Comp s f a|. This is a computation
 that takes the current results, choicepoint stack and application state, and returns the list of all results.  The
