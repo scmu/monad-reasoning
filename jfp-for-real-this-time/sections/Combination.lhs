@@ -117,12 +117,19 @@ flatten t   = StateT $ \ (s1, s2) -> alpha <$> runStateT (runStateT t s1) s2
 \end{code}
 where the isomorphism |alpha1| and its inverse |alpha| rearrange a
 nested tuple
+
+\begin{minipage}[t]{0.5\textwidth}
 \begin{code}
 alpha   :: ((a, x), y) -> (a, (x, y))
 alpha ((a, x), y)   = (a, (x, y))
+\end{code}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\begin{code}
 alpha1  :: (a, (x, y)) -> ((a, x), y)
 alpha1 (a, (x, y))  = ((a, x), y)
 \end{code}
+\end{minipage}
 The proof of \Cref{thm:states-state} can be found in
 \Cref{app:states-state}. Instead of proving it directly, we show the
 correctness of the isomorphism of |nest| and |flatten|, and prove the

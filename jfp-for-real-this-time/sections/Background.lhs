@@ -438,8 +438,8 @@ The above monadic version of |queens| essentially assume that each
 searching branch has its own state; we do not need to explicitly
 restore the state when backtracking.
 %
-Though this is a convenient high-level programming assumption for
-programmers, it may not be friendly to low-level implementations and
+Though it is a convenient high-level programming assumption for
+programmers, it causes obstacles to low-level implementations and
 optimisations.
 % is the starting point of this paper.
 In the following sections, we investigate how low-level implementation

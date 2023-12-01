@@ -65,7 +65,7 @@ debugging messages when each of the four ports are used:
 < (putStr "exit" `mplus` side (putStr "redo")) >>
 < return x
 
-This technique was applied in the monadic setting by Hinze \cite{monadicbacktracking},
+This technique was applied in the monadic setting by \citet{monadicbacktracking},
 and it has been our inspiration for expressing the state restoration with global
 state.
 

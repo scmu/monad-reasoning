@@ -54,9 +54,9 @@ a choicepoint stack and a trail stack, simultaneously.
 \label{sec:local2trail}
 
 %
-For example, for the modification-based version |local2globalM|,
+Let us consider modification-based version of simulation |local2globalM|.
 %
-we can model this idea with a trail stack to contain elements of type |Either r
+We can use a trail stack to contain elements of type |Either r
 ()|, where |r| is the type of deltas to the states. Each |Left x| entry represents
 an update to the state with the delta |x|, and each |Right ()| is a
 marker.
@@ -74,26 +74,34 @@ We can easily model the |Stack| data type with Haskell lists.
 newtype Stack s = Stack [s]
 \end{code}
 
-We thread the stack through the computation using the state effect and define primitive pop and push operations  
-as follows.
+We thread the stack through the computation using the state effect and define primitive pop and push operations as follows.
 % -- popStack :: Functor f => Free (StateF (Stack s) :+: f) (Maybe s)
 % -- pushStack :: Functor f => s -> Free (StateF (Stack s) :+: f) ()
+
+\begin{minipage}[t]{0.5\textwidth}
 \begin{code}
-popStack :: MState (Stack s) m => m (Maybe s)
-popStack = do
+popStack  :: MState (Stack s) m
+          => m (Maybe s)
+popStack  = do
   Stack xs <- get
   case xs of
     []       -> return Nothing
-    (x:xs')  -> do put (Stack xs'); return (Just x)
-
-pushStack :: MState (Stack s) m => s -> m ()
+    (x:xs')  -> do  put (Stack xs'); return (Just x)
+\end{code}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+\begin{code}
+pushStack  :: MState (Stack s) m
+           => s -> m ()
 pushStack x = do
   Stack xs <- get
   put (Stack (x:xs))
 \end{code}
+\end{minipage}
 
-We also need to define a new instance of |MState| in order to
-correctly use state operations for the trail stack.
+In order to correctly use state operations to interact with the trail
+stack in the translation, we also need to define a new instance of
+|MState|.
 \begin{code}
 instance (Functor f, Functor g, Functor h)
   => MState s (Free (f :+: g :+: StateF s :+: h)) where
@@ -116,7 +124,7 @@ local2trail = fold Var (alg1 # alg2 # fwd)
     alg2 (Or p q)       = (pushStack (Right ()) >> p) `mplus` (undoTrail >> q)
     alg2 p              = Op . Inr . Inl $ p
     fwd p               = Op . Inr . Inr . Inr $ p
-    undoTrail = do  top <- popStack;
+    undoTrail = do  top <- popStack
                     case top of
                       Nothing          -> return ()
                       Just (Right ())  -> return ()
@@ -263,8 +271,8 @@ general state containing two stacks. Then, we use the handler
 the handler |hState| to interpret the two stacks. Finally, we use the
 function |extractT| to get the final results.
 
-Finally, we can also fuse |simulateT| into a single
-handler.
+As in \Cref{sec:final-simulate}, we can also fuse |simulateT| into a
+single handler.
 \begin{code}
 type Comp f a s r = (WAM f a s r, s) -> Free f [a]
 data WAM f a s r = WAM  { results  :: [a]

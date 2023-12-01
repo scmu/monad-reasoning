@@ -55,8 +55,8 @@ necessary.
 %This is especially efficient when we have mutable states or in-place
 %update.
 In this section, we formalise this intuition with a translation from
-the local-state semantics to the global-state semantics for restorable
-state updates.
+the local-state semantics to the global-state semantics for
+incremental and reversible state updates.
 
 \subsection{State Update and Restoration}
 
