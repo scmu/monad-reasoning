@@ -109,11 +109,11 @@ Instances of |Undo| should satisfy the following law which says
 
 
 Modification-based state effects restrict the general |put| operation
-of |MState| to modification oprations.  We define a new typeclass
+of |MState| to modification operations.  We define a new typeclass
 |MModify s r m| which inherits from |Monad m| and |Undo s r| to
 capture the interfaces of state updates and restoration.  It has three
 operations: a |mget| operation that reads and returns the state
-(similar to the |get| operation of |MState|), a |update r| operation
+(similar to the |get| operation of |MState|), an |update r| operation
 that updates the state with the delta |r|, and a |restore r|
 operations that restores the update introduced by the delta |r|.
 %

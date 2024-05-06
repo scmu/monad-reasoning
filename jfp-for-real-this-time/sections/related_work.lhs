@@ -129,10 +129,10 @@ of effect handlers. They use a specific form of fusion known as fold--build
 fusion or short-cut fusion~\citep{shortcut}. To enable this kind of fusion they
 transform the handler algebras to use the codensity monad as their carrier.
 Their approach is not directly usable because it does not fuse non-handler functions,
-and we derive simpler algebras (not obfuscated by the condisity monad) than those they do.
+and we derive simpler algebras (not obfuscated by the codensity monad) than those they do.
 
 More recently \citet{YangW21} have used the fusion approach of \citet{Wu15} (but with
-the continuation monad rather than the condensity monad) for reasoning;
+the continuation monad rather than the codensity monad) for reasoning;
 they remark that, although handlers are composable, the
 semantics of these composed handlers are not always obvious and that
 determining the correct order of composition to arrive at a desired
@@ -161,6 +161,6 @@ that no other effects are invoked.
 
 Another precursor is the work of \cite{Seynaeve20}, which establishes similar results as
 those in \Cref{sec:sim-nondet-state}. However, instead of generic definitions for the free 
-monad and its fold, they use a specialized free monad for nondeterminism and explicitly recursive
-handler functions. As a consequence, their proofs use structural induction rather than fold fusion.
+monad and its fold, they use a specialized free monad for nondeterminism and ordinary recursive
+functions for handling. As a consequence, their proofs use structural induction rather than fold fusion.
 Furthermore, they did not consider other effects either.

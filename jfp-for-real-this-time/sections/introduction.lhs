@@ -9,14 +9,14 @@
 % \subsection{Overview}
 % \label{sec:overview}
 
-The trade-off between ``high-level'' and ``low-level'' styles of programming is almost as old as the field of computer sciences itself.
+The trade-off between ``high-level'' and ``low-level'' styles of programming is almost as old as the field of computer science itself.
 In a high-level style of programming, we lean on abstractions to make our
 programs easier to read and write, and less error-prone.  We pay for this
 comfort by giving up precise control over the underlying machinery; we forego
 optimisation opportunities or have to trust a (usually opaque) compiler to
 perform low-level optimisations for us. For performance-sensitive applications, compiler optimisations
 are not reliable enough; instead we often resort to lower-level programming
-techniques ourselves.  Although they allow a
+techniques ourselves.  Although these lower-level programming techniques allow a
 fine-grained control over program execution and the implementation of
 optimisation techniques, they tend to be harder to write and not compose very well.  This is an
 important trade-off to take into account when choosing an appropriate programming language
@@ -36,10 +36,10 @@ This article investigates how we can construct programs that are most
 naturally expressed with a high-level effect, but where we still want access to
 the optimisation opportunities of a lower-level effect. In particular,
 inspired by Prolog and Constraint Programming systems, we investigate programs
-that rely on the high-level interaction between the nondeterminism and state
+that rely on high-level interaction between the nondeterminism and state
 effects which we call \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
-\citep{AICPub641:1983,AitKaci91}, we show how these can be simulated in terms of the low-level
+\citep{AICPub641:1983,AitKaci91}, we show how these high-level effectes can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimisations like exploiting mutable state
 for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing

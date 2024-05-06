@@ -198,7 +198,7 @@ The modifcation-based state models the state of the program.
 The choicepoint stack stores the remaining branches to implement the
 nondeterministic searching.
 %
-The trail stack stores the privous state updates to implement the
+The trail stack stores the previous state updates to implement the
 backtracking.
 
 The combined simulation function |simulateT| is defined

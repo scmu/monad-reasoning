@@ -237,7 +237,7 @@ In fact, two stronger \textit{contextual} equalities hold:
 These equations state that the intepretations of the left- and right-hand sides are
 indistinguishable even when put in a larger program context |>>= k|. 
 They follow from the definitions of |hND| and |(>>=)|, as well as the associativity
-and identity proprerties of |(++)|.
+and identity properties of |(++)|.
 
 We obtain the two non-contextual equations as a corollary by choosing |k = return|.
 

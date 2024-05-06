@@ -103,7 +103,7 @@ state-based implementation to implement the nondeterminism mechanism.
 \subsection{Simulating Nondeterminism with State}
 \label{sec:sim-nondet-state}
 
-The main idea of simulating nondeterminism with state is to explictly
+The main idea of simulating nondeterminism with state is to explicitly
 manage
 \begin{enumerate}
 \item
@@ -115,7 +115,7 @@ a list of yet to be explored branches, which we call a |stack|.
 This stack corresponds to the choicepoint stack in Prolog.
 %
 When entering one branch, we can push other branches to the stack.
-When leaving the branch, we collect its result and pop a new branch
+ehen leaving the branch, we collect its result and pop a new branch
 from the stack to continue.
 
 We define a new type |S a| consisting of the |results| and |stack|.

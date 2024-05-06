@@ -122,7 +122,7 @@ $
 \paragraph*{Monads}\
 Monadic side-effects~\citep{Moggi91}, the main focus of this paper,
 are those that can dynamically determine what happens next.
-A monad |m :: * -> *| is a functor instantiates the monad type class,
+A monad |m :: * -> *| is a functor which instantiates the monad type class,
 which has two operations return (|eta|) and bind (|>>=|).
 
 < class Functor m => Monad m where
@@ -329,7 +329,7 @@ queensNaive n = choose (permutations [1..n]) >>= filtr valid
 \end{code}
 The program |queensNaive 4 :: [[Int]]| gives as result |[[2,4,1,3],
 [3,1,4,2]]|.  The program uses a generate-and-test strategy: it
-generates all permutations of queens as candiate solutions, and then
+generates all permutations of queens as candidate solutions, and then
 tests which ones are valid.
 % This version enumerates the entire search space to find solutions.
 
