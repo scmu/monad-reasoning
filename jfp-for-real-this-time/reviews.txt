@@ -119,7 +119,7 @@ that is not the focus of our paper. Instead, it is reasoning, which is easier
 to do and to understand on a more bare-bones handler interface.
 
 At the same time, we have used type class constraints like MState and MNondet
-to leave room for generality. Instantiating these constraitns with appropriate
+to leave room for generality. Instantiating these constraints with appropriate
 free monads allows for the inductive reasoning and fusion methodology we
 employ.  Yet, the results we obtain can also be transferred to other monad
 instances, with parametricity as a tool. For instance, through parametricity
@@ -131,6 +131,12 @@ where p in the left-hand side has type Free (StateF S :+: F) A) and
 in the right-hand side StateT S (Free F) A.
 
 TODO: We will explicitate our motivation for this handler interface in the paper.
+
+WT: I don't parse the type of p, but I guess the point here is that
+h_State translates the freemonad interpretations of state operations
+to their StateT monad interpretations. How is parametricity used in
+the equation? Does it mean that there is only one lawful
+implementation for h_State?
 
 > Referee: 2
 >
@@ -199,6 +205,8 @@ CHANGED to "these high-level effects"
 
 TODO: add qualifying paragraph
 
+WT: I don't really understand this question.
+
 > 143 : is a functor instantiates -> is a functor which instantiates
 
 FIXED
@@ -218,6 +226,8 @@ FIXED
 > 441 : What's the associativity for :+:
 
 TODO
+
+WT: right associative
 
 > 499 : globale -> global
 
@@ -243,9 +253,17 @@ FIXED
 
 TODO
 
+WT: Right. I don't know. Probably because of some historical reason :)
+
 > 1016 : "Instead of proving it directly" Why is the indirect approach better?
 
 TODO
+
+WT: Applying fusion to each side once is easier than apply fusion
+twice to one side, because the fused version is usually more
+complicated than its components. (Though in the proof we actually
+applied fusion to the left-hand side and did a direct induction on the
+right-hand side.)
 
 > 1020 : simmuarises -> summarises
 
