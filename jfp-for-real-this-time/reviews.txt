@@ -7,89 +7,89 @@
 
 
 > Reviewers' Comments to Author:
-> 
+>
 > Referee: 1
-> 
+>
 > Comments to the Author
-> 
+>
 > # Summary
-> 
+>
 > There exist two types of effect interactions between state and nondeterminism:
 > global and local states. A global state carries a single state across all
 > nondeterministic branches, whereas local states offer each branch its own state
 > copy. Local states are good for reasoning, while global states prove
 > advantageous for performance.
-> 
+>
 > This paper studies global states, local states, and non-determinism through
 > three key steps:
-> 
+>
 > 1. Translation of local state to global state
 > 2. Translation of non-determinism to global state
 > 3. Merging two states to a single state of tuples
-> 
+>
 > At this point, one can implement non-determinism and local states using global
 > states.
-> 
+>
 > The paper further improves the efficiency of the approach, by refining step 1
 > through two more efficient implementations using
-> 
+>
 > (a) Updates and restoration: instead of explicitly copying the local-state
 > semantics into the global-state semantics, this approach keeps track of the
 > state modifications and undoes them when necessary.
-> 
+>
 > (b) Trail stack: a technique that batches consecutive restorative steps.
-> 
+>
 > The framework is built on top of effect handlers implemented as free monads,
 > demonstrating equivalence properties through program calculation and fusion
 > laws.
-> 
+>
 > Overall, this is a fun paper to read, and aligns well with JFP's scope.
-> 
+>
 > # Comments
-> 
+>
 > I have two main comments regarding monad instances and effect handlers:
-> 
+>
 > 1. The effect handler interface appears somewhat restricted.
 > 2. I am curious about the extent to which the results are specific to algebraic
 >   effects and handlers.
-> 
+>
 > ## The effect handler interface
-> 
+>
 > The paper introduces the following monad instance:
-> 
+>
 > ```
 > instance (...) => MState s (Free (State s :+: f))
 > ```
-> 
+>
 > This interface requires `State s` to be exactly the first effect in the effect
 > list. Similarly, the interface
-> 
+>
 > ```
 > instance (...) => MNondet (Free (g :+: Nondet :+: f))
 > ```
-> 
+>
 > requires `Nondet` to be exactly the second effect in the effect list.
-> 
+>
 > As such, `Free (State s :+: Nondet :+: f)` supports both state and
 > nondeterminism, while `Free (Nondet :+: State s :+: f)` does not.
-> 
+>
 > This necessitates the `<=>` function to explicitly swap the order of two
 > functors:
-> 
+>
 > ```
 > (<=>) :: (...) => Free (f1 :+:f2 :+:f) a -> Free (f2 :+: f1 :+: f) a
 > ```
-> 
+>
 > This approach is unsatisfying for two reasons. First, it essentially requires
 > the user to explicitly insert coercions to witness the equivalence of effect
 > lists. This seems to go against the modularity typically desired in effect
 > handler, while being closer to monad transformers that require explicit lifts.
-> 
+>
 > Consequently, this interface tries to achieve a form of modularity using type
 > classes. For example, instead of returning `Free ...`, the type of `queens` is:
-> 
+>
 > `queens :: (MState (Int, [Int]) m, MNondet m) => Int -> m [Int]`
-> 
+>
 > However, all `MState` and `MNondet` instances, in my opinion, are quite
 > distracting, giving the impression that effect handlers must implement monad
 > instances to be effective. Would it be possible to get rid of those monadic
@@ -97,19 +97,19 @@
 > operations?
 >
 > ## Specific to effect handlers
-> 
+>
 > The techniques for implementing local states and non-determinism using global
 > states are intriguing.
-> 
+>
 > However, I kept wondering: To what extent are these techniques specific to
 > effect handlers per se, considering that many steps apply more general ideas?
 > One might implement a monadic interface for `queens` as well as other functions,
 > and reason about equivalence between different monadic implementations?
-> 
+>
 > While the paper notes that using effect handlers enable one to make use of the
 > fusion laws, it seems to unnecessarily tie results exclusively to effect
 > handlers.
-> 
+>
 > While perhaps no fundamental changes are necessary, this is a question worth
 > discussing and clarifying in the paper?
 
@@ -123,7 +123,7 @@ to leave room for generality. Instantiating these constraitns with appropriate
 free monads allows for the inductive reasoning and fusion methodology we
 employ.  Yet, the results we obtain can also be transferred to other monad
 instances, with parametricity as a tool. For instance, through parametricity
-we have that, given (p :: MState S m) :: m A and Functor F, 
+we have that, given (p :: MState S m) :: m A and Functor F,
 
 	h_State p = p
 
@@ -131,25 +131,25 @@ where p in the left-hand side has type Free (StateF S :+: F) A) and
 in the right-hand side StateT S (Free F) A.
 
 TODO: We will explicitate our motivation for this handler interface in the paper.
- 
+
 > Referee: 2
-> 
+>
 > Comments to the Author
-> 
+>
 > SUMMARY
-> 
+>
 > The paper show how to use algebraic effects to refine through successive
-> transformations a program with nondeterminism and state. 
+> transformations a program with nondeterminism and state.
 > It starts with a slow but high-level implementation (local state) and after
 > several translations ends up with a low-level program which incorporates
-> optimisations seen in the WAM. 
-> 
+> optimisations seen in the WAM.
+>
 > The implementation is done using rather simple Haskell programs and the
 > correctness of all the transformations is proved, using the usual
-> fast-and-loose approach of equational reasoning. 
-> 
+> fast-and-loose approach of equational reasoning.
+>
 > EVALUATON
-> 
+>
 > I think the paper is rather well-written and cites the relevant literature.
 > The structure of the paper is clear, and with the help of diagrams the reader
 > always know what is going on. The background is appropriately introduced, and
@@ -159,22 +159,22 @@ TODO: We will explicitate our motivation for this handler interface in the paper
 > would help to make them as crystal clear as the previous ones.
 
 TODO
- 
+
 > The paper makes a good contribution to reasoning about programs with effects,
 > making good use of the "effect rewriting" capability of handlers of algebraic
 > effects, and using an example that, while somewhat academic, it's clearly of
 > practical importance.
-> 
+>
 > CONCLUSION
-> 
+>
 > The paper show an interesting and novel formal derivation of a program with
 > non-determinism and state represented using algebraic effects.
 > I'm happy to recommend acceptance.
-> 
+>
 > TYPOS AND MINORS COMMENTS FOR THE AUTHORS
-> 
+>
 > Decide on whether to use American or British English (but not both).
-> 
+>
 > 24:  nondeterminsm ->  nondeterminism
 
 FIXED
@@ -277,13 +277,13 @@ FIXED
 
 > 1559 : "explicitly recursive handler functions", is this referring to shallow handlers?
 
-No, they use ordinary functions. We have formulated to "ordinary recursive functions for handling" 
+No, they use ordinary functions. We have formulated to "ordinary recursive functions for handling"
 to clarify this.
- 
+
 > Referee: 3
-> 
+>
 > Comments to the Author
-> 
+>
 > This paper presents an approach to translate from high-level effects to
 > low-level effects. This allows one to write a program using high-level effects,
 > but the code can be translated and optimized using low-level effects. The
@@ -295,7 +295,7 @@ to clarify this.
 > state is still "duplicated". However, the paper continues to show that, by using a
 > structure similar to Prolog's Warren Abstract Machine, the program can be
 > optimized because we only keep track of incremental, reversible state updates.
-> 
+>
 > I find this paper generally well-written, easy to follow, and intellectually
 > enlightening. Distinguishing effects similarly to how we distinguish
 > "high-level" and "low-level" programming is quite novel and the paper makes a
@@ -304,7 +304,7 @@ to clarify this.
 > potential for a series of new research work following this. Besides those main
 > strengths, I also appreciate the paper's thoughtful discussion on type-class
 > laws.
-> 
+>
 > On the other hand, I am disappointed to see that for a paper that focuses on
 > high-level programming with low-level optimizations, there is no experiment to
 > show how effective these optimizations are. I believe these questions are
@@ -314,9 +314,9 @@ to clarify this.
 > either DFS or BFS with pruning?
 
 TODO
- 
+
 > Suggestions for presentation:
-> 
+>
 > - l. 182, the footnote: "As argued by Kiselov (2015), these laws differ... We
 >   choose to present a minimal setting for nondeterminism here." It was not clear
 >   to me why choosing a minimal setting would not impact the correctness of this
@@ -324,86 +324,86 @@ TODO
 >   explanation here.
 
 TODO
- 
+
 > - l. 232-235: I know what the n-queens problem is, but for people who are not
 >   familiar with this problem or chess, it would be best to add a short sentence
 >   explaining when a queen can attack another piece.
 
 TODO
- 
+
 > - l. 652: The type signature for putR is polymorphic, but the reasoning followed
 >   seems to rely on m being Global? For example, if I have a different monad that
 >   prioritizes q in p [] q, the explanations and Figure. 1 would no longer be
 >   correct, right?
 
 TODO
- 
+
 > - l. 704-712: I understand it eventually, but the first time I read this
 >   paragraph, I was very confused. I believe the reason is that this paragraph is
 >   trying to introduce three different types of information in one paragraph.
 
 TODO
- 
+
 >   1. I think that the first sentence, which states that if putR is instantiated
 >   with Global, satisfies local laws as well, should be part of "State-Restoring
 >   Put", as this is the property of putR.
-> 
+>
 >   2. The paragraph then talks about the translation method, which is replacing
 >   "put" with "putR". Here, it would be useful to emphasize which monad we are at
 >   at each step. At first, I wasn't sure when replacing "put" with "putR", should
 >   I consider "putR" instantiated with the local state or the global state.
-> 
+>
 >   3. The third thing the paragraph talks about is when executing the translation
 >   strategy, we must replace _all_ occurrences. It might be useful to start this
 >   discussion in a new paragraph, possibly after an example of the translation
 >   (perhaps even after the definition of local2global).
-> 
+>
 > Other comments:
-> 
+>
 > - l. 49: "We say that an effect is lower-level than another effect when the
 >   lower-level effect can simulate the high-level effect." What about effects
 >   that can simulate each other? I am also curious if one can simulate global
 >   state using a local state?
 
 TODO
- 
+
 > - l. 170-172: What's the relation between MNondet and Haskell's MonadPlus?
 
 TODO
- 
+
 > - l. 334: Out of curiosity, what is the reason that the paper chooses to use
 T>   free monads rather than freer monads? Is it for simplicity or are there any
 >   deeper reasons?
 
 The free monad is simpler (does not use GADTs) and is arguably better known.
- 
+
 > - l. 592-597: Isn't this implementation of nondeterministic choice essentially a
 >   sequential operation?
 
 TODO
- 
+
 > - l. 660: "...then restore the it to..." Remove "the".
 
 FIXED
- 
+
 > - l. 854-857: I don't understand why we need both push and append here. What
 >   would be the issue if we only have one of them? Would there be bugs or
 >   performance issues? Relatedly, can you replace the stack with a queue to model
 >   BFS?
 
 TODO
- 
+
 > - l. 942: It is not clear to me what's the benefit of modeling two states with
 >   one state.
 
 TODO
- 
+
 > - Fig. 4 and Fig. 5 remind me of some of the itree papers. In particular, they
 >   remind me of Fig. 2 in "Formal Reasoning about Layered Monadic Interpreters"
 >   by Yoon et al. It's not the same thing but there seem to be similarities.
 
 TODO
- 
+
 > - Section 7: I am curious about the relation between this approach and STM
 >   (Software Transactional Memory).
 
