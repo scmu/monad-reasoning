@@ -138,6 +138,8 @@ to their StateT monad interpretations. How is parametricity used in
 the equation? Does it mean that there is only one lawful
 implementation for h_State?
 
+==> Tom addresses this
+
 > Referee: 2
 >
 > Comments to the Author
@@ -165,6 +167,8 @@ implementation for h_State?
 > would help to make them as crystal clear as the previous ones.
 
 TODO
+
+==> Tom
 
 > The paper makes a good contribution to reasoning about programs with effects,
 > making good use of the "effect rewriting" capability of handlers of algebraic
@@ -205,6 +209,8 @@ CHANGED to "these high-level effects"
 
 TODO: add qualifying paragraph
 
+==> Tom 
+
 WT: I don't really understand this question.
 
 > 143 : is a functor instantiates -> is a functor which instantiates
@@ -214,6 +220,8 @@ FIXED
 > 168 : Is this notion of nondeterminism the same as the one in the PPDP 2015 paper by the second author? If not, what are the differences?
 
 TODO
+
+==> Tom 
 
 > 245 : candiate -> candidate
 
@@ -227,7 +235,7 @@ FIXED
 
 TODO
 
-WT: right associative
+==> WT: right associative
 
 > 499 : globale -> global
 
@@ -253,13 +261,15 @@ FIXED
 
 TODO
 
-WT: Right. I don't know. Probably because of some historical reason :)
+==> WT: Right. I don't know. Probably because of some historical reason :)
+    Argue that some theorems look nicer. No essential difference.
+
 
 > 1016 : "Instead of proving it directly" Why is the indirect approach better?
 
 TODO
 
-WT: Applying fusion to each side once is easier than apply fusion
+==> WT: Applying fusion to each side once is easier than apply fusion
 twice to one side, because the fused version is usually more
 complicated than its components. (Though in the proof we actually
 applied fusion to the left-hand side and did a direct induction on the
@@ -284,6 +294,7 @@ FIXED
 > 1530 : at the a handles a
 
 TODO
+==> Tom
 
 > 1537 : condisity -> codensity
 
@@ -333,6 +344,11 @@ to clarify this.
 
 TODO
 
+==> Wenhao explores benchmarks 
++ add discussion that Haskell implementation only models existing efficient systems
+  and does not exhibit performance improvements due to aspects like laziness 
+  and overhead of algebraic effects and handlers
+
 > Suggestions for presentation:
 >
 > - l. 182, the footnote: "As argued by Kiselov (2015), these laws differ... We
@@ -342,12 +358,15 @@ TODO
 >   explanation here.
 
 TODO
+==> Tom
+    based on Prolog, existing systems
 
 > - l. 232-235: I know what the n-queens problem is, but for people who are not
 >   familiar with this problem or chess, it would be best to add a short sentence
 >   explaining when a queen can attack another piece.
 
 TODO
+==> Tom
 
 > - l. 652: The type signature for putR is polymorphic, but the reasoning followed
 >   seems to rely on m being Global? For example, if I have a different monad that
@@ -355,12 +374,14 @@ TODO
 >   correct, right?
 
 TODO
+==> Tom check
 
 > - l. 704-712: I understand it eventually, but the first time I read this
 >   paragraph, I was very confused. I believe the reason is that this paragraph is
 >   trying to introduce three different types of information in one paragraph.
 
 TODO
+==> Tom check
 
 >   1. I think that the first sentence, which states that if putR is instantiated
 >   with Global, satisfies local laws as well, should be part of "State-Restoring
@@ -384,10 +405,17 @@ TODO
 >   state using a local state?
 
 TODO
+==> Wenhao: informal notion
+    (Tom: I don't think we can modularly simulate global state with local state.
+          E.g., Prolog systems have to add additional built-ins like assert and
+                nb_setval/getval for global state.)
 
 > - l. 170-172: What's the relation between MNondet and Haskell's MonadPlus?
 
 TODO
+==> Tom: MonadPlus has a similar signature, but does not associate any laws
+         with its methods. To be explicit about having associated laws, we have
+         introduced a different type class. We will clarify this in the text.
 
 > - l. 334: Out of curiosity, what is the reason that the paper chooses to use
 T>   free monads rather than freer monads? Is it for simplicity or are there any
@@ -400,29 +428,40 @@ The free monad is simpler (does not use GADTs) and is arguably better known.
 
 TODO
 
+Yes, it is. This is the standard semantics in the literature.
+
 > - l. 660: "...then restore the it to..." Remove "the".
 
 FIXED
 
 > - l. 854-857: I don't understand why we need both push and append here. What
 >   would be the issue if we only have one of them? Would there be bugs or
->   performance issues? Relatedly, can you replace the stack with a queue to model
->   BFS?
+>   performance issues? 
 
-TODO
+No, the two operations do different things. The push adds a branch and append adds
+a solution. These are stored in separate lists.
+
+>   Relatedly, can you replace the stack with a queue to model BFS?
+
+Yes, that is a good observation. We've added a remark about this in the paper. TODO
 
 > - l. 942: It is not clear to me what's the benefit of modeling two states with
 >   one state.
 
-TODO
+It is only a minor issue: we find the final result more pleasing if it features a single
+state monad. 
 
 > - Fig. 4 and Fig. 5 remind me of some of the itree papers. In particular, they
 >   remind me of Fig. 2 in "Formal Reasoning about Layered Monadic Interpreters"
 >   by Yoon et al. It's not the same thing but there seem to be similarities.
 
 TODO
+==> read the paper
+    One difference is that itrees are coinductively defined whereas
+    we rely on the inductive structure of free monads for our proofs.
 
 > - Section 7: I am curious about the relation between this approach and STM
 >   (Software Transactional Memory).
 
 TODO
+==> read the paper
