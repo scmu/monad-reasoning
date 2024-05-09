@@ -120,8 +120,9 @@ have investigated a framework for encoding axioms or effect theories in the type
 system: the type of an effectful function declares the operators used in the 
 function, as well as the equalities that handlers for these operators should
 comply with.  The type of a handler indicates which operators it handles and
-which equations it complies with.  This allows expressing at the a handles a
-higher-level effect in terms of a lower-level one.
+which equations it complies with.  This allows expressing at the type level
+that a handler reduces a
+higher-level effect to a lower-level one.
 
 
 \citet{Wu15} first presented fusion as a technique for optimizing compositions

@@ -293,8 +293,7 @@ FIXED
 
 > 1530 : at the a handles a
 
-TODO
-==> Tom
+We have fixed the sentence.
 
 > 1537 : condisity -> codensity
 
@@ -357,9 +356,14 @@ TODO
 >   work the first time I read this part. Perhaps it's worth adding a brief
 >   explanation here.
 
-TODO
-==> Tom
-    based on Prolog, existing systems
+All our formal theorems are proven correct by equational reasoning
+with respect to the reference semantics for nondeterminsm we choose. 
+We don't believe there is any doubt about their correctness in this sense.
+
+The only question is what reference semantics to used. The one we use
+(without commutativity and idempotence laws) conforms to the well-known
+list monad and to the behavior of Prolog (where the order of results and
+possible duplicates can be observed). We have added the latter to the footnote.
 
 > - l. 232-235: I know what the n-queens problem is, but for people who are not
 >   familiar with this problem or chess, it would be best to add a short sentence
@@ -412,10 +416,9 @@ TODO
 
 > - l. 170-172: What's the relation between MNondet and Haskell's MonadPlus?
 
-TODO
-==> Tom: MonadPlus has a similar signature, but does not associate any laws
-         with its methods. To be explicit about having associated laws, we have
-         introduced a different type class. We will clarify this in the text.
+MonadPlus has a similar signature, but does not associate any laws
+with its methods. To be explicit about having associated laws, we have
+introduced a different type class. We have clarified this in the footnote.
 
 > - l. 334: Out of curiosity, what is the reason that the paper chooses to use
 T>   free monads rather than freer monads? Is it for simplicity or are there any
@@ -425,8 +428,6 @@ The free monad is simpler (does not use GADTs) and is arguably better known.
 
 > - l. 592-597: Isn't this implementation of nondeterministic choice essentially a
 >   sequential operation?
-
-TODO
 
 Yes, it is. This is the standard semantics in the literature.
 
