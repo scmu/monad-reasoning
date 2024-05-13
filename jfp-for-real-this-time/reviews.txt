@@ -368,8 +368,7 @@ possible duplicates can be observed). We have added the latter to the footnote.
 >   familiar with this problem or chess, it would be best to add a short sentence
 >   explaining when a queen can attack another piece.
 
-TODO
-==> Tom
+We have added such a sentence.
 
 > - l. 652: The type signature for putR is polymorphic, but the reasoning followed
 >   seems to rely on m being Global? For example, if I have a different monad that

@@ -316,7 +316,9 @@ instance Applicative (State s) where
 The n-queens problem used here is an adapted and simplified version from that of
 \cite{Gibbons11}.
 The aim of the puzzle is to place $n$ queens on a $n \times n$ chess board such
-that no two queens can attack each other.
+that no two queens can attack each other. This means that no two queens should
+be placed on the same row, the same column or the same diagonal of the chess board.
+
 Given $n$, we number the rows and columns by |[1..n]|.
 Since all queens should be placed on distinct rows and distinct columns, a
 potential solution can be represented by a permutation |xs| of the list |[1..n]|,
