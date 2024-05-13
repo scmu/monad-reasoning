@@ -181,7 +181,7 @@ As argued by \cite{Kiselyov:15:Laws}, these laws differ depending on
 how the monad is used and how it should interact with other effects.
 The standard |MonadPlus| type class has no laws associated. We introduce
 a different type class, |MNondet|, to impose the minimal set of laws for
-nondeterminism we require. We choose these laws because they
+nondeterminism from \cite{RivasJS18}. We choose these laws because they
 are consistent with both the list monad and with the behavior of Prolog.
 }
 

@@ -219,9 +219,8 @@ FIXED
 
 > 168 : Is this notion of nondeterminism the same as the one in the PPDP 2015 paper by the second author? If not, what are the differences?
 
-TODO
-
-==> Tom 
+Yes, it is the same (generalized) near-semiring structure. We now point this
+out in the footnote, referring to the extended version of the PPDP 2015 paper.
 
 > 245 : candiate -> candidate
 
