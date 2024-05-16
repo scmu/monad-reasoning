@@ -407,8 +407,8 @@ alters a program written for local-state semantics to a program that,
 when interpreted under global-state semantics, behaves exactly the
 same as the original program interpreted under local-state semantics.
 %
-This translation makes explicit copying of the whole state and relies
-on using the nondeterminism mechanism to insert state-restoring
+This translation explicitly copies the whole state and relies
+on the nondeterminism mechanism to insert state-restoring
 branches.
 %
 We will show other translations from local-state semantics to
@@ -479,8 +479,11 @@ nondeterminism in \Cref{sec:undo} and \Cref{sec:trail-stack}.
 \paragraph*{State-Restoring Put}\
 %
 Central to the implementation of backtracking in the global state setting is
-the backtracking variant of |put|.
-Going forward, such a state-restoring |putR| modifies the state as usual,
+the backtracking variant |putR| of |put|.
+The idea is that |putR|, when run with a global state, satisfies laws
+(\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and
+the local-state laws.
+Going forward, |putR| modifies the state as usual,
 but, when backtracked over, it restores the old state.
 
 % This is accomplished with the following definition:
@@ -491,6 +494,7 @@ putR s = get >>= \ s' -> put s `mplus` side (put s')
 \end{code}
 \label{eq:state-restoring-put}
 
+\noindent
 Here the |side| branch is executed for its side-effect only; it fails
 before yielding a result.
 \begin{code}
@@ -565,87 +569,14 @@ state-restoring put.
 
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph*{Translation with State-Restoring Put}\
-%
-The idea is that |putR|, when run with a global state, satisfies laws
-(\ref{eq:put-put}) to (\ref{eq:put-left-dist}) --- the state laws and
-the local-state laws.
-Then, one can take a program written for local-state semantics, replace
-all occurrences of |put| by |putR|, and run the program with a global state.
-However, to satisfy all of these laws,
-care should be taken to replace \emph{all} occurrences of |put|.
-Particularly, placing a program in a larger context, where |put| has not been replaced, can change the meaning
-of its subprograms.
-An example of such a problematic context is |(>> put t)|, where the |get|-|put| law
-(\ref{eq:get-put}) breaks and programs |get >> putR| and |return ()| can be
-differentiated:
 
-\begin{minipage}{0.7\textwidth}
-<    (get >> putR) >> put t
-< = {-~  definition of |putR|  -}
-<    (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
-< = {-~  get-get (\ref{eq:get-get})  -}
-<    (get >>= \s -> put s `mplus` side (put s)) >> put t
-< = {-~  right-distributivity (\ref{eq:mplus-dist})  -}
-<    (get >>= \s -> (put s >> put t) `mplus` (side (put s)) >> put t)
-< = {-~  left-identity (\ref{eq:mzero-zero})  -}
-<    (get >>= \s -> (put s >> put t) `mplus` side (put s))
-< = {-~  put-put (\ref{eq:put-put})  -}
-<    (get >>= \s -> put t `mplus` side (put s))
-\end{minipage}%
-\begin{minipage}{0.3\textwidth}
-<    return () >> put t
-< =  put t
-\end{minipage}
-
-Those two programs do not behave in the same way when |s /= t|.
-%
-Hence, only provided that \emph{all} occurences of |put| in a program are replaced by |putR|
-can we simulate local-state semantics. The replacement itself as well as the correctness statement
-that incorporates this requirement can be easily expressed with effect handlers. As we will explain
-below we need to articulate this global replacement in the
-correctness proof. This requires using the {\bf fusion-post'} rule rather than the more widely used {\bf fusion-post} rule.
-
-%\paragraph*{Proving the |putR| Operation Correct}
-% \label{sec:putr}
-% It is time to give a more formal definition for the translation between
-% global-state and local-state semantics using the free monad representation.
-% We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
-% notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
-% constructors. Their implementations are straightforwardly defined in terms of
-% |Get|, |Put|, |Or| and |Fail|.
-
-% %if False
-% \begin{code}
-% getOp     :: (s -> Free (StateF s :+: NondetF :+: f) a)
-%           -> Free (StateF s :+: NondetF :+: f) a
-% getOp     = Op . Inl . Get
-
-% putOp     :: s
-%           -> Free (StateF s :+: NondetF :+: f) a
-%           -> Free (StateF s :+: NondetF :+: f) a
-% putOp s   = Op . Inl  . Put s
-
-% orOp      :: Free (StateF s :+: NondetF :+: f) a
-%           -> Free (StateF s :+: NondetF :+: f) a
-%           -> Free (StateF s :+: NondetF :+: f) a
-% orOp p q  = (Op . Inr . Inl) (Or p q)
-
-% failOp    :: Free (StateF s :+: NondetF :+: f) a
-% failOp    = (Op . Inr . Inl) Fail
-% \end{code}
-% %endif
-
-% We can then define |putROp| in terms of these helper functions.
-% \begin{code}
-% putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
-% putROp t k = getOp (\s -> (putOp t k) `orOp` (putOp s failOp))
-% \end{code}
-% Note the similarity with the |putR| definition (\Cref{eq:state-restoring-put}) of the previous paragraph.
-% Here, we use a continuation-based representation, from which we can always recover the
-% representation of |putR| by setting the continuation to |return|.
-
-We realize the global replacement of |put| with
-a |putR| with the effect handler |local2global|:
+We do not expect the programmer to program against the global-state semantics directly
+and use the state-restoring |putR| as they see fit, as this can be quite confusing
+and error-prone. Instead we provide an automatic translation: 
+The programmer writes their program against the local-state semantics and uses
+the regular |put|. We then then translate the local-state semantics program
+to a corresponding global-state semantics program using
+the effect handler |local2global|:
 \begin{code}
 local2global  :: Functor f
               => Free (StateF s :+: NondetF :+: f) a
@@ -655,15 +586,34 @@ local2global = fold Var alg
     alg (Inl (Put t k)) = putR t >> k
     alg p               = Op p
 \end{code}
-% Now, we want to prove this translation correct, but what does correctness mean
-% in this context?
-% Informally stated, it should transform between local-state and global-state
-% semantics.
-% For simplicity, we can implicitly assume
-% commutativity and associativity of the coproduct operator |(:+:)|
-% and omit the |comm2| in the definition of |hGlobal|.
+This handler maps the |put| with local-state semantics onto the state-restoring |putR| with global-state semantics. All other local-state operations are mapped onto their global-state counterpart.
 
-The following theorem shows that the translation |local2global|
+For example, recall the backtracking algorithm |queens| for the n-queens example in
+\Cref{sec:motivation-and-challenges}.
+%
+It is initially designed to run in the local-state semantics because
+every branch maintains its own copy of the state and has no influence
+on other branches. We can handle it with |hLocal| as follows.
+%
+\begin{code}
+queensLocal :: Int -> [[Int]]
+queensLocal = hNil . flip hLocal (0, []) . queens
+\end{code}
+% % For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
+%
+With the simulation |local2global|, we can also translate |queens| to
+an equivalent program in global-state semantics and handle it with
+|hGlobal|.% The correctness is obvious from \Cref{thm:local-global}.
+% Using the simulation function |local2global|, we can also have a
+% function |queensGlobal| which solves the n-queens problem using the
+% handler |hGlobal| for global-state semantics.
+\begin{code}
+queensGlobal :: Int -> [[Int]]
+queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
+\end{code}
+% These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
+
+The following theorem guarantees that the translation |local2global|
 preserves the meaning when switching from local-state to global-state
 semantics:
 %
@@ -722,7 +672,7 @@ appropriate |alg'| such that |alg' (fmap hGlobal t)| restores the state for any
 |t| of type |(StateF s :+: NondetF :+: f) (Free (StateF s :+: NondetF :+: f)
 a)|.
 
-Fortunately, we do not need such an |alg'|. As we have already pointed out, we
+Fortunately, we do not need such an |alg'|. We
 can assume that the subterms of |t| have already been transformed by
 |local2global|, and thus all occurrences of |Put| appear in the |putR|
 constellation.
@@ -753,30 +703,91 @@ back to its initial value.
 We elaborate each of these steps in \Cref{app:local-global}.
 \end{proof}
 
-% %-------------------------------------------------------------------------------
-\paragraph*{N-queens with Global-State Semantics}\
+\paragraph*{Note on Global Replacement}
+To preserve the behavior when going from local-state to global-state semantics,
+care should be taken to replace \emph{all} occurrences of |put|.
+Particularly, placing a program in a larger context, where |put| has not been replaced, can change the meaning
+of its subprograms.
+An example of such a problematic context is |(>> put t)|, where the |get|-|put| law
+(\ref{eq:get-put}) breaks and programs |get >> putR| and |return ()| can be
+differentiated:
+
+\begin{minipage}{0.7\textwidth}
+<    (get >> putR) >> put t
+< = {-~  definition of |putR|  -}
+<    (get >>= \s -> get >>= \s0 -> put s `mplus` side (put s0)) >> put t
+< = {-~  get-get (\ref{eq:get-get})  -}
+<    (get >>= \s -> put s `mplus` side (put s)) >> put t
+< = {-~  right-distributivity (\ref{eq:mplus-dist})  -}
+<    (get >>= \s -> (put s >> put t) `mplus` (side (put s)) >> put t)
+< = {-~  left-identity (\ref{eq:mzero-zero})  -}
+<    (get >>= \s -> (put s >> put t) `mplus` side (put s))
+< = {-~  put-put (\ref{eq:put-put})  -}
+<    (get >>= \s -> put t `mplus` side (put s))
+\end{minipage}%
+\begin{minipage}{0.3\textwidth}
+<    return () >> put t
+< =  put t
+\end{minipage}
+
+Those two programs do not behave in the same way when |s /= t|.
 %
-Recall the backtracking algorithm |queens| for the n-queens example in
-\Cref{sec:motivation-and-challenges}.
-%
-It is initially designed to run in the local-state semantics because
-every branch maintains its own copy of the state and has no influence
-on other branches. We can handle it with |hLocal| as follows.
-%
-\begin{code}
-queensLocal :: Int -> [[Int]]
-queensLocal = hNil . flip hLocal (0, []) . queens
-\end{code}
-% % For example, the program |queensLocal 4| gives the result |[[3,1,4,2],[2,4,1,3]]|.
-%
-With the simulation |local2global|, we can also translate |queens| to
-an equivalent program in global-state semantics and handle it with
-|hGlobal|.% The correctness is obvious from \Cref{thm:local-global}.
-% Using the simulation function |local2global|, we can also have a
-% function |queensGlobal| which solves the n-queens problem using the
-% handler |hGlobal| for global-state semantics.
-\begin{code}
-queensGlobal :: Int -> [[Int]]
-queensGlobal = hNil . flip hGlobal (0, []) . local2global . queens
-\end{code}
-% These two functions are equivalent as we have proven that |hGlobal . local2global = hLocal|.
+Hence, only provided that \emph{all} occurences of |put| in a program are replaced by |putR|
+can we simulate local-state semantics with global-state semantics. This has been articulated
+in the proof by the composition |hGlobal . local2global|: there is no room inbetween the replacement
+by |local2global| and the interpretation with |hGlobal| to add plain |put| operations.
+The global replacement requirement also manifests itself in the proof, in the form
+of the {\bf fusion-post'} rule rather than the more widely used {\bf fusion-post} rule.
+
+% The replacement itself as well as the correctness statement
+% that incorporates this requirement can be easily expressed with effect handlers. As we will explain
+% below we need to articulate this global replacement in the
+% correctness proof. 
+
+%\paragraph*{Proving the |putR| Operation Correct}
+% \label{sec:putr}
+% It is time to give a more formal definition for the translation between
+% global-state and local-state semantics using the free monad representation.
+% We use helper functions |getOp|, |putOp|, |orOp| and |failOp| to shorten
+% notation and eliminate the overkill of writing the |Op| and |Inl|, |Inr|
+% constructors. Their implementations are straightforwardly defined in terms of
+% |Get|, |Put|, |Or| and |Fail|.
+
+% %if False
+% \begin{code}
+% getOp     :: (s -> Free (StateF s :+: NondetF :+: f) a)
+%           -> Free (StateF s :+: NondetF :+: f) a
+% getOp     = Op . Inl . Get
+
+% putOp     :: s
+%           -> Free (StateF s :+: NondetF :+: f) a
+%           -> Free (StateF s :+: NondetF :+: f) a
+% putOp s   = Op . Inl  . Put s
+
+% orOp      :: Free (StateF s :+: NondetF :+: f) a
+%           -> Free (StateF s :+: NondetF :+: f) a
+%           -> Free (StateF s :+: NondetF :+: f) a
+% orOp p q  = (Op . Inr . Inl) (Or p q)
+
+% failOp    :: Free (StateF s :+: NondetF :+: f) a
+% failOp    = (Op . Inr . Inl) Fail
+% \end{code}
+% %endif
+
+% We can then define |putROp| in terms of these helper functions.
+% \begin{code}
+% putROp :: s -> Free (StateF s :+: NondetF :+: f) a -> Free (StateF s :+: NondetF :+: f) a
+% putROp t k = getOp (\s -> (putOp t k) `orOp` (putOp s failOp))
+% \end{code}
+% Note the similarity with the |putR| definition (\Cref{eq:state-restoring-put}) of the previous paragraph.
+% Here, we use a continuation-based representation, from which we can always recover the
+% representation of |putR| by setting the continuation to |return|.
+
+% Now, we want to prove this translation correct, but what does correctness mean
+% in this context?
+% Informally stated, it should transform between local-state and global-state
+% semantics.
+% For simplicity, we can implicitly assume
+% commutativity and associativity of the coproduct operator |(:+:)|
+% and omit the |comm2| in the definition of |hGlobal|.
+

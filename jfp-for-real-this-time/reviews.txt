@@ -375,16 +375,13 @@ We have added such a sentence.
 >   prioritizes q in p [] q, the explanations and Figure. 1 would no longer be
 >   correct, right?
 
-TODO
-==> Tom check
+Correct. We've clarified this by moving the first sentence of the next question
+here.
 
 > - l. 704-712: I understand it eventually, but the first time I read this
 >   paragraph, I was very confused. I believe the reason is that this paragraph is
 >   trying to introduce three different types of information in one paragraph.
-
-TODO
-==> Tom check
-
+>
 >   1. I think that the first sentence, which states that if putR is instantiated
 >   with Global, satisfies local laws as well, should be part of "State-Restoring
 >   Put", as this is the property of putR.
@@ -398,7 +395,14 @@ TODO
 >   strategy, we must replace _all_ occurrences. It might be useful to start this
 >   discussion in a new paragraph, possibly after an example of the translation
 >   (perhaps even after the definition of local2global).
->
+
+1. We have moved the first sentence to the earlier paragraph.
+
+2. We have reformulated the paragraph, brought the n-queens example forward
+   and then followed with the theorem and proof.
+
+3. We have added this in a new paragraph at the end of the section.
+
 > Other comments:
 >
 > - l. 49: "We say that an effect is lower-level than another effect when the
