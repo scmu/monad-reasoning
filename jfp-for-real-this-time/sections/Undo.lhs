@@ -34,88 +34,96 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, gu
 
 % backtracking in local state
 
-In \Cref{sec:local2global}, we give a translation |local2global| which
-simulates local state with global state by replacing |put| with its
+\Cref{sec:local2global} uses |local2global| to
+simulate local state with global state by replacing |put| with the
 state-restoring version |putR|.  The |putR| operation makes the
-implicit copying of the local-state semantics explicit in the
-global-state semantics. However, this copying still exists and can be
-rather costly if the state is big (e.g., a long array), and especially
-wasteful if the modifications made to that state are small (e.g., a
+implicit state copying of the local-state semantics explicit in the
+global-state semantics. This copying can be
+rather costly if the state is big (e.g., a long array). It is especially
+wasteful when the modifications made to that state are small (e.g., a
 single entry in the array).
 %
-Fortunately, low-level features like the global-state semantics
-give us more possibility to apply more fine-grained optimisation
-strategies.
+Fortunately, lower-level effects 
+present more opportunities for fine-grained optimisation.
 %
-As a result, instead of copying the whole state to implement the
-backtracking behaviour in the global-state semantics, we can just keep
-track of the modifications made to the state, and undo them when
-necessary.
+In particular, we can exploit the global-state semantics to avoid copying the
+whole state. Instead, we only keep track of the modifications made to the
+state, and undo them when backtracking.
 %
 %This is especially efficient when we have mutable states or in-place
 %update.
-In this section, we formalise this intuition with a translation from
-the local-state semantics to the global-state semantics for
-incremental and reversible state updates.
+This section formalises that approach in terms of an alternative translation from the
+local-state semantics to the global-state semantics that incrementally records 
+\emph{reversible state updates}.
 
-\subsection{State Update and Restoration}
+%-------------------------------------------------------------------------------
+\subsection{Reversible State Updates}
 
-We first need to characterise a specific subset of state effects where
-all state update operations can be undone. We call them
-modification-based state effects.
-%
-% We first need to characterise restorable updates.
-%
-For example, the |queens| program in
-\Cref{sec:motivation-and-challenges} uses the operation |s `plus` r|
-to update the state.
-%
-We can undo it using the following |`minus` r| operation which is
-essentially the left inverse of |`plus` r|.
-% It is restorable as we can define its left inverse as follows:
+Our goal is to undo a state change without holding on to the old state.
+Instead, we should be able to recover the old state from the new state However,
+knowing only the new state is usually not enough to accomplish this. We must
+also know ``what update was applied to the old state that led to the new
+state''.
+
+We reify the information about the update in a type |u|, which depends on the
+particular application at hand. For example, in the |queens| program of
+\Cref{sec:motivation-and-challenges} we repeatedly update the state to place an
+additional queen on the board. Recall that a state |s| of type |(Int, [Int])|
+consists of the current column |c| and the partial solution |sol|, i.e., the
+rows of the already placed queens. Hence, the information we need to
+characterise an update is the row |r| of the queen to place in the current
+column, i.e., |u = Int|.  The update itself is performed as |s `plus` r|,
+where 
+\begin{spec}
+plus :: (Int, [Int]) -> Int -> (Int, [Int])
+plus (c, sol) r   = (c+1, r:sol)
+\end{spec}
+
+Now we can clearly recover the old state from the new state and the modification as follows:
 \begin{spec}
 minus   :: (Int, [Int]) -> Int -> (Int, [Int])
 minus   (c, sol) r = (c-1, tail sol)
 \end{spec}
-%
-These two operators satisfy the equation |(`minus` r) . (`plus` r) = id|
-for any |r :: Int|.
-%
-% Then, instead of copying the whole state like what we did in the
-% simulation |local2global|, we can just use |s `minus` r| to roll back
-% the update.
+Indeed, we clearly have |(s `plus` r) `minus` r = s|.
 
-In general, we define a typeclass |Undo s r| with two operations
-|plus| and |minus| to characterise restorable state updates. Here, |s|
-is the type of states and |r| is the type of deltas.  We can
-implement the previous state update and restoration operations of
-n-queens as an instance |Undo (Int, [Int]) Int| of the typeclass.
+In general, we define a typeclass |Undo s u| with two operations
+|plus| and |minus| to characterise reversible state updates. Here, |s|
+is the type of states and |u| is the type of updates.
 %
 \begin{spec}
-class Undo s r where
-  plus   :: s -> r -> s
-  minus  :: s -> r -> s
-instance Undo (Int, [Int]) Int where
-  plus (c, sol) r   = (c+1, r:sol)
-  minus (c, sol) r  = (c-1, tail sol)
+class Undo s u where
+  plus   :: s -> u -> s
+  minus  :: s -> u -> s
 \end{spec}
 %
-Instances of |Undo| should satisfy the following law which says
+Instances of |Undo| should satisfy the following law which says that
 |`minus` x| is a left inverse of |`plus` x|:
 \begin{alignat}{2}
     &\mbox{\bf plus-minus}:\quad &
       |(`minus` x) . (`plus` x)| ~=~ & |id| \label{eq:plus-minus} \mbox{~~.}
 \end{alignat}
 
+%-------------------------------------------------------------------------------
+\subsection{Reversible State Update Effect}
 
-Modification-based state effects restrict the general |put| operation
-of |MState| to modification operations.  We define a new typeclass
-|MModify s r m| which inherits from |Monad m| and |Undo s r| to
-capture the interfaces of state updates and restoration.  It has three
+For our optimized approach to work, we have to restrict the way the state is
+changed in local-state programs.  We no longer allow arbitrary |put s'| calls
+to change the implicit state.  The only supported changes are of the form |put
+(s `plus` u)| where |s| is the current state.
+
+To enforce this requirement, we replace the general |get|/|put| interface
+provided by |MState| with the more restricted interface of a new type class:
+\begin{code}
+class (Monad m, Undo s u) => MModify s u m | m -> s, m -> u where
+    mget     :: m s
+    update   :: u -> m ()
+    restore  :: u -> m ()
+\end{code}
+This |MModify| class has three
 operations: a |mget| operation that reads and returns the state
-(similar to the |get| operation of |MState|), an |update r| operation
-that updates the state with the delta |r|, and a |restore r|
-operations that restores the update introduced by the delta |r|.
+(similar to the |get| operation of |MState|), an |update u| operation
+that updates the state with the reversible state change |u|, and a |restore u|
+operations that reverses the update |u|.
 %
 Note that only the |mget| and |update| operations are expected to be
 used by programmers; |restore| operations are automatically generated
@@ -126,30 +134,23 @@ by the translation to the global-state semantics.
 % typeclass |MModify| which restricts the |put| operation of |MState|
 % to |update| and |restore|.
 
-\begin{code}
-class (Monad m, Undo s r) => MModify s r m | m -> s, m -> r where
-    mget     :: m s
-    update   :: r -> m ()
-    restore  :: r -> m ()
-\end{code}
-%
 The three operations satisfy the following laws:
 \begin{alignat}{2}
     &\mbox{\bf mget-mget}:\quad &
     |mget >>= (\s -> mget >>= k s)| &= |mget >>= (\s -> k s s)|
     ~~\mbox{,} \label{eq:mget-mget} \\
     &\mbox{\bf update-mget}:~ &
-    |mget >>= \s -> update r >> return (s `plus` r)|
+    |mget >>= \s -> update u >> return (s `plus` u)|
     &=
-    |update r >> mget|
+    |update u >> mget|
     ~~\mbox{,} \label{eq:update-mget}\\
     &\mbox{\bf restore-mget}:~ &
-    |mget >>= \s -> restore r >> return (s `minus` r)|
+    |mget >>= \s -> restore u >> return (s `minus` u)|
     &=
-    |restore r >> mget|
+    |restore u >> mget|
     ~~\mbox{,} \label{eq:restore-mget}\\
     &\mbox{\bf update-restore}:\quad &
-    |update r >> restore r| &= |return ()|
+    |update u >> restore u| &= |return ()|
     ~~\mbox{.} \label{eq:update-restore}
 \end{alignat}
 The first law for |mget| corresponds to that for |get|. The second
@@ -166,7 +167,22 @@ on |mget|. Finally, the fourth law expresses that |restore| undoes the effect of
 %   restore = undefined
 % \end{code}
 
-As what we did for the nondeterminism and state effects in
+We can rewrite the |queens| program to make use of this |MModify| type class.
+Compared to the |MState|-based version in
+\Cref{sec:motivation-and-challenges}, we only need to replace |get| with |mget|
+and |put (s `plus` r)| with |update r|.
+\begin{code}
+queensM :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
+queensM n = loop where
+  loop = do  (c, sol) <- mget
+             if c >= n then return sol
+             else do  r <- choose [1..n]
+                      guard (safe r 1 sol)
+                      update r
+                      loop
+\end{code}
+
+Like we did for the state effects in
 \Cref{sec:free-monads-and-their-folds}, we define a new signature
 |ModifyF| representing the syntax of modification-based state effects,
 and implement the free monad |Free (ModifyF s r :+: f)| as an instance
@@ -191,9 +207,9 @@ instance (Functor f, Undo s r) => MModify s r (Free (ModifyF s r :+: f)) where
 \end{code}
 
 % We can implement a handler for |ModifyF| straightforwardly as follows.
-The following handler |hModify| maps this free monad to the |StateT|
-monad transformer using the operations |plus| and |minus| provided by
-|Undo s r|.
+Like the |hState| handler, the following |hModify| handler maps this free monad
+to the |StateT| monad transformer, but now using the operations |plus| and
+|minus| provided by |Undo s r|.
 \begin{code}
 hModify :: (Functor f, Undo s r) => Free (ModifyF s r :+: f) a -> StateT s (Free f) a
 hModify = fold gen (alg # fwd)
@@ -229,6 +245,14 @@ hGlobalM  :: (Functor f, Undo s r)
 hGlobalM  = fmap (fmap fst) . runStateT . hModify . hNDf . comm2
 \end{code}
 
+For example, the locate-state interpretation of |queensM| is obtained
+through:
+\begin{code}
+queensLocalM :: Int -> [[Int]]
+queensLocalM = hNil . flip hLocalM (0, []) . queensM
+\end{code}
+
+%-------------------------------------------------------------------------------
 \subsection{Simulating Local State with Global State and Undo}
 \label{sec:local2globalM}
 
@@ -251,18 +275,18 @@ In \Cref{sec:trail-stack} we will show a lower-level simulation of
 local-state semantics without relying on nondeterminism.
 %
 \begin{code}
-local2globalM  :: (Functor f, Undo s r)
-               => Free (ModifyF s r :+: NondetF :+: f) a
-               -> Free (ModifyF s r :+: NondetF :+: f) a
+local2globalM  :: (Functor f, Undo s u)
+               => Free (ModifyF s u :+: NondetF :+: f) a
+               -> Free (ModifyF s u :+: NondetF :+: f) a
 local2globalM  = fold Var alg
   where
-    alg (Inl (MUpdate r k)) = (update r `mplus` side (restore r)) >> k
+    alg (Inl (MUpdate u k)) = (update u `mplus` side (restore u)) >> k
     alg p               = Op p
 \end{code}
 
 Compared to |local2global|, the main difference is that we do not need
-to copy and store the whole state. Instead, we store the delta |r| and
-undo the state update using |restore r| in the second branch.
+to copy and store the whole state. Instead, we store the update |u| and
+reverse the state update using |restore u| in the second branch.
 %
 The following theorem shows the correctness of |local2globalM|.
 %
@@ -270,9 +294,9 @@ The following theorem shows the correctness of |local2globalM|.
 % \begin{theorem}
 \begin{restatable}[]{theorem}{modifyLocalGlobal}
 \label{thm:modify-local-global}
-Given |Functor f| and |Undo s r|, the equation
+Given |Functor f| and |Undo s u|, the equation
 < hGlobalM . local2globalM = hLocalM
-holds for all programs |p :: Free (ModifyF s r :+: NondetF :+: f) a|
+holds for all programs |p :: Free (ModifyF s u :+: NondetF :+: f) a|
 that do not use the operation |Op (Inl MRestore _ _)|.
 \end{restatable}
 % \end{theorem}
@@ -344,31 +368,9 @@ The proof of this theorem can be found in \Cref{app:modify-local-global}.
 % apply a function to it, it can be more efficient with in-place
 % update~\citep{LorenzenLS23} or mutable states.
 
-
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\paragraph*{N-queens with State Update and Restoration}\
-%
-We can rewrite the |queens| program with modification-based state and
-nondeterminism. Compared to the |queens| in
-\Cref{sec:motivation-and-challenges}, we only need to change the |get|
-and |put (s `plus` r)| with the update operation |update r|.
+As a conseqence of the theorem, we can get the desired local-state behavior for |queensM| by
+simulating it with global-state semantics as follows:
 \begin{code}
-queensM :: (MModify (Int, [Int]) Int m, MNondet m) => Int -> m [Int]
-queensM n = loop where
-  loop = do  (c, sol) <- mget
-             if c >= n then return sol
-             else do  r <- choose [1..n]
-                      guard (safe r 1 sol)
-                      update r
-                      loop
-\end{code}
-
-We can interpret it using either |hLocalM| or |hGlobalM| composed with
-|local2globalM|.
-\begin{code}
-queensLocalM :: Int -> [[Int]]
-queensLocalM = hNil . flip hLocalM (0, []) . queensM
-
 queensGlobalM :: Int -> [[Int]]
 queensGlobalM = hNil . flip hGlobalM (0, []) . local2globalM . queensM
 \end{code}
