@@ -285,7 +285,8 @@ laws between state and nondeterminism in details in Section
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \paragraph*{The Coproduct Operator for Combining Effects}\
 To combine the syntax of effects given by free monads,
-we need to define a coproduct operator |:+:| for signatures.
+we need to define a right-associative coproduct operator |:+:| for
+signatures.
 %if False
 \begin{code}
 -- class (MState s m, MNondet m) => MStateNondet s m | m -> s

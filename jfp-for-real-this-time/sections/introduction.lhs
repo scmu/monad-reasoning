@@ -24,7 +24,7 @@ for implementing an application.
 
 Maybe surprisingly, as they are rarely described in this way, there is a
 similar pattern for side-effects within programming languages: some effects can
-be described as ``lower-level'' than others.  We say that an effect is
+be described as ``lower-level'' than others.  Informally, we say that an effect is
 lower-level than another effect when the lower-level effect can simulate the
 higher-level effect. In other words, it is possible to write a
 program using lower-level effects that has identical semantics to the same program with

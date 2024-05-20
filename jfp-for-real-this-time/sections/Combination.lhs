@@ -131,9 +131,11 @@ alpha1 (a, (x, y))  = ((a, x), y)
 \end{code}
 \end{minipage}
 The proof of \Cref{thm:states-state} can be found in
-\Cref{app:states-state}. Instead of proving it directly, we show the
-correctness of the isomorphism of |nest| and |flatten|, and prove the
-following equation:
+\Cref{app:states-state}. \Cref{thm:states-state} has two function
+compositions on the right-hand side, which would require using fusion
+twice, resuling in a complicated handler. To avoid this complexity,
+we show the correctness of the isomorphism of |nest| and
+|flatten|, and prove the following equation:
 < flatten . hStates = hState . states2state
 % The proof of the |nest| / |flatten| isomorphism can be found in
 % \Cref{app:flatten-nest} and the proof of the theorem is written out in

@@ -211,8 +211,6 @@ TODO: add qualifying paragraph
 
 ==> Tom 
 
-WT: I don't really understand this question.
-
 > 143 : is a functor instantiates -> is a functor which instantiates
 
 FIXED
@@ -232,9 +230,9 @@ FIXED
 
 > 441 : What's the associativity for :+:
 
-TODO
+DONE
 
-==> WT: right associative
+==> WT: Right associative. Updated the text.
 
 > 499 : globale -> global
 
@@ -258,7 +256,11 @@ FIXED
 >             gen x = append_s x >> pop_s
 >             alg (Or p q) = push_s q >> p
 
-TODO
+DONE
+
+There is no essential difference between whether taking an extra
+argument p or not. The main benefit of having this extra argument is
+to make the lemmas and theorems used in the proofs more succinct.
 
 ==> WT: Right. I don't know. Probably because of some historical reason :)
     Argue that some theorems look nicer. No essential difference.
@@ -266,7 +268,14 @@ TODO
 
 > 1016 : "Instead of proving it directly" Why is the indirect approach better?
 
-TODO
+DONE
+
+The original Theorem 4 has two function compositions on the right-hand
+side. To prove it directly, we need to apply fusion to RHS twice,
+which would result in a complicated handler. The indirect approach
+rewrites Theorem 4 to a equation with only one composition on each
+side, avoiding the sequential usage of fusion. We have elaborated in
+the paper.
 
 ==> WT: Applying fusion to each side once is easier than apply fusion
 twice to one side, because the fused version is usually more
@@ -410,7 +419,26 @@ here.
 >   that can simulate each other? I am also curious if one can simulate global
 >   state using a local state?
 
-TODO
+DONE
+
+This is just an informal notion. Though we don't plan to make it
+formal in the paper, one possible approach to a formal definition is
+to use Felleisen's macro expansion (Felleisen, 1991, On the Expressive
+Power of Programming Languages) and adapt it into the form of effect
+handlers with certain restrictions. Effects that can simulate each
+other should be on the same level. We don't think it is possible to
+modularly simulate global state with local state as demonstrated by
+the fact that Prolog systems have to add additional built-ins like
+assert and nb_setval/getval for global state.
+
+Wenhao:
+  Seems that we can simulate global state with local state by
+    `Or p q = Or p (p; q)`.
+  However, this simulation duplicates the continuations `p`, which
+  would definitely result in unexpected results when combining with
+  other effects. I would expect it to be ruled out by "certain
+  restrictions" in a formal definition of simulation.
+
 ==> Wenhao: informal notion
     (Tom: I don't think we can modularly simulate global state with local state.
           E.g., Prolog systems have to add additional built-ins like assert and
