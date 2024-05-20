@@ -60,7 +60,7 @@ local-state semantics to the global-state semantics that incrementally records
 \subsection{Reversible State Updates}
 
 Our goal is to undo a state change without holding on to the old state.
-Instead, we should be able to recover the old state from the new state However,
+Instead, we should be able to recover the old state from the new state. However,
 knowing only the new state is usually not enough to accomplish this. We must
 also know ``what update was applied to the old state that led to the new
 state''.

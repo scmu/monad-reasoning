@@ -31,14 +31,14 @@ fun hState(action)
     ctl get()  fn(s) resume(s)(s)
     ctl put(x) fn(s) resume(())(x)
 
-// fun hStateMu(action)(init)
-//   var s := init
-//   handle action
-//     return(x)  (x,s)
-//     ctl get()  resume(s)
-//     ctl put(x)
-//       s := x
-//       resume(())
+fun hStateMu(action)(init)
+  var s := init
+  handle action
+    return(x)  (x,s)
+    ctl get()  resume(s)
+    ctl put(x)
+      s := x
+      resume(())
 
 // --------------------------------------------------------
 //  Modify
@@ -66,8 +66,8 @@ pub fun hLocal(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
 pub fun hGlobal(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
   hState{ hND(action) }(init).fst
 
-// pub fun hGlobalMu(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
-//   hStateMu{ hND(action) }(init).fst
+pub fun hGlobalMu(action: () -> <nd,state<a>|e> b, init: a) : e list<b>
+  hStateMu{ hND(action) }(init).fst
 
 pub fun local2global(action: () -> <nd,state<a>,state<a>|e> b) : <nd,state<a>|e> b
   handle action
@@ -221,7 +221,7 @@ pub fun testOne(q, n, times)
 pub fun benchmark(n, times)
   println("queensLocal:\t" ++ testOne(queensLocal, n, times).show)
   println("queensGlobal:\t" ++ testOne(queensGlobal, n, times).show)
-  // println("queensGlobalMu:\t" ++ testOne(queensGlobalMu, n, times).show)
+  println("queensGlobalMu:\t" ++ testOne(queensGlobalMu, n, times).show)
   println("queensGlobal':\t" ++ testOne(queensGlobal', n, times).show)
   println("queensLocalM:\t" ++ testOne(queensLocalM, n, times).show)
   println("queensGlobalM:\t" ++ testOne(queensGlobalM, n, times).show)

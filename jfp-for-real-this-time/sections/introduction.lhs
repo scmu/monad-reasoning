@@ -115,6 +115,15 @@ effects with low-level effects we implemented and proved in the paper.
 %
 Throughout the paper, we use Haskell as a means to illustrate
 our findings with code.
+%
+We focused more on formalising and proving the correctness of
+simulations instead of showing performance improvements, as they have
+already been demonstrated by real-world systems like Prolog.
+%
+Especially, the Haskell implementations themselves do not exhibit
+performance improvements due to aspects like laziness, immutable
+states, and overhead of algebraic effects and handlers.
+
 
 \begin{table}[h]
 \begin{center}

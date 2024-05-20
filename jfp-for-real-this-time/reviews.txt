@@ -349,9 +349,25 @@ to clarify this.
 > usage? Furthermore, how does the technique work on other programs that require
 > either DFS or BFS with pruning?
 
-TODO
+We use algebraic effects and handlers as well as their Haskell
+implementations as a tool to model simulations used by existing
+efficient systems (like Prolog). The Haskell implementations
+themselves do not exhibit performance improvements due to aspects like
+laziness, immutable states, and overhead of algebraic effects and
+handlers. Since the affects of these optimisations have already been
+demonstrated by real-world systems, we focused more on formalising
+them and proving their correctness via program calculation.
 
-==> Wenhao explores benchmarks 
+We believe that the simulations we studied can be applied to any
+programs that relies on the nondeterminism and state operations with
+local state semantics. The simulation in Section 7 further requires
+the source program to use `update` instead of general `put`. We didn't
+consider pruning in this paper. As far as we know, general pruning is
+not an algebraic effect but a scoped effect (Wu et al., 2014, Effect
+Handlers in Scope). We leave the generalisation of our work to scoped
+effects and higher-order effects as future work.
+
+==> Wenhao explores benchmarks
 + add discussion that Haskell implementation only models existing efficient systems
   and does not exhibit performance improvements due to aspects like laziness 
   and overhead of algebraic effects and handlers
