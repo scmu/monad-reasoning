@@ -28,60 +28,50 @@ import Combination hiding (results, Comp)
 \section{Modelling Local State with Trail Stack}
 \label{sec:trail-stack}
 
-In order
-to trigger the restoration of the previous state, the simulations |local2global| in \Cref{sec:local2global} and |local2globalM|
-in \Cref{sec:undo} introduce a call to |or| and to |fail|
-at every modification of the state.
+In order to
+restore the previous state during backtracking, the approaches of
+\Cref{sec:local2global} and \Cref{sec:undo} both introduce a new failing branch
+at every individual modification of the state 
 %
 The Warren Abstract Machine (WAM)~\citep{AitKaci91} does this in a more efficient and
-lower-level way: it uses a \emph{trail stack} to batch consecutive restorative steps.
+lower-level way: it stores consective updates in a \emph{trail stack} and then batch-processes them
+on backtracking. This avoids introducing any additional branches.
 %
-In this section, we first make use of the idea of trail stacks to
-implement a lower-level translation from local-state semantics to
-global-state semantics for the modifcation-based version of state
-effects in \Cref{sec:undo} which does not require extra calls to
-nondeterminism operations.
+This section first incorporates that trail-stack idea in the 
+modification-based approach of \Cref{sec:undo}.
 %
-Then, we combine this simulation with other simulations
-% the simulation of nondeterminism
-% in \Cref{sec:nondeterminism-state} and the simulation of multiple
-% states in \Cref{sec:multiple-states}
-to obtain another ultimate simulation function which uses two stacks,
-a choicepoint stack and a trail stack, simultaneously.
+Then, by combining it with the earlier state-based simulation of nondeterminism, 
+we get an overall simulation of local-state in terms of a two stacks, the choicepoint
+stack and the trail stack.
 
-
-\subsection{Simulating Local State with Global State and Trail Stack}
+%-------------------------------------------------------------------------------
+\subsection{Simulating Local State with Global Trail Stack}
 \label{sec:local2trail}
 
-%
-Let us consider modification-based version of simulation |local2globalM|.
-%
-We can use a trail stack to contain elements of type |Either r
-()|, where |r| is the type of deltas to the states. Each |Left x| entry represents
-an update to the state with the delta |x|, and each |Right ()| is a
-marker.
-%
-When we enter a left branch, we push a marker on the trail stack.
-%
-For every update we perform in that branch, we push the corresponding
-delta on the trail stack, on top of the marker.
-%
-When we backtrack to the right branch, we unwind the trail stack down to the
-marker and restore all deltas along the way. This process is known as ``untrailing''.
-
-We can easily model the |Stack| data type with Haskell lists.
+Let us work out the trail stack idea in more detail. For that, we will
+need a second instance of the state effect. The primary one keeps
+track of the state featured in the local-state semantics.
+The new, secondary one keeps track of the trail stack.
+We can easily model this stack datastructure as a Haskell lists.
 \begin{code}
-newtype Stack s = Stack [s]
+newtype Stack a = Stack [a]
 \end{code}
+We store this stack in the secondary instance of the state effect, and we add
+and remove elements through the |pushStack| and |popStack| functions.
 
-We thread the stack through the computation using the state effect and define primitive pop and push operations as follows.
-% -- popStack :: Functor f => Free (StateF (Stack s) :+: f) (Maybe s)
-% -- pushStack :: Functor f => s -> Free (StateF (Stack s) :+: f) ()
-
+\begin{minipage}[t]{0.4\textwidth}
+\begin{code}
+pushStack  :: MState (Stack a) m
+           => a -> m ()
+pushStack x = do
+  Stack xs <- get
+  put (Stack (x:xs))
+\end{code}
+\end{minipage}
 \begin{minipage}[t]{0.5\textwidth}
 \begin{code}
-popStack  :: MState (Stack s) m
-          => m (Maybe s)
+popStack  :: MState (Stack a) m
+          => m (Maybe a)
 popStack  = do
   Stack xs <- get
   case xs of
@@ -89,18 +79,51 @@ popStack  = do
     (x:xs')  -> do  put (Stack xs'); return (Just x)
 \end{code}
 \end{minipage}
-\begin{minipage}[t]{0.5\textwidth}
-\begin{code}
-pushStack  :: MState (Stack s) m
-           => s -> m ()
-pushStack x = do
-  Stack xs <- get
-  put (Stack (x:xs))
-\end{code}
-\end{minipage}
 
-In order to correctly use state operations to interact with the trail
-stack in the translation, we also need to define a new instance of
+We store two types of entries in the trail stack. The first types are the
+reversible updates |u| (see \Cref{sec:undo}) that we apply to the primary
+state. The second types are markers that mark the end of a batch on the trail
+stack; we represent these with the unit type |()|. Hence, we use the sum type
+|Either u ()| to use both as elements of the trail stack.
+
+When we enter a left branch, we push a |Right ()| marker on the trail stack.
+%
+For every state update |u| we perform in that branch, we push the corresponding
+|Left u| entry on top of the marker.
+%
+When we backtrack to the right branch, we unwind the trail stack down to the
+marker and reverse all updates along the way. This process is known as ``untrailing''.
+\begin{code}
+undoTrail :: (MState (Stack (Either u ())) m, MModify s u m)  => m ()
+undoTrail = do  top <- popStack
+                case top of
+                  Nothing          -> return ()
+                  Just (Right ())  -> return ()
+                  Just (Left r)    -> restore r >> undoTrail
+\end{code}
+% -- popStack :: Functor f => Free (StateF (Stack s) :+: f) (Maybe s)
+% -- pushStack :: Functor f => s -> Free (StateF (Stack s) :+: f) ()
+
+With the above trail stack functionality in place, the following translation function |local2trail| simulates the
+local-state semantics with global-state semantics by means of the trail stack.
+\begin{code}
+local2trail :: (Functor f, Undo s u)
+            => Free (ModifyF s u :+: NondetF :+: f) a
+            -> Free (ModifyF s u :+: NondetF :+: StateF (Stack (Either u ())) :+: f) a
+local2trail = fold Var (alg1 # alg2 # fwd)
+  where
+    alg1 (MUpdate r k)  = pushStack (Left r) >> update r >> k
+    alg1 p              = Op . Inl $ p
+    alg2 (Or p q)       = (pushStack (Right ()) >> p) `mplus` (undoTrail >> q)
+    alg2 p              = Op . Inr . Inl $ p
+    fwd p               = Op . Inr . Inr . Inr $ p
+\end{code}
+As already informally explained above, this translation function
+1) pushes updates to the trail tack, 2) pushes a marker to the trail stack in the left branch of a choice, and
+3) untrails  untrail in the right branch. All other operations remain as is.
+
+To ensure that |pushStack| and |popStack| access the secondary, trail-stack state
+in the above translation, we also need to define the following instance of
 |MState|.
 \begin{code}
 instance (Functor f, Functor g, Functor h)
@@ -109,31 +132,6 @@ instance (Functor f, Functor g, Functor h)
     put x    = Op . Inr . Inr . Inl $ Put x (return ())
 \end{code}
 
-
-With these in place, the following translation function |local2trail| simulates the
-local-state semantics with global-state semantics by means of the trail stack.
-
-\begin{code}
-local2trail :: (Functor f, Undo s r)
-            => Free (ModifyF s r :+: NondetF :+: f) a
-            -> Free (ModifyF s r :+: NondetF :+: StateF (Stack (Either r ())) :+: f) a
-local2trail = fold Var (alg1 # alg2 # fwd)
-  where
-    alg1 (MUpdate r k)  = pushStack (Left r) >> update r >> k
-    alg1 p              = Op . Inl $ p
-    alg2 (Or p q)       = (pushStack (Right ()) >> p) `mplus` (undoTrail >> q)
-    alg2 p              = Op . Inr . Inl $ p
-    fwd p               = Op . Inr . Inr . Inr $ p
-    undoTrail = do  top <- popStack
-                    case top of
-                      Nothing          -> return ()
-                      Just (Right ())  -> return ()
-                      Just (Left r)    -> restore r >> undoTrail
-\end{code}
-As already informally explained above, this translation function
-introduces code to push a marker in the left branch of a choice, and 
-untrail in the right branch. Whenever an update happens, it is also
-recorded on the trail stack. All other operations remain as is.
 
 Now, we can combine the simulation |local2trail| with the global-state
 semantics provided by |hGlobalM|, and handle the trail stack at the

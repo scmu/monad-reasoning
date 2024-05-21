@@ -273,7 +273,7 @@ DONE
 The original Theorem 4 has two function compositions on the right-hand
 side. To prove it directly, we need to apply fusion to RHS twice,
 which would result in a complicated handler. The indirect approach
-rewrites Theorem 4 to a equation with only one composition on each
+rewrites Theorem 4 to an equation with only one composition on each
 side, avoiding the sequential usage of fusion. We have elaborated in
 the paper.
 
@@ -354,12 +354,12 @@ implementations as a tool to model simulations used by existing
 efficient systems (like Prolog). The Haskell implementations
 themselves do not exhibit performance improvements due to aspects like
 laziness, immutable states, and overhead of algebraic effects and
-handlers. Since the affects of these optimisations have already been
+handlers. Since the effects of these optimisations have already been
 demonstrated by real-world systems, we focused more on formalising
 them and proving their correctness via program calculation.
 
 We believe that the simulations we studied can be applied to any
-programs that relies on the nondeterminism and state operations with
+program that relies on the nondeterminism and state operations with
 local state semantics. The simulation in Section 7 further requires
 the source program to use `update` instead of general `put`. We didn't
 consider pruning in this paper. As far as we know, general pruning is
