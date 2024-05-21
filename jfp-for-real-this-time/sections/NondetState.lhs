@@ -115,7 +115,7 @@ a list of yet to be explored branches, which we call a |stack|.
 This stack corresponds to the choicepoint stack in Prolog.
 %
 When entering one branch, we can push other branches to the stack.
-ehen leaving the branch, we collect its result and pop a new branch
+When leaving the branch, we collect its result and pop a new branch
 from the stack to continue.
 
 We define a new type |S a| consisting of the |results| and |stack|.
@@ -234,6 +234,11 @@ next branch from the stack and proceeds with it. Likewise, for failure
 the handler simply pops and proceeds with the next branch. For
 nondeterministic choices, the handler pushes the second branch on the
 stack and proceeds with the first branch.
+%
+The |nondet2stateS| implements the depth-first search strategy which is
+consistent with the implementation of |hND|.
+%
+It is also impossible to implement the breadth-first search strategy by replacing the stack with a queue.
 
 To extract the final result from the |S| wrapper, we define the |extractS| function.
 \begin{code}
