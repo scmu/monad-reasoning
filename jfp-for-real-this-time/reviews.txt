@@ -256,19 +256,11 @@ FIXED
 >             gen x = append_s x >> pop_s
 >             alg (Or p q) = push_s q >> p
 
-DONE
-
 There is no essential difference between whether taking an extra
 argument p or not. The main benefit of having this extra argument is
 to make the lemmas and theorems used in the proofs more succinct.
 
-==> WT: Right. I don't know. Probably because of some historical reason :)
-    Argue that some theorems look nicer. No essential difference.
-
-
 > 1016 : "Instead of proving it directly" Why is the indirect approach better?
-
-DONE
 
 The original Theorem 4 has two function compositions on the right-hand
 side. To prove it directly, we need to apply fusion to RHS twice,
@@ -276,12 +268,6 @@ which would result in a complicated handler. The indirect approach
 rewrites Theorem 4 to an equation with only one composition on each
 side, avoiding the sequential usage of fusion. We have elaborated in
 the paper.
-
-==> WT: Applying fusion to each side once is easier than apply fusion
-twice to one side, because the fused version is usually more
-complicated than its components. (Though in the proof we actually
-applied fusion to the left-hand side and did a direct induction on the
-right-hand side.)
 
 > 1020 : simmuarises -> summarises
 
@@ -346,8 +332,7 @@ to clarify this.
 > show how effective these optimizations are. I believe these questions are
 > important to answer: What does the performance look like using high-level
 > effects? How much speedup did we gain after optimizations? What about memory
-> usage? Furthermore, how does the technique work on other programs that require
-> either DFS or BFS with pruning?
+> usage? 
 
 We use algebraic effects and handlers as well as their Haskell
 implementations as a tool to model simulations used by existing
@@ -358,6 +343,9 @@ handlers. Since the effects of these optimisations have already been
 demonstrated by real-world systems, we focused more on formalising
 them and proving their correctness via program calculation.
 
+> Furthermore, how does the technique work on other programs that require
+> either DFS or BFS with pruning?
+
 We believe that the simulations we studied can be applied to any
 program that relies on the nondeterminism and state operations with
 local state semantics. The simulation in Section 7 further requires
@@ -366,6 +354,8 @@ consider pruning in this paper. As far as we know, general pruning is
 not an algebraic effect but a scoped effect (Wu et al., 2014, Effect
 Handlers in Scope). We leave the generalisation of our work to scoped
 effects and higher-order effects as future work.
+
+TODO: mention BFS
 
 ==> Wenhao explores benchmarks
 + add discussion that Haskell implementation only models existing efficient systems
@@ -447,6 +437,8 @@ modularly simulate global state with local state as demonstrated by
 the fact that Prolog systems have to add additional built-ins like
 assert and nb_setval/getval for global state.
 
+TODO: mention macro expansion in the paper
+
 Wenhao:
   Seems that we can simulate global state with local state by
     `Or p q = Or p (p; q)`.
@@ -454,6 +446,8 @@ Wenhao:
   would definitely result in unexpected results when combining with
   other effects. I would expect it to be ruled out by "certain
   restrictions" in a formal definition of simulation.
+
+TODO: mention the above idea in the reponse
 
 ==> Wenhao: informal notion
     (Tom: I don't think we can modularly simulate global state with local state.
@@ -492,8 +486,6 @@ a solution. These are stored in separate lists.
 
 Yes, that is a good observation. We've added a remark about this in the paper.
 
-DONE
-
 > - l. 942: It is not clear to me what's the benefit of modeling two states with
 >   one state.
 
@@ -508,6 +500,7 @@ TODO
 ==> read the paper
     One difference is that itrees are coinductively defined whereas
     we rely on the inductive structure of free monads for our proofs.
+    The algebras cannot manipulate the continuations, which is important for nondeterminism.
 
 > - Section 7: I am curious about the relation between this approach and STM
 >   (Software Transactional Memory).
