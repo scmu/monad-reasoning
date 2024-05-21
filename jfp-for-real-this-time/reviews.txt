@@ -166,9 +166,7 @@ implementation for h_State?
 > Perhaps sections 7 and 8 feel a bit more rushed, and a bit more explanation
 > would help to make them as crystal clear as the previous ones.
 
-TODO
-
-==> Tom
+We have improved the writing in these two sections.
 
 > The paper makes a good contribution to reasoning about programs with effects,
 > making good use of the "effect rewriting" capability of handlers of algebraic
