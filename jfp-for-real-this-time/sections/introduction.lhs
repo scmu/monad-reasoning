@@ -53,6 +53,16 @@ For programs written with high-level effects and interpreted by their
 handlers, we can define a general translation handler to transform
 these high-level effects to low-level effects, and then interpret the
 translated programs with the handlers of low-level effects.
+%
+Though we do not give a formal definition of what should a
+simulation from high-level effects to low-level effects look like, we
+expect it to be a handler of the high-level effects which
+interpret their operations with the operations of the low-level
+effects. This handler is essentailly a monomorphism from the syntax
+tree of high-level effects to that of low-level effects, similar to
+\citet{Felleisen91}'s notion of macro expansion but on a
+continuation-passing level (as the syntax trees of free monads provide
+access to continuations).
 
 % use
 % of effects from their implementations. Effect handlers allow us to

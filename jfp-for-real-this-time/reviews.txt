@@ -228,9 +228,7 @@ FIXED
 
 > 441 : What's the associativity for :+:
 
-DONE
-
-==> WT: Right associative. Updated the text.
+FIXED Right-associate.
 
 > 499 : globale -> global
 
@@ -347,18 +345,18 @@ them and proving their correctness via program calculation.
 We believe that the simulations we studied can be applied to any
 program that relies on the nondeterminism and state operations with
 local state semantics. The simulation in Section 7 further requires
-the source program to use `update` instead of general `put`. We didn't
-consider pruning in this paper. As far as we know, general pruning is
-not an algebraic effect but a scoped effect (Wu et al., 2014, Effect
-Handlers in Scope). We leave the generalisation of our work to scoped
-effects and higher-order effects as future work.
-
-TODO: mention BFS
-
-==> Wenhao explores benchmarks
-+ add discussion that Haskell implementation only models existing efficient systems
-  and does not exhibit performance improvements due to aspects like laziness 
-  and overhead of algebraic effects and handlers
+the source program to use `update` instead of general `put`. Notice
+that the implementation of `hND` in the paper follows the standard
+implementation of the DFS strategy. We didn't consider a BFS
+implementation of the handler for nondeterminism in the paper, but our
+simulation of nondeterminism with states in Section 5 can also
+implement BFS by replacing the stack with a queue. We do not expect
+any specific challenge for proving the correctness of the queue-based
+simulation with respect to a BFS version of the `hND` handler. We
+didn't consider pruning in this paper as well. As far as we know,
+general pruning is not an algebraic effect but a scoped effect (Wu et
+al., 2014, Effect Handlers in Scope). We leave the generalisation of
+our work to scoped effects and higher-order effects as future work.
 
 > Suggestions for presentation:
 >
@@ -420,8 +418,7 @@ here.
 >
 > - l. 49: "We say that an effect is lower-level than another effect when the
 >   lower-level effect can simulate the high-level effect." What about effects
->   that can simulate each other? I am also curious if one can simulate global
->   state using a local state?
+>   that can simulate each other?
 
 DONE
 
@@ -429,28 +426,25 @@ This is just an informal notion. Though we don't plan to make it
 formal in the paper, one possible approach to a formal definition is
 to use Felleisen's macro expansion (Felleisen, 1991, On the Expressive
 Power of Programming Languages) and adapt it into the form of effect
-handlers with certain restrictions. Effects that can simulate each
-other should be on the same level. We don't think it is possible to
-modularly simulate global state with local state as demonstrated by
-the fact that Prolog systems have to add additional built-ins like
-assert and nb_setval/getval for global state.
+handlers with certain restrictions (probably define the macro
+expansion on a continuation-passing level since we are working with
+effect handlers). Effects that can simulate each other should be on
+the same level. We have expanded the discussion on low-level effects
+vs. high-level effects on line 69.
 
-TODO: mention macro expansion in the paper
+>  I am also curious if one can simulate global state using a local state?
 
-Wenhao:
-  Seems that we can simulate global state with local state by
-    `Or p q = Or p (p; q)`.
-  However, this simulation duplicates the continuations `p`, which
-  would definitely result in unexpected results when combining with
-  other effects. I would expect it to be ruled out by "certain
-  restrictions" in a formal definition of simulation.
-
-TODO: mention the above idea in the reponse
-
-==> Wenhao: informal notion
-    (Tom: I don't think we can modularly simulate global state with local state.
-          E.g., Prolog systems have to add additional built-ins like assert and
-                nb_setval/getval for global state.)
+We don't think it is possible to modularly simulate global state with
+local state as demonstrated by the fact that Prolog systems have to
+add additional built-ins like assert and nb_setval/getval for global
+state. One seemingly possible way to simulate global state with local
+state is by
+    `Or p q = Or p (p; q)`
+so that the state operations in the first branch also happen in the
+second branch. However, this simulation breaks the compositionality
+with other effects since it duplicates the continuations `p`. For
+instance, if `p` contains another `print` effect, the printing would
+be performed twice.
 
 > - l. 170-172: What's the relation between MNondet and Haskell's MonadPlus?
 
