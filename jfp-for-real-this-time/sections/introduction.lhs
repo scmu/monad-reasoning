@@ -54,13 +54,13 @@ handlers, we can define a general translation handler to transform
 these high-level effects to low-level effects, and then interpret the
 translated programs with the handlers of low-level effects.
 %
-Though we do not give a formal definition of what should a
-simulation from high-level effects to low-level effects look like, we
-expect it to be a handler of the high-level effects which
-interpret their operations with the operations of the low-level
+Though we do not give a formal definition of a
+simulation from high-level effects to low-level effects, we
+expect it to be a handler which interprets the operations of the high-level effects
+in terms of the operations of the low-level
 effects. This handler is essentailly a monomorphism from the syntax
 tree of high-level effects to that of low-level effects, similar to
-\citet{Felleisen91}'s notion of macro expansion but on a
+\citet{Felleisen91}'s notion of macro expansion but at the
 continuation-passing level (as the syntax trees of free monads provide
 access to continuations).
 
@@ -123,16 +123,18 @@ conclude (\Cref{sec:conclusion}).
 \Cref{tab:overview} gives an overview of the simulations of high-level
 effects with low-level effects we implemented and proved in the paper.
 %
-Throughout the paper, we use Haskell as a means to illustrate
-our findings with code.
+Throughout the paper, we use Haskell as a means to illustrate our findings with
+code. In particular, we restrict ourselves to a well-behaved and well-founded
+fragment of Haskell that avoids non-termination and other forms of bottom, and
+readily admits equational reasoning with structural induction.
 %
-We focused more on formalising and proving the correctness of
-simulations instead of showing performance improvements, as they have
-already been demonstrated by real-world systems like Prolog.
+Moreover, we focus on formalising and proving the correctness of the
+simulations rather than empirical evidence of performance improvements, as those
+have already been demonstrated by real-world systems like Prolog.
 %
-Especially, the Haskell implementations themselves do not exhibit
+In fact, the Haskell implementations themselves do not exhibit
 performance improvements due to aspects like laziness, immutable
-states, and overhead of algebraic effects and handlers.
+state, and the overhead of algebraic effects and handlers.
 
 
 \begin{table}[h]

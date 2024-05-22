@@ -204,10 +204,7 @@ CHANGED: dropped the article
 CHANGED to "these high-level effects"
 
 > Is it valid the reason about the state monad in the full Haskell language? Or are the authors working in a “nice” subset.
-
-TODO: add qualifying paragraph
-
-==> Tom 
+As usual, we work in a nice subset and now point this out in the introduction.
 
 > 143 : is a functor instantiates -> is a functor which instantiates
 
@@ -228,7 +225,7 @@ FIXED
 
 > 441 : What's the associativity for :+:
 
-FIXED Right-associate.
+It is right-associative.
 
 > 499 : globale -> global
 
@@ -353,7 +350,7 @@ simulation of nondeterminism with states in Section 5 can also
 implement BFS by replacing the stack with a queue. We do not expect
 any specific challenge for proving the correctness of the queue-based
 simulation with respect to a BFS version of the `hND` handler. We
-didn't consider pruning in this paper as well. As far as we know,
+didn't consider pruning in this paper either. As far as we know,
 general pruning is not an algebraic effect but a scoped effect (Wu et
 al., 2014, Effect Handlers in Scope). We leave the generalisation of
 our work to scoped effects and higher-order effects as future work.
