@@ -41,7 +41,7 @@ states?}
 Low-level effects allow us to make better use of low-level features
 such as mutable states.
 %
-In this section, we discuss two potential optimisations enabled
+In this section, we discuss two potential optimizations enabled
 by mutable states.
 
 \paragraph*{Undo with Mutable States}\
@@ -53,7 +53,7 @@ state of the translation |local2global| in \Cref{sec:local2global}, it
 still needs to retrieve and modify the whole immutable state when
 updating and restoring.
 %
-A natural optimisation is to replace the immutable states with mutable
+A natural optimization is to replace the immutable states with mutable
 states so that we can implement more efficient versions of state
 modification operations which only need to modify part of the mutable
 states.
@@ -105,11 +105,11 @@ it by implementing a stack with a mutable array.
 \subsection{Benchmark}
 \label{sec:benchmark}
 
-As a running example, we have shown our simulations and optimisations
+As a running example, we have shown our simulations and optimizations
 on the n-queens example. Table~\ref{tbl:benchmarks-haskell} shows
 the benchmarks for all implementations of n-queens appeared in the
 paper. \footnote{The benchmarks are run using GHC 8.10.7 with the
-|-O2| optimisation option turned on, on a MacBook Pro with a 2.3 GHz
+|-O2| optimization option turned on, on a MacBook Pro with a 2.3 GHz
 Intel Core i5 processor and 16 GB RAM.}
 
 % for several implementation of n-queens in Haskell using fusion
@@ -117,7 +117,7 @@ Intel Core i5 processor and 16 GB RAM.}
 % mutable states so the |queensStackR| is slower? Or we just don't show
 % it?} Better benchmarks are acquired using an implementation in C++
 % (Table~\ref{tbl:benchmarks-c++}), which allows more fine-grained,
-% low-level optimisations.  The best results are achieved using the C++
+% low-level optimizations.  The best results are achieved using the C++
 % |queensStackR| implementation, which have a 8--11\% runtime
 % improvement over |queensLocal|.
 

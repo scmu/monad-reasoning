@@ -386,7 +386,7 @@ we have a wasteful duplication of information.
 Global-state semantics, however, threads a single state through the entire
 computation without making any implicit copies.
 Consequently, it is easier to control resource usage and apply
-optimisation strategies in this setting.
+optimization strategies in this setting.
 % Therefore, it is easier to reason about resource usage  in this setting.
 % Consequently, it might be instructive to write our programs directly in the
 % global-state style.
@@ -399,7 +399,7 @@ Furthermore, it is significantly more challenging for programmers to
 reason about global-state semantics than local-state semantics.
 
 To resolve this dilemma, we can write our programs in a local-state style
-and then translate them to the global-state style to enable low-level optimisations.
+and then translate them to the global-state style to enable low-level optimizations.
 %
 In this subsection, we show one systematic program translation that
 alters a program written for local-state semantics to a program that,

@@ -27,7 +27,7 @@ import Control.Monad.State.Lazy hiding (fail, mplus, mzero, get, put, modify, gu
 %endif
 
 %-------------------------------------------------------------------------------
-% \section{Optimisation with Undo}
+% \section{optimization with Undo}
 % \section{Modification-based State}
 \section{Modelling Local State with Undo}
 \label{sec:undo}
@@ -44,7 +44,7 @@ wasteful when the modifications made to that state are small (e.g., a
 single entry in the array).
 %
 Fortunately, lower-level effects 
-present more opportunities for fine-grained optimisation.
+present more opportunities for fine-grained optimization.
 %
 In particular, we can exploit the global-state semantics to avoid copying the
 whole state. Instead, we only keep track of the modifications made to the

@@ -141,7 +141,7 @@ points.
 > transformations a program with nondeterminism and state.
 > It starts with a slow but high-level implementation (local state) and after
 > several translations ends up with a low-level program which incorporates
-> optimisations seen in the WAM.
+> optimizations seen in the WAM.
 >
 > The implementation is done using rather simple Haskell programs and the
 > correctness of all the transformations is proved, using the usual
@@ -329,7 +329,7 @@ implementations as a tool to model simulations used by existing
 efficient systems (like Prolog). The Haskell implementations
 themselves do not exhibit performance improvements due to aspects like
 laziness, immutable states, and overhead of algebraic effects and
-handlers. Since the effects of these optimisations have already been
+handlers. Since the effects of these optimizations have already been
 demonstrated by real-world systems, we focused more on formalising
 them and proving their correctness via program calculation.
 
