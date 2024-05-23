@@ -368,7 +368,7 @@ The proof of this theorem can be found in \Cref{app:modify-local-global}.
 % apply a function to it, it can be more efficient with in-place
 % update~\citep{LorenzenLS23} or mutable states.
 
-As a conseqence of the theorem, we can get the desired local-state behavior for |queensM| by
+As a consequence of the theorem, we can get the desired local-state behavior for |queensM| by
 simulating it with global-state semantics as follows:
 \begin{code}
 queensGlobalM :: Int -> [[Int]]

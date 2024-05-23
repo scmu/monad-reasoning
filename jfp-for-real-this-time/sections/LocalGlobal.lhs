@@ -292,7 +292,7 @@ The |Maybe| in this type indicates that a computation may fail to produce a
 result. However, since the |s| is outside of the |Maybe|, a modified state
 is returned even if the computation fails.
 This |Global s a| type is an instance of the |MState| and |MNondet|
-typeclasses.
+type classes.
 
 %if False
 \begin{code}
@@ -349,16 +349,15 @@ hGlobal :: (Functor f) => Free (StateF s :+: NondetF :+: f) a -> (s -> Free f [a
 hGlobal = fmap (fmap fst) . runStateT . hState . hNDf . comm2
 \end{code}
 This also runs a single state through a nondeterministic computation.
-The |comm2| isomorphism swaps the order of two functors in the
-co-product signature of the free monad in order to let |hLocal| and
+Here, the |comm2| isomorphism from \Cref{sec:combining-effects} allows |hLocal| and
 |hGlobal| have the same type signature.
-\begin{code}
-comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
-comm2 (Var x)             = Var x
-comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
-comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
-comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
-\end{code}
+% \begin{code}
+% comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+% comm2 (Var x)             = Var x
+% comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
+% comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
+% comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
+% \end{code}
 % By incorporating |comm2| in the definition of |hGlobal|, |hLocal| and |hGlobal| have exactly the same signature.
 
 In the case where the remaining signature is empty (|f = NilF|), we get:
@@ -732,9 +731,9 @@ differentiated:
 
 Those two programs do not behave in the same way when |s /= t|.
 %
-Hence, only provided that \emph{all} occurences of |put| in a program are replaced by |putR|
+Hence, only provided that \emph{all} occurrences of |put| in a program are replaced by |putR|
 can we simulate local-state semantics with global-state semantics. This has been articulated
-in the proof by the composition |hGlobal . local2global|: there is no room inbetween the replacement
+in the proof by the composition |hGlobal . local2global|: there is no room between the replacement
 by |local2global| and the interpretation with |hGlobal| to add plain |put| operations.
 The global replacement requirement also manifests itself in the proof, in the form
 of the {\bf fusion-post'} rule rather than the more widely used {\bf fusion-post} rule.

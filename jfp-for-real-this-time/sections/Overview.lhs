@@ -61,7 +61,7 @@ implementation.
 
 To expose these, we simulate the high-level local-state semantics to one
 that is entirely based on state alone. In the process we expose the duplication
-of states across nondeterminstic branches. We incrementally define this simulation;
+of states across nondeterministic branches. We incrementally define this simulation;
 the figure below shows how this influences the n-queens example.
 In particular, we take the following steps: \Cref{sec:local-global} simulates
 local state with global state; \Cref{sec:nondeterminism-state} explains how to
@@ -234,7 +234,7 @@ In fact, two stronger \textit{contextual} equalities hold:
       |hND (((m `mplus` n) `mplus` o) >>= k)| & ~=~ & |hND ((m `mplus` (n `mplus` o)) >>= k)|
 \end{array}
 \end{equation*}
-These equations state that the intepretations of the left- and right-hand sides are
+These equations state that the interpretations of the left- and right-hand sides are
 indistinguishable even when put in a larger program context |>>= k|. 
 They follow from the definitions of |hND| and |(>>=)|, as well as the associativity
 and identity properties of |(++)|.
@@ -476,7 +476,7 @@ comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 \paragraph*{Transfer to Other Representations}
 Our use of type class constraints allows us to reduce other monadic representations
 to the core algebraic effects and handlers representation.
-by an appeal to parametricitiy~\cite{DBLP:conf/icfp/Voigtlander09}. For instance, for a
+by an appeal to parametricity~\cite{DBLP:conf/icfp/Voigtlander09}. For instance, for a
 program |p :: forall m. MNondet m => m Int| we have that:
 \begin{equation*}
  |p :: [Int]| = |hND (p :: Free NondetF Int)|

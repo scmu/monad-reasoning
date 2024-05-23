@@ -39,7 +39,7 @@ inspired by Prolog and Constraint Programming systems, we investigate programs
 that rely on high-level interaction between the nondeterminism and state
 effects which we call \emph{local state}. Following low-level implementation
 techniques for these systems, like the Warren Abstract Machine (WAM)
-\citep{AICPub641:1983,AitKaci91}, we show how these high-level effectes can be simulated in terms of the low-level
+\citep{AICPub641:1983,AitKaci91}, we show how these high-level effects can be simulated in terms of the low-level
 \emph{global state} interaction of state and nondeterminism, and finally by state alone. This
 allows us to incorporate typical optimisations like exploiting mutable state
 for efficient backtracking based on \emph{trailing} as opposed to copying or recomputing
@@ -58,7 +58,7 @@ Though we do not give a formal definition of a
 simulation from high-level effects to low-level effects, we
 expect it to be a handler which interprets the operations of the high-level effects
 in terms of the operations of the low-level
-effects. This handler is essentailly a monomorphism from the syntax
+effects. This handler is essentially a monomorphism from the syntax
 tree of high-level effects to that of low-level effects, similar to
 \citet{Felleisen91}'s notion of macro expansion but at the
 continuation-passing level (as the syntax trees of free monads provide

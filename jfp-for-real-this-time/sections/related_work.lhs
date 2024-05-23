@@ -75,7 +75,7 @@ Various authors have modelled (aspects of) Prolog in functional programming
 languages, often using monads to capture nondeterminism and state effects.
 Notably, \cite{prologinhaskell} develop an embedding of Prolog in Haskell.
 
-Most attention has gone towards modelling the nondeterminsm or search aspect of
+Most attention has gone towards modelling the nondeterminism or search aspect of
 Prolog, with various monads and monad transformers being proposed
 \citep{DBLP:conf/icfp/Hinze00,DBLP:conf/icfp/KiselyovSFS05}. Notably, \cite{DBLP:conf/ppdp/SchrijversWDD14} shows how
 Prolog's search can be exposed with a free monad and manipulated using handlers.

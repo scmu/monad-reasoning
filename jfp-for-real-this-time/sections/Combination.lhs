@@ -133,7 +133,7 @@ alpha1 (a, (x, y))  = ((a, x), y)
 The proof of \Cref{thm:states-state} can be found in
 \Cref{app:states-state}. \Cref{thm:states-state} has two function
 compositions on the right-hand side, which would require using fusion
-twice, resuling in a complicated handler. To avoid this complexity,
+twice, resulting in a complicated handler. To avoid this complexity,
 we show the correctness of the isomorphism of |nest| and
 |flatten|, and prove the following equation:
 < flatten . hStates = hState . states2state
