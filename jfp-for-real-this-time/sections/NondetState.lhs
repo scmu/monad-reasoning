@@ -304,7 +304,7 @@ where |gen| and |alg| are from the definition of |nondet2stateS|, and
 \label{sec:nondet2state}
 
 The |nondet2stateS| function only considers nondeterminism as the only
-effect. In this section, we generalise it to work in combination with
+effect. In this section, we generalize it to work in combination with
 other effects. One immediate benefit is that we can use it in
 together with our previous simulation |local2global| in
 \Cref{sec:local2global}.

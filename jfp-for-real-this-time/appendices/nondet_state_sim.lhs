@@ -227,7 +227,7 @@ For the case |p = alg x|, we proceed with a case analysis on |x|.
 \end{proof}
 
 % We also have the following lemmas, which were used in the above proof:
-The following four lemmas characterise the behaviours of stack
+The following four lemmas characterize the behaviours of stack
 operations.
 
 \begin{lemma}[evaluation-append]\label{eq:eval-append}~
@@ -711,7 +711,7 @@ For the case |p = fwd x|, we proceed with a case analysis on |x|.
 % the proofs do work out.
 \end{proof}
 
-The following four lemmas characterise the behaviours of stack
+The following four lemmas characterize the behaviours of stack
 operations.
 % We have also used the following lemmas in the above proof,
 % which are similar to the lemmas used in the proof of Theorem \ref{eq:runnd-hnd}.

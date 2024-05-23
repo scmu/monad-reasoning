@@ -70,7 +70,7 @@ and garbage collection, and to improve locality.
 % often takes less time than recomputing the state from scratch.
 % \wenhao{I think the implementation of local state we give in 4.1 doesn't use the backtracking technique.}
 % Global state is sometimes called non-backtrackable state.
-In this section, we first formally characterise local-state and
+In this section, we first formally characterize local-state and
 global-state semantics, and then define a translation from the former
 to the latter which uses the mechanism of nondeterminism to store
 previous states and insert backtracking branches.
@@ -91,7 +91,7 @@ We refer to this semantics as \emph{local-state semantics}.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 % \paragraph*{Interaction Laws}\
 \paragraph*{The Local-State Laws}\
-The following two laws characterise the local-state semantics for a monad
+The following two laws characterize the local-state semantics for a monad
 with state and nondeterminism:
 \begin{alignat}{2}
     % &\mbox{\bf get-right-identity}:\quad &

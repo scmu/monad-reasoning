@@ -71,7 +71,7 @@ particular application at hand. For example, in the |queens| program of
 additional queen on the board. Recall that a state |s| of type |(Int, [Int])|
 consists of the current column |c| and the partial solution |sol|, i.e., the
 rows of the already placed queens. Hence, the information we need to
-characterise an update is the row |r| of the queen to place in the current
+characterize an update is the row |r| of the queen to place in the current
 column, i.e., |u = Int|.  The update itself is performed as |s `plus` r|,
 where 
 \begin{spec}
@@ -87,7 +87,7 @@ minus   (c, sol) r = (c-1, tail sol)
 Indeed, we clearly have |(s `plus` r) `minus` r = s|.
 
 In general, we define a typeclass |Undo s u| with two operations
-|plus| and |minus| to characterise reversible state updates. Here, |s|
+|plus| and |minus| to characterize reversible state updates. Here, |s|
 is the type of states and |u| is the type of updates.
 %
 \begin{spec}
