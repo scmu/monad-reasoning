@@ -23,7 +23,7 @@ import Debug.Trace as DT
 \section{Background and Motivation}
 \label{sec:background}
 
-This section summarises the main prerequisites for equational
+This section summarizes the main prerequisites for equational
 reasoning with effects and motivates our translations from high-level
 effects to low-level effects.
 % For a more extensive treatment we refer to the work of % % %

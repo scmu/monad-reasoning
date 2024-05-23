@@ -52,7 +52,7 @@ state, and undo them when backtracking.
 %
 %This is especially efficient when we have mutable states or in-place
 %update.
-This section formalises that approach in terms of an alternative translation from the
+This section formalizes that approach in terms of an alternative translation from the
 local-state semantics to the global-state semantics that incrementally records 
 \emph{reversible state updates}.
 
