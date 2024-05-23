@@ -491,12 +491,13 @@ satisfies the following four equations:
 |hND (m `mplus` n)| & = & |hND m `mplus` hND n|
 \end{eqnarray*}
 
+Since the freemonad representation is initial, the
+structure-preserving map |hND| is guaranteed to exist and be unique.
+%
 Now, if we want to prove a property about |p :: [Int]|, the parametricity equation allows us to prove it instead
 about |hND (p :: Free NondetF Int)|.  A similar observation can be made for
 other constraints, like |MState| or the combination of |MState| and |MNondet|.
-%
-Moreover, since the freemonad representation is initial, there always exist a unique
-structure-preserving map from it to any other lawful monadic implementation.
+
 
 In the rest of this paper, we focus on results for the core representation of
 algebraic effects and handlers. By means of the above approach, these results
