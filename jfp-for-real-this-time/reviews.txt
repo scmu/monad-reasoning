@@ -5,7 +5,10 @@
 > benefit from more explanation, and reviewer 3's suggestion to add some
 > performance evaluation.
 
-
+We are very grateful for the feedback of the reviewers. Please find our responses
+interleaved with the reviews below. Where indicated we have updated the paper
+accordingly.
+ 
 > Reviewers' Comments to Author:
 >
 > Referee: 1
@@ -116,8 +119,7 @@
 Yes, it is possible to make the handler interface more convenient (like the
 order of effects / handler applications and an implicit (<=>) operator), but
 that is not the focus of our paper. Instead, it is reasoning, which is easier
-to do and to understand on a more bare-bones handler interface. We have
-motivated this in the text.
+to do and to understand on a more bare-bones handler interface. 
 
 At the same time, we have used type class constraints like MState and MNondet
 to leave room for generality. Instantiating these constraints with appropriate
@@ -183,7 +185,10 @@ FIXED
 >
 FIXED
 
- 40 : Although they -> Although low-level programming techniques
+> 40 : Although they -> Although low-level programming techniques
+
+FIXED
+
 > 56 : the high-level interaction -> a high-level interaction (or are you postulating that there is only one possible interaction?).
 
 CHANGED: dropped the article
@@ -193,6 +198,7 @@ CHANGED: dropped the article
 CHANGED to "these high-level effects"
 
 > Is it valid the reason about the state monad in the full Haskell language? Or are the authors working in a “nice” subset.
+
 As usual, we work in a nice subset and now point this out in the introduction.
 
 > 143 : is a functor instantiates -> is a functor which instantiates
@@ -405,8 +411,6 @@ here.
 > - l. 49: "We say that an effect is lower-level than another effect when the
 >   lower-level effect can simulate the high-level effect." What about effects
 >   that can simulate each other?
-
-DONE
 
 This is just an informal notion. Though we don't plan to make it
 formal in the paper, one possible approach to a formal definition is
