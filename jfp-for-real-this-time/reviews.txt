@@ -411,12 +411,10 @@ DONE
 This is just an informal notion. Though we don't plan to make it
 formal in the paper, one possible approach to a formal definition is
 to use Felleisen's macro expansion (Felleisen, 1991, On the Expressive
-Power of Programming Languages) and adapt it into the form of effect
-handlers with certain restrictions (probably define the macro
-expansion on a continuation-passing level since we are working with
-effect handlers). Effects that can simulate each other should be on
-the same level. We have expanded the discussion on low-level effects
-vs. high-level effects on line 69.
+Power of Programming Languages) at the continuation-passing level
+since we are working with effect handlers. Effects that can simulate
+each other should be on the same level. We have expanded the
+discussion on low-level effects vs. high-level effects on line 69.
 
 >  I am also curious if one can simulate global state using a local state?
 
