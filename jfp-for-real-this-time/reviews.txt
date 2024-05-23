@@ -173,7 +173,9 @@ We have improved the writing in these two sections.
 > TYPOS AND MINORS COMMENTS FOR THE AUTHORS
 >
 > Decide on whether to use American or British English (but not both).
->
+
+We've replaced the British by the American spelling where we found it.
+
 > 24:  nondeterminsm ->  nondeterminism
 
 FIXED
