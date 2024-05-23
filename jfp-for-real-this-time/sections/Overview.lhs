@@ -447,3 +447,54 @@ Also, the empty signature |NilF| has a trivial associated handler.
 hNil :: Free NilF a -> a
 hNil (Var x) = x
 \end{code}
+
+%-------------------------------------------------------------------------------
+\subsection{Proof Device}
+
+The algebraic effects and handlers implementation we introduce in this paper
+is, much like the core calculus of a programming language, a proof device and
+not an ergonomic library. The results we obtain for this representation can be
+transferred to other representations.
+
+\paragraph*{Explicit Isomorphisms}
+For instance, notice for instance that |hState| and |hNDf| both require the signature they
+handle to be on the left in the co-product. It is possible to relax this
+requirement by means of advanced type-level programming. That makes using
+handlers more ergonomic at the cost of obscuring formal reasoning about them.
+Because the latter is the focus of this paper, we do not introduce the
+additional flexibility. Instead, we appeal to explicit isomorphisms, to reorder
+the signatures in a co-product. For example, the |comm2| isomorphism, that we will use in \Cref{sec:global-state}, swaps the
+order of two functors in the co-product signature of the free monad.
+\begin{code}
+comm2 :: (Functor f1, Functor f2, Functor f) => Free (f1 :+: f2 :+: f) a -> Free (f2 :+: f1 :+: f) a
+comm2 (Var x)             = Var x
+comm2 (Op (Inl k))        = (Op . Inr . Inl)  (fmap comm2 k)
+comm2 (Op (Inr (Inl k)))  = (Op . Inl)        (fmap comm2 k)
+comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
+\end{code}
+
+\paragraph*{Transfer to Other Representations}
+Our use of type class constraints allows us to reduce other monadic representations
+to the core algebraic effects and handlers representation.
+by an appeal to parametricitiy~\cite{DBLP:conf/icfp/Voigtlander09}. For instance, for a
+program |p :: forall m. MNondet m => m Int| we have that:
+\begin{equation*}
+ |p :: [Int]| = |hND (p :: Free NondetF Int)|
+\end{equation*}
+This is true because |hND| is the structure-preserving map from the |Free
+NondetF| instance of |MNondet| to the |[]| instance. That is to say, |hND|
+satisfies the following four equations:
+\begin{eqnarray*}
+|hND (return x)| & = & |return x| \\
+|hND (m >>= k)| & = & |hND m >>= hND . k| \\
+|hND mzero | & = & |mzero| \\
+|hND (m `mplus` n)| & = & |hND m `mplus` hND n|
+\end{eqnarray*}
+
+Now, if we want to prove a property about |p :: [Int]|, the parametricity equation allows us to prove it instead
+about |hND (p :: Free NondetF Int)|.  A similar observation can be made for
+other constraints, like |MState| or the combination of |MState| and |MNondet|. 
+
+In the rest of this paper, we focus on results for the core representation of
+algebraic effects and handlers. By means of the above approach, these results
+can be generalized to other representations.

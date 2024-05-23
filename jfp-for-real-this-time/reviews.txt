@@ -116,29 +116,18 @@
 Yes, it is possible to make the handler interface more convenient (like the
 order of effects / handler applications and an implicit (<=>) operator), but
 that is not the focus of our paper. Instead, it is reasoning, which is easier
-to do and to understand on a more bare-bones handler interface.
+to do and to understand on a more bare-bones handler interface. We have
+motivated this in the text.
 
 At the same time, we have used type class constraints like MState and MNondet
 to leave room for generality. Instantiating these constraints with appropriate
 free monads allows for the inductive reasoning and fusion methodology we
-employ.  Yet, the results we obtain can also be transferred to other monad
-instances, with parametricity as a tool. For instance, through parametricity
-we have that, given (p :: MState S m) :: m A and Functor F,
+employ. Yet, the results we obtain can also be transferred to other monad
+instances, using parametricity.
 
-	h_State p = p
+We have added a subsection at the end of Section 3 to explain the above two
+points.
 
-where p in the left-hand side has type Free (StateF S :+: F) A) and
-in the right-hand side StateT S (Free F) A.
-
-TODO: We will explicitate our motivation for this handler interface in the paper.
-
-WT: I don't parse the type of p, but I guess the point here is that
-h_State translates the freemonad interpretations of state operations
-to their StateT monad interpretations. How is parametricity used in
-the equation? Does it mean that there is only one lawful
-implementation for h_State?
-
-==> Tom addresses this
 
 > Referee: 2
 >
@@ -485,14 +474,25 @@ state monad.
 >   remind me of Fig. 2 in "Formal Reasoning about Layered Monadic Interpreters"
 >   by Yoon et al. It's not the same thing but there seem to be similarities.
 
-TODO
-==> read the paper
-    One difference is that itrees are coinductively defined whereas
-    we rely on the inductive structure of free monads for our proofs.
-    The algebras cannot manipulate the continuations, which is important for nondeterminism.
+itrees are a variant of algebraic effects and handlers that are used
+in a similar way, layering handlers for different effects. They are less expressive in
+the sense that the algebras of handlers do not have access to the continuation,
+which is apparently harder to express in a mechanized setting. Yet, access to
+the continuations is essential for modelling backtracking nondeterminism. On
+the reasoning side a difference is that itrees are defined coinductively
+whereas we rely on the induction structure of free monads for our proofs.
 
 > - Section 7: I am curious about the relation between this approach and STM
 >   (Software Transactional Memory).
 
-TODO
-==> read the paper
+While STM's retry and orElse have similar signatures to our Fail and Or
+operations, they have different equational theories. In particular, while Or is
+algebraic, orElse is not. It does not obey the equation (p1 `orElse` p2) >>= k
+= (p1 >>= k) `orElse` (p2 >>= k). It's not a generalized near-semiring, but a
+generalized dioid (see
+https://www.sciencedirect.com/science/article/pii/S1571066118300525). Hence,
+we cannot use the algebraic effects and handlers approach to model it, but
+the work on scoped effects and handlers.
+
+The interaction between readTVar/writeTVar and orElse is however similar to
+local-state semantics. 

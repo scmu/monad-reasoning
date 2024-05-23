@@ -59,6 +59,7 @@ newtype Stack a = Stack [a]
 We store this stack in the secondary instance of the state effect, and we add
 and remove elements through the |pushStack| and |popStack| functions.
 
+\begin{tabular}{ll}
 \begin{minipage}[t]{0.4\textwidth}
 \begin{code}
 pushStack  :: MState (Stack a) m
@@ -68,6 +69,7 @@ pushStack x = do
   put (Stack (x:xs))
 \end{code}
 \end{minipage}
+&
 \begin{minipage}[t]{0.5\textwidth}
 \begin{code}
 popStack  :: MState (Stack a) m
@@ -79,6 +81,7 @@ popStack  = do
     (x:xs')  -> do  put (Stack xs'); return (Just x)
 \end{code}
 \end{minipage}
+\end{tabular}
 
 We store two types of entries in the trail stack. The first types are the
 reversible updates |u| (see \Cref{sec:undo}) that we apply to the primary
