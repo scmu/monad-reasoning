@@ -475,8 +475,8 @@ comm2 (Op (Inr (Inr k)))  = (Op . Inr . Inr)  (fmap comm2 k)
 
 \paragraph*{Transfer to Other Representations}
 Our use of type class constraints allows us to reduce other monadic representations
-to the core algebraic effects and handlers representation.
-by an appeal to parametricity~\cite{DBLP:conf/icfp/Voigtlander09}. For instance, for a
+to the core algebraic effects and handlers representation
+by an appeal to parametricity~\citep{DBLP:conf/icfp/Voigtlander09}. For instance, for a
 program |p :: forall m. MNondet m => m Int| we have that:
 \begin{equation*}
  |p :: [Int]| = |hND (p :: Free NondetF Int)|
@@ -493,7 +493,10 @@ satisfies the following four equations:
 
 Now, if we want to prove a property about |p :: [Int]|, the parametricity equation allows us to prove it instead
 about |hND (p :: Free NondetF Int)|.  A similar observation can be made for
-other constraints, like |MState| or the combination of |MState| and |MNondet|. 
+other constraints, like |MState| or the combination of |MState| and |MNondet|.
+%
+Moreover, since the freemonad representation is initial, there always exist a unique
+structure-preserving map from it to any other lawful monadic implementation.
 
 In the rest of this paper, we focus on results for the core representation of
 algebraic effects and handlers. By means of the above approach, these results
