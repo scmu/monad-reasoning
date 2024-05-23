@@ -31,7 +31,7 @@ import Combination hiding (results, Comp)
 In order to
 restore the previous state during backtracking, the approaches of
 \Cref{sec:local2global} and \Cref{sec:undo} both introduce a new failing branch
-at every individual modification of the state 
+at every individual modification of the state.
 %
 The Warren Abstract Machine (WAM)~\citep{AitKaci91} does this in a more efficient and
 lower-level way: it stores consecutive updates in a \emph{trail stack} and then batch-processes them
@@ -41,7 +41,7 @@ This section first incorporates that trail-stack idea in the
 modification-based approach of \Cref{sec:undo}.
 %
 Then, by combining it with the earlier state-based simulation of nondeterminism, 
-we get an overall simulation of local-state in terms of a two stacks, the choicepoint
+we get an overall simulation of local state in terms of two stacks, the choicepoint
 stack and the trail stack.
 
 %-------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ the local-state semantics given by |hLocal| defined in \Cref{sec:local-state}.
 Given |Functor f| and |Undo s u|, the equation
 < hGlobalT = hLocalM
 holds for all programs |p :: Free (ModifyF s u :+: NondetF :+: f) a|
-that do not use the operation |Op (Inl MRestore _ _)|.
+that do not use the operation |Op (Inl (MRestore _ _))|.
 \end{restatable}
 The proof can be found in Appendix~\ref{app:immutable-trail-stack};
 it uses the same fold fusion strategy as in the proofs of other theorems.

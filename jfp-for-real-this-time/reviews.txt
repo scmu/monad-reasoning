@@ -349,7 +349,7 @@ any specific challenge for proving the correctness of the queue-based
 simulation with respect to a BFS version of the `hND` handler. We
 didn't consider pruning in this paper either. As far as we know,
 general pruning is not an algebraic effect but a scoped effect (Wu et
-al., 2014, Effect Handlers in Scope). We leave the generalisation of
+al., 2014, Effect Handlers in Scope). We leave the generalization of
 our work to scoped effects and higher-order effects as future work.
 
 > Suggestions for presentation:

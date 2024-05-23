@@ -204,7 +204,7 @@ The last two laws show that |(>>=)| is right-distributive
 over |mplus| and that |mzero| cancels bind on the left.
 
 The approach of \citet{Gibbons11} is to reason about effectful
-programs using an axiomatic characterisation given by these laws. It
+programs using an axiomatic characterization given by these laws. It
 does not rely on the specific implementation of any particular
 instance of |MNondet|.
 %
