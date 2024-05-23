@@ -491,7 +491,7 @@ satisfies the following four equations:
 |hND (m `mplus` n)| & = & |hND m `mplus` hND n|
 \end{eqnarray*}
 
-Since the freemonad representation is initial, the
+Since the free-monad representation is initial, the
 structure-preserving map |hND| is guaranteed to exist and be unique.
 %
 Now, if we want to prove a property about |p :: [Int]|, the parametricity equation allows us to prove it instead
