@@ -1,0 +1,78 @@
+> Reviewers' Comments to Author:
+> 
+> Referee: 1
+> 
+> Comments to the Author
+> 
+> This paper presents an approach to translate from high-level effects to
+> low-level effects. This allows one to write a program using high-level effects,
+> but the code can be translated and optimized using low-level effects. The
+> high-level effects this paper studies are nondeterminism and local state that
+> can viewed as states being duplicated at every nondeterministic branch. The
+> low-level effect considered is a single global state. The paper shows how to
+> translate programs written in nondeterminism and local state, to an equivalent
+> program in global state. There is no performance gained at this step yet, as the
+> state is still "duplicated". However, the paper continues to show that, by using a
+> structure similar to Prolog's Warren Abstract Machine, the program can be
+> optimized because we only keep track of incremental, reversible state updates.
+> 
+> I find this paper generally well-written, easy to follow, and intellectually
+> enlightening. Distinguishing effects similarly to how we distinguish
+> "high-level" and "low-level" programming is quite novel and the paper makes a
+> convincing first step as to why distinguishing these effects can be beneficial in
+> programming. I find the work presented in this paper solid and there is
+> potential for a series of new research work following this. Besides those main
+> strengths, I also appreciate the paper's thoughtful discussion on type-class
+> laws.
+> 
+> My original review was concerned with the lack of performance evaluation. However, the authors clarified the objectives of this paper at the end of Section 1, which is to formalize and prove the simulation's correctness, rather than showing performance improvement in Haskell. This clarification addressed my main concern for this paper. Besides this main concern, the authors also did well in addressing other smaller issues that I raised.
+> 
+> Referee: 2
+> 
+> Comments to the Author
+> 
+> This version fixes the minor issues of the previous one so I'm happy to recommend acceptance.
+> 
+> Referee: 3
+> 
+> Comments to the Author
+> 
+> I re-read the whole paper, and still found it overall a fun paper to read.
+> 
+> The main revision to my comment seems to be the newly added Section 3.3 (
+> A changelog would be helpful; maybe I missed it?)
+> 
+> Section 3.3 has two parts. First, it puts forward the discussion of the
+> isomorphism between programs with different orders of effects. Then, it adds a
+> discussion on monadic representations and parametricity. Overall I'm happy with
+> the paragraph.
+> 
+> line 514-515 "It is possible to relax this requirement by means of advanced
+> type-level programming."
+> 
+> It'd be hlepful to add some references.
+
+Now referencing datatypes a la carte.
+ 
+> While revising Section 4.2, "Implementation", I got another question. You
+> explained why a correct implementation for the global-state monad is tricky, and
+> presented the `Global` newtype. But, the actual handler-based implementation for
+> global state is rather unsurprising (as one simply swaps the order of hState and
+> hND). Could you elaborate a bit on the intuition behind this? Does the modularity
+> of effect handlers simplify the original problem?
+
+The last sentence already explains why it is simpler: the carrier type does not
+have to be a monad. Reformulated it a little bit to make it more explicit.
+This is more extensively explained in the previous subsection, for local state.
+The word `again` in the sentence referred to it. I guess that was not clear
+enough and the reviewer did not have that earlier explanation in mind anymore.
+I have added an explicit reference to the previous subsection and reformulated
+the sentence a little bit.
+ 
+> line 756-757. "We then then"
+
+FIXED
+ 
+> line 1585 "Gibbons and Hinze Gibbons and Hinze (2011)"
+
+FIXED

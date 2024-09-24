@@ -364,8 +364,9 @@ In the case where the remaining signature is empty (|f = NilF|), we get:
 %
 < fmap hNil . hGlobal :: Free (StateF s :+: NondetF :+: NilF) a -> (s -> [a])
 %
-The carrier type is again simpler than |Global s a| because it does not have to
-support the |(>>=)| operator.
+Like in Section~\ref{sec:local-state}, the carrier type here is again simpler
+than that of the corresponding monad because it does not have to support the
+|(>>=)| operator.
 
 %-------------------------------------------------------------------------------
 % \subsection{Transforming Between Local State and Global State}
@@ -573,7 +574,7 @@ We do not expect the programmer to program against the global-state semantics di
 and use the state-restoring |putR| as they see fit, as this can be quite confusing
 and error-prone. Instead we provide an automatic translation: 
 The programmer writes their program against the local-state semantics and uses
-the regular |put|. We then then translate the local-state semantics program
+the regular |put|. We then translate the local-state semantics program
 to a corresponding global-state semantics program using
 the effect handler |local2global|:
 \begin{code}

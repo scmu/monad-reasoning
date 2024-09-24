@@ -92,7 +92,7 @@ Here, we cover those that have most directly inspired this paper.
 %- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 \paragraph*{Axiomatic Reasoning}\
 %
-Gibbons and Hinze \cite{Gibbons11} proposed to reason axiomatically about
+\cite{Gibbons11} proposed to reason axiomatically about
 programs with effects and provided an axiomatic characterization of
 local state semantics. Our earlier work in \cite{Pauwels19} was
 directly inspired by their work: we introduced an axiomatic

@@ -1,4 +1,4 @@
-
+TODO
 %if False
 \begin{code}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
@@ -459,7 +459,7 @@ transferred to other representations.
 \paragraph*{Explicit Isomorphisms}
 For instance, notice for instance that |hState| and |hNDf| both require the signature they
 handle to be on the left in the co-product. It is possible to relax this
-requirement by means of advanced type-level programming. That makes using
+requirement by means of advanced type-level programming, e.g., using type class overloading \citep{SWIERSTRA_2008}. That makes using
 handlers more ergonomic at the cost of obscuring formal reasoning about them.
 Because the latter is the focus of this paper, we do not introduce the
 additional flexibility. Instead, we appeal to explicit isomorphisms, to reorder
